@@ -2,7 +2,7 @@
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-06",
   "baseline_updated": "2026-10-06",
-  "phase": "M2 IN PROGRESS — F2 (Model Gateway) implemented; gateway NOT yet wired to LangGraph",
+  "phase": "M2 IN PROGRESS — F3 (Requirements Analyst) implemented; ModelGateway wired to the `interpret` node ONLY",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -30,18 +30,26 @@
     "timeout_per_request_and_budget": true,
     "budget_integrated_with_gateway": true,
     "cost_accounting_supports_none": true,
-    "tests_passing": 280,
+    "f3_interpret_uses_gateway": true,
+    "f3_deterministic_fallback_preserved": true,
+    "f3_pydantic_is_the_absolute_gate": true,
+    "f3_model_cannot_widen_scope": true,
+    "f3_fallback_is_declared_not_silent": true,
+    "f3_budget_accounting_in_interpret": true,
+    "f3_node_revalidates_even_though_the_gateway_does": true,
+    "pricing_table_loaded_from_settings": true,
+    "pricing_table_empty_by_default": true,
+    "tests_passing": 312,
     "tests_skipped": 1,
     "tests_require_network": false,
     "tests_require_credentials": false,
-    "mutations_caught": "24/24 (project, pre-F2) + 8/8 (redaction) + F2 mutations",
+    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8 F3 mutations added and verified separately (see docs/BASELINE-F3-REQUIREMENTS-ANALYST.md)",
     "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
     "m1_assumptions": "5/5",
     "frontend_browser_checks": "11/11"
   },
   "not_implemented": [
-    "llm_wired_to_langgraph",
-    "requirements_analyst",
+    "llm_wired_to_other_langgraph_nodes",
     "reasoning_supervisor",
     "real_coder",
     "real_test_executor",
@@ -50,16 +58,28 @@
     "real_stt",
     "full_observability",
     "authentication",
-    "agent_prompts"
+    "agent_prompts_beyond_interpret"
   ],
-  "next_milestone": "F3 — Requirements Analyst",
+  "next_milestone": "F4 — Reasoning Supervisor",
   "ready_for_model_gateway": "YES",
   "model_gateway_ready": "YES",
-  "model_gateway_caveats": [
-    "No LangGraph node calls the gateway yet; that is deliberate for F2",
-    "No agent prompts exist yet; only minimal probe messages",
-    "The pricing table is empty by default, so cost is None until it is filled",
-    "The real-provider test is opt-in and was NOT executed without credentials",
+  "f3_requirements_analyst_ready": "YES",
+  "technical_debt": [
+    {
+      "id": "TD-01",
+      "title": "Validacion E2E con modelo real",
+      "status": "OPEN — mecanismo listo, ejecucion pendiente",
+      "detail": "La cadena completa (Settings -> adapter -> gateway -> proveedor -> usage -> validacion Pydantic) NO se ha ejecutado contra un proveedor real: no hay credenciales en el entorno. El mecanismo esta implementado y la prueba existe (tests/test_model_gateway_real.py), pero se SALTA en lugar de pasar en falso.",
+      "how_to_close": "Definir AI_SWE_MODEL_API_KEY, AI_SWE_MODEL_NAME y AI_SWE_MODEL_PROVIDER en .env y ejecutar: AI_SWE_RUN_REAL_PROVIDER_TESTS=1 python -m pytest tests/test_model_gateway_real.py -m real_provider",
+      "decision": "APLAZADA por decision del Arquitecto (2026-10-07): se sigue trabajando con FakeModelAdapter y el fallback determinista para mantener la suite rapida y offline.",
+      "risk_if_unclosed": "Un fallo de integracion real (forma de la respuesta, cabeceras, formato de usage del proveedor) no se detectaria hasta el primer uso con un proveedor de verdad."
+    }
+  ],
+  "f3_caveats": [
+    "Only `interpret` is connected to the gateway; every other node stays deterministic",
+    "The real-provider test is opt-in and was NOT executed: no credentials in the environment (see technical_debt TD-01)",
+    "AI_SWE_MODEL_PRICING is empty in the repository, so cost is None (unknown), never 0",
+    "The pricing table has a loading mechanism but no tariff is asserted as current",
     "No authentication yet (open finding from the external audit)"
   ],
   "rules": [
@@ -74,6 +94,9 @@
     "A passing test proves nothing until a mutation makes it fail",
     "No agent imports a provider SDK; all go through ModelGateway",
     "Only models/providers/ may know about a concrete provider",
-    "The standard suite must pass without internet, credentials or an external provider"
+    "The standard suite must pass without internet, credentials or an external provider",
+    "F3: only `interpret` may talk to the gateway; the deterministic classifier is the permanent fallback",
+    "F3: a model failure degrades to the fallback and leaves a recoverable error; it is never silent",
+    "F3: the interpreter's scope comes from the user, never from the model"
   ]
 }

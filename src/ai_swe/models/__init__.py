@@ -53,7 +53,12 @@ from ai_swe.models.errors import (
     UnknownProviderError,
 )
 from ai_swe.models.gateway import ModelGateway, gateway_from_settings
-from ai_swe.models.pricing import ModelPricing, PricingTable
+from ai_swe.models.pricing import (
+    ModelPricing,
+    PricingTable,
+    pricing_from_entries,
+    pricing_from_json,
+)
 from ai_swe.models.providers import (
     FakeModelAdapter,
     OpenAICompatibleAdapter,
@@ -98,6 +103,8 @@ __all__ = [
     "consume",
     "effective_timeout_s",
     "gateway_from_settings",
+    "pricing_from_entries",
+    "pricing_from_json",
     "provider_config_from_settings",
     "register_provider",
     "registered_providers",

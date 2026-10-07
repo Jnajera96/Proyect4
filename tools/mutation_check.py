@@ -347,6 +347,63 @@ MUTACIONES: list[Mutation] = [
         "\nmodels/\n*.bin",
         "test_model_gateway.py",
     ),
+    # ------------------------------------------------------------------ F3
+    Mutation(
+        "F3: interpret ignora el modelo aunque este conectado",
+        SRC / "graph" / "nodes.py",
+        "    resultado = _interpretacion_del_modelo(state)",
+        "    resultado = None",
+        "test_f3_interpret_analyst.py",
+    ),
+    Mutation(
+        "F3: un fallo del modelo se traga en vez de caer al fallback",
+        SRC / "graph" / "nodes.py",
+        "        if not _es_fallo_esperado(exc):\n            raise",
+        "        pass",
+        "test_f3_interpret_analyst.py",
+    ),
+    Mutation(
+        "F3: el modelo puede ampliar el alcance autorizado",
+        SRC / "graph" / "nodes.py",
+        'interpretacion = interpretacion.model_copy(update={"scope": _alcance(state)})',
+        "pass",
+        "test_f3_interpret_analyst.py",
+    ),
+    Mutation(
+        "F3: el gasto del modelo no se contabiliza",
+        SRC / "graph" / "nodes.py",
+        "    nuevo_presupuesto = gateway.consume(state.budget, respuesta)",
+        "    nuevo_presupuesto = state.budget",
+        "test_f3_interpret_analyst.py",
+    ),
+    Mutation(
+        "F3: el segundo nodo tambien habla con el gateway",
+        SRC / "graph" / "nodes.py",
+        "def researcher(state: RunState) -> dict:",
+        "def researcher(state: RunState) -> dict:\n    from ai_swe.models import ModelGateway  # mutacion: acopla el segundo nodo\n    _ = ModelGateway",
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "F3: el gateway se importa al cargar el modulo (deja de ser perezoso)",
+        SRC / "graph" / "nodes.py",
+        "def _gateway_por_defecto():",
+        "from ai_swe.models import ModelGateway\n\n\ndef _gateway_por_defecto():",
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "F3: la tabla de precios acepta un modelo sin tarifa como 0.0",
+        SRC / "models" / "pricing.py",
+        "        if precio is None:\n            return None",
+        "        if precio is None:\n            return 0.0",
+        "test_f3_interpret_analyst.py",
+    ),
+    Mutation(
+        "F3: la interpretacion estructurada se salta la validacion Pydantic",
+        SRC / "graph" / "nodes.py",
+        "    interpretacion = TaskInterpretation.model_validate(datos)",
+        "    interpretacion = TaskInterpretation.model_construct(**datos)",
+        "test_f3_interpret_analyst.py",
+    ),
 ]
 
 
@@ -480,9 +537,19 @@ def main() -> int:
     print("linea base verde.\n", flush=True)
 
     print("== mutaciones ==")
+    # Filtro opcional por prefijo de nombre (`python tools/mutation_check.py F3`).
+    # Existe porque la verificacion completa ejecuta la suite entera 43 veces y en
+    # una maquina lenta supera cualquier limite de tiempo razonable. Un filtro
+    # permite verificar **un subconjunto** sin fingir que se verifico el resto: el
+    # recuento final dice cuantas se comprobaron, no cuantas existen.
+    filtro = sys.argv[1] if len(sys.argv) > 1 else ""
+    seleccion = [m for m in MUTACIONES if not filtro or filtro in m.nombre]
+    if filtro:
+        print(f"  (filtro: {filtro!r} -> {len(seleccion)} de {len(MUTACIONES)} mutaciones)\n")
+
     cazadas = 0
     no_concluyentes: list[str] = []
-    for m in MUTACIONES:
+    for m in seleccion:
         contenido = m.fichero.read_text(encoding="utf-8")
         if contenido.count(m.original) != 1:
             print(f"  {m.nombre:48s} -> NO APLICABLE (el patron aparece "
@@ -512,7 +579,9 @@ def main() -> int:
             cazadas += 1
             print(f"  {m.nombre:48s} -> cazada  ({segundos:.1f}s)", flush=True)
 
-    print(f"\n{cazadas}/{len(MUTACIONES)} mutaciones cazadas")
+    print(f"\n{cazadas}/{len(seleccion)} mutaciones cazadas"
+          + (f" (de {len(MUTACIONES)} en total; esta ejecucion estaba filtrada)"
+             if filtro else ""))
     if no_concluyentes:
         print(f"{len(no_concluyentes)} NO CONCLUYENTES (no cuentan como cazadas):")
         for nombre in no_concluyentes:
@@ -529,7 +598,7 @@ def main() -> int:
 
     # Un resultado no concluyente no puede dar salida correcta: significaria que
     # hay mutaciones sin comprobar y el verificador diria que todo esta bien.
-    return 0 if cazadas == len(MUTACIONES) and not no_concluyentes else 1
+    return 0 if cazadas == len(seleccion) and not no_concluyentes else 1
 
 
 if __name__ == "__main__":

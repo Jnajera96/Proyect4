@@ -800,15 +800,147 @@ def test_ningun_modulo_importa_un_sdk_de_proveedor() -> None:
     assert infractores == []
 
 
-def test_ningun_nodo_llama_al_gateway_todavia() -> None:
-    """F2 no conecta el gateway a LangGraph: los nodos deben seguir igual."""
+def test_solo_interpret_habla_con_el_gateway() -> None:
+    """**F3**: de todos los nodos del grafo, solo `interpret` usa el gateway.
+
+    La version anterior de esta prueba afirmaba que *ningun* fichero del grafo
+    contuviera la cadena `ai_swe.models`, y buscaba subcadenas con `in` sobre el
+    texto completo. Eso la hacia fragil en los dos sentidos: **fallaba por una
+    mencion en un comentario** (falso positivo, y asi ocurrio al escribir F3) y
+    **no habria detectado** un `importlib.import_module("ai_swe.models")`, porque
+    esa cadena no aparece. Se reescribe con `ast` para mirar los `import` de verdad.
+
+    **Que se comprueba exactamente.** No basta con «solo `nodes.py` importa»: una
+    mutacion que anadio `from ai_swe.models import ModelGateway` dentro de
+    `researcher` (el **segundo** nodo) seguia dejando el conjunto de ficheros en
+    `{nodes.py}` y pasaba sin ser cazada. Lo que de verdad protege la arquitectura
+    es **la funcion** que importa: solo las funciones que sirven a `interpret`
+    pueden hacerlo. Se comparan nombres de funcion, no ficheros.
+
+    Y se comprueba que esos imports sean **perezosos** (dentro de una funcion),
+    porque un `import ai_swe.models` en el cuerpo del modulo obligaria a tener el
+    gateway instalado para poder importar el grafo.
+    """
+    import ast
     from pathlib import Path
 
     raiz = Path(__file__).resolve().parent.parent / "src" / "ai_swe" / "graph"
+
+    # Las funciones que pueden importar el gateway. Todo lo demas es una violacion
+    # de la regla «una fase conecta un nodo».
+    funciones_autorizadas = {
+        "_gateway_por_defecto",
+        "_interpretacion_del_modelo",
+        "_es_fallo_esperado",
+    }
+    funciones_con_modelo: set[str] = set()
+    a_nivel_de_modulo: list[str] = []
+
     for archivo in raiz.rglob("*.py"):
-        texto = archivo.read_text(encoding="utf-8")
-        assert "ai_swe.models" not in texto, f"{archivo.name} importa el gateway"
-        assert "ModelGateway" not in texto, f"{archivo.name} usa el gateway"
+        modulo = ast.parse(archivo.read_text(encoding="utf-8"), filename=str(archivo))
+        for nodo in ast.walk(modulo):
+            if isinstance(nodo, ast.Import):
+                nombres = [a.name for a in nodo.names]
+            elif isinstance(nodo, ast.ImportFrom):
+                nombres = [nodo.module or ""]
+            else:
+                continue
+            if not any(n == "ai_swe.models" or n.startswith("ai_swe.models.") for n in nombres):
+                continue
+            contenedora = _funcion_contenedora(arbol_funciones(modulo), nodo)
+            if contenedora is None:
+                a_nivel_de_modulo.append(f"{archivo.name}:{nodo.lineno}")
+            else:
+                funciones_con_modelo.add(contenedora)
+
+    assert funciones_con_modelo <= funciones_autorizadas, (
+        "solo las funciones que sirven a `interpret` pueden importar el gateway; "
+        f"tambien lo hacen: {sorted(funciones_con_modelo - funciones_autorizadas)}"
+    )
+    assert a_nivel_de_modulo == [], (
+        f"el gateway debe importarse de forma perezosa, no al cargar el modulo: {a_nivel_de_modulo}"
+    )
+
+
+def arbol_funciones(modulo):
+    """Todas las funciones del modulo, para poder saber quien contiene a quien."""
+    import ast
+
+    return [n for n in ast.walk(modulo) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+
+
+def _funcion_contenedora(funciones, objetivo) -> str | None:
+    """Nombre de la funcion **mas interna** que contiene al nodo, o `None`.
+
+    Se elige la mas interna por su rango de lineas: una funcion anidada tiene un
+    rango estrictamente dentro de la que la contiene, y ese es el ambito real del
+    `import`.
+    """
+    candidatas = [
+        f
+        for f in funciones
+        if f.lineno <= objetivo.lineno <= (f.end_lineno or f.lineno)
+    ]
+    if not candidatas:
+        return None
+    return min(candidatas, key=lambda f: (f.end_lineno or f.lineno) - f.lineno).name
+
+
+def test_interpret_es_el_unico_nodo_conectado_al_modelo() -> None:
+    """La invariante de F3, comprobada sobre el **comportamiento**, no sobre el texto.
+
+    Se ejecuta `interpret` sin gateway y se comprueba que sigue clasificando por
+    vocabulario; y con un gateway falso, que usa el modelo y contabiliza el gasto.
+    Una prueba estructural puede pasar con un nodo desconectado; esta no.
+    """
+    estado = _estado_interpret("corrige el bug del parser")
+    from ai_swe.graph import nodes
+
+    previo = nodes._GATEWAY
+    try:
+        # Sin modelo: clasificacion determinista, sin errores, sin gasto.
+        nodes.usar_gateway(nodes.SIN_GATEWAY)
+        delta = nodes.interpret(estado)
+        assert delta["interpretation"].intent.value == "modify"
+        assert "errors" not in delta
+        assert "budget" not in delta
+
+        # Con modelo que responde bien: lo usa y cobra.
+        from ai_swe.models import FakeModelAdapter, ModelGateway
+
+        fake = FakeModelAdapter(
+            structured={
+                "intent": "out_of_scope",
+                "scope": {"repo_path": "/x", "allowed_paths": [], "protected_paths": []},
+                "constraints": [],
+                "confidence": 0.8,
+                "rationale": "lo decide el modelo",
+            }
+        )
+        nodes.usar_gateway(ModelGateway([fake]))
+        delta = nodes.interpret(estado)
+        assert delta["interpretation"].intent.value == "out_of_scope"
+        assert delta["budget"].used_model_calls == 1
+    finally:
+        nodes.usar_gateway(previo)
+
+
+def _estado_interpret(texto: str):
+    from datetime import UTC, datetime
+
+    from ai_swe.contracts import Instruction, InstructionSource, RunOptions, RunState
+
+    ahora = datetime.now(UTC)
+    return RunState(
+        run_id="run-t",
+        trace_id="trace-t",
+        created_at=ahora,
+        updated_at=ahora,
+        instruction=Instruction(
+            text=texto, source=InstructionSource.TEXT, confirmed_by_user=True
+        ),
+        options=RunOptions(),
+    )
 
 
 def test_el_codigo_fuente_no_esta_excluido_por_gitignore() -> None:

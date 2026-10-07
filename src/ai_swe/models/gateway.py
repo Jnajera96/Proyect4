@@ -46,7 +46,7 @@ from ai_swe.models.errors import (
     ModelGatewayError,
     StructuredOutputError,
 )
-from ai_swe.models.pricing import TABLA_POR_DEFECTO, PricingTable
+from ai_swe.models.pricing import TABLA_POR_DEFECTO, PricingTable, pricing_from_json
 from ai_swe.models.providers.base import ProviderAdapter, ProviderResponse
 from ai_swe.models.registry import (
     build_adapter,
@@ -400,9 +400,16 @@ def gateway_from_settings(
     **La credencial se exige aqui**, en el borde y solo cuando de verdad se va a usar
     el modelo. Arrancar el sistema sin clave sigue siendo valido: esta funcion no se
     llama al arrancar.
+
+    **Tabla de precios.** Se carga de `AI_SWE_MODEL_PRICING` si esta declarada. Una
+    lista declarada pero mal formada **falla aqui**, en el borde: unos precios mal
+    escritos no deben degradarse en silencio a «no se sabe», porque entonces el
+    presupuesto de coste dejaria de actuar sin que nadie se entere.
     """
+    tabla = pricing_from_json(settings.model_pricing)
+
     if adapters is not None:
-        return ModelGateway(list(adapters), sleep=sleep)
+        return ModelGateway(list(adapters), sleep=sleep, pricing=tabla)
 
     config = provider_config_from_settings(settings)
     if requires_credentials(config.name) and not config.has_credentials:
@@ -418,4 +425,5 @@ def gateway_from_settings(
         timeout_s=config.timeout_s,
         max_retries=config.max_retries,
         sleep=sleep,
+        pricing=tabla,
     )

@@ -35,6 +35,17 @@ class Settings(BaseSettings):
         description="Secreto: solo desde el entorno. Nunca se registra en claro.",
     )
     model_base_url: str | None = Field(default=None, description="Para proveedores locales.")
+    # Tarifas publicadas por el proveedor, en la moneda del proveedor. Vacio = no
+    # se declara ninguna, y entonces el coste de cada llamada es `None` ("no se
+    # sabe"). Se mantiene vacio en el repositorio a proposito: un precio inventado
+    # se cree, y una tarifa cambia sin avisar. Ver `models/pricing.py`.
+    #
+    # Forma: [{"model": "...", "input_per_1k": 0.0, "output_per_1k": 0.0,
+    #          "currency": "USD"}]
+    model_pricing: str = Field(
+        default="",
+        description="Lista JSON de tarifas por modelo. Vacia = no se conoce ningun precio.",
+    )
 
     # --- Almacen de estado ---------------------------------------------------
     state_db_path: Path = Field(default=Path("var/state.sqlite3"))

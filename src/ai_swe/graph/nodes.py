@@ -15,6 +15,7 @@ peor que uno que admite que no las ejecuto.
 from __future__ import annotations
 
 import hashlib
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -42,6 +43,8 @@ from ai_swe.contracts import (
     TaskInterpretation,
 )
 from ai_swe.tools.policy import DecisionContext, decide
+
+log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------- vocabulario
 
@@ -137,31 +140,268 @@ def _escalar(state: RunState, errores: list[RunError]) -> dict:
 # -------------------------------------------------------------------- nodos
 
 
-def interpret(state: RunState) -> dict:
-    """Interpreta la instruccion y produce un plan. Sin modelo en M1."""
-    intencion = _clasificar(state.instruction.text)
+# ------------------------------------------------------------------ F3: modelo
+
+# **El unico punto del grafo que habla con el modelo.** `interpret` es el unico nodo
+# conectado al `ModelGateway`; los demas siguen siendo deterministas. Es deliberado:
+# una fase = un nodo, y asi el efecto del modelo es medible de forma aislada.
+#
+# La frontera se construye de forma **perezosa**, no al importar el modulo:
+#   - importar `ai_swe.models` al cargar `nodes` obligaria a tener el gateway
+#     instalado para poder importar el grafo, y el grafo debe poder importarse sin
+#     proveedor;
+#   - la credencial solo se exige cuando de verdad se va a llamar (`gateway_from_settings`
+#     falla en el borde), no al arrancar el sistema.
+
+
+def _gateway_por_defecto():
+    """Construye el gateway real desde la configuracion. Puede lanzar.
+
+    **No se captura aqui el error de credencial**: quien llama decide si un fallo de
+    configuracion se degrada a fallback o se propaga. Capturar en el constructor
+    ocultaria la diferencia entre «no hay proveedor» y «hay proveedor mal configurado».
+    """
+    from ai_swe.config import load_settings
+    from ai_swe.models import gateway_from_settings
+
+    return gateway_from_settings(load_settings())
+
+
+class _SinGateway:
+    """Centinela: «este nodo no debe llamar al modelo».
+
+    Se distingue de `None` porque `None` significaria «construye el de por defecto».
+    Con el centinela, un nodo sin gateway **no** intenta abrir una conexion.
+    """
+
+    __slots__ = ()
+
+
+SIN_GATEWAY = _SinGateway()
+
+# El gateway se inyecta por atributo de modulo, no por variable global de entorno.
+# Motivo: una variable global mutable se puede cambiar desde cualquier sitio y deja
+# el estado de las pruebas dependiendo del orden. Aqui solo lo toca
+# `usar_gateway(...)`, y `usar_gateway(None)` restaura el comportamiento por defecto.
+_GATEWAY: object = SIN_GATEWAY
+
+
+def usar_gateway(gateway) -> None:
+    """Inyecta el gateway que usara `interpret`.
+
+    - `usar_gateway(gateway)` -> usa ese gateway (una prueba, un respaldo).
+    - `usar_gateway(None)` -> vuelve a construir el de por defecto (produccion).
+    - `usar_gateway(SIN_GATEWAY)` -> **desconecta** el modelo: `interpret` usa solo
+      el clasificador determinista, que es el comportamiento de `M1`/`F1`/`F2`.
+
+    Existe para que la suite offline pueda ejercitar el nodo con y sin modelo sin
+    tocar la red ni las credenciales, y para que el fallback sea comprobable de
+    verdad en lugar de por inspeccion.
+    """
+    global _GATEWAY
+    if gateway is None:
+        _GATEWAY = SIN_GATEWAY
+    else:
+        _GATEWAY = gateway
+
+
+# Instruccion del sistema. Pide **solo** el objeto de `TaskInterpretation`: el
+# esquema JSON se anade automaticamente en el gateway (`generate_structured`), que
+# lo **deriva** del contrato Pydantic. No se escribe el esquema aqui a mano: una
+# copia paralela divergiria del contrato y el modelo cumpliria uno que nadie valida.
+PROMPT_INTERPRETACION = """\
+Eres el Requirements Analyst de un sistema de ingenieria de software. Tu unica
+tarea es CLASIFICAR una instruccion y delimitar su alcance. No ejecutas nada, no
+escribes codigo y no inventas datos que la instruccion no contenga.
+
+Clasifica la instruccion en exactamente una de estas intenciones:
+  - "question": el usuario pregunta algo o pide una explicacion, sin pedir cambios.
+  - "inspect": el usuario pide analizar, revisar, listar o describir algo.
+  - "modify": el usuario pide un cambio concreto en el codigo (corregir, anadir,
+    refactorizar, eliminar...).
+  - "out_of_scope": el usuario pide algo que este sistema NO puede hacer: publicar,
+    desplegar, hacer push o merge, tocar produccion o GitHub. Ante la duda entre
+    "modify" y "out_of_scope", elige "out_of_scope" si la accion sale del sistema.
+
+Rellena el campo "scope" con el repositorio y las rutas tal como aparezcan en la
+instruccion, o con el texto disponible si no se indica ninguna.
+En "constraints", lista las prohibiciones o condiciones EXPLICITAS del usuario
+(por ejemplo, "no toques X"). No inventes restricciones que no se hayan dicho.
+"confidence" es tu seguridad real entre 0.0 y 1.0: usa un valor bajo si la
+instruccion es ambigua, no 1.0 por defecto.
+"rationale" explica en una o dos frases por que elegiste esa intencion.
+"""
+
+
+def _alcance(state: RunState) -> Scope:
+    """Alcance declarado por el usuario. Se calcula en un solo sitio."""
     opciones = state.options
-    alcance = Scope(
+    return Scope(
         repo_path=opciones.repo_path or "(sin repositorio configurado)",
         allowed_paths=opciones.allowed_paths,
         protected_paths=opciones.protected_paths,
     )
-    interpretacion = TaskInterpretation(
+
+
+def _interpretacion_determinista(state: RunState, *, motivo: str) -> TaskInterpretation:
+    """Clasificacion por vocabulario. Es el **fallback**, y sigue siendo valido.
+
+    No es codigo muerto ni un andamio: es la via por la que el sistema sigue
+    funcionando sin credenciales, sin red o con el proveedor caido. Por eso su
+    `rationale` **dice** que fue determinista: una interpretacion que no declara su
+    origen no se puede auditar.
+    """
+    intencion = _clasificar(state.instruction.text)
+    return TaskInterpretation(
         intent=intencion,
-        scope=alcance,
-        constraints=["M1: la interpretacion es determinista; el modelo llega en M2"],
+        scope=_alcance(state),
+        constraints=["clasificacion determinista por vocabulario (fallback sin modelo)"],
         confidence=0.5,
         rationale=(
             f"clasificacion determinista por vocabulario -> {intencion.value}"
-            + ("" if opciones.repo_path else "; no se configuro repositorio")
+            + ("" if state.options.repo_path else "; no se configuro repositorio")
+            + f"; motivo del fallback: {motivo}"
         ),
     )
+
+
+def _interpretacion_del_modelo(
+    state: RunState,
+) -> tuple[TaskInterpretation, Budget, int] | None:
+    """Intenta interpretar con el modelo. `None` si hay que caer al fallback.
+
+    Devuelve `(interpretacion, presupuesto_consumido, tokens)` cuando el modelo
+    responde y **cumple el contrato**. La validacion no se relaja aqui: el gateway
+    lanza `StructuredOutputError` si el JSON no valida, y ese caso tambien cae al
+    fallback. El contrato Pydantic sigue siendo la puerta absoluta.
+
+    Un fallo **no recuperable** que no sea de la llamada (credencial invalida,
+    proveedor desconocido, configuracion incompleta) tampoco se oculta: se registra
+    como error tipado recuperable y se sigue con el fallback, que es lo que permite
+    que la demo funcione sin proveedor. Lo que NO se hace es fingir que el modelo
+    respondio.
+    """
+    from ai_swe.models import (
+        MessageRole,
+        ModelGatewayError,
+        ModelMessage,
+        ModelRequest,
+        StructuredOutputError,
+    )
+    from pydantic import ValidationError
+
+    gateway = _GATEWAY
+    if isinstance(gateway, _SinGateway):
+        return None
+    gateway = _gateway_por_defecto() if gateway is None else gateway
+
+    peticion = ModelRequest(
+        messages=[
+            ModelMessage(role=MessageRole.SYSTEM, content=PROMPT_INTERPRETACION),
+            ModelMessage(role=MessageRole.USER, content=state.instruction.text),
+        ],
+        max_output_tokens=1024,
+        temperature=0.0,
+        agent_role=AgentRole.SUPERVISOR,
+        run_id=state.run_id,
+        trace_id=state.trace_id,
+    )
+    respuesta = gateway.generate_structured(
+        peticion, response_model=TaskInterpretation, budget=state.budget
+    )
+    datos = respuesta.structured_data
+    if datos is None:  # pragma: no cover - el gateway nunca devuelve None validado
+        raise StructuredOutputError("structured_data vacio tras la validacion")
+    # El gateway ya valido, pero **no se confia en ello**: aqui se revalida. Si un
+    # dia el gateway cambiara, el nodo no debe pasar a aceptar datos sin comprobar.
+    # La revalidacion se envuelve para que un dato fuera de contrato se trate como
+    # un fallo del modelo (fallback) y no como un `ValidationError` crudo que
+    # **abortaria la ejecucion**: la frontera debe degradar, no reventar.
+    try:
+        interpretacion = TaskInterpretation.model_validate(datos)
+    except ValidationError as exc:
+        raise StructuredOutputError(
+            "el modelo devolvio datos que no cumplen TaskInterpretation",
+            provider=respuesta.provider,
+            detail=str(exc)[:600],
+        ) from exc
+    # El alcance lo fija el **usuario**, no el modelo. Si el modelo devuelve un
+    # repositorio distinto del configurado, se queda el del usuario: el alcance es
+    # una restriccion de seguridad, y un modelo no la amplia por su cuenta.
+    interpretacion = interpretacion.model_copy(update={"scope": _alcance(state)})
+    nuevo_presupuesto = gateway.consume(state.budget, respuesta)
+    tokens = nuevo_presupuesto.used_tokens - state.budget.used_tokens
+    return interpretacion, nuevo_presupuesto, tokens
+
+
+def interpret(state: RunState) -> dict:
+    """Interpreta la instruccion y produce un plan.
+
+    **Unico nodo conectado al modelo (F3).** Si hay gateway y el modelo responde
+    con un JSON que cumple `TaskInterpretation`, se usa su clasificacion y se
+    contabiliza el gasto. En cualquier otro caso -sin gateway, sin credencial,
+    proveedor caido, sin red, o respuesta que no valida- se cae de forma
+    **transparente** al clasificador determinista por vocabulario, que sigue
+    existiendo y sigue siendo el comportamiento por defecto del sistema.
+
+    La caida al fallback **no es silenciosa**: deja un `RunError` recuperable con
+    el motivo. Un fallback que no se declara es indistinguible de un acierto, y
+    eso haria imposible saber que el modelo no llego a usarse.
+    """
+    errores = list(state.errors)
+
+    try:
+        resultado = _interpretacion_del_modelo(state)
+    except Exception as exc:  # noqa: BLE001 - la frontera convierte cualquier fallo
+        if not _es_fallo_esperado(exc):
+            raise
+        motivo = f"{type(exc).__name__}: {exc}"[:500]
+        log.warning("interpret: el modelo no respondio, se usa el fallback (%s)", motivo)
+        errores = _error(
+            state,
+            "MODEL_FALLBACK",
+            AgentRole.SUPERVISOR.value,
+            f"interpretacion determinista: el modelo no se pudo usar ({motivo})",
+            recuperable=True,
+        )
+        return {
+            "interpretation": _interpretacion_determinista(state, motivo="modelo no disponible"),
+            "status": RunStatus.RUNNING,
+            "next_step": _clasificar(state.instruction.text).value,
+            "errors": errores,
+            "updated_at": _ahora(),
+        }
+
+    if resultado is None:
+        interpretacion = _interpretacion_determinista(state, motivo="modelo no conectado")
+        return {
+            "interpretation": interpretacion,
+            "status": RunStatus.RUNNING,
+            "next_step": interpretacion.intent.value,
+            "updated_at": _ahora(),
+        }
+
+    interpretacion, presupuesto, _tokens = resultado
     return {
         "interpretation": interpretacion,
+        "budget": presupuesto,
         "status": RunStatus.RUNNING,
-        "next_step": intencion.value,
+        "next_step": interpretacion.intent.value,
         "updated_at": _ahora(),
     }
+
+
+def _es_fallo_esperado(exc: BaseException) -> bool:
+    """Si el fallo es de los que justifican caer al fallback.
+
+    Se enumeran por **tipo** en lugar de capturar `Exception` a secas: un `TypeError`
+    o un `KeyError` en el codigo propio son defectos, y tragarselos los convertiria
+    en un fallback silencioso que nunca se depuraria. Lo que se degrada es el fallo
+    del **modelo o de su configuracion**, no un error de programacion.
+    """
+    from ai_swe.models import ModelGatewayError
+
+    return isinstance(exc, ModelGatewayError)
 
 
 def researcher(state: RunState) -> dict:
