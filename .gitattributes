@@ -1,0 +1,33 @@
+# Normalizacion de finales de linea.
+#
+# Sin esto, Git avisa de que convertira LF a CRLF en cada fichero en Windows, y
+# un colaborador en Linux veria diffs de fichero completo por un cambio de un
+# caracter. El aviso es ruido; el diff real es peor.
+#
+# Regla: en el repositorio, siempre LF. En el arbol de trabajo, lo que diga el SO.
+
+* text=auto eol=lf
+
+# Binarios: nunca normalizar, o se corrompen.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.sqlite3 binary
+
+# Ficheros que deben conservar CRLF por convencion de plataforma.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Marcar linguistica para el visor de diffs de GitHub.
+*.py   text diff=python
+*.md   text diff=markdown
+*.toml text
+*.json text
+*.yml  text
+*.yaml text
