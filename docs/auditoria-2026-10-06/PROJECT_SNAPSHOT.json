@@ -1,7 +1,8 @@
 {
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-06",
-  "phase": "M1 infrastructure/scaffold",
+  "baseline_updated": "2026-10-06",
+  "phase": "F1 closed (reproducibility + pre-M2 security hardening); M2 NOT started",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -10,11 +11,22 @@
     "frontend": true,
     "hitl": true,
     "policy_engine": true,
-    "tests_passing": 153,
-    "mutations_caught": "24/24"
+    "secret_redaction": true,
+    "secret_redaction_logging_filter": true,
+    "settings_secretstr": true,
+    "config_validation_on_use": true,
+    "budget_model_counters": true,
+    "lockfile": true,
+    "python_version_pinned": true,
+    "tests_passing": 211,
+    "mutations_caught": "24/24 (project) + 8/8 (redaction)",
+    "repro_build_from_lock": "211/211 in a fresh env outside the workspace",
+    "m1_assumptions": "5/5",
+    "frontend_browser_checks": "11/11"
   },
   "not_implemented": [
     "llm",
+    "model_gateway",
     "requirements_analyst",
     "reasoning_supervisor",
     "real_coder",
@@ -26,6 +38,13 @@
     "authentication"
   ],
   "next_milestone": "M2",
+  "ready_for_model_gateway": "YES",
+  "readiness_caveats": [
+    "Redaction must be invoked at the trace/logging points, not only exist",
+    "require_model_credentials must be called just before the first real provider call",
+    "max_cost has no price source yet; decide in M2 whether it takes effect",
+    "No authentication yet (open finding from the external audit)"
+  ],
   "rules": [
     "Keep LangGraph",
     "Keep RunState typed",
@@ -33,6 +52,8 @@
     "No direct Coder writes to main workspace",
     "No shell=True with LLM-generated commands",
     "No MCP/Graphify before M2 E2E",
-    "No exposure beyond localhost before auth"
+    "No exposure beyond localhost before auth",
+    "New Budget fields enter with defaults; only removal/rename bumps schema version",
+    "A passing test proves nothing until a mutation makes it fail"
   ]
 }

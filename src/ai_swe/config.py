@@ -2,13 +2,20 @@
 
 Validada al arrancar. Los secretos se leen del entorno y **nunca** se escriben
 en el repositorio; `.env.example` documenta nombres, no valores.
+
+**Por que `SecretStr` y no `str`.** Un `str` corriente acaba en un `repr`, en un
+`model_dump()`, en un mensaje de error de validacion o en un volcado de depuracion
+sin que nadie lo escriba a proposito. `SecretStr` no elimina el riesgo, pero lo
+reduce a un acto explicito: hay que llamar a `.get_secret_value()` para ver el
+valor. La redaccion centralizada (`ai_swe.security`) es la segunda linea, para los
+sitios donde un secreto llegue igualmente en texto.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,7 +30,10 @@ class Settings(BaseSettings):
     # --- Proveedor de modelo -------------------------------------------------
     model_provider: str = Field(default="openai", description="Proveedor del Foundation Model.")
     model_name: str = Field(default="", description="Identificador del modelo a usar.")
-    model_api_key: str = Field(default="", description="Secreto: solo desde el entorno.")
+    model_api_key: SecretStr = Field(
+        default=SecretStr(""),
+        description="Secreto: solo desde el entorno. Nunca se registra en claro.",
+    )
     model_base_url: str | None = Field(default=None, description="Para proveedores locales.")
 
     # --- Almacen de estado ---------------------------------------------------
@@ -66,8 +76,8 @@ class Settings(BaseSettings):
 
     # --- Observabilidad ------------------------------------------------------
     langfuse_enabled: bool = Field(default=False)
-    langfuse_public_key: str = Field(default="")
-    langfuse_secret_key: str = Field(default="")
+    langfuse_public_key: SecretStr = Field(default=SecretStr(""))
+    langfuse_secret_key: SecretStr = Field(default=SecretStr(""))
     langfuse_host: str = Field(default="http://localhost:3000")
     log_level: str = Field(default="INFO")
 
@@ -88,6 +98,84 @@ class Settings(BaseSettings):
         """
         return self.tts_enabled
 
+    def registrar_secretos(self) -> int:
+        """Registra los secretos conocidos en el redactor central (`RNF-S3`).
+
+        Devuelve cuantos valores se registraron, para poder comprobarlo en una
+        prueba. Se registra el valor literal porque es la unica forma fiable de
+        redactar una clave corta o con formato impredecible que ningun patron
+        reconoceria.
+
+        Se importa `ai_swe.security` de forma diferida para que `config` no
+        dependa de la capa de seguridad en tiempo de importacion.
+        """
+        from ai_swe.security import register_secret
+
+        registrados = 0
+        for secreto in (self.model_api_key, self.langfuse_secret_key, self.langfuse_public_key):
+            if register_secret(secreto.get_secret_value()):
+                registrados += 1
+        return registrados
+
 
 def load_settings() -> Settings:
-    return Settings()
+    """Carga la configuracion y deja sus secretos protegidos por el redactor.
+
+    **No exige una clave de API.** M1 debe arrancar sin proveedor: el grafo se
+    recorre, la API responde y el frontend funciona sin ninguna credencial. La
+    exigencia de clave se evalua cuando se intenta usar un modelo, no al arrancar
+    (ver `require_model_credentials`).
+    """
+    settings = Settings()
+    settings.registrar_secretos()
+    return settings
+
+
+# --------------------------------------------------------------- validacion de uso
+
+# Proveedores que **necesitan** una clave para llamar al modelo. Un proveedor
+# local (`ollama`, `vllm`...) expone un endpoint HTTP y no usa clave.
+PROVEEDORES_CON_CLAVE = frozenset({"openai", "anthropic", "azure", "openrouter", "mistral"})
+
+
+class ConfiguracionInsuficiente(RuntimeError):
+    """Falta configuracion para realizar una operacion concreta.
+
+    Es una excepcion **tipada y segura**: su mensaje nombra el campo que falta y
+    nunca incluye el valor de un secreto. Existe para que el fallo ocurra en el
+    borde del sistema -antes de gastar una llamada y antes de que un error opaco
+    suba desde dentro del cliente del modelo- y para que sea accionable.
+
+    **No se lanza al arrancar.** Se lanza cuando se va a usar el modelo sin la
+    configuracion necesaria, que es el momento en que el problema tiene sentido.
+    Arrancar M1 sin clave es valido y deliberado.
+    """
+
+    def __init__(self, campo: str, detalle: str) -> None:
+        self.campo = campo
+        super().__init__(f"configuracion insuficiente: {campo} ({detalle})")
+
+
+def require_model_credentials(settings: Settings) -> None:
+    """Comprueba que hay credenciales antes de llamar al modelo.
+
+    Lanza `ConfiguracionInsuficiente` -con el **nombre** del campo, nunca su
+    valor- si el proveedor configurado necesita una clave y no la tiene. Si el
+    proveedor no necesita clave (local), no comprueba nada.
+
+    Debe llamarse **justo antes** de la primera llamada real al proveedor, no al
+    importar ni al arrancar. Asi M1 sigue funcionando sin proveedor y el error
+    llega pronto y con contexto cuando de verdad se necesita.
+    """
+    if settings.model_provider.lower() not in PROVEEDORES_CON_CLAVE:
+        return
+    if not settings.model_api_key.get_secret_value().strip():
+        raise ConfiguracionInsuficiente(
+            campo="model_api_key",
+            detalle=f"el proveedor '{settings.model_provider}' exige una clave",
+        )
+    if not settings.model_name.strip():
+        raise ConfiguracionInsuficiente(
+            campo="model_name",
+            detalle=f"el proveedor '{settings.model_provider}' exige un modelo",
+        )

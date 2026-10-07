@@ -528,13 +528,32 @@
           "type": "object"
         },
         "Budget": {
-          "description": "Presupuesto de la ejecucion. Agotarlo corta y escala, no continua (RNF-C1).",
+          "description": "Presupuesto de la ejecucion. Agotarlo corta y escala, no continua (RNF-C1).\n\n**Por que estan los contadores aqui y no en el futuro `ModelGateway`.** El\npresupuesto es parte del estado persistido, no del cliente del modelo. Si el\nlimite viviera solo en quien llama, una reanudacion tras un corte arrancaria\ncon los contadores a cero y volveria a gastar lo ya gastado. Al vivir en el\nestado, el checkpoint los conserva y el limite sobrevive a un reinicio.\n\n**Compatibilidad.** Los campos nuevos entran con valor por defecto, de modo\nque un estado serializado antes de existir se deserializa sin error y sin\nnecesidad de tocar `ESQUEMA_VERSION`. Solo un cambio que *elimine* o *renombre*\nun campo obligaria a subir la version.",
           "properties": {
             "elapsed_seconds": {
               "default": 0.0,
               "minimum": 0,
               "title": "Elapsed Seconds",
               "type": "number"
+            },
+            "max_cost": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Max Cost"
+            },
+            "max_model_calls": {
+              "default": 120,
+              "minimum": 1,
+              "title": "Max Model Calls",
+              "type": "integer"
             },
             "max_review_cycles": {
               "default": 2,
@@ -565,6 +584,18 @@
               "default": 0,
               "minimum": 0,
               "title": "Review Cycles Used",
+              "type": "integer"
+            },
+            "used_cost": {
+              "default": 0.0,
+              "minimum": 0,
+              "title": "Used Cost",
+              "type": "number"
+            },
+            "used_model_calls": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Used Model Calls",
               "type": "integer"
             },
             "used_tokens": {

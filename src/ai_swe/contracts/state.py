@@ -123,14 +123,41 @@ class RunOptions(BaseModel):
 
 
 class Budget(BaseModel):
-    """Presupuesto de la ejecucion. Agotarlo corta y escala, no continua (RNF-C1)."""
+    """Presupuesto de la ejecucion. Agotarlo corta y escala, no continua (RNF-C1).
 
+    **Por que estan los contadores aqui y no en el futuro `ModelGateway`.** El
+    presupuesto es parte del estado persistido, no del cliente del modelo. Si el
+    limite viviera solo en quien llama, una reanudacion tras un corte arrancaria
+    con los contadores a cero y volveria a gastar lo ya gastado. Al vivir en el
+    estado, el checkpoint los conserva y el limite sobrevive a un reinicio.
+
+    **Compatibilidad.** Los campos nuevos entran con valor por defecto, de modo
+    que un estado serializado antes de existir se deserializa sin error y sin
+    necesidad de tocar `ESQUEMA_VERSION`. Solo un cambio que *elimine* o *renombre*
+    un campo obligaria a subir la version.
+    """
+
+    # --- Tokens ---------------------------------------------------------------
     max_tokens: int = Field(default=200_000, ge=1)
     used_tokens: int = Field(default=0, ge=0)
+    # --- Llamadas a herramienta ----------------------------------------------
     max_tool_calls: int = Field(default=60, ge=1)
     used_tool_calls: int = Field(default=0, ge=0)
+    # --- Llamadas al modelo (M2) ---------------------------------------------
+    # Se separan de las llamadas a herramienta porque el coste y el riesgo son
+    # distintos: una herramienta toca el mundo, una llamada al modelo gasta dinero.
+    max_model_calls: int = Field(default=120, ge=1)
+    used_model_calls: int = Field(default=0, ge=0)
+    # --- Tiempo ---------------------------------------------------------------
     max_seconds: float = Field(default=900.0, gt=0)
     elapsed_seconds: float = Field(default=0.0, ge=0)
+    # --- Coste ----------------------------------------------------------------
+    # En unidades de la moneda del proveedor. Se deja abierto a `None` como "sin
+    # limite declarado", que es distinto de cero: cero significa "no se permite
+    # gastar nada".
+    max_cost: float | None = Field(default=None, ge=0)
+    used_cost: float = Field(default=0.0, ge=0)
+    # --- Ciclos de revision ---------------------------------------------------
     max_review_cycles: int = Field(default=2, ge=0, le=5)
     review_cycles_used: int = Field(default=0, ge=0)
 
@@ -143,13 +170,41 @@ class Budget(BaseModel):
         return max(0, self.max_tool_calls - self.used_tool_calls)
 
     @property
+    def remaining_model_calls(self) -> int:
+        return max(0, self.max_model_calls - self.used_model_calls)
+
+    @property
+    def remaining_cost(self) -> float | None:
+        """Coste restante, o `None` si no se declaro limite de coste."""
+        if self.max_cost is None:
+            return None
+        return max(0.0, self.max_cost - self.used_cost)
+
+    @property
     def exhausted(self) -> bool:
-        return (
-            self.remaining_tokens == 0
-            or self.remaining_tool_calls == 0
-            or self.elapsed_seconds >= self.max_seconds
-            or self.review_cycles_used > self.max_review_cycles
-        )
+        return self.exhausted_reasons() != ()
+
+    def exhausted_reasons(self) -> tuple[str, ...]:
+        """Motivos por los que el presupuesto esta agotado. Vacio = queda margen.
+
+        Se devuelve la lista de motivos, no un booleano, porque cuando el sistema
+        se detiene hay que poder decir **por que** se detuvo. Un `True` obliga a
+        adivinar cual de los seis limites salto.
+        """
+        motivos: list[str] = []
+        if self.remaining_tokens == 0:
+            motivos.append("tokens")
+        if self.remaining_tool_calls == 0:
+            motivos.append("tool_calls")
+        if self.remaining_model_calls == 0:
+            motivos.append("model_calls")
+        if self.elapsed_seconds >= self.max_seconds:
+            motivos.append("seconds")
+        if self.remaining_cost == 0:
+            motivos.append("cost")
+        if self.review_cycles_used > self.max_review_cycles:
+            motivos.append("review_cycles")
+        return tuple(motivos)
 
 
 class RunError(BaseModel):

@@ -12,14 +12,17 @@ la ejecución de forma trazable y entrega un resultado revisado con evidencia.
 
 ## Estado del proyecto
 
-**Fases M0 (diseño) y M1 (esqueleto ejecutable) completadas.**
+**Fases M0 (diseño), M1 (esqueleto ejecutable) y F1 (reproducibilidad + hardening
+pre-M2) completadas.**
 
 > **Documentación.** El **estado real verificado** está en
 > [`docs/auditoria-2026-10-06/`](docs/auditoria-2026-10-06/) (derivado de la
 > auditoría técnica del 2026-10-06) y el **diseño** en `docs/01..06`.
 > Índice y jerarquía de evidencia: [`docs/README.md`](docs/README.md).
-> Reporte de la sesión de integración documental:
+> Reporte de la integración documental:
 > [`docs/BASELINE-M1-POST-DOCUMENTACION.md`](docs/BASELINE-M1-POST-DOCUMENTACION.md).
+> Acta de cierre de `F1` (reproducibilidad y seguridad pre-M2):
+> [`docs/BASELINE-PRE-M2.md`](docs/BASELINE-PRE-M2.md).
 
 | Componente | Estado |
 |---|---|
@@ -37,7 +40,9 @@ la ejecución de forma trazable y entrega un resultado revisado con evidencia.
 | **M1: grafo, almacén de estado, API y frontend** | ✅ `src/ai_swe/`, `frontend/` |
 | Ejecución asíncrona con progreso en vivo por SSE | ✅ `graph/worker.py`, `api/app.py` |
 | Contrato exportado para el navegador | ✅ `frontend/contracts.json` |
-| Suite de pruebas (153 pruebas, 24/24 mutaciones cazadas) | ✅ `tests/` |
+| Redacción centralizada de secretos (`RNF-S3`) | ✅ `src/ai_swe/security/` |
+| Reproducibilidad (lockfile, versión de Python fijada) | ✅ `uv.lock`, `.python-version` |
+| Suite de pruebas (211 pruebas, 32/32 mutaciones cazadas) | ✅ `tests/` |
 | **Model Gateway + LLM conectado** | 🔴 **no existe** — fase `F2` |
 | **Requirements Analyst** | 🔴 **no existe** — fase `F3` |
 | **Supervisor con razonamiento / `RunPlan`** | 🔴 **no existe** — fase `F4` |
@@ -79,7 +84,17 @@ funcione de extremo a extremo; la voz es un adaptador de borde y llega tarde.
 
 ## Instalación
 
-Requiere Python 3.12 o superior.
+Requiere Python 3.12 o superior (versión del entorno verificado: **3.13**, fijada en
+`.python-version`).
+
+Con `uv` (recomendado, reproducible — usa el lockfile):
+
+```bash
+uv sync --frozen           # instala exactamente lo resuelto en uv.lock
+uv sync --frozen --extra dev   # + herramientas de desarrollo
+```
+
+Con `pip` (sin garantía de resolución exacta):
 
 ```bash
 python -m venv .venv
@@ -95,11 +110,12 @@ pip install -e ".[observability]"   # Langfuse
 pip install -e ".[mcp]"             # servidores MCP (FASE FUTURA, no usado todavía)
 ```
 
-> ⚠️ **Sin lockfile todavía.** Las dependencias se declaran con mínimos (`>=`), de modo
-> que dos instalaciones en fechas distintas pueden resolver versiones diferentes. Es la
-> deuda de reproducibilidad conocida y se aborda en la fase `F1`. El mecanismo
-> propuesto y su justificación están en
-> [`docs/auditoria-2026-10-06/12_GIT_REPRODUCIBILIDAD.md`](docs/auditoria-2026-10-06/12_GIT_REPRODUCIBILIDAD.md).
+> ✅ **Reproducibilidad resuelta.** Existe `uv.lock` (99 paquetes), generado con `uv lock`
+> desde `pyproject.toml`. Se verificó que un entorno reconstruido desde el lockfile, en
+> una ubicación distinta, reproduce **211/211 pruebas** con las mismas versiones. El
+> lockfile **no** se generó con `pip freeze` a propósito: el entorno de trabajo contiene
+> paquetes ajenos al proyecto y congelarlos habría declarado como dependencias cosas que
+> el proyecto nunca pidió.
 
 ## Ejecución de las pruebas
 
@@ -111,7 +127,8 @@ Verificación de que la suite **protege** el código (introduce cada defecto a
 propósito y comprueba que alguna prueba falla):
 
 ```bash
-python tools/mutation_check.py
+python tools/mutation_check.py            # 24/24 mutaciones backend+frontend
+python tools/verify_redaction_mutations.py  # 8/8 mutaciones de la redacción
 ```
 
 Regeneración y validación del diagrama:

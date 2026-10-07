@@ -38,6 +38,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
 
+from ai_swe.config import load_settings
 from ai_swe.contracts import (
     ApprovalDecision,
     EventKind,
@@ -50,12 +51,26 @@ from ai_swe.contracts import (
 )
 from ai_swe.graph.engine import NothingToResume, RunEngine, RunNotFound
 from ai_swe.graph.worker import RunWorker
+from ai_swe.security import install_redacting_filter
 from ai_swe.state import RunStore
 from ai_swe.stt.base import FakeAdapter, STTAdapter, Transcript
 
 log = logging.getLogger(__name__)
 
 TERMINALES = {RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.NEEDS_HUMAN, RunStatus.CANCELLED}
+
+
+def _configurar_nivel_de_log(nivel: str) -> None:
+    """Fija el nivel del logger raiz a partir de la configuracion validada.
+
+    `log_level` ya paso por el validador de `Settings`, asi que aqui llega en
+    mayusculas y dentro del conjunto permitido. Se envuelve igualmente en un
+    `try` porque configurar el logging nunca debe impedir que el servicio arranque.
+    """
+    try:
+        logging.getLogger().setLevel(nivel)
+    except (ValueError, TypeError):  # pragma: no cover - defensivo
+        log.warning("nivel de log invalido en configuracion: %r", nivel)
 FRONTEND_DIR = Path(__file__).resolve().parents[3] / "frontend"
 
 
@@ -110,6 +125,14 @@ def crear_app(
 
     @asynccontextmanager
     async def ciclo_de_vida(_app: FastAPI) -> AsyncIterator[None]:
+        # La redaccion de secretos se instala ANTES de cualquier otra cosa: si un
+        # arranque posterior falla y registra su error, ese error ya pasa por el
+        # filtro. Hacerlo al final dejaria una ventana sin proteccion justo en el
+        # momento en que la configuracion (con sus claves) esta en la mano.
+        ajustes = load_settings()
+        install_redacting_filter()
+        _configurar_nivel_de_log(ajustes.log_level)
+
         # Recuperacion al arrancar: una ejecucion en `planned` o `running`
         # pertenece a un proceso que ya no existe. Dejarla asi seria la terminacion
         # anomala que MET-13 prohibe, y el navegador esperaria para siempre.

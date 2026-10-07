@@ -1,9 +1,21 @@
 > **Procedencia.** Documento del conjunto `AI_SWE_documentacion_actualizada`,
 > derivado de la auditoría técnica externa del 2026-10-06.
 > Estado: **VIGENTE**. Integrado sin modificar su contenido técnico;
-> solo se añadió esta cabecera. Ver `_PROCEDENCIA.txt`.
+> solo se añadió esta cabecera y, más abajo, el estado real de cada fase.
+> Ver `_PROCEDENCIA.txt`.
 
 # 09 — Roadmap actualizado
+
+**Estado real a 2026-10-06 (tras cerrar `F1`):**
+
+| Fase | Estado |
+|---|---|
+| `F0` — Git y respaldo | ✅ hecha |
+| `F1` — Reproducibilidad | ✅ hecha (este cierre) |
+| `F2` — Model Gateway | ⬜ siguiente, **no iniciada** |
+| `F3`–`F16` | ⬜ no iniciadas |
+
+Evidencia del cierre de `F1`: [`../BASELINE-PRE-M2.md`](../BASELINE-PRE-M2.md).
 
 ## F0 — Git y respaldo
 Repositorio propio para `proyecto4-ai-swe`; commit del estado M1.

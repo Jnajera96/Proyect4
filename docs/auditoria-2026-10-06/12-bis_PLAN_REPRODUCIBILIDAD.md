@@ -1,6 +1,12 @@
 # 12-bis — Plan de reproducibilidad (documento de trabajo)
 
-> **Estado:** PROPUESTA, pendiente de ejecutar en la fase `F1`.
+> **Estado: EJECUTADO (`F1`, 2026-10-06).** Este documento describía el mecanismo
+> *antes* de ejecutarlo, que es lo que exigía la fase. Ya se ejecutó: existe
+> `uv.lock` y `.python-version`, y la reproducibilidad se comprobó con una
+> reconstrucción real. **Se conserva como registro de la decisión**, no como plan
+> pendiente. Resultado y evidencia: [`../BASELINE-PRE-M2.md`](../BASELINE-PRE-M2.md).
+
+> **Estado original:** PROPUESTA, pendiente de ejecutar en la fase `F1`.
 > **No se ha generado ningún lockfile todavía.** Este documento describe el
 > mecanismo y su justificación, que es lo que la fase `F1` exige antes de tocar
 > nada. Ver `docs/auditoria-2026-10-06/12_GIT_REPRODUCIBILIDAD.md` para el

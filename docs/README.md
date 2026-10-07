@@ -38,6 +38,11 @@ preguntas) con toda la evidencia recolectada. Es el origen del conjunto anterior
 documental: qué se cambió, estado de Git, validaciones ejecutadas y matriz de
 preparación para M2.
 
+**`BASELINE-PRE-M2.md`** — acta de cierre de la fase `F1` (reproducibilidad +
+hardening de seguridad pre-M2): lockfile, versión de Python, redacción de secretos,
+configuración y `Budget`, con el veredicto `READY_FOR_MODEL_GATEWAY`. **Es la
+evidencia más reciente del estado de la reproducibilidad y la seguridad.**
+
 ---
 
 ## Capa 2 — Diseño histórico (M0)
