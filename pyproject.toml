@@ -63,6 +63,12 @@ dev = [
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+markers = [
+    # Pruebas de integracion real: exigen credenciales y red. NO se ejecutan en la
+    # suite normal; se saltan salvo que se pidan explicitamente. Una API externa
+    # nunca debe ser dependencia del CI.
+    "real_provider: integracion real con un proveedor; requiere AI_SWE_MODEL_API_KEY y AI_SWE_RUN_REAL_PROVIDER_TESTS=1",
+]
 # No se rota ni se borra nada al terminar: cada borrado es una ocasion de que el
 # interceptor de este entorno interfiera. Los directorios se acumulan en el
 # temporal del sistema y se pueden borrar a mano cuando molesten.

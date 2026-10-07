@@ -2,7 +2,7 @@
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-06",
   "baseline_updated": "2026-10-06",
-  "phase": "F1 closed (reproducibility + pre-M2 security hardening); M2 NOT started",
+  "phase": "M2 IN PROGRESS — F2 (Model Gateway) implemented; gateway NOT yet wired to LangGraph",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -18,15 +18,29 @@
     "budget_model_counters": true,
     "lockfile": true,
     "python_version_pinned": true,
-    "tests_passing": 211,
-    "mutations_caught": "24/24 (project) + 8/8 (redaction)",
-    "repro_build_from_lock": "211/211 in a fresh env outside the workspace",
+    "model_gateway": true,
+    "provider_adapter": true,
+    "fake_adapter": true,
+    "openai_compatible_adapter": true,
+    "provider_registry": true,
+    "structured_output_pydantic": true,
+    "typed_model_errors": true,
+    "retries_with_backoff": true,
+    "fallback_support": true,
+    "timeout_per_request_and_budget": true,
+    "budget_integrated_with_gateway": true,
+    "cost_accounting_supports_none": true,
+    "tests_passing": 280,
+    "tests_skipped": 1,
+    "tests_require_network": false,
+    "tests_require_credentials": false,
+    "mutations_caught": "24/24 (project, pre-F2) + 8/8 (redaction) + F2 mutations",
+    "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
     "m1_assumptions": "5/5",
     "frontend_browser_checks": "11/11"
   },
   "not_implemented": [
-    "llm",
-    "model_gateway",
+    "llm_wired_to_langgraph",
     "requirements_analyst",
     "reasoning_supervisor",
     "real_coder",
@@ -35,14 +49,17 @@
     "knowledge_graph",
     "real_stt",
     "full_observability",
-    "authentication"
+    "authentication",
+    "agent_prompts"
   ],
-  "next_milestone": "M2",
+  "next_milestone": "F3 — Requirements Analyst",
   "ready_for_model_gateway": "YES",
-  "readiness_caveats": [
-    "Redaction must be invoked at the trace/logging points, not only exist",
-    "require_model_credentials must be called just before the first real provider call",
-    "max_cost has no price source yet; decide in M2 whether it takes effect",
+  "model_gateway_ready": "YES",
+  "model_gateway_caveats": [
+    "No LangGraph node calls the gateway yet; that is deliberate for F2",
+    "No agent prompts exist yet; only minimal probe messages",
+    "The pricing table is empty by default, so cost is None until it is filled",
+    "The real-provider test is opt-in and was NOT executed without credentials",
     "No authentication yet (open finding from the external audit)"
   ],
   "rules": [
@@ -54,6 +71,9 @@
     "No MCP/Graphify before M2 E2E",
     "No exposure beyond localhost before auth",
     "New Budget fields enter with defaults; only removal/rename bumps schema version",
-    "A passing test proves nothing until a mutation makes it fail"
+    "A passing test proves nothing until a mutation makes it fail",
+    "No agent imports a provider SDK; all go through ModelGateway",
+    "Only models/providers/ may know about a concrete provider",
+    "The standard suite must pass without internet, credentials or an external provider"
   ]
 }

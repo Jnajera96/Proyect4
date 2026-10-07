@@ -6,16 +6,23 @@
 
 # 09 — Roadmap actualizado
 
-**Estado real a 2026-10-06 (tras cerrar `F1`):**
+**Estado real a 2026-10-06 (tras cerrar `F1` y `F2`):**
 
 | Fase | Estado |
 |---|---|
 | `F0` — Git y respaldo | ✅ hecha |
-| `F1` — Reproducibilidad | ✅ hecha (este cierre) |
-| `F2` — Model Gateway | ⬜ siguiente, **no iniciada** |
-| `F3`–`F16` | ⬜ no iniciadas |
+| `F1` — Reproducibilidad | ✅ hecha |
+| `F2` — Model Gateway | ✅ **hecha** (frontera única; **no conectada todavía** a LangGraph) |
+| `F3` — Requirements Analyst | ⬜ siguiente, **no iniciada** |
+| `F4`–`F16` | ⬜ no iniciadas |
 
 Evidencia del cierre de `F1`: [`../BASELINE-PRE-M2.md`](../BASELINE-PRE-M2.md).
+Evidencia del cierre de `F2`: [`../BASELINE-MODEL-GATEWAY.md`](../BASELINE-MODEL-GATEWAY.md).
+Referencia de uso del gateway: [`../MODEL-GATEWAY.md`](../MODEL-GATEWAY.md).
+
+**Nota sobre `M2`:** el hito `M2` (agentes reales) está **en progreso**: `F2` es su
+primera fase y está terminada, pero ningún nodo de LangGraph llama todavía al
+gateway. Eso es deliberado: permite comprobar que `F2` no degradó `M1`.
 
 ## F0 — Git y respaldo
 Repositorio propio para `proyecto4-ai-swe`; commit del estado M1.

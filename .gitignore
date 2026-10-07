@@ -3,17 +3,22 @@
 .env.*
 !.env.example
 
-# Estado y espacios de trabajo de las ejecuciones
-var/
+# Estado y espacios de trabajo de las ejecuciones.
+# Se ancla con `/` inicial a la RAIZ del repositorio. Sin anclar, `var/` coincide
+# con cualquier directorio llamado `var` a cualquier profundidad, y lo mismo con
+# los demas: un patron sin barra inicial no es "en la raiz", es "en cualquier sitio".
+/var/
 *.sqlite3
 *.sqlite3-journal
 *.sqlite3-wal
 *.sqlite3-shm
-data/workspaces/
+/data/workspaces/
 
-# Temporales de pruebas que quedaron sin limpiar en la raiz
-tmp*/
-_tmp/
+# Temporales de pruebas que quedaron sin limpiar en la raiz.
+# Anclado por el mismo motivo: sin anclar, `tmp*/` excluiria cualquier paquete cuyo
+# nombre empiece por `tmp` en cualquier subdirectorio.
+/tmp*/
+/_tmp/
 
 # Python
 __pycache__/
@@ -49,6 +54,12 @@ secrets/
 *.swp
 .DS_Store
 
-# Modelos descargados de Speech-to-Text
-models/
+# Modelos descargados de Speech-to-Text.
+# **ANCLADO A LA RAIZ, y no es un detalle.** Sin la barra inicial, `models/`
+# coincide con CUALQUIER directorio llamado `models` a cualquier profundidad, y
+# `src/ai_swe/models/` -el paquete del Model Gateway- habria quedado excluido del
+# control de versiones **en silencio**: las pruebas pasan, `git status` no avisa, y
+# el codigo no se commitea nunca. Se detecto al revisar por que el paquete no
+# aparecia como nuevo.
+/models/
 *.bin

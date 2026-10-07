@@ -43,6 +43,17 @@ hardening de seguridad pre-M2): lockfile, versión de Python, redacción de secr
 configuración y `Budget`, con el veredicto `READY_FOR_MODEL_GATEWAY`. **Es la
 evidencia más reciente del estado de la reproducibilidad y la seguridad.**
 
+**`MODEL-GATEWAY.md`** — referencia de uso del `ModelGateway` (`F2`): contratos,
+adapters, errores, retry, fallback, timeout, presupuesto, seguridad, structured
+output y cómo añadir un proveedor.
+
+**`MODEL-GATEWAY-DESIGN.md`** — diseño previo a la implementación de `F2`, con las
+decisiones y su justificación (por qué síncrono, por qué HTTP y no SDK, por qué el
+presupuesto no vive en el gateway).
+
+**`BASELINE-MODEL-GATEWAY.md`** — acta de cierre de `F2`, con el veredicto
+`MODEL_GATEWAY_READY`.
+
 ---
 
 ## Capa 2 — Diseño histórico (M0)

@@ -267,6 +267,86 @@ MUTACIONES: list[Mutation] = [
         "  /* anadirEvento omitido */",
         comando=(sys.executable, "tools/verify_frontend.py"),
     ),
+    # ---------------------------------------------------- F2: Model Gateway
+    # Cada una comprueba una propiedad que el sistema afirma tener. No se anade
+    # ninguna que no haga caer a una prueba concreta.
+    Mutation(
+        "el gateway deja de comprobar el presupuesto",
+        SRC / "models" / "gateway.py",
+        "        if budget is not None:\n            assert_budget_available(budget, provider=solicitado)",
+        "        if False:\n            assert_budget_available(budget, provider=solicitado)",
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "el timeout deja de acotarse al presupuesto",
+        SRC / "models" / "gateway.py",
+        "        if budget is not None:\n            acotado = effective_timeout_s(budget, base)",
+        "        if False:\n            acotado = effective_timeout_s(budget, base)",
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "la salida estructurada se acepta sin validar",
+        SRC / "models" / "gateway.py",
+        "        try:\n            validado = response_model.model_validate(datos)\n        except ValidationError as exc:\n            raise StructuredOutputError(\n                f\"la respuesta no cumple el contrato {response_model.__name__}\",\n                provider=provider,\n                detail=str(exc)[:600],\n            ) from exc\n        return validado.model_dump()",
+        "        return datos",
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "la llamada al modelo deja de contarse",
+        SRC / "models" / "budget.py",
+        '    datos["used_model_calls"] = budget.used_model_calls + 1',
+        '    datos["used_model_calls"] = budget.used_model_calls',
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "los tokens dejan de sumarse al presupuesto",
+        SRC / "models" / "budget.py",
+        "    if usage is not None and usage.known_total is not None:\n        datos[\"used_tokens\"] = budget.used_tokens + usage.known_total",
+        "    if False:\n        datos[\"used_tokens\"] = budget.used_tokens + usage.known_total",
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "los errores dejan de redactar el mensaje",
+        SRC / "models" / "errors.py",
+        "        self.message = redact(message)",
+        "        self.message = message",
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "el adapter real deja de registrar su credencial",
+        SRC / "models" / "providers" / "openai_compatible.py",
+        "        register_secret(api_key)",
+        "        pass",
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "una credencial invalida pasa a reintentarse",
+        SRC / "models" / "errors.py",
+        '    error_class = "MODEL_AUTHENTICATION_ERROR"',
+        '    error_class = "MODEL_AUTHENTICATION_ERROR"\n    recoverable = True',
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "el gateway ignora los proveedores de respaldo",
+        SRC / "models" / "gateway.py",
+        "        for indice, adapter in enumerate(self._adapters):",
+        "        for indice, adapter in enumerate(self._adapters[:1]):",
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "el registro resuelve proveedores por import dinamico",
+        SRC / "models" / "registry.py",
+        '    fabrica = _REGISTRO.get(clave)\n    if fabrica is None:',
+        '    import importlib\n\n    try:\n        return importlib.import_module(clave).adapter\n    except Exception:  # noqa: BLE001\n        fabrica = None\n    if fabrica is None:',
+        "test_model_gateway.py",
+    ),
+    Mutation(
+        "el .gitignore vuelve a excluir el paquete del gateway",
+        RAIZ / ".gitignore",
+        "\n/models/\n*.bin",
+        "\nmodels/\n*.bin",
+        "test_model_gateway.py",
+    ),
 ]
 
 

@@ -12,8 +12,8 @@ la ejecución de forma trazable y entrega un resultado revisado con evidencia.
 
 ## Estado del proyecto
 
-**Fases M0 (diseño), M1 (esqueleto ejecutable) y F1 (reproducibilidad + hardening
-pre-M2) completadas.**
+**Fases M0 (diseño), M1 (esqueleto ejecutable), F1 (reproducibilidad + hardening
+pre-M2) y F2 (Model Gateway) completadas.**
 
 > **Documentación.** El **estado real verificado** está en
 > [`docs/auditoria-2026-10-06/`](docs/auditoria-2026-10-06/) (derivado de la
@@ -23,6 +23,8 @@ pre-M2) completadas.**
 > [`docs/BASELINE-M1-POST-DOCUMENTACION.md`](docs/BASELINE-M1-POST-DOCUMENTACION.md).
 > Acta de cierre de `F1` (reproducibilidad y seguridad pre-M2):
 > [`docs/BASELINE-PRE-M2.md`](docs/BASELINE-PRE-M2.md).
+> Model Gateway (`F2`): [`docs/MODEL-GATEWAY.md`](docs/MODEL-GATEWAY.md) y acta en
+> [`docs/BASELINE-MODEL-GATEWAY.md`](docs/BASELINE-MODEL-GATEWAY.md).
 
 | Componente | Estado |
 |---|---|
@@ -42,8 +44,11 @@ pre-M2) completadas.**
 | Contrato exportado para el navegador | ✅ `frontend/contracts.json` |
 | Redacción centralizada de secretos (`RNF-S3`) | ✅ `src/ai_swe/security/` |
 | Reproducibilidad (lockfile, versión de Python fijada) | ✅ `uv.lock`, `.python-version` |
-| Suite de pruebas (211 pruebas, 32/32 mutaciones cazadas) | ✅ `tests/` |
-| **Model Gateway + LLM conectado** | 🔴 **no existe** — fase `F2` |
+| **Model Gateway (frontera única con el modelo)** | ✅ `src/ai_swe/models/` — `F2` |
+| **ProviderAdapter + FakeAdapter + adapter OpenAI-compatible** | ✅ `models/providers/` |
+| **Structured output validado con Pydantic** | ✅ `gateway.generate_structured` |
+| Suite de pruebas (280 pruebas, mutaciones en `tools/mutation_check.py`) | ✅ `tests/` |
+| **Model Gateway conectado a LangGraph** | 🔴 **no conectado** — fase `F3`+ |
 | **Requirements Analyst** | 🔴 **no existe** — fase `F3` |
 | **Supervisor con razonamiento / `RunPlan`** | 🔴 **no existe** — fase `F4` |
 | **Coder que genere parches** | 🔴 **no existe** — produce cambio vacío |
