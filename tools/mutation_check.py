@@ -1,0 +1,456 @@
+"""Comprobacion por mutacion: la suite de pruebas protege de verdad?
+
+Una suite en verde no prueba nada por si sola. Puede estar comprobando cosas que
+no se rompen nunca, o afirmando exactamente lo que el codigo ya hace.
+
+Este guion introduce cada defecto **a proposito**, ejecuta las pruebas, restaura
+el fichero e informa. Si una mutacion no es cazada, hay un punto ciego: o el
+defecto es inocuo, o la suite no lo vigila.
+
+Regla de oro: si la linea base ya falla, el resultado no significa nada. El
+guion aborta en ese caso en lugar de informar de mutaciones cazadas sobre un
+arbol roto.
+
+Uso:
+    python tools/mutation_check.py
+"""
+
+from __future__ import annotations
+
+import json
+import json
+import subprocess
+import time
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from xml.etree import ElementTree
+
+RAIZ = Path(__file__).resolve().parents[1]
+SRC = RAIZ / "src" / "ai_swe"
+TESTS = RAIZ / "tests"
+
+# Diario de recuperacion. **Un solo fichero, y nunca se borra: se vacia.**
+#
+# El primer diseno escribia un `.mutation_backup` por mutacion y lo borraba al
+# restaurar. Eso disparaba el limite de borrados del entorno (bloquea tras 50 por
+# turno), que mataba el proceso a mitad: el verificador se colgaba sin producir ni
+# una linea y el fallo parecia de la aplicacion. Un unico fichero que solo se
+# escribe elimina esas veinticuatro operaciones de borrado.
+DIARIO = RAIZ / "_mutation_journal.json"
+
+# Limite por invocacion de pytest. Una mutacion puede dejar una prueba esperando
+# un tiempo de espera largo (los flujos SSE esperan a `run.done`). Sin limite, el
+# verificador se cuelga y no hay forma de saber en cual.
+LIMITE_PYTEST = 90.0
+
+# Limite para las herramientas de verificacion externas (el navegador).
+LIMITE_COMANDO = 180.0
+
+
+def _leer_diario() -> dict[str, str]:
+    if not DIARIO.exists():
+        return {}
+    try:
+        return json.loads(DIARIO.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def _escribir_diario(datos: dict[str, str]) -> None:
+    DIARIO.write_text(json.dumps(datos, ensure_ascii=False), encoding="utf-8")
+
+
+def _recuperar_pendientes() -> list[str]:
+    """Restaura ficheros que quedaron mutados por una ejecucion interrumpida.
+
+    Un `finally` **no protege contra que maten el proceso**. Si eso ocurre, el
+    arbol queda con una mutacion aplicada y todas las verificaciones posteriores
+    miden el codigo equivocado sin que nada lo indique.
+
+    Paso de verdad: se interrumpio el verificador y el frontend quedo sin pintar
+    eventos. La comprobacion del navegador empezo a fallar por un defecto que **no
+    existia en el codigo real**, y el fallo apuntaba a la aplicacion en lugar de al
+    instrumento.
+    """
+    diario = _leer_diario()
+    restaurados: list[str] = []
+    for ruta, contenido in diario.items():
+        Path(ruta).write_text(contenido, encoding="utf-8")
+        restaurados.append(str(Path(ruta).relative_to(RAIZ)))
+    if restaurados:
+        _escribir_diario({})
+    return restaurados
+
+
+@dataclass(frozen=True)
+class Mutation:
+    nombre: str
+    fichero: Path
+    original: str
+    mutado: str
+    prueba_esperada: str = ""
+    # Si se indica, se ejecuta este comando en lugar de pytest. Lo usan las
+    # mutaciones del frontend, que se verifican en un navegador real.
+    comando: tuple[str, ...] = ()
+
+
+MUTACIONES: list[Mutation] = [
+    Mutation(
+        "el Researcher puede escribir",
+        SRC / "tools" / "registry.py",
+        '{"list_files", "read_file", "search_text", "git_status", "git_log", "git_diff"}\n    ),\n    AgentRole.CODER',
+        '{"list_files", "read_file", "search_text", "git_status", "git_log", "git_diff", "write_file"}\n    ),\n    AgentRole.CODER',
+        "test_policy.py",
+    ),
+    Mutation(
+        "write_file pierde el confinamiento al worktree",
+        SRC / "tools" / "registry.py",
+        'risk=RiskLevel.HIGH,\n        writes=True,\n        inside_worktree=True,\n    ),\n    "apply_patch"',
+        'risk=RiskLevel.HIGH,\n        writes=True,\n    ),\n    "apply_patch"',
+        "test_policy.py",
+    ),
+    Mutation(
+        "la politica deja de denegar por defecto",
+        SRC / "tools" / "policy.py",
+        "    if spec is None:\n        return _deny(",
+        "    if spec is None:\n        return _allow(",
+        "test_policy.py",
+    ),
+    Mutation(
+        "la politica permite rutas que escapan",
+        SRC / "tools" / "policy.py",
+        '        if normalized is None:\n            return _deny(\n                f"la ruta \'{raw_path}\' es absoluta o escapa del area autorizada",\n                "POLICY-PATH-ESCAPES",\n            )',
+        "        if normalized is None:\n            normalized = raw_path",
+        "test_policy.py",
+    ),
+    Mutation(
+        "la politica ignora el presupuesto agotado",
+        SRC / "tools" / "policy.py",
+        '    if ctx.budget_exhausted:\n        return _approval(\n            "el presupuesto de la ejecucion esta agotado",\n            "POLICY-BUDGET-EXHAUSTED",\n        )\n',
+        "",
+        "test_policy.py",
+    ),
+    Mutation(
+        "la instruccion de voz no exige confirmacion",
+        SRC / "contracts" / "state.py",
+        "            if not self.confirmed_by_user:\n                raise ValueError(",
+        "            if False:\n                raise ValueError(",
+        "test_contracts.py",
+    ),
+    Mutation(
+        "el plan acepta ciclos de dependencias",
+        SRC / "contracts" / "tasks.py",
+        "        for node in graph:\n            visit(node)\n        return self",
+        "        return self",
+        "test_contracts.py",
+    ),
+    Mutation(
+        "el verificador de serializabilidad se queda ciego",
+        SRC / "contracts" / "validate.py",
+        '    return [f"{path}: tipo no serializable {annotation!r}"]',
+        "    return []",
+        "test_contracts.py",
+    ),
+    Mutation(
+        "la leyenda del diagrama deja de validarse",
+        RAIZ / "tools" / "build_diagram.py",
+        "    for text, lx, ly in LEGEND:\n        lr = free_label_rect(text, lx, ly)",
+        "    for text, lx, ly in []:\n        lr = free_label_rect(text, lx, ly)",
+        "test_diagram_layout.py",
+    ),
+    Mutation(
+        "el diagrama deja de detectar etiquetas sobre aristas",
+        RAIZ / "tools" / "build_diagram.py",
+        "            if seg_hits_rect(p, q, lr_i):",
+        "            if False:",
+        "test_diagram_layout.py",
+    ),
+    # ---------------------------------------------------------------- fase M1
+    Mutation(
+        "el checkpoint deja de conocer los tipos de contrato",
+        SRC / "state" / "store.py",
+        "    return tuple(sorted(pares))",
+        "    return ()",
+        "test_store.py",
+    ),
+    Mutation(
+        "la red de seguridad de MET-13 se desactiva",
+        SRC / "graph" / "engine.py",
+        "        if estado.status.is_terminal or estado.status is RunStatus.AWAITING_APPROVAL:\n            return estado",
+        "        if True:\n            return estado",
+        "test_workflow.py",
+    ),
+    Mutation(
+        "reanudar no comprueba si la ejecucion existe",
+        SRC / "graph" / "engine.py",
+        "            if self._store.summary(run_id) is None:\n                raise RunNotFound(run_id)",
+        "            if False:\n                raise RunNotFound(run_id)",
+        "test_workflow.py",
+    ),
+    Mutation(
+        "la puerta de aprobacion aprueba siempre",
+        SRC / "graph" / "nodes.py",
+        "    if eleccion is not ApprovalDecision.APPROVED:",
+        "    if False:",
+        "test_workflow.py",
+    ),
+    Mutation(
+        "el confinamiento de rutas del Researcher se elimina",
+        SRC / "graph" / "nodes.py",
+        "    try:\n        return candidata.resolve().is_relative_to(raiz.resolve())\n    except (OSError, ValueError):\n        return False",
+        "    return True",
+        "test_workflow.py",
+    ),
+    Mutation(
+        "el ciclo de revision deja de estar acotado",
+        SRC / "graph" / "nodes.py",
+        '        return "coder" if state.budget.review_cycles_used < state.budget.max_review_cycles else "escalate"',
+        '        return "coder"',
+        "test_workflow.py",
+    ),
+    Mutation(
+        "los errores de validacion vuelven a romper la serializacion",
+        SRC / "api" / "app.py",
+        "            raise HTTPException(status_code=422, detail=_detalle_validacion(exc)) from exc",
+        "            raise HTTPException(status_code=422, detail=exc.errors()) from exc",
+        "test_api.py",
+    ),
+    Mutation(
+        "la creacion vuelve a bloquear hasta que la ejecucion termina",
+        SRC / "api" / "app.py",
+        "        motor.create(estado)\n        trabajador.submit(estado.run_id)",
+        "        motor.start(estado)",
+        "test_api.py",
+    ),
+    Mutation(
+        "el estado no se puede consultar antes del primer nodo",
+        SRC / "graph" / "engine.py",
+        "        try:\n            return self._store.initial_state(run_id)\n        except KeyError as exc:\n            raise RunNotFound(run_id) from exc",
+        "        raise RunNotFound(run_id)",
+        "test_api.py",
+    ),
+    Mutation(
+        "el checkpoint y el indice vuelven a divergir tras un aborto",
+        SRC / "graph" / "engine.py",
+        "        self._app.update_state(config, nuevo.model_dump())\n\n        self._store.sync(nuevo)",
+        "        self._store.sync(nuevo)",
+        "test_workflow.py",
+    ),
+    # ------------------------------------------------------------- frontend
+    # Se verifican en un motor de render real, no con un shim de DOM.
+    Mutation(
+        "el frontend pierde la suscripcion a los eventos",
+        RAIZ / "frontend" / "index.html",
+        "fuente = new EventSource(`/runs/${runId}/events`);",
+        "fuente = null;",
+        comando=(sys.executable, "tools/verify_frontend.py"),
+    ),
+    Mutation(
+        "el frontend deja de cargar los contratos",
+        RAIZ / "frontend" / "index.html",
+        'const r = await fetch("contracts.json");\n  contratos = await r.json();',
+        "contratos = { schemas: { EventKind: { enum: [] } } };",
+        comando=(sys.executable, "tools/verify_frontend.py"),
+    ),
+    Mutation(
+        "el frontend deja de mostrar el run_id",
+        RAIZ / "frontend" / "index.html",
+        '$("run-id").textContent = cuerpo.run_id;',
+        '$("run-id").textContent = "";',
+        comando=(sys.executable, "tools/verify_frontend.py"),
+    ),
+    Mutation(
+        "el frontend deja de pintar los eventos",
+        RAIZ / "frontend" / "index.html",
+        "  anadirEvento(ev.kind, detalle, ev.seq);",
+        "  /* anadirEvento omitido */",
+        comando=(sys.executable, "tools/verify_frontend.py"),
+    ),
+]
+
+
+def _limpiar(bruto: str) -> str:
+    return "\n".join(linea for linea in bruto.splitlines() if "safe-delete" not in linea)
+
+
+def _veredicto_del_informe(ruta: Path, desde_ns: int) -> tuple[bool, str] | None:
+    """Lee el veredicto del informe XML que pytest acaba de escribir.
+
+    **Por que no se usa el codigo de salida.** En este entorno, el interceptor de
+    borrado de ficheros hace que pytest salga con codigo 1 y **sin resumen** aunque
+    no haya fallado ninguna prueba. El codigo de salida y la salida estandar estan
+    ambos corrompidos por algo ajeno a las pruebas. El informe XML lo escribe pytest
+    a un fichero y no depende de ninguno de los dos.
+
+    **Por que se compara la fecha en lugar de borrar el informe antes.** Borrar
+    consume cuota del interceptor de este entorno, que bloquea tras 50 borrados por
+    turno y mata el proceso. Con `desde_ns` se distingue un informe nuevo de uno
+    viejo sin borrar nada.
+
+    Leccion general: cuando la senal que usas para verificar esta corrompida por el
+    entorno, no la rodees con reintentos; **cambia de senal**.
+    """
+    if not ruta.exists():
+        return None
+    try:
+        if ruta.stat().st_mtime_ns < desde_ns:
+            return None  # el informe es de una ejecucion anterior
+        arbol = ElementTree.parse(ruta)
+    except (OSError, ElementTree.ParseError):
+        return None
+
+    pruebas = fallos = errores = 0
+    for suite in arbol.iter("testsuite"):
+        pruebas += int(suite.get("tests", 0))
+        fallos += int(suite.get("failures", 0))
+        errores += int(suite.get("errors", 0))
+
+    if pruebas == 0:
+        return None  # un informe vacio no distingue "nada malo" de "nada"
+    return (fallos == 0 and errores == 0), f"{pruebas} pruebas, {fallos} fallos, {errores} errores"
+
+
+def _run_pytest(target: str | None = None, intentos: int = 2) -> tuple[bool, str]:
+    """Ejecuta pytest y devuelve (verde, salida).
+
+    El veredicto sale del **informe XML**, no del codigo de salida. Se reintenta
+    solo cuando no hay informe, que es cuando el proceso no llego a terminar.
+    """
+    informe = RAIZ / "_mutation_report.xml"
+    cmd = [
+        sys.executable, "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider",
+        f"--junitxml={informe}",
+    ]
+    if target:
+        cmd.append(target)
+
+    ultima = ""
+    for intento in range(1, intentos + 1):
+        desde_ns = time.time_ns()
+        try:
+            result = subprocess.run(
+                cmd, cwd=RAIZ, capture_output=True, text=True, timeout=LIMITE_PYTEST
+            )
+            salida = _limpiar(result.stdout + result.stderr) + f"\n[returncode={result.returncode}]"
+        except subprocess.TimeoutExpired:
+            # Una mutacion puede dejar una prueba esperando un tiempo de espera
+            # largo (los flujos SSE esperan a `run.done`). Sin limite, el
+            # verificador se queda colgado y no hay forma de saber en cual.
+            return False, f"[la ejecucion supero {LIMITE_PYTEST}s: se considera cazada]"
+
+        veredicto = _veredicto_del_informe(informe, desde_ns)
+        if veredicto is not None:
+            verde, resumen = veredicto
+            return verde, salida + f"\n[informe: {resumen}]"
+
+        ultima = salida + f"\n[sin informe; intento {intento}/{intentos}]"
+
+    return False, ultima
+
+
+def _run_comando(comando: tuple[str, ...], marcador: str = "RESULTADO:") -> tuple[bool | None, str]:
+    """Ejecuta una herramienta de verificacion y devuelve (veredicto, salida).
+
+    Devuelve **`None`** cuando la herramienta no llego a emitir un veredicto. Es la
+    distincion mas importante de todo el fichero: si la herramienta **se cae**, su
+    codigo de salida no es cero, y confundir eso con «la mutacion se ha cazado»
+    produce un falso positivo.
+
+    Paso de verdad: la verificacion del navegador moria a los 1,3 s porque el
+    entorno le bloqueaba un borrado, y las tres ultimas mutaciones del frontend se
+    reportaron como cazadas sin que la comprobacion llegara a ejecutarse. **Un
+    verificador que se cae no ha comprobado nada**, y hay que decirlo.
+    """
+    try:
+        result = subprocess.run(
+            list(comando), cwd=RAIZ, capture_output=True, text=True, timeout=LIMITE_COMANDO
+        )
+    except subprocess.TimeoutExpired:
+        return None, f"[la herramienta supero {LIMITE_COMANDO}s sin emitir veredicto]"
+
+    bruto = result.stdout + result.stderr
+    salida = _limpiar(bruto) + f"\n[returncode={result.returncode}]"
+    if marcador not in bruto:
+        return None, salida + f"\n[sin veredicto: no se encontro «{marcador}»]"
+    return result.returncode == 0, salida
+
+
+def _verde(m: Mutation) -> bool | None:
+    if m.comando:
+        return _run_comando(m.comando)[0]
+    return _run_pytest(f"tests/{m.prueba_esperada}" if m.prueba_esperada else None)[0]
+
+
+def main() -> int:
+    restaurados = _recuperar_pendientes()
+    if restaurados:
+        print("AVISO: se encontro una ejecucion anterior interrumpida y se restauro:")
+        for ruta in restaurados:
+            print(f"  - {ruta}")
+        print("Las verificaciones previas a esta restauracion no eran validas.\n")
+
+    print("== linea base ==", flush=True)
+    verde, salida = _run_pytest()
+    if not verde:
+        print("ABORTADO: la linea base ya falla. Las mutaciones no significarian nada.")
+        print("\n--- salida de la linea base ---")
+        print(salida[-3000:])
+        return 1
+    print("linea base verde.\n", flush=True)
+
+    print("== mutaciones ==")
+    cazadas = 0
+    no_concluyentes: list[str] = []
+    for m in MUTACIONES:
+        contenido = m.fichero.read_text(encoding="utf-8")
+        if contenido.count(m.original) != 1:
+            print(f"  {m.nombre:48s} -> NO APLICABLE (el patron aparece "
+                  f"{contenido.count(m.original)} veces)")
+            continue
+
+        m.fichero.write_text(contenido.replace(m.original, m.mutado), encoding="utf-8")
+        _escribir_diario({str(m.fichero): contenido})
+        inicio = time.perf_counter()
+        try:
+            resultado = _verde(m)
+        finally:
+            m.fichero.write_text(contenido, encoding="utf-8")
+            _escribir_diario({})
+        segundos = time.perf_counter() - inicio
+
+        if resultado is None:
+            # La herramienta no llego a emitir veredicto. **No cuenta como cazada**:
+            # no se puede afirmar que la prueba proteja el codigo si la prueba no
+            # llego a ejecutarse.
+            no_concluyentes.append(m.nombre)
+            print(f"  {m.nombre:48s} -> NO CONCLUYENTE: la herramienta no emitio veredicto"
+                  f"  ({segundos:.1f}s)", flush=True)
+        elif resultado:
+            print(f"  {m.nombre:48s} -> NO CAZADA <<< PUNTO CIEGO  ({segundos:.1f}s)", flush=True)
+        else:
+            cazadas += 1
+            print(f"  {m.nombre:48s} -> cazada  ({segundos:.1f}s)", flush=True)
+
+    print(f"\n{cazadas}/{len(MUTACIONES)} mutaciones cazadas")
+    if no_concluyentes:
+        print(f"{len(no_concluyentes)} NO CONCLUYENTES (no cuentan como cazadas):")
+        for nombre in no_concluyentes:
+            print(f"  - {nombre}")
+
+    print("\n== restauracion ==")
+    verde, salida = _run_pytest()
+    if not verde:
+        print("FALLO AL RESTAURAR: el arbol quedo modificado.")
+        print("\n--- salida tras restaurar ---")
+        print(salida[-3000:])
+        return 1
+    print("arbol restaurado y suite en verde.")
+
+    # Un resultado no concluyente no puede dar salida correcta: significaria que
+    # hay mutaciones sin comprobar y el verificador diria que todo esta bien.
+    return 0 if cazadas == len(MUTACIONES) and not no_concluyentes else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

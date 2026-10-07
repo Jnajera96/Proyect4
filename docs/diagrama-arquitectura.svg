@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1080" width="1400" height="1080" role="img" aria-labelledby="dtitle ddesc">
+<title id="dtitle">Arquitectura del AI Software Engineering System</title>
+<desc id="ddesc">Entrada por voz o texto; el adaptador Speech-to-Text convierte audio en texto confirmado por el usuario. La API FastAPI entrega la tarea al Supervisor en LangGraph, que coordina Researcher, Coder y Reviewer sobre un worktree aislado. Las herramientas se exponen por MCP y pasan por el Policy Engine. El estado compartido permite reanudar la ejecucion y la aprobacion humana protege las acciones con efectos. La observabilidad y el proveedor de modelo son servicios externos; el Text-to-Speech es opcional.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<rect x="0" y="0" width="1400" height="1080" fill="#FFFFFF"/>
+<text x="40" y="34" fill="#2C2C2A" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="600">AI Software Engineering System - Proyecto 4, Equipo 4</text>
+<text x="40" y="56" fill="#5F5E5A" font-family="Segoe UI, Arial, sans-serif" font-size="13">Agentic Workflows - Multi-Agent - MCP - Shared State - Human-in-the-Loop</text>
+<g><rect x="70" y="130" width="915" height="865" rx="18" fill="#FCFCFA" stroke="#8A8A82" stroke-width="1" stroke-dasharray="7 5"/>
+<text x="86" y="152" fill="#2C2C2A" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" letter-spacing="0.6">LIMITE DE CONFIANZA - APLICACION</text></g>
+<g><rect x="1060" y="130" width="320" height="865" rx="18" fill="#F6FBF9" stroke="#0F6E56" stroke-width="1" stroke-dasharray="7 5"/>
+<text x="1076" y="152" fill="#04342C" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" letter-spacing="0.6">SERVICIOS EXTERNOS</text></g>
+<path d="M560 116 L560 150" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M560 212 L560 246" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M560 308 L560 342" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M560 404 L560 438" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M550 506 L550 528 L275 528 L275 545" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M550 506 L550 545" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M550 506 L550 528 L825 528 L825 545" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M275 613 L275 660" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M550 613 L550 660" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M825 613 L825 640 L490 640 L490 660" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M150 472 L120 472 L120 830 L150 830" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)" stroke-dasharray="6 4"/>
+<path d="M275 740 L275 790" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M560 700 L600 700" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M775 740 L775 790" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M775 870 L775 890 L560 890 L560 910" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M720 940 L1080 940" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)" stroke-dasharray="6 4"/>
+<path d="M400 940 L100 940 L100 181 L400 181" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M950 472 L1080 472" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M950 579 L1080 579" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)" stroke-dasharray="6 4"/>
+<path d="M950 490 L1000 490 L1000 700 L1080 700" fill="none" stroke="#5F5E5A" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#arrow)" stroke-dasharray="6 4"/>
+<g><rect x="400" y="60" width="320" height="56" rx="10" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/>
+<text x="560.0" y="79.0" fill="#2C2C2A" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Usuario</text>
+<text x="560.0" y="99.0" fill="#5F5E5A" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">dicta o escribe la tarea</text></g>
+<g><rect x="400" y="150" width="320" height="62" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="560.0" y="172.0" fill="#26215C" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Frontend</text>
+<text x="560.0" y="192.0" fill="#534AB7" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">captura audio - confirma transcripcion</text></g>
+<g><rect x="400" y="246" width="320" height="62" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+<text x="560.0" y="268.0" fill="#04342C" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Speech-to-Text (adaptador)</text>
+<text x="560.0" y="288.0" fill="#0F6E56" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">faster-whisper local | API cloud</text></g>
+<g><rect x="400" y="342" width="320" height="62" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="560.0" y="364.0" fill="#042C53" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">API / Backend - FastAPI</text>
+<text x="560.0" y="384.0" fill="#185FA5" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">valida - crea run_id - publica progreso</text></g>
+<g><rect x="150" y="438" width="800" height="68" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="550.0" y="463.0" fill="#26215C" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Supervisor - LangGraph</text>
+<text x="550.0" y="483.0" fill="#534AB7" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">interpreta - planifica - enruta - controla presupuesto</text></g>
+<g><rect x="150" y="545" width="250" height="68" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="275.0" y="570.0" fill="#26215C" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Researcher</text>
+<text x="275.0" y="590.0" fill="#534AB7" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">lee repo - reune evidencia</text></g>
+<g><rect x="425" y="545" width="250" height="68" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="550.0" y="570.0" fill="#26215C" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Coder</text>
+<text x="550.0" y="590.0" fill="#534AB7" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">parche en worktree aislado</text></g>
+<g><rect x="700" y="545" width="250" height="68" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="825.0" y="570.0" fill="#26215C" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Reviewer</text>
+<text x="825.0" y="590.0" fill="#534AB7" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">diff - pruebas - criterios</text></g>
+<g><rect x="150" y="660" width="410" height="80" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="355.0" y="691.0" fill="#042C53" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Tools / MCP</text>
+<text x="355.0" y="711.0" fill="#185FA5" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">filesystem - git - run_tests (allowlist)</text></g>
+<g><rect x="600" y="660" width="350" height="80" rx="10" fill="#FAEEDA" stroke="#854F0B" stroke-width="1"/>
+<text x="775.0" y="691.0" fill="#412402" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Policy Engine y Guardrails</text>
+<text x="775.0" y="711.0" fill="#854F0B" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">allow | deny | require_approval</text></g>
+<g><rect x="150" y="790" width="410" height="80" rx="10" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/>
+<text x="355.0" y="821.0" fill="#2C2C2A" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Shared State</text>
+<text x="355.0" y="841.0" fill="#5F5E5A" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">checkpointer - plan - artefactos - evidencia</text></g>
+<g><rect x="600" y="790" width="350" height="80" rx="10" fill="#FAEEDA" stroke="#854F0B" stroke-width="1"/>
+<text x="775.0" y="821.0" fill="#412402" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Human-in-the-Loop</text>
+<text x="775.0" y="841.0" fill="#854F0B" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">aprobacion de acciones con efectos</text></g>
+<g><rect x="400" y="910" width="320" height="60" rx="10" fill="#EAF3DE" stroke="#3B6D11" stroke-width="1"/>
+<text x="560.0" y="931.0" fill="#173404" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Resultado validado</text>
+<text x="560.0" y="951.0" fill="#3B6D11" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">resumen - diff - pruebas</text></g>
+<g><rect x="1080" y="438" width="280" height="175" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+<text x="1220.0" y="516.5" fill="#04342C" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Foundation Model</text>
+<text x="1220.0" y="536.5" fill="#0F6E56" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">API gestionada o local (Ollama/vLLM)</text></g>
+<g><rect x="1080" y="660" width="280" height="80" rx="10" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/>
+<text x="1220.0" y="691.0" fill="#2C2C2A" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Observabilidad - Langfuse</text>
+<text x="1220.0" y="711.0" fill="#5F5E5A" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">traces - tokens - costo - latencia</text></g>
+<g><rect x="1080" y="910" width="280" height="60" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+<text x="1220.0" y="931.0" fill="#04342C" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="600" text-anchor="middle" dominant-baseline="central">Text-to-Speech (opcional)</text>
+<text x="1220.0" y="951.0" fill="#0F6E56" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="middle" dominant-baseline="central">solo salida - desactivable</text></g>
+<text x="596" y="322" fill="#2C2C2A" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="start">texto confirmado</text>
+<text x="150" y="170" fill="#2C2C2A" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="start">respuesta al usuario</text>
+<text x="1004" y="636" fill="#2C2C2A" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="start">traces</text>
+<text x="790" y="765" fill="#2C2C2A" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="start">aprobacion</text>
+<text x="556" y="524" fill="#2C2C2A" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" text-anchor="start">plan y subtareas</text>
+<text x="80" y="1014" fill="#5F5E5A" font-family="Segoe UI, Arial, sans-serif" font-size="12">Linea continua: flujo principal. Linea discontinua: flujo opcional o transversal.</text>
+<text x="80" y="1032" fill="#5F5E5A" font-family="Segoe UI, Arial, sans-serif" font-size="12">El repositorio del usuario no se modifica hasta que se aprueba la promocion desde el worktree.</text>
+<text x="80" y="1050" fill="#5F5E5A" font-family="Segoe UI, Arial, sans-serif" font-size="12">Todos los agentes comparten el proveedor de modelo. El Policy Engine decide antes de cada llamada a herramienta.</text>
+</svg>

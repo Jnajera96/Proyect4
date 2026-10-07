@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-swe-system"
+version = "0.1.0"
+description = "Proyecto 4 - AI Software Engineering System: sistema multiagente para tareas de ingenieria de software"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+
+# Dependencias justificadas en docs/02-tecnologias.md. Ninguna entra sin
+# responder las ocho preguntas de esa seccion.
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    # Necesaria para `UploadFile` y `Form`: sin ella FastAPI falla al arrancar las
+    # rutas que reciben audio. Se descubrio al ejecutar las pruebas de la API.
+    "python-multipart>=0.0.9",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.5",
+    "langgraph>=0.2",
+    "langgraph-checkpoint-sqlite>=2.0",
+    "httpx>=0.27",
+    "sse-starlette>=2.1",
+]
+
+[project.optional-dependencies]
+# MCP: servidores de archivos y Git. PERTENECE A UNA FASE FUTURA (`F13`) y NO se
+# importa todavia en `src/`. Estaba declarada como dependencia OBLIGATORIA por
+# error: una instalacion limpia instalaba un paquete que ningun modulo usaba.
+# Se mueve a extra para que el manifiesto describa lo que el codigo realmente
+# necesita. NO instalar hasta que exista el cliente MCP.
+mcp = [
+    "mcp>=1.0",
+]
+# Speech-to-Text local. Opcional por diseno: el sistema funciona sin voz.
+voice = [
+    "faster-whisper>=1.0",
+]
+# Observabilidad. Prescindible en ejecucion, no en evaluacion.
+observability = [
+    "langfuse>=2.50",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.6",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+# No se rota ni se borra nada al terminar: cada borrado es una ocasion de que el
+# interceptor de este entorno interfiera. Los directorios se acumulan en el
+# temporal del sistema y se pueden borrar a mano cuando molesten.
+#
+# NO se fija `--basetemp`: con una ruta fija, dos sesiones de pytest simultaneas
+# se destruyen los directorios entre si, porque pytest limpia el basetemp al
+# empezar. Ese peligro oculto es peor que el problema que resolvia.
+tmp_path_retention_policy = "none"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_swe"]

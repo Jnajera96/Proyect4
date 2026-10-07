@@ -1,0 +1,38 @@
+{
+  "project": "AI Software Engineering System",
+  "audit_date": "2026-10-06",
+  "phase": "M1 infrastructure/scaffold",
+  "verified": {
+    "fastapi": true,
+    "langgraph": true,
+    "sqlite_persistence": true,
+    "sse": true,
+    "frontend": true,
+    "hitl": true,
+    "policy_engine": true,
+    "tests_passing": 153,
+    "mutations_caught": "24/24"
+  },
+  "not_implemented": [
+    "llm",
+    "requirements_analyst",
+    "reasoning_supervisor",
+    "real_coder",
+    "real_test_executor",
+    "mcp",
+    "knowledge_graph",
+    "real_stt",
+    "full_observability",
+    "authentication"
+  ],
+  "next_milestone": "M2",
+  "rules": [
+    "Keep LangGraph",
+    "Keep RunState typed",
+    "LLM proposes; deterministic code validates",
+    "No direct Coder writes to main workspace",
+    "No shell=True with LLM-generated commands",
+    "No MCP/Graphify before M2 E2E",
+    "No exposure beyond localhost before auth"
+  ]
+}

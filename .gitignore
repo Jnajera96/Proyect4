@@ -1,0 +1,54 @@
+# Secretos y configuracion local. NUNCA commitear.
+.env
+.env.*
+!.env.example
+
+# Estado y espacios de trabajo de las ejecuciones
+var/
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+data/workspaces/
+
+# Temporales de pruebas que quedaron sin limpiar en la raiz
+tmp*/
+_tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.pytest_tmp/
+.ruff_cache/
+.mypy_cache/
+
+# Artefactos de la verificacion por mutacion. Se regeneran en cada ejecucion.
+*.mutation_backup
+_mutation_report.xml
+_mutation_journal.json
+# Sonda de la verificacion del frontend: se sobrescribe en cada ejecucion y NO se
+# borra, porque en este entorno un borrado bloqueado mata el proceso que verifica.
+frontend/_verify.html
+frontend/_verify_probe.js
+
+# Secretos
+*.pem
+*.key
+secrets/
+.env.local
+
+# Entornos y editores
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Modelos descargados de Speech-to-Text
+models/
+*.bin

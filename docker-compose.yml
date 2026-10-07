@@ -1,0 +1,49 @@
+# Entorno de desarrollo del prototipo.
+#
+# Se declara la ausencia de red en el servicio de ejecucion cuando exista
+# (fase M3): `network_mode: none` es la materializacion de RNF-S6.
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src:ro
+      - ./frontend:/app/frontend:ro
+      - estado:/app/var
+    healthcheck:
+      test: ["CMD", "python", "-c", "import ai_swe; print(ai_swe.__version__)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Observabilidad. Prescindible en ejecucion, no en evaluacion
+  # (docs/02-tecnologias.md, seccion 10).
+  langfuse:
+    image: langfuse/langfuse:latest
+    profiles: ["observability"]
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
+      NEXTAUTH_SECRET: cambiar-en-despliegue-real
+      SALT: cambiar-en-despliegue-real
+    depends_on:
+      - langfuse-db
+
+  langfuse-db:
+    image: postgres:16-alpine
+    profiles: ["observability"]
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse-db:/var/lib/postgresql/data
+
+volumes:
+  estado:
+  langfuse-db:

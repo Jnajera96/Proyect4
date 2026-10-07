@@ -1,0 +1,1678 @@
+{
+  "endpoints": {
+    "GET /runs": {
+      "codigo": 200,
+      "respuesta": "RunSummary[]"
+    },
+    "GET /runs/{run_id}": {
+      "codigo": 200,
+      "respuesta": "RunState"
+    },
+    "GET /runs/{run_id}/events": {
+      "nota": "Cada evento lleva id, event y data. data es un RunEvent. Reanudable con la cabecera Last-Event-ID.",
+      "respuesta": "text/event-stream"
+    },
+    "POST /runs": {
+      "codigo": 202,
+      "cuerpo": "RunRequest",
+      "nota": "Responde antes de ejecutar. El run_id llega de inmediato.",
+      "respuesta": "RunState"
+    },
+    "POST /runs/{run_id}/approve": {
+      "codigo": 200,
+      "cuerpo": "ApproveRequest",
+      "respuesta": "RunState"
+    },
+    "POST /transcriptions": {
+      "nota": "multipart/form-data con el campo 'audio'. NO crea ejecucion.",
+      "respuesta": "Transcript"
+    }
+  },
+  "esquema_estado": "1.0.0",
+  "nota": "GENERADO AUTOMATICAMENTE por tools/export_contracts.py. No editar a mano. Para regenerar: python tools/export_contracts.py",
+  "schemas": {
+    "ApprovalDecision": {
+      "enum": [
+        "approved",
+        "rejected",
+        "modified"
+      ],
+      "title": "ApprovalDecision",
+      "type": "string"
+    },
+    "ApproveRequest": {
+      "$defs": {
+        "ApprovalDecision": {
+          "enum": [
+            "approved",
+            "rejected",
+            "modified"
+          ],
+          "title": "ApprovalDecision",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "decision": {
+          "$ref": "#/$defs/ApprovalDecision",
+          "default": "approved"
+        }
+      },
+      "title": "ApproveRequest",
+      "type": "object"
+    },
+    "EventKind": {
+      "enum": [
+        "run.created",
+        "run.started",
+        "run.step",
+        "run.status",
+        "run.awaiting_approval",
+        "run.report",
+        "run.error",
+        "run.done"
+      ],
+      "title": "EventKind",
+      "type": "string"
+    },
+    "FinalReport": {
+      "description": "Informe final. Las cuatro secciones de RF-13 estan separadas a proposito:\nmezclar \"lo que cambie\", \"lo que comprobe\" y \"lo que queda pendiente\" en un\nparrafo es lo que hace que un informe no sea auditable.",
+      "properties": {
+        "changes_applied": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 500,
+          "title": "Changes Applied",
+          "type": "array"
+        },
+        "pending": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Pending",
+          "type": "array"
+        },
+        "review": {
+          "default": "",
+          "maxLength": 2000,
+          "title": "Review",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "tests_executed": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Tests Executed",
+          "type": "array"
+        }
+      },
+      "required": [
+        "summary"
+      ],
+      "title": "FinalReport",
+      "type": "object"
+    },
+    "InstructionSource": {
+      "enum": [
+        "text",
+        "voice"
+      ],
+      "title": "InstructionSource",
+      "type": "string"
+    },
+    "Intent": {
+      "enum": [
+        "question",
+        "inspect",
+        "modify",
+        "out_of_scope"
+      ],
+      "title": "Intent",
+      "type": "string"
+    },
+    "RunError": {
+      "description": "Error tipado. La taxonomia esta en docs/01-arquitectura.md, seccion 9.8.",
+      "properties": {
+        "agent": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Agent",
+          "type": "string"
+        },
+        "error_class": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Error Class",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "recoverable": {
+          "title": "Recoverable",
+          "type": "boolean"
+        },
+        "subtask_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtask Id"
+        }
+      },
+      "required": [
+        "error_class",
+        "agent",
+        "message",
+        "recoverable",
+        "occurred_at"
+      ],
+      "title": "RunError",
+      "type": "object"
+    },
+    "RunEvent": {
+      "$defs": {
+        "EventKind": {
+          "description": "Tipos de evento del flujo de progreso.\n\nSon un conjunto **cerrado**: el frontend puede hacer un `switch` exhaustivo y\nun tipo nuevo no se cuela sin que alguien lo note.",
+          "enum": [
+            "run.created",
+            "run.started",
+            "run.step",
+            "run.status",
+            "run.awaiting_approval",
+            "run.report",
+            "run.error",
+            "run.done"
+          ],
+          "title": "EventKind",
+          "type": "string"
+        }
+      },
+      "description": "Un evento del progreso de una ejecucion.\n\n`seq` es monotonamente creciente por ejecucion y se envia como `id:` en el\nflujo SSE. Eso permite que el navegador se reconecte con `Last-Event-ID` y\nreciba **solo lo que se perdio**, en lugar de empezar de cero o perder\neventos. Es la razon de que el registro sea persistente y no una cola en\nmemoria.",
+      "properties": {
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": true,
+          "description": "Carga estructurada. El frontend la consume directamente, sin parsear texto.",
+          "title": "Data",
+          "type": "object"
+        },
+        "kind": {
+          "$ref": "#/$defs/EventKind"
+        },
+        "seq": {
+          "minimum": 1,
+          "title": "Seq",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "at",
+        "kind"
+      ],
+      "title": "RunEvent",
+      "type": "object"
+    },
+    "RunOptions": {
+      "description": "Lo que el usuario **pidio**. Distinto de `TaskInterpretation`, que es lo que\nel Supervisor **entendio**.\n\nMantenerlos separados permite comparar ambos y detectar una interpretacion que\nse desvio de la peticion, cosa imposible si se funden en un solo objeto.",
+      "properties": {
+        "allowed_paths": {
+          "description": "Rutas relativas donde se permite escribir.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Paths",
+          "type": "array"
+        },
+        "dry_run": {
+          "default": false,
+          "description": "Ejecuta el flujo sin tocar el repositorio. Util para demostrar el grafo.",
+          "title": "Dry Run",
+          "type": "boolean"
+        },
+        "protected_paths": {
+          "description": "Rutas que exigen aprobacion explicita.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Protected Paths",
+          "type": "array"
+        },
+        "repo_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Repositorio autorizado sobre el que trabajar.",
+          "title": "Repo Path"
+        }
+      },
+      "title": "RunOptions",
+      "type": "object"
+    },
+    "RunRequest": {
+      "$defs": {
+        "InstructionSource": {
+          "enum": [
+            "text",
+            "voice"
+          ],
+          "title": "InstructionSource",
+          "type": "string"
+        },
+        "RunOptions": {
+          "description": "Lo que el usuario **pidio**. Distinto de `TaskInterpretation`, que es lo que\nel Supervisor **entendio**.\n\nMantenerlos separados permite comparar ambos y detectar una interpretacion que\nse desvio de la peticion, cosa imposible si se funden en un solo objeto.",
+          "properties": {
+            "allowed_paths": {
+              "description": "Rutas relativas donde se permite escribir.",
+              "items": {
+                "type": "string"
+              },
+              "title": "Allowed Paths",
+              "type": "array"
+            },
+            "dry_run": {
+              "default": false,
+              "description": "Ejecuta el flujo sin tocar el repositorio. Util para demostrar el grafo.",
+              "title": "Dry Run",
+              "type": "boolean"
+            },
+            "protected_paths": {
+              "description": "Rutas que exigen aprobacion explicita.",
+              "items": {
+                "type": "string"
+              },
+              "title": "Protected Paths",
+              "type": "array"
+            },
+            "repo_path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Repositorio autorizado sobre el que trabajar.",
+              "title": "Repo Path"
+            }
+          },
+          "title": "RunOptions",
+          "type": "object"
+        },
+        "TranscriptMeta": {
+          "description": "Metadatos de la transcripcion. El audio en si nunca entra al sistema.",
+          "properties": {
+            "confidence": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Confidence",
+              "type": "number"
+            },
+            "duration_s": {
+              "minimum": 0.0,
+              "title": "Duration S",
+              "type": "number"
+            },
+            "language": {
+              "maxLength": 16,
+              "minLength": 2,
+              "title": "Language",
+              "type": "string"
+            },
+            "low_confidence_warned": {
+              "default": false,
+              "description": "Se aviso al usuario de que la confianza estaba bajo el umbral.",
+              "title": "Low Confidence Warned",
+              "type": "boolean"
+            },
+            "provider": {
+              "description": "p. ej. 'faster-whisper:large-v3'",
+              "minLength": 1,
+              "title": "Provider",
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider",
+            "language",
+            "confidence",
+            "duration_s"
+          ],
+          "title": "TranscriptMeta",
+          "type": "object"
+        }
+      },
+      "description": "Peticion de creacion de una ejecucion. Solo texto confirmado.",
+      "properties": {
+        "instruction": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Instruction",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/RunOptions"
+        },
+        "source": {
+          "$ref": "#/$defs/InstructionSource",
+          "default": "text"
+        },
+        "transcript_meta": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TranscriptMeta"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "instruction"
+      ],
+      "title": "RunRequest",
+      "type": "object"
+    },
+    "RunState": {
+      "$defs": {
+        "AgentRole": {
+          "enum": [
+            "supervisor",
+            "researcher",
+            "coder",
+            "reviewer"
+          ],
+          "title": "AgentRole",
+          "type": "string"
+        },
+        "Approval": {
+          "description": "Registro de una aprobacion humana. Es un requisito de trazabilidad\n(RNF-T2): quien, cuando, que accion y sobre que contenido exacto.",
+          "properties": {
+            "action": {
+              "minLength": 1,
+              "title": "Action",
+              "type": "string"
+            },
+            "actor": {
+              "minLength": 1,
+              "title": "Actor",
+              "type": "string"
+            },
+            "content_sha256": {
+              "maxLength": 64,
+              "minLength": 64,
+              "title": "Content Sha256",
+              "type": "string"
+            },
+            "decided_at": {
+              "format": "date-time",
+              "title": "Decided At",
+              "type": "string"
+            },
+            "decision": {
+              "$ref": "#/$defs/ApprovalDecision"
+            },
+            "reason": {
+              "default": "",
+              "maxLength": 2000,
+              "title": "Reason",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "actor",
+            "decided_at",
+            "content_sha256",
+            "decision"
+          ],
+          "title": "Approval",
+          "type": "object"
+        },
+        "ApprovalDecision": {
+          "enum": [
+            "approved",
+            "rejected",
+            "modified"
+          ],
+          "title": "ApprovalDecision",
+          "type": "string"
+        },
+        "Artifacts": {
+          "description": "Artefactos producidos por la ejecucion.",
+          "properties": {
+            "base_commit": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Base Commit"
+            },
+            "changed_files": {
+              "items": {
+                "$ref": "#/$defs/FileChange"
+              },
+              "maxItems": 500,
+              "title": "Changed Files",
+              "type": "array"
+            },
+            "diff": {
+              "anyOf": [
+                {
+                  "maxLength": 500000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Diff"
+            },
+            "worktree_path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Worktree Path"
+            }
+          },
+          "title": "Artifacts",
+          "type": "object"
+        },
+        "Budget": {
+          "description": "Presupuesto de la ejecucion. Agotarlo corta y escala, no continua (RNF-C1).",
+          "properties": {
+            "elapsed_seconds": {
+              "default": 0.0,
+              "minimum": 0,
+              "title": "Elapsed Seconds",
+              "type": "number"
+            },
+            "max_review_cycles": {
+              "default": 2,
+              "maximum": 5,
+              "minimum": 0,
+              "title": "Max Review Cycles",
+              "type": "integer"
+            },
+            "max_seconds": {
+              "default": 900.0,
+              "exclusiveMinimum": 0,
+              "title": "Max Seconds",
+              "type": "number"
+            },
+            "max_tokens": {
+              "default": 200000,
+              "minimum": 1,
+              "title": "Max Tokens",
+              "type": "integer"
+            },
+            "max_tool_calls": {
+              "default": 60,
+              "minimum": 1,
+              "title": "Max Tool Calls",
+              "type": "integer"
+            },
+            "review_cycles_used": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Review Cycles Used",
+              "type": "integer"
+            },
+            "used_tokens": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Used Tokens",
+              "type": "integer"
+            },
+            "used_tool_calls": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Used Tool Calls",
+              "type": "integer"
+            }
+          },
+          "title": "Budget",
+          "type": "object"
+        },
+        "CodeChange": {
+          "description": "Salida del Coder. Aplica en worktree aislado, nunca en el repo del usuario.",
+          "properties": {
+            "diff": {
+              "default": "",
+              "maxLength": 500000,
+              "title": "Diff",
+              "type": "string"
+            },
+            "diff_sha256": {
+              "description": "Permite detectar bucles: el mismo hash dos veces es un bucle.",
+              "maxLength": 64,
+              "minLength": 64,
+              "title": "Diff Sha256",
+              "type": "string"
+            },
+            "files_changed": {
+              "items": {
+                "$ref": "#/$defs/FileChange"
+              },
+              "maxItems": 200,
+              "title": "Files Changed",
+              "type": "array"
+            },
+            "rationale": {
+              "description": "Por que este cambio satisface el criterio de la subtarea.",
+              "maxLength": 4000,
+              "minLength": 1,
+              "title": "Rationale",
+              "type": "string"
+            }
+          },
+          "required": [
+            "rationale",
+            "diff_sha256"
+          ],
+          "title": "CodeChange",
+          "type": "object"
+        },
+        "Evidence": {
+          "description": "Evidencia verificable: lo que permite decir 'esto se comprobo'.",
+          "properties": {
+            "findings": {
+              "items": {
+                "$ref": "#/$defs/Finding"
+              },
+              "maxItems": 500,
+              "title": "Findings",
+              "type": "array"
+            },
+            "test_runs": {
+              "items": {
+                "$ref": "#/$defs/TestRun"
+              },
+              "maxItems": 200,
+              "title": "Test Runs",
+              "type": "array"
+            }
+          },
+          "title": "Evidence",
+          "type": "object"
+        },
+        "FileChange": {
+          "properties": {
+            "added": {
+              "minimum": 0,
+              "title": "Added",
+              "type": "integer"
+            },
+            "path": {
+              "minLength": 1,
+              "title": "Path",
+              "type": "string"
+            },
+            "removed": {
+              "minimum": 0,
+              "title": "Removed",
+              "type": "integer"
+            },
+            "sha256": {
+              "maxLength": 64,
+              "minLength": 64,
+              "title": "Sha256",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "added",
+            "removed",
+            "sha256"
+          ],
+          "title": "FileChange",
+          "type": "object"
+        },
+        "FinalReport": {
+          "description": "Informe final. Las cuatro secciones de RF-13 estan separadas a proposito:\nmezclar \"lo que cambie\", \"lo que comprobe\" y \"lo que queda pendiente\" en un\nparrafo es lo que hace que un informe no sea auditable.",
+          "properties": {
+            "changes_applied": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 500,
+              "title": "Changes Applied",
+              "type": "array"
+            },
+            "pending": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 200,
+              "title": "Pending",
+              "type": "array"
+            },
+            "review": {
+              "default": "",
+              "maxLength": 2000,
+              "title": "Review",
+              "type": "string"
+            },
+            "summary": {
+              "maxLength": 4000,
+              "minLength": 1,
+              "title": "Summary",
+              "type": "string"
+            },
+            "tests_executed": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 200,
+              "title": "Tests Executed",
+              "type": "array"
+            }
+          },
+          "required": [
+            "summary"
+          ],
+          "title": "FinalReport",
+          "type": "object"
+        },
+        "Finding": {
+          "description": "Un hallazgo con evidencia. Sin evidencia, un hallazgo es una opinion.",
+          "properties": {
+            "evidence": {
+              "description": "Fragmento de codigo o salida que sustenta el hallazgo.",
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Evidence",
+              "type": "string"
+            },
+            "explanation": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Explanation",
+              "type": "string"
+            },
+            "line": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Line"
+            },
+            "path": {
+              "minLength": 1,
+              "title": "Path",
+              "type": "string"
+            },
+            "severity": {
+              "$ref": "#/$defs/Severity"
+            }
+          },
+          "required": [
+            "severity",
+            "path",
+            "explanation",
+            "evidence"
+          ],
+          "title": "Finding",
+          "type": "object"
+        },
+        "Instruction": {
+          "description": "La instruccion tal como entra al sistema: siempre texto confirmado.",
+          "properties": {
+            "confirmed_by_user": {
+              "title": "Confirmed By User",
+              "type": "boolean"
+            },
+            "source": {
+              "$ref": "#/$defs/InstructionSource"
+            },
+            "text": {
+              "maxLength": 20000,
+              "minLength": 1,
+              "title": "Text",
+              "type": "string"
+            },
+            "transcript_meta": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TranscriptMeta"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "text",
+            "source",
+            "confirmed_by_user"
+          ],
+          "title": "Instruction",
+          "type": "object"
+        },
+        "InstructionSource": {
+          "enum": [
+            "text",
+            "voice"
+          ],
+          "title": "InstructionSource",
+          "type": "string"
+        },
+        "Intent": {
+          "description": "Clasificacion de la instruccion.\n\nEs lo que permite que una pregunta simple no active el aparato completo de\nagentes (docs/01-arquitectura.md, seccion 9.2).",
+          "enum": [
+            "question",
+            "inspect",
+            "modify",
+            "out_of_scope"
+          ],
+          "title": "Intent",
+          "type": "string"
+        },
+        "Outputs": {
+          "description": "Salidas de los agentes. Cada agente escribe solo su propio campo.",
+          "properties": {
+            "coder_output": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CodeChange"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "researcher_output": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ResearchOutput"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "reviewer_output": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ReviewVerdict"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "title": "Outputs",
+          "type": "object"
+        },
+        "ResearchOutput": {
+          "description": "Salida del Researcher. Solo lectura: reune evidencia, no modifica nada.\n\nEl campo `unknowns` es obligatorio a proposito: obliga al agente a declarar\nel limite de su conocimiento en lugar de rellenar el vacio.",
+          "properties": {
+            "files_read": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 500,
+              "title": "Files Read",
+              "type": "array"
+            },
+            "findings": {
+              "items": {
+                "$ref": "#/$defs/Finding"
+              },
+              "maxItems": 200,
+              "title": "Findings",
+              "type": "array"
+            },
+            "unknowns": {
+              "description": "Lo que el agente NO pudo determinar. Debe declararse explicitamente.",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 50,
+              "title": "Unknowns",
+              "type": "array"
+            }
+          },
+          "title": "ResearchOutput",
+          "type": "object"
+        },
+        "ReviewDecision": {
+          "enum": [
+            "accept",
+            "request_changes",
+            "escalate"
+          ],
+          "title": "ReviewDecision",
+          "type": "string"
+        },
+        "ReviewVerdict": {
+          "description": "Salida del Reviewer. No escribe: solo juzga con evidencia.",
+          "properties": {
+            "decision": {
+              "$ref": "#/$defs/ReviewDecision"
+            },
+            "findings": {
+              "items": {
+                "$ref": "#/$defs/Finding"
+              },
+              "maxItems": 200,
+              "title": "Findings",
+              "type": "array"
+            },
+            "required_fixes": {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 50,
+              "title": "Required Fixes",
+              "type": "array"
+            },
+            "summary": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Summary",
+              "type": "string"
+            }
+          },
+          "required": [
+            "decision",
+            "summary"
+          ],
+          "title": "ReviewVerdict",
+          "type": "object"
+        },
+        "RunError": {
+          "description": "Error tipado. La taxonomia esta en docs/01-arquitectura.md, seccion 9.8.",
+          "properties": {
+            "agent": {
+              "maxLength": 40,
+              "minLength": 1,
+              "title": "Agent",
+              "type": "string"
+            },
+            "error_class": {
+              "maxLength": 80,
+              "minLength": 1,
+              "title": "Error Class",
+              "type": "string"
+            },
+            "message": {
+              "maxLength": 4000,
+              "minLength": 1,
+              "title": "Message",
+              "type": "string"
+            },
+            "occurred_at": {
+              "format": "date-time",
+              "title": "Occurred At",
+              "type": "string"
+            },
+            "recoverable": {
+              "title": "Recoverable",
+              "type": "boolean"
+            },
+            "subtask_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Subtask Id"
+            }
+          },
+          "required": [
+            "error_class",
+            "agent",
+            "message",
+            "recoverable",
+            "occurred_at"
+          ],
+          "title": "RunError",
+          "type": "object"
+        },
+        "RunOptions": {
+          "description": "Lo que el usuario **pidio**. Distinto de `TaskInterpretation`, que es lo que\nel Supervisor **entendio**.\n\nMantenerlos separados permite comparar ambos y detectar una interpretacion que\nse desvio de la peticion, cosa imposible si se funden en un solo objeto.",
+          "properties": {
+            "allowed_paths": {
+              "description": "Rutas relativas donde se permite escribir.",
+              "items": {
+                "type": "string"
+              },
+              "title": "Allowed Paths",
+              "type": "array"
+            },
+            "dry_run": {
+              "default": false,
+              "description": "Ejecuta el flujo sin tocar el repositorio. Util para demostrar el grafo.",
+              "title": "Dry Run",
+              "type": "boolean"
+            },
+            "protected_paths": {
+              "description": "Rutas que exigen aprobacion explicita.",
+              "items": {
+                "type": "string"
+              },
+              "title": "Protected Paths",
+              "type": "array"
+            },
+            "repo_path": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Repositorio autorizado sobre el que trabajar.",
+              "title": "Repo Path"
+            }
+          },
+          "title": "RunOptions",
+          "type": "object"
+        },
+        "RunPlan": {
+          "description": "Plan de ejecucion. Es la salida estructurada central del Supervisor.",
+          "properties": {
+            "max_review_cycles": {
+              "default": 2,
+              "maximum": 5,
+              "minimum": 0,
+              "title": "Max Review Cycles",
+              "type": "integer"
+            },
+            "rationale": {
+              "maxLength": 4000,
+              "minLength": 1,
+              "title": "Rationale",
+              "type": "string"
+            },
+            "subtasks": {
+              "items": {
+                "$ref": "#/$defs/Subtask"
+              },
+              "maxItems": 32,
+              "minItems": 1,
+              "title": "Subtasks",
+              "type": "array"
+            }
+          },
+          "required": [
+            "subtasks",
+            "rationale"
+          ],
+          "title": "RunPlan",
+          "type": "object"
+        },
+        "RunStatus": {
+          "description": "Estados de una ejecucion.\n\n`AWAITING_APPROVAL` no es terminal: la ejecucion espera y debe sobrevivir a\nla caida del proceso (RF-11, RF-12).",
+          "enum": [
+            "planned",
+            "running",
+            "awaiting_approval",
+            "completed",
+            "failed",
+            "needs_human",
+            "cancelled"
+          ],
+          "title": "RunStatus",
+          "type": "string"
+        },
+        "Scope": {
+          "description": "Alcance declarado por el usuario. Es lo que hace posible el HITL util:\nlo declarado como libre no vuelve a preguntar (docs/01-arquitectura.md 15.4).",
+          "properties": {
+            "allowed_paths": {
+              "description": "Rutas relativas donde se permite escribir. Vacio = todo el repo.",
+              "items": {
+                "type": "string"
+              },
+              "title": "Allowed Paths",
+              "type": "array"
+            },
+            "max_files_changed": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Max Files Changed",
+              "type": "integer"
+            },
+            "max_lines_changed": {
+              "default": 400,
+              "maximum": 10000,
+              "minimum": 1,
+              "title": "Max Lines Changed",
+              "type": "integer"
+            },
+            "protected_paths": {
+              "description": "Rutas relativas donde nunca se escribe sin aprobacion explicita.",
+              "items": {
+                "type": "string"
+              },
+              "title": "Protected Paths",
+              "type": "array"
+            },
+            "repo_path": {
+              "description": "Raiz del repositorio autorizado.",
+              "title": "Repo Path",
+              "type": "string"
+            }
+          },
+          "required": [
+            "repo_path"
+          ],
+          "title": "Scope",
+          "type": "object"
+        },
+        "Severity": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "Subtask": {
+          "description": "Una unidad de trabajo asignada a un agente.",
+          "properties": {
+            "agent": {
+              "$ref": "#/$defs/AgentRole"
+            },
+            "allowed_tools": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Allowed Tools",
+              "type": "array"
+            },
+            "attempts": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Attempts",
+              "type": "integer"
+            },
+            "depends_on": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Depends On",
+              "type": "array"
+            },
+            "description": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Description",
+              "type": "string"
+            },
+            "done_criteria": {
+              "maxLength": 1000,
+              "minLength": 1,
+              "title": "Done Criteria",
+              "type": "string"
+            },
+            "id": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[a-z0-9][a-z0-9_-]*$",
+              "title": "Id",
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/$defs/SubtaskStatus",
+              "default": "pending"
+            }
+          },
+          "required": [
+            "id",
+            "description",
+            "agent",
+            "done_criteria"
+          ],
+          "title": "Subtask",
+          "type": "object"
+        },
+        "SubtaskStatus": {
+          "enum": [
+            "pending",
+            "running",
+            "completed",
+            "failed",
+            "skipped"
+          ],
+          "title": "SubtaskStatus",
+          "type": "string"
+        },
+        "TaskInterpretation": {
+          "description": "Salida validada de la fase de interpretacion del Supervisor.",
+          "properties": {
+            "confidence": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Confidence",
+              "type": "number"
+            },
+            "constraints": {
+              "description": "Prohibiciones o condiciones explicitas del usuario.",
+              "items": {
+                "type": "string"
+              },
+              "title": "Constraints",
+              "type": "array"
+            },
+            "intent": {
+              "$ref": "#/$defs/Intent"
+            },
+            "rationale": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Rationale",
+              "type": "string"
+            },
+            "scope": {
+              "$ref": "#/$defs/Scope"
+            }
+          },
+          "required": [
+            "intent",
+            "scope",
+            "confidence",
+            "rationale"
+          ],
+          "title": "TaskInterpretation",
+          "type": "object"
+        },
+        "TestRun": {
+          "description": "Evidencia de una ejecucion de pruebas. Es la senal objetiva del sistema.",
+          "properties": {
+            "duration_s": {
+              "minimum": 0.0,
+              "title": "Duration S",
+              "type": "number"
+            },
+            "exit_code": {
+              "title": "Exit Code",
+              "type": "integer"
+            },
+            "reproducible": {
+              "default": false,
+              "description": "El Reviewer re-ejecuta para confirmar que el resultado es reproducible.",
+              "title": "Reproducible",
+              "type": "boolean"
+            },
+            "stderr": {
+              "default": "",
+              "maxLength": 200000,
+              "title": "Stderr",
+              "type": "string"
+            },
+            "stdout": {
+              "default": "",
+              "maxLength": 200000,
+              "title": "Stdout",
+              "type": "string"
+            },
+            "target": {
+              "description": "Identificador de la lista permitida.",
+              "minLength": 1,
+              "title": "Target",
+              "type": "string"
+            }
+          },
+          "required": [
+            "target",
+            "exit_code",
+            "duration_s"
+          ],
+          "title": "TestRun",
+          "type": "object"
+        },
+        "TranscriptMeta": {
+          "description": "Metadatos de la transcripcion. El audio en si nunca entra al sistema.",
+          "properties": {
+            "confidence": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Confidence",
+              "type": "number"
+            },
+            "duration_s": {
+              "minimum": 0.0,
+              "title": "Duration S",
+              "type": "number"
+            },
+            "language": {
+              "maxLength": 16,
+              "minLength": 2,
+              "title": "Language",
+              "type": "string"
+            },
+            "low_confidence_warned": {
+              "default": false,
+              "description": "Se aviso al usuario de que la confianza estaba bajo el umbral.",
+              "title": "Low Confidence Warned",
+              "type": "boolean"
+            },
+            "provider": {
+              "description": "p. ej. 'faster-whisper:large-v3'",
+              "minLength": 1,
+              "title": "Provider",
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider",
+            "language",
+            "confidence",
+            "duration_s"
+          ],
+          "title": "TranscriptMeta",
+          "type": "object"
+        }
+      },
+      "description": "Estado completo de una ejecucion.\n\nDebe ser serializable: se verifica estructuralmente en tests/test_contracts.py.",
+      "properties": {
+        "approvals": {
+          "items": {
+            "$ref": "#/$defs/Approval"
+          },
+          "maxItems": 200,
+          "title": "Approvals",
+          "type": "array"
+        },
+        "artifacts": {
+          "$ref": "#/$defs/Artifacts"
+        },
+        "budget": {
+          "$ref": "#/$defs/Budget"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "errors": {
+          "items": {
+            "$ref": "#/$defs/RunError"
+          },
+          "maxItems": 500,
+          "title": "Errors",
+          "type": "array"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Evidence"
+        },
+        "final_report": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FinalReport"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "instruction": {
+          "$ref": "#/$defs/Instruction"
+        },
+        "interpretation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TaskInterpretation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "next_step": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Step"
+        },
+        "options": {
+          "$ref": "#/$defs/RunOptions"
+        },
+        "outputs": {
+          "$ref": "#/$defs/Outputs"
+        },
+        "plan": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunPlan"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "run_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/RunStatus",
+          "default": "planned"
+        },
+        "trace_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Trace Id",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "trace_id",
+        "created_at",
+        "updated_at",
+        "instruction"
+      ],
+      "title": "RunState",
+      "type": "object"
+    },
+    "RunStatus": {
+      "enum": [
+        "planned",
+        "running",
+        "awaiting_approval",
+        "completed",
+        "failed",
+        "needs_human",
+        "cancelled"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    },
+    "RunSummary": {
+      "$defs": {
+        "RunStatus": {
+          "description": "Estados de una ejecucion.\n\n`AWAITING_APPROVAL` no es terminal: la ejecucion espera y debe sobrevivir a\nla caida del proceso (RF-11, RF-12).",
+          "enum": [
+            "planned",
+            "running",
+            "awaiting_approval",
+            "completed",
+            "failed",
+            "needs_human",
+            "cancelled"
+          ],
+          "title": "RunStatus",
+          "type": "string"
+        }
+      },
+      "description": "Vista ligera de una ejecucion, para listados y paneles.",
+      "properties": {
+        "awaiting_approval": {
+          "default": false,
+          "description": "Atajo para que el panel sepa si debe mostrar la puerta de aprobacion.",
+          "title": "Awaiting Approval",
+          "type": "boolean"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "error_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Error Count",
+          "type": "integer"
+        },
+        "intent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intent"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/RunStatus"
+        },
+        "trace_id": {
+          "title": "Trace Id",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "trace_id",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "RunSummary",
+      "type": "object"
+    },
+    "Transcript": {
+      "$defs": {
+        "Segment": {
+          "properties": {
+            "end_s": {
+              "minimum": 0.0,
+              "title": "End S",
+              "type": "number"
+            },
+            "start_s": {
+              "minimum": 0.0,
+              "title": "Start S",
+              "type": "number"
+            },
+            "text": {
+              "title": "Text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "start_s",
+            "end_s",
+            "text"
+          ],
+          "title": "Segment",
+          "type": "object"
+        }
+      },
+      "description": "Resultado de una transcripcion. **No** crea ninguna ejecucion (`RF-02`).",
+      "properties": {
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "duration_s": {
+          "minimum": 0.0,
+          "title": "Duration S",
+          "type": "number"
+        },
+        "language": {
+          "maxLength": 16,
+          "minLength": 2,
+          "title": "Language",
+          "type": "string"
+        },
+        "low_confidence": {
+          "default": false,
+          "description": "La confianza esta por debajo del umbral y hay que avisar al usuario.",
+          "title": "Low Confidence",
+          "type": "boolean"
+        },
+        "provider": {
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/Segment"
+          },
+          "maxItems": 2000,
+          "title": "Segments",
+          "type": "array"
+        },
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "language",
+        "confidence",
+        "duration_s",
+        "provider"
+      ],
+      "title": "Transcript",
+      "type": "object"
+    },
+    "TranscriptMeta": {
+      "description": "Metadatos de la transcripcion. El audio en si nunca entra al sistema.",
+      "properties": {
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "duration_s": {
+          "minimum": 0.0,
+          "title": "Duration S",
+          "type": "number"
+        },
+        "language": {
+          "maxLength": 16,
+          "minLength": 2,
+          "title": "Language",
+          "type": "string"
+        },
+        "low_confidence_warned": {
+          "default": false,
+          "description": "Se aviso al usuario de que la confianza estaba bajo el umbral.",
+          "title": "Low Confidence Warned",
+          "type": "boolean"
+        },
+        "provider": {
+          "description": "p. ej. 'faster-whisper:large-v3'",
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "language",
+        "confidence",
+        "duration_s"
+      ],
+      "title": "TranscriptMeta",
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+Conjunto documental: AI_SWE_documentacion_actualizada
+Origen: auditoría técnica externa de solo lectura del 2026-10-06
+Integrado en el proyecto: 2026-10-06
+Estado: VIGENTE — describe el estado real verificado y el plan hacia M2
+
+Jerarquía de evidencia aplicada al integrar (de más a menos fiable):
+  1. Código ejecutable y comportamiento comprobable
+  2. Tests y resultados verificables
+  3. Configuración real
+  4. Auditoría externa
+  5. Documentación nueva (este conjunto)
+  6. Documentación histórica (docs/01..06)
+  7. Comentarios, planes o supuestos
+
+Regla: ante contradicción, NO se adapta el código a la documentación.
+Se determinó primero cuál refleja el estado real y se corrigió la documentación.
+
+Los documentos 01..06 de docs/ son la documentación histórica de diseño (M0).
+Siguen siendo válidos como diseño, pero su información de ESTADO puede estar
+desactualizada. Donde eso ocurre, se añadió un aviso SUPERSEDED en el propio
+documento apuntando a este conjunto.
