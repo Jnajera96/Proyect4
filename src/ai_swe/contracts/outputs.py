@@ -50,6 +50,73 @@ class ResearchOutput(BaseModel):
     files_read: list[str] = Field(default_factory=list, max_length=500)
 
 
+class FileOperation(StrEnum):
+    """Que le hace la propuesta a un archivo. Sin esto, crear y borrar se confunden.
+
+    Un fichero eliminado con `added=0, removed=N` es indistinguible de uno
+    modificado que borro N lineas. La operacion es lo que desambigua.
+    """
+
+    CREATE = "create"
+    MODIFY = "modify"
+    DELETE = "delete"
+
+
+class FileProposal(BaseModel):
+    """**Lo que el modelo genera (F6).** Una edicion propuesta sobre un archivo.
+
+    Se distingue de `FileChange` a proposito: aqui vive el **contenido** que el
+    modelo si sabe producir, y no los metadatos derivados (`added`, `removed`,
+    `sha256`) que el modelo **no puede** calcular -no conoce el hash de un fichero
+    que aun no ha escrito, y pedirselo solo produciria un dato inventado.
+
+    `new_content` es obligatorio en `create`/`modify` y debe faltar en `delete`:
+    un borrado no tiene contenido nuevo. Se codifica en el validador para que la
+    incoherencia se detecte en la frontera del contrato y no mas tarde.
+    """
+
+    path: str = Field(min_length=1, max_length=500)
+    operation: FileOperation
+    new_content: str | None = Field(
+        default=None,
+        max_length=500_000,
+        description="Contenido completo resultante. Obligatorio en create/modify.",
+    )
+    rationale: str = Field(
+        min_length=1,
+        max_length=2000,
+        description="Por que este archivo concreto necesita este cambio.",
+    )
+
+    @model_validator(mode="after")
+    def _content_matches_operation(self) -> FileProposal:
+        if self.operation is FileOperation.DELETE and self.new_content is not None:
+            raise ValueError(
+                f"'{self.path}': una operacion 'delete' no lleva new_content"
+            )
+        if self.operation is not FileOperation.DELETE and self.new_content is None:
+            raise ValueError(
+                f"'{self.path}': la operacion '{self.operation.value}' exige new_content"
+            )
+        return self
+
+
+class CodeProposal(BaseModel):
+    """**Lo que el modelo genera (F6).** La propuesta de cambio del Coder.
+
+    El modelo propone **archivos y contenido**; el nodo `coder` deriva el diff
+    unificado, cuenta lineas y calcula el `sha256` de forma determinista. El
+    modelo propone; el codigo verifica.
+    """
+
+    files: list[FileProposal] = Field(default_factory=list, max_length=50)
+    rationale: str = Field(
+        min_length=1,
+        max_length=4000,
+        description="Por que esta propuesta satisface el criterio de la subtarea.",
+    )
+
+
 class FileChange(BaseModel):
     path: str = Field(min_length=1)
     added: int = Field(ge=0)

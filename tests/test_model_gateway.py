@@ -800,12 +800,15 @@ def test_ningun_modulo_importa_un_sdk_de_proveedor() -> None:
     assert infractores == []
 
 
-def test_solo_interpret_y_plan_hablan_con_el_gateway() -> None:
-    """**F3 y F4**: de todos los nodos del grafo, solo `interpret` y `plan` usan el gateway.
+def test_solo_los_nodos_autorizados_hablan_con_el_gateway() -> None:
+    """**F3, F4 y F6**: de todos los nodos del grafo, solo los autorizados usan el gateway.
 
-    Los dos son pasos del Supervisor en `docs/03-flujo-e-implementacion.md` (paso 5,
-    interpretacion; paso 6, planificacion). Ningun otro nodo puede hablar con el
-    modelo: cada fase conecta el nodo que le toca y no todos a la vez.
+    Los tres son pasos con contrato de `docs/03-flujo-e-implementacion.md`: `interpret`
+    (paso 5, interpretacion), `plan` (paso 6, planificacion) y `coder` (paso 8, proponer
+    cambios). Ningun otro nodo puede hablar con el modelo: cada fase conecta el nodo
+    que le toca y no todos a la vez. `researcher` (F5) sigue siendo determinista a
+    proposito -enumera con `rglob`-, asi que importar el gateway ahi seguiria siendo
+    una violacion, y esta prueba la cazaria.
 
     La version anterior de esta prueba afirmaba que *ningun* fichero del grafo
     contuviera la cadena `ai_swe.models`, y buscaba subcadenas con `in` sobre el
@@ -818,8 +821,8 @@ def test_solo_interpret_y_plan_hablan_con_el_gateway() -> None:
     mutacion que anadio `from ai_swe.models import ModelGateway` dentro de
     `researcher` (el **segundo** nodo) seguia dejando el conjunto de ficheros en
     `{nodes.py}` y pasaba sin ser cazada. Lo que de verdad protege la arquitectura
-    es **la funcion** que importa: solo las funciones que sirven a `interpret`
-    pueden hacerlo. Se comparan nombres de funcion, no ficheros.
+    es **la funcion** que importa: solo las funciones que sirven a un nodo con
+    contrato pueden hacerlo. Se comparan nombres de funcion, no ficheros.
 
     Y se comprueba que esos imports sean **perezosos** (dentro de una funcion),
     porque un `import ai_swe.models` en el cuerpo del modulo obligaria a tener el
@@ -832,11 +835,15 @@ def test_solo_interpret_y_plan_hablan_con_el_gateway() -> None:
 
     # Las funciones que pueden importar el gateway. Todo lo demas es una violacion
     # de la regla «una fase conecta un nodo»: F3 conecto `interpret`, F4 anadio
-    # `plan`. Las dos son pasos del Supervisor (docs/03, pasos 5 y 6).
+    # `plan`, F6 anadio `coder`. Las tres son pasos con contrato (docs/03).
+    # `_coder_del_modelo` es la funcion que aisla la llamada del Coder al modelo:
+    # `coder` la invoca y trata el resultado, pero el `import` vive aqui, que es
+    # donde se concentra el acceso al gateway.
     funciones_autorizadas = {
         "_gateway_por_defecto",
         "_interpretacion_del_modelo",
         "_plan_del_modelo",
+        "_coder_del_modelo",
         "_es_fallo_esperado",
     }
     funciones_con_modelo: set[str] = set()
@@ -860,7 +867,7 @@ def test_solo_interpret_y_plan_hablan_con_el_gateway() -> None:
                 funciones_con_modelo.add(contenedora)
 
     assert funciones_con_modelo <= funciones_autorizadas, (
-        "solo las funciones que sirven a `interpret` pueden importar el gateway; "
+        "solo las funciones de los nodos ya conectados pueden importar el gateway; "
         f"tambien lo hacen: {sorted(funciones_con_modelo - funciones_autorizadas)}"
     )
     assert a_nivel_de_modulo == [], (

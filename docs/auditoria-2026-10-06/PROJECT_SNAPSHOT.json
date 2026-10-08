@@ -2,7 +2,7 @@
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-06",
   "baseline_updated": "2026-10-06",
-  "phase": "M2 IN PROGRESS — F5 (Plan-Driven Execution) implemented; ModelGateway wired to `interpret` and `plan` ONLY",
+  "phase": "M2 IN PROGRESS — F6 (The Real Coder) implemented; ModelGateway wired to `interpret`, `plan` and `coder` ONLY",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -52,33 +52,45 @@
     "f5_exhausted_plan_goes_to_finalize": true,
     "f5_index_never_decreases": true,
     "f5_all_executor_nodes_advance_index": true,
-    "tests_passing": 366,
+    "f6_coder_uses_gateway": true,
+    "f6_model_generates_codeproposal_not_codechange": true,
+    "f6_system_derives_diff_lines_and_sha256": true,
+    "f6_model_never_supplies_a_hash": true,
+    "f6_file_operation_distinguishes_create_modify_delete": true,
+    "f6_scope_limits_enforced_with_declared_trim": true,
+    "f6_deterministic_empty_change_fallback": true,
+    "f6_budget_accounting_in_coder": true,
+    "f6_coder_does_not_write_to_disk": true,
+    "f6_coder_output_lands_in_runstate_outputs": true,
+    "tests_passing": 399,
     "tests_skipped": 1,
     "tests_require_network": false,
     "tests_require_credentials": false,
-    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5)",
+    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6)",
     "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
     "m1_assumptions": "5/5",
     "frontend_browser_checks": "11/11"
   },
   "not_implemented": [
     "llm_wired_to_other_langgraph_nodes",
-    "real_coder",
+    "real_reviewer",
     "real_test_executor",
+    "sandbox_patch_application",
     "mcp",
     "knowledge_graph",
     "real_stt",
     "full_observability",
     "authentication",
-    "agent_prompts_beyond_interpret_and_plan",
+    "agent_prompts_beyond_interpret_plan_and_coder",
     "plan_dependencies_respected_before_execution"
   ],
-  "next_milestone": "F6 — dependency-aware scheduling and real Coder/Reviewer integration",
+  "next_milestone": "F7 — sandbox: apply the proposed CodeChange to an isolated worktree (the Coder proposes, it never writes)",
   "ready_for_model_gateway": "YES",
   "model_gateway_ready": "YES",
   "f3_requirements_analyst_ready": "YES",
   "f4_supervisor_ready": "YES",
   "f5_plan_driven_execution_ready": "YES",
+  "f6_real_coder_ready": "YES",
   "technical_debt": [
     {
       "id": "TD-01",
@@ -91,7 +103,7 @@
     }
   ],
   "f3_caveats": [
-    "Only `interpret` and `plan` are connected to the gateway; every other node stays deterministic",
+    "Only `interpret`, `plan` and `coder` are connected to the gateway; every other node stays deterministic",
     "The real-provider test is opt-in and was NOT executed: no credentials in the environment (see technical_debt TD-01)",
     "AI_SWE_MODEL_PRICING is empty in the repository, so cost is None (unknown), never 0",
     "The pricing table has a loading mechanism but no tariff is asserted as current",
@@ -109,6 +121,16 @@
     "All executor nodes (researcher, coder) advance plan_index by 1; the router only compares, never calculates",
     "The plan is consumed sequentially; dependencies (depends_on) are NOT yet respected before execution (F6)",
     "When the plan is exhausted, execution goes to finalize regardless of intent (the plan is the source of truth)"
+  ],
+  "f6_caveats": [
+    "The model generates a CodeProposal (path, operation, new_content, rationale); it never generates a CodeChange",
+    "The system -not the model- derives the unified diff, the added/removed line counts and every sha256: a model cannot know the hash of a file it has not written",
+    "FileOperation (create/modify/delete) exists because a deleted file with added=0/removed=N is indistinguishable from a modified one",
+    "The unified diff is line-level and has no old content: `create` treats the previous file as empty, `delete` as fully removed. F7 (sandbox) is what will hold both versions",
+    "Scope limits (max_files_changed, max_lines_changed) are enforced by trimming and the trim is declared with a SCOPE_TRIMMED error, never silent",
+    "The fallback is a controlled EMPTY change plus a recoverable MODEL_FALLBACK error: no invented patch, ever",
+    "The Coder consumes budget and writes NOTHING to disk; applying the patch is F7",
+    "ProjectRequirements does not exist (NOT_IMPLEMENTED per the F2 audit): the Coder works from TaskInterpretation, Evidence and the current Subtask"
   ],
   "rules": [
     "Keep LangGraph",
@@ -133,6 +155,13 @@
     "F5: plan_index is the single source of truth for progress; it lives in RunState, not duplicated elsewhere",
     "F5: the executor node advances plan_index; the router only reads it, never calculates",
     "F5: evidence accumulates immutably; no executor overwrites the output of a previous subtask",
-    "F5: when the plan is exhausted, execution finalizes; the static M1 route does not apply"
+    "F5: when the plan is exhausted, execution finalizes; the static M1 route does not apply",
+    "F6: the model proposes content; the code derives diff, line counts and hashes -the model never supplies a hash",
+    "F6: CodeProposal is what the model generates and CodeChange is what the system derives; they are different contracts on purpose",
+    "F6: a `delete` carries no new_content and a `create`/`modify` requires it; the contract rejects the incoherence at the boundary",
+    "F6: exceeding Scope limits trims and declares (SCOPE_TRIMMED); it never truncates silently and never discards the whole change",
+    "F6: a model failure degrades to a controlled EMPTY change with a recoverable error; inventing a patch is forbidden",
+    "F6: the Coder never writes to disk; it only fills RunState.outputs.coder_output (F7 applies the patch)",
+    "F6: a model failure must APPEND its error to the existing ones; it must never overwrite the errors of earlier phases"
   ]
 }

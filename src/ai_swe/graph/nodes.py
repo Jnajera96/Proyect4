@@ -27,7 +27,10 @@ from ai_swe.contracts import (
     ApprovalDecision,
     Budget,
     CodeChange,
+    CodeProposal,
     Evidence,
+    FileChange,
+    FileOperation,
     FinalReport,
     Finding,
     Intent,
@@ -244,7 +247,15 @@ instruccion es ambigua, no 1.0 por defecto.
 
 
 def _alcance(state: RunState) -> Scope:
-    """Alcance declarado por el usuario. Se calcula en un solo sitio."""
+    """Alcance declarado por el usuario. Se calcula en un solo sitio.
+
+    Se prefiere el `scope` de la interpretacion (F3) cuando existe, porque es el
+    que lleva los limites de tamano (`max_files_changed`, `max_lines_changed`); el
+    de `RunOptions` no los tiene. Si aun no hay interpretacion, se construye desde
+    las opciones, que es lo unico disponible.
+    """
+    if state.interpretation is not None:
+        return state.interpretation.scope
     opciones = state.options
     return Scope(
         repo_path=opciones.repo_path or "(sin repositorio configurado)",
@@ -804,28 +815,314 @@ def explain_limits(state: RunState) -> dict:
             "updated_at": _ahora()}
 
 
-def coder(state: RunState) -> dict:
-    """Propone un parche. Sin modelo en M1, asi que no propone ninguno.
+# ------------------------------------------------------------- F6: Coder real
 
-    **F5: avanza el indice.** Cada nodo ejecutor declara que ha completado su
-    subtarea sumando 1 a `plan_index`. El router solo lee, nunca calcula.
+# Instruccion del sistema para el Coder. Se pide **solo** `CodeProposal`: el esquema
+# se deriva del contrato en el gateway. Aqui se explican las reglas que el contrato
+# no puede expresar por si solo (que el diff y los hashes los calcula el sistema).
+PROMPT_CODIFICACION = """\
+Eres el Coder de un sistema de ingenieria de software. Recibes una subtarea, la
+interpretacion de la peticion y la evidencia ya reunida por el Researcher. Tu tarea
+es PROPONER los cambios de codigo, no aplicarlos.
+
+Reglas obligatorias:
+  - Devuelve una lista de archivos. Para cada uno indica:
+      "operation": "create" (nuevo), "modify" (existe) o "delete" (se elimina).
+      "new_content": el CONTENIDO COMPLETO resultante del archivo. En "delete" se omite.
+      "rationale": por que ese archivo concreto necesita el cambio.
+  - `new_content` es el fichero entero, no un fragmento ni un diff. El sistema
+    calcula el diff y los hashes a partir de tu contenido; **no los inventes**.
+  - No declares rutas absolutas ni que escapen del repositorio.
+  - Respeta el criterio de termino de la subtarea: si no puedes cumplirlo, deja
+    `files` vacio y explicalo en `rationale` en lugar de proponer un cambio falso.
+  - No propongas mas archivos de los que permite el alcance declarado.
+"""
+
+
+def _contar_lineas(texto: str) -> int:
+    """Cuenta lineas de la forma en que `diff` las cuenta.
+
+    Un texto vacio tiene 0 lineas; un texto que termina en salto tiene una linea
+    final vacia que no se cuenta. Se centraliza para que el conteo de anadidas y
+    el de eliminadas usen exactamente el mismo criterio.
     """
-    cambio = CodeChange(
+    if not texto:
+        return 0
+    lineas = texto.split("\n")
+    if lineas and lineas[-1] == "":
+        lineas.pop()
+    return len(lineas)
+
+
+def _diff_unificado(propuesta: FileProposal) -> str:
+    """Genera un diff unificado minimo y determinista para un archivo.
+
+    **Por que no lo genera el modelo.** Un diff escrito a mano por el modelo es
+    fragil y no verificable: no hay forma de comprobar que sus trozos se
+    corresponden con el contenido. Aqui se deriva del contenido, asi que el diff
+    y el contenido no pueden divergir.
+
+    Es un diff de **lineas completas**: el archivo anterior se trata como vacio en
+    `create` (todo se anade) y como el contenido nuevo en `delete` (todo se
+    elimina). Sin el contenido viejo no se puede hacer mejor, y F7 -el sandbox- es
+    quien tendra ambas versiones.
+    """
+    ruta = propuesta.path
+    if propuesta.operation is FileOperation.CREATE:
+        viejo, nuevo = "", propuesta.new_content or ""
+    elif propuesta.operation is FileOperation.DELETE:
+        viejo, nuevo = "", ""
+    else:
+        viejo, nuevo = "", propuesta.new_content or ""
+
+    lineas_viejas = [f"-{l}" for l in viejo.split("\n") if l]
+    lineas_nuevas = [f"+{l}" for l in nuevo.split("\n") if l]
+
+    cabecera = f"--- a/{ruta}\n+++ b/{ruta}\n"
+    if propuesta.operation is FileOperation.CREATE:
+        cabecera = f"--- /dev/null\n+++ b/{ruta}\n"
+    elif propuesta.operation is FileOperation.DELETE:
+        cabecera = f"--- a/{ruta}\n+++ /dev/null\n"
+
+    return cabecera + "\n".join(lineas_viejas + lineas_nuevas) + ("\n" if lineas_nuevas else "")
+
+
+def _respetar_limites(propuesta: CodeProposal, scope: Scope) -> tuple[CodeProposal, str | None]:
+    """Recorta la propuesta a los limites del `Scope`. Devuelve (propuesta, motivo).
+
+    **Por que recortar y no rechazar en bloque.** El alcance declara cuanto se
+    permite cambiar, no que el trabajo entero se descarte. Recortar deja el cambio
+    parcial y **declarado**; rechazar entero convierte un exceso de una linea en
+    cero progreso. El motivo se devuelve para que el nodo lo registre: un recorte
+    silencioso seria tan malo como no aplicarlo.
+    """
+    if not propuesta.files:
+        return propuesta, None
+
+    motivo: str | None = None
+    archivos = list(propuesta.files)
+
+    if len(archivos) > scope.max_files_changed:
+        motivo = (
+            f"la propuesta tocaba {len(archivos)} archivos y el alcance permite "
+            f"{scope.max_files_changed}: se conservan los primeros"
+        )
+        archivos = archivos[: scope.max_files_changed]
+
+    # Limite de lineas: se van descartando archivos por el final hasta que el
+    # total de lineas de contenido nuevo quepa.
+    def _lineas(fs: list[FileProposal]) -> int:
+        return sum(_contar_lineas(f.new_content or "") for f in fs)
+
+    while archivos and _lineas(archivos) > scope.max_lines_changed:
+        quitado = archivos.pop()
+        extra = (
+            f"la propuesta superaba {scope.max_lines_changed} lineas y el alcance "
+            f"permite {scope.max_lines_changed}: se descarto '{quitado.path}'"
+            if motivo is None
+            else f"; ademas se descarto '{quitado.path}' por el limite de lineas"
+        )
+        motivo = (motivo or "") + extra if motivo else extra
+
+    return propuesta.model_copy(update={"files": archivos}), motivo
+
+
+def _cambio_desde_propuesta(propuesta: CodeProposal) -> CodeChange:
+    """Convierte la propuesta del modelo en el `CodeChange` derivado.
+
+    Aqui se calcula **toda** la metainformacion de forma determinista: conteo de
+    lineas, diff unificado y hashes. El modelo nunca aporta un hash, porque no
+    puede conocerlo; si lo aportara, seria un dato inventado.
+    """
+    cambios: list[FileChange] = []
+    trozos_dif: list[str] = []
+
+    for archivo in propuesta.files:
+        contenido = archivo.new_content or ""
+        nuevo_sha = hashlib.sha256(contenido.encode("utf-8")).hexdigest()
+        if archivo.operation is FileOperation.DELETE:
+            anadidas, eliminadas = 0, 0
+        else:
+            anadidas, eliminadas = _contar_lineas(contenido), 0
+        cambios.append(
+            FileChange(
+                path=archivo.path,
+                added=anadidas,
+                removed=eliminadas,
+                sha256=nuevo_sha,
+            )
+        )
+        trozos_dif.append(_diff_unificado(archivo))
+
+    diferencias = "".join(trozos_dif)
+    return CodeChange(
+        files_changed=cambios,
+        diff=diferencias,
+        rationale=propuesta.rationale,
+        diff_sha256=hashlib.sha256(diferencias.encode("utf-8")).hexdigest(),
+    )
+
+
+def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str]] | None:
+    """Intenta que el modelo proponga el cambio. `None` si hay que caer al fallback.
+
+    Devuelve `(cambio, presupuesto_consumido, avisos)`. Los avisos son los recortes
+    por alcance, que el nodo registra para que el recorte no sea silencioso.
+    """
+    from ai_swe.models import (
+        MessageRole,
+        ModelMessage,
+        ModelRequest,
+        StructuredOutputError,
+    )
+    from pydantic import ValidationError
+
+    gateway = _GATEWAY
+    if isinstance(gateway, _SinGateway):
+        return None
+    gateway = _gateway_por_defecto() if gateway is None else gateway
+
+    interpretacion = state.interpretation
+    subtarea = _subtarea_actual(state)
+    hallazgos = state.evidence.findings[-20:] if state.evidence.findings else []
+
+    lineas_evidencia = "\n".join(
+        f"- [{f.severity.value}] {f.path}: {f.explanation} (evidencia: {f.evidence[:120]})"
+        for f in hallazgos
+    ) or "(sin hallazgos previos)"
+
+    contexto = (
+        "Interpretacion de la peticion:\n"
+        f"- intencion: {interpretacion.intent.value if interpretacion else 'desconocida'}\n"
+        f"- restricciones: {interpretacion.constraints if interpretacion else []}\n\n"
+        f"Subtarea a completar:\n"
+        f"- descripcion: {subtarea.description if subtarea else 'no declarada'}\n"
+        f"- criterio de termino: {subtarea.done_criteria if subtarea else 'no declarado'}\n\n"
+        f"Evidencia acumulada por el Researcher:\n{lineas_evidencia}\n\n"
+        f"Peticion original del usuario:\n{state.instruction.text}"
+    )
+
+    peticion = ModelRequest(
+        messages=[
+            ModelMessage(role=MessageRole.SYSTEM, content=PROMPT_CODIFICACION),
+            ModelMessage(role=MessageRole.USER, content=contexto),
+        ],
+        max_output_tokens=4096,
+        temperature=0.0,
+        agent_role=AgentRole.CODER,
+        run_id=state.run_id,
+        trace_id=state.trace_id,
+    )
+    respuesta = gateway.generate_structured(
+        peticion, response_model=CodeProposal, budget=state.budget
+    )
+    datos = respuesta.structured_data
+    if datos is None:  # pragma: no cover - el gateway nunca devuelve None validado
+        raise StructuredOutputError("structured_data vacio tras la validacion")
+    # Revalidacion defensiva, igual que en F3/F4. Se envuelve el fallo para que
+    # un dato fuera de contrato degrade al fallback en lugar de abortar la ejecucion.
+    try:
+        propuesta = CodeProposal.model_validate(datos)
+    except ValidationError as exc:
+        raise StructuredOutputError(
+            "el modelo devolvio una propuesta que no cumple CodeProposal",
+            provider=respuesta.provider,
+            detail=str(exc)[:600],
+        ) from exc
+
+    propuesta, motivo = _respetar_limites(propuesta, _alcance(state))
+    avisos = [motivo] if motivo else []
+    cambio = _cambio_desde_propuesta(propuesta)
+    nuevo_presupuesto = gateway.consume(state.budget, respuesta)
+    return cambio, nuevo_presupuesto, avisos
+
+
+def _cambio_vacio(motivo: str) -> CodeChange:
+    """Cambio vacio controlado: no se propone nada, y se dice por que.
+
+    Es el fallback obligatorio. Un cambio vacio es **honesto**: no hay parche
+    porque no hubo modelo. Inventar uno seria fabricar un cambio que nadie ha
+    razonado.
+    """
+    return CodeChange(
         files_changed=[],
         diff="",
-        rationale=(
-            "M1: nodo determinista sin modelo conectado. El Coder no genera parches "
-            "todavia; la generacion real llega en M2. Se devuelve un cambio vacio en "
-            "lugar de un parche inventado."
-        ),
+        rationale=motivo,
         diff_sha256=hashlib.sha256(b"").hexdigest(),
     )
-    return {
+
+
+def coder(state: RunState) -> dict:
+    """Coder real (F6). Propone un parche **estructurado**; no escribe en disco.
+
+    El modelo devuelve un `CodeProposal` (archivos y contenido); este nodo deriva
+    de forma determinista el diff unificado, el conteo de lineas y los `sha256`.
+    El modelo propone; el codigo verifica.
+
+    **No escribe en el sistema de archivos.** Aplicar parches es F7 (sandbox). Aqui
+    el resultado queda en `RunState.outputs.coder_output`.
+
+    **F5:** cada nodo ejecutor avanza `plan_index`; el router solo lee.
+    """
+    errores = list(state.errors)
+    avisos: list[str] = []
+    try:
+        resultado = _coder_del_modelo(state)
+    except Exception as exc:  # noqa: BLE001 - la frontera convierte cualquier fallo
+        if not _es_fallo_esperado(exc):
+            raise
+        motivo = f"{type(exc).__name__}: {exc}"[:500]
+        log.warning("coder: el modelo no respondio, se usa el fallback (%s)", motivo)
+        cambio = _cambio_vacio(
+            "cambio vacio de respaldo: el modelo no se pudo usar "
+            f"({motivo}). No se propone ningun parche inventado."
+        )
+        return {
+            "outputs": _con_salidas(state, coder_output=cambio),
+            "errors": _error(
+                state,
+                "MODEL_FALLBACK",
+                AgentRole.CODER.value,
+                f"cambio determinista de respaldo: el modelo no se pudo usar ({motivo})",
+                recuperable=True,
+            ),
+            "plan_index": state.plan_index + 1,
+            "next_step": "run_tests",
+            "updated_at": _ahora(),
+        }
+
+    if resultado is None:
+        cambio = _cambio_vacio(
+            "cambio vacio de respaldo: no hay modelo conectado. La generacion real "
+            "de parches requiere el ModelGateway; no se propone un parche inventado."
+        )
+        return {
+            "outputs": _con_salidas(state, coder_output=cambio),
+            "plan_index": state.plan_index + 1,
+            "next_step": "run_tests",
+            "updated_at": _ahora(),
+        }
+
+    cambio, presupuesto, avisos = resultado
+    # Un recorte por alcance no puede quedar sin dejar rastro.
+    for aviso in avisos:
+        errores = _error(
+            state,
+            "SCOPE_TRIMMED",
+            AgentRole.CODER.value,
+            aviso,
+            recuperable=True,
+        )
+    salida = {
         "outputs": _con_salidas(state, coder_output=cambio),
+        "budget": presupuesto,
         "plan_index": state.plan_index + 1,
         "next_step": "run_tests",
         "updated_at": _ahora(),
     }
+    if avisos:
+        salida["errors"] = errores
+    return salida
 
 
 def run_tests(state: RunState) -> dict:
