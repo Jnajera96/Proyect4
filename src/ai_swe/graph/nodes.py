@@ -27,6 +27,7 @@ from ai_swe.contracts import (
     ApprovalDecision,
     Budget,
     CodeChange,
+    Evidence,
     FinalReport,
     Finding,
     Intent,
@@ -113,6 +114,13 @@ def _con_presupuesto(state: RunState, **cambios) -> Budget:
     datos = state.budget.model_dump()
     datos.update(cambios)
     return Budget.model_validate(datos)
+
+
+def _con_evidencia(state: RunState, **cambios) -> Evidence:
+    """Constructor inmutable de la evidencia: copia y actualiza sin mutar."""
+    datos = state.evidence.model_dump()
+    datos.update(cambios)
+    return Evidence.model_validate(datos)
 
 
 def _error(
@@ -644,11 +652,20 @@ def plan(state: RunState) -> dict:
     }
 
 
+def _subtarea_actual(state: RunState) -> Subtask | None:
+    """Devuelve la subtarea que toca ejecutar ahora, o None si no hay plan."""
+    if state.plan is None or not state.plan.subtasks:
+        return None
+    if state.plan_index >= len(state.plan.subtasks):
+        return None
+    return state.plan.subtasks[state.plan_index]
+
+
 def researcher(state: RunState) -> dict:
     """Enumera el repositorio autorizado. Lectura real, sin modelo.
 
-    Se confina cada ruta resuelta dentro de la raiz autorizada (`RNF-S2`): un
-    enlace simbolico que apunte fuera no debe poder ampliar el alcance.
+    **F5: ahora es iterativo.** Acumula hallazgos en `evidence.findings` sin
+    sobrescribir los de subtareas anteriores, y avanza `plan_index`.
     """
     hallazgos: list[Finding] = []
     leidos: list[str] = []
@@ -687,10 +704,27 @@ def researcher(state: RunState) -> dict:
                     )
                 )
 
-    salida = ResearchOutput(findings=hallazgos, unknowns=incognitas, files_read=leidos)
+    # Acumulacion inmutable de la evidencia (F5): se concatenan los hallazgos
+    # nuevos a los que ya existian, en lugar de sobrescribir.
+    hallazgos_previos = list(state.evidence.findings)
+    hallazgos_totales = hallazgos_previos + hallazgos
+    leidos_previos = state.outputs.researcher_output.files_read if state.outputs.researcher_output else []
+    leidos_totales = list(leidos_previos) + leidos
+    incognitas_previas = state.outputs.researcher_output.unknowns if state.outputs.researcher_output else []
+    incognitas_totales = list(incognitas_previas) + incognitas
+
+    salida = ResearchOutput(
+        findings=hallazgos_totales,
+        unknowns=incognitas_totales,
+        files_read=leidos_totales,
+    )
+
+    # Avance del indice: el nodo que ejecuta la tarea es el que declara que
+    # la ha completado. El router solo compara, nunca calcula.
     return {
         "outputs": _con_salidas(state, researcher_output=salida),
-        "next_step": "coder" if state.interpretation and state.interpretation.intent is Intent.MODIFY else "finalize",
+        "evidence": _con_evidencia(state, findings=hallazgos_totales),
+        "plan_index": state.plan_index + 1,
         "updated_at": _ahora(),
     }
 
@@ -771,7 +805,11 @@ def explain_limits(state: RunState) -> dict:
 
 
 def coder(state: RunState) -> dict:
-    """Propone un parche. Sin modelo en M1, asi que no propone ninguno."""
+    """Propone un parche. Sin modelo en M1, asi que no propone ninguno.
+
+    **F5: avanza el indice.** Cada nodo ejecutor declara que ha completado su
+    subtarea sumando 1 a `plan_index`. El router solo lee, nunca calcula.
+    """
     cambio = CodeChange(
         files_changed=[],
         diff="",
@@ -784,6 +822,7 @@ def coder(state: RunState) -> dict:
     )
     return {
         "outputs": _con_salidas(state, coder_output=cambio),
+        "plan_index": state.plan_index + 1,
         "next_step": "run_tests",
         "updated_at": _ahora(),
     }
@@ -1049,6 +1088,41 @@ def route_after_plan(state: RunState) -> str:
     if state.plan is None or not state.plan.subtasks:
         return "researcher"
     return state.plan.subtasks[0].agent.value
+
+
+def route_after_execution(state: RunState) -> str:
+    """Enrutador iterativo (F5). Decide el siguiente nodo tras ejecutar una subtarea.
+
+    Lee `plan_index` para saber cuantas subtareas se han completado, y elige el
+    agente de la siguiente. Si no quedan subtareas, finaliza.
+
+    **Por que no un nodo `next_subtask`.** El enrutador es puro: no tiene efectos
+    secundarios, no gasta presupuesto, no llama al modelo. Un nodo extra solo
+    anadiria un paso vacio al grafo y un punto de friccion al checkpoint. El
+    enrutador condicional de LangGraph esta disenado exactamente para esto.
+    """
+    # Si no hay plan, no hay iteracion: se cae a la ruta estatica de M1.
+    if state.plan is None or not state.plan.subtasks:
+        return _ruta_estatica_m1(state)
+
+    # Si aun quedan subtareas por ejecutar, se va a la siguiente.
+    if state.plan_index < len(state.plan.subtasks):
+        siguiente = state.plan.subtasks[state.plan_index]
+        return siguiente.agent.value
+
+    # Plan agotado: se finaliza. El plan ya dicto todo lo que habia que hacer;
+    # la ruta estatica de M1 no aplica porque el plan es la fuente de verdad.
+    return "finalize"
+
+
+def _ruta_estatica_m1(state: RunState) -> str:
+    """Ruta de cierre cuando NO hay plan (compatibilidad M1, F5 no aplica)."""
+    intencion = state.interpretation.intent if state.interpretation else Intent.INSPECT
+    if intencion is Intent.MODIFY:
+        return "coder"
+    if intencion is Intent.QUESTION:
+        return "answer_direct"
+    return "finalize"
 
 
 def route_after_research(state: RunState) -> str:

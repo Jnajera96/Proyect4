@@ -6,8 +6,7 @@ Topologia (docs/03-flujo-e-implementacion.md, seccion 3.5):
       interpret --fuera de alcance?--> explain_limits | plan
       explain_limits -> finalize
       plan --primera subtarea--> researcher
-      researcher --intencion--> coder | answer_direct | finalize
-      answer_direct -> finalize
+      researcher --siguiente subtarea?--> <agente> | finalize
       coder --hay cambios?--> run_tests | escalate_no_changes
       escalate_no_changes -> finalize
       run_tests --terminal?--> finalize | reviewer
@@ -38,6 +37,11 @@ generan a partir del plan. Por eso ningun plan -ni circular ni gigante- puede cr
 un bucle en la ejecucion, y el contrato `RunPlan` (ids unicos, dependencias
 existentes, DFS de ciclos, maximo de 32 subtareas) acota el dato antes de que entre
 al estado.
+
+**Iteracion por subtareas (`F5`).** El enrutador `route_after_execution` lee
+`plan_index` para saber cuantas subtareas se han completado, y envia al agente de
+la siguiente. El indice avanza en el nodo ejecutor, no en el router: el router solo
+compara, nunca calcula. Cuando el plan se agota, se cae a la ruta estatica de M1.
 """
 
 from __future__ import annotations
@@ -69,7 +73,7 @@ def construir_grafo() -> StateGraph:
     grafo.add_conditional_edges("interpret", nodes.route_after_interpret)
     grafo.add_conditional_edges("plan", nodes.route_after_plan)
     grafo.add_edge("explain_limits", "finalize")
-    grafo.add_conditional_edges("researcher", nodes.route_after_research)
+    grafo.add_conditional_edges("researcher", nodes.route_after_execution)
     grafo.add_edge("answer_direct", "finalize")
     grafo.add_conditional_edges("coder", nodes.route_after_coder)
     grafo.add_edge("escalate_no_changes", "finalize")

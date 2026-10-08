@@ -464,6 +464,49 @@ MUTACIONES: list[Mutation] = [
         '    return "plan"',
         "test_f4_supervisor_plan.py",
     ),
+    # ------------------------------------------------------------------ F5
+    Mutation(
+        "F5: el indice no avanza tras ejecutar researcher",
+        SRC / "graph" / "nodes.py",
+        '        "evidence": _con_evidencia(state, findings=hallazgos_totales),\n        "plan_index": state.plan_index + 1,\n        "updated_at": _ahora(),',
+        '        "evidence": _con_evidencia(state, findings=hallazgos_totales),\n        "plan_index": state.plan_index,\n        "updated_at": _ahora(),',
+        "test_f5_plan_driven_execution.py",
+    ),
+    Mutation(
+        "F5: la evidencia se sobrescribe en lugar de acumularse",
+        SRC / "graph" / "nodes.py",
+        '    hallazgos_previos = list(state.evidence.findings)\n    hallazgos_totales = hallazgos_previos + hallazgos',
+        '    hallazgos_totales = hallazgos',
+        "test_f5_plan_driven_execution.py",
+    ),
+    Mutation(
+        "F5: el enrutador ignora el plan y usa la ruta estatica",
+        SRC / "graph" / "nodes.py",
+        '    if state.plan_index < len(state.plan.subtasks):\n        siguiente = state.plan.subtasks[state.plan_index]\n        return siguiente.agent.value',
+        '    return _ruta_estatica_m1(state)',
+        "test_f5_plan_driven_execution.py",
+    ),
+    Mutation(
+        "F5: el plan agotado no finaliza",
+        SRC / "graph" / "nodes.py",
+        '    # Plan agotado: se finaliza. El plan ya dicto todo lo que habia que hacer;\n    # la ruta estatica de M1 no aplica porque el plan es la fuente de verdad.\n    return "finalize"',
+        '    # Plan agotado: se finaliza.\n    return _ruta_estatica_m1(state)',
+        "test_f5_plan_driven_execution.py",
+    ),
+    Mutation(
+        "F5: el indice puede ser negativo",
+        SRC / "contracts" / "state.py",
+        '    plan_index: int = Field(default=0, ge=0)',
+        '    plan_index: int = Field(default=0)',
+        "test_f5_plan_driven_execution.py",
+    ),
+    Mutation(
+        "F5: un segundo nodo ejecutor no avanza el indice",
+        SRC / "graph" / "nodes.py",
+        '        "outputs": _con_salidas(state, coder_output=cambio),\n        "plan_index": state.plan_index + 1,\n        "next_step": "run_tests",',
+        '        "outputs": _con_salidas(state, coder_output=cambio),\n        "plan_index": state.plan_index,\n        "next_step": "run_tests",',
+        "test_f5_plan_driven_execution.py",
+    ),
 ]
 
 

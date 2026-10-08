@@ -270,6 +270,11 @@ class RunState(BaseModel):
     status: RunStatus = RunStatus.PLANNED
     next_step: str | None = Field(default=None, max_length=120)
 
+    # F5: indice de progreso en el plan. Es **cuanto se ha hecho**, no *que se va
+    # a hacer* (eso es `plan`). Separar ambas cosas evita que dos fuentes de
+    # verdad se desincronicen.
+    plan_index: int = Field(default=0, ge=0)
+
     @model_validator(mode="after")
     def _timestamps_consistent(self) -> RunState:
         if self.updated_at < self.created_at:

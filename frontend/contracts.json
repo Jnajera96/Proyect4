@@ -1456,6 +1456,12 @@
           ],
           "default": null
         },
+        "plan_index": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Plan Index",
+          "type": "integer"
+        },
         "run_id": {
           "maxLength": 64,
           "minLength": 1,
