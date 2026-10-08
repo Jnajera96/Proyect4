@@ -37,6 +37,10 @@ venv/
 *.mutation_backup
 _mutation_report.xml
 _mutation_journal.json
+# Registros de las ejecuciones de verificacion (suite completa, mutaciones). Son
+# scratch de la sesion: el resultado que vale es el que se transcribe al acta.
+_*.log
+_*.xml
 # Sonda de la verificacion del frontend: se sobrescribe en cada ejecucion y NO se
 # borra, porque en este entorno un borrado bloqueado mata el proceso que verifica.
 frontend/_verify.html

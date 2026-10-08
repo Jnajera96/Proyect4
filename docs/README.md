@@ -28,8 +28,12 @@ solo lectura del 2026-10-06. Es la **fuente de verdad sobre el estado**.
 | `11_DEFINITION_OF_DONE_M2.md` | Criterio de término de M2 |
 | `12_GIT_REPRODUCIBILIDAD.md` | Estado de Git y reproducibilidad |
 | `13_PROXIMO_PROMPT_AGENTE.md` | Prompt previsto para iniciar M2 |
-| `PROJECT_SNAPSHOT.json` | Snapshot estructurado del estado |
 | `UPLOAD_ORDER.md` | Orden de integración del conjunto |
+
+> **El snapshot vive ahora en la raíz del repositorio: [`PROJECT_SNAPSHOT.json`](../PROJECT_SNAPSHOT.json).**
+> Se movió desde `auditoria-2026-10-06/` el 2026-10-08 para resolver la duplicidad
+> `AUD-01` (dos ficheros con el mismo nombre se desincronizan). Es la **fuente
+> estructurada del estado** y el único snapshot del proyecto.
 
 **`AUDITORIA-EXTERNA.md`** — informe completo de la auditoría (50 secciones + 25
 preguntas) con toda la evidencia recolectada. Es el origen del conjunto anterior.

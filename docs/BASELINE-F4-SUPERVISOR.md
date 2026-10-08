@@ -270,7 +270,7 @@ muestra los ficheros de F4 legítimamente modificados.
 | `tests/test_f4_supervisor_plan.py` | **nuevo**, 38 pruebas |
 | `tests/test_model_gateway.py` | la prueba estructural de F2 pasa a `test_solo_interpret_y_plan_hablan_con_el_gateway` |
 | `tools/mutation_check.py` | 8 mutaciones F4 |
-| `docs/auditoria-2026-10-06/PROJECT_SNAPSHOT.json` | fase F4, contadores, caveats, reglas |
+| `PROJECT_SNAPSHOT.json` | fase F4, contadores, caveats, reglas |
 
 ---
 

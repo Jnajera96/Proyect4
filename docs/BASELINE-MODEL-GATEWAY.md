@@ -76,7 +76,7 @@ alcance de la fase. Justificación completa en
 | `README.md` | estado, tabla de componentes y recuento de pruebas |
 | `docs/README.md` | índice: documentos nuevos |
 | `docs/auditoria-2026-10-06/09_ROADMAP.md` | `F2` marcada como hecha |
-| `docs/auditoria-2026-10-06/PROJECT_SNAPSHOT.json` | estado y reservas |
+| `PROJECT_SNAPSHOT.json` | estado y reservas |
 
 **No se modificó ningún nodo de LangGraph, ni el almacén, ni la API, ni el
 frontend.** Es deliberado: así se comprueba que `F2` no degradó `M1`.

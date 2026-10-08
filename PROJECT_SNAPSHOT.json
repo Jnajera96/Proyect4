@@ -1,0 +1,570 @@
+{
+  "project": "AI Software Engineering System",
+  "audit_date": "2026-10-08",
+  "baseline_updated": "2026-10-06",
+  "phase": "M2 IN PROGRESS — F7 (Sandbox & Worktree) implemented; ModelGateway wired to `interpret`, `plan` and `coder` ONLY",
+  "verified": {
+    "fastapi": true,
+    "langgraph": true,
+    "sqlite_persistence": true,
+    "sse": true,
+    "frontend": true,
+    "hitl": true,
+    "policy_engine": true,
+    "secret_redaction": true,
+    "secret_redaction_logging_filter": true,
+    "settings_secretstr": true,
+    "config_validation_on_use": true,
+    "budget_model_counters": true,
+    "lockfile": true,
+    "python_version_pinned": true,
+    "model_gateway": true,
+    "provider_adapter": true,
+    "fake_adapter": true,
+    "openai_compatible_adapter": true,
+    "provider_registry": true,
+    "structured_output_pydantic": true,
+    "typed_model_errors": true,
+    "retries_with_backoff": true,
+    "fallback_support": true,
+    "timeout_per_request_and_budget": true,
+    "budget_integrated_with_gateway": true,
+    "cost_accounting_supports_none": true,
+    "f3_interpret_uses_gateway": true,
+    "f3_deterministic_fallback_preserved": true,
+    "f3_pydantic_is_the_absolute_gate": true,
+    "f3_model_cannot_widen_scope": true,
+    "f3_fallback_is_declared_not_silent": true,
+    "f3_budget_accounting_in_interpret": true,
+    "f3_node_revalidates_even_though_the_gateway_does": true,
+    "pricing_table_loaded_from_settings": true,
+    "pricing_table_empty_by_default": true,
+    "f4_supervisor_plan_uses_gateway": true,
+    "f4_plan_injected_into_runstate": true,
+    "f4_deterministic_fallback_preserved": true,
+    "f4_plan_review_cycles_clamped_to_budget": true,
+    "f4_budget_accounting_in_plan": true,
+    "f4_fallback_is_declared_not_silent": true,
+    "f4_plan_is_data_not_topology": true,
+    "f5_plan_index_tracks_progress": true,
+    "f5_researcher_accumulates_evidence": true,
+    "f5_router_reads_plan_index": true,
+    "f5_exhausted_plan_goes_to_finalize": true,
+    "f5_index_never_decreases": true,
+    "f5_all_executor_nodes_advance_index": true,
+    "f6_coder_uses_gateway": true,
+    "f6_model_generates_codeproposal_not_codechange": true,
+    "f6_system_derives_diff_lines_and_sha256": true,
+    "f6_model_never_supplies_a_hash": true,
+    "f6_file_operation_distinguishes_create_modify_delete": true,
+    "f6_scope_limits_enforced_with_declared_trim": true,
+    "f6_deterministic_empty_change_fallback": true,
+    "f6_budget_accounting_in_coder": true,
+    "f6_coder_does_not_write_to_disk": true,
+    "f6_coder_output_lands_in_runstate_outputs": true,
+    "f7_sandbox_is_a_git_worktree_per_run": true,
+    "f7_sandbox_lives_under_gitignored_workspace_root": true,
+    "f7_sandbox_teardown_removes_and_prunes": true,
+    "f7_patch_applied_inside_sandbox_only": true,
+    "f7_original_repo_untouched_after_apply": true,
+    "f7_path_traversal_blocked_before_any_write": true,
+    "f7_confinement_passes_through_policy_engine": true,
+    "f7_unified_diff_real_with_previous_content": true,
+    "f7_delete_requires_approval_coder_cannot_delete": true,
+    "tests_passing": 435,
+    "tests_skipped": 1,
+    "tests_require_network": false,
+    "tests_require_credentials": false,
+    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7)",
+    "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
+    "m1_assumptions": "5/5",
+    "frontend_browser_checks": "11/11",
+    "f7_fourth_barrier_has_its_own_isolated_test": true,
+    "f7_teardown_removes_ghost_worktrees": true,
+    "f7_creation_leaves_no_branch_in_user_repo": true,
+    "f7_mutation_timeout_is_not_counted_as_caught": true,
+    "f7_barrier_2_and_4_have_isolated_tests": true
+  },
+  "not_implemented": [
+    "llm_wired_to_other_langgraph_nodes",
+    "real_reviewer",
+    "real_test_executor",
+    "mcp",
+    "knowledge_graph",
+    "real_stt",
+    "full_observability",
+    "authentication",
+    "agent_prompts_beyond_interpret_plan_and_coder",
+    "plan_dependencies_respected_before_execution",
+    "promotion_of_sandbox_changes_to_the_user_repo"
+  ],
+  "next_milestone": "M3 — wire the sandbox into the graph (a `sandbox` node between coder and run_tests) and promote reviewed changes via approval",
+  "ready_for_model_gateway": "YES",
+  "model_gateway_ready": "YES",
+  "f3_requirements_analyst_ready": "YES",
+  "f4_supervisor_ready": "YES",
+  "f5_plan_driven_execution_ready": "YES",
+  "f6_real_coder_ready": "YES",
+  "f7_sandbox_ready": "YES",
+  "technical_debt": [
+    {
+      "id": "TD-01",
+      "title": "Validacion E2E con modelo real",
+      "status": "OPEN — mecanismo listo, ejecucion pendiente",
+      "detail": "La cadena completa (Settings -> adapter -> gateway -> proveedor -> usage -> validacion Pydantic) NO se ha ejecutado contra un proveedor real: no hay credenciales en el entorno. El mecanismo esta implementado y la prueba existe (tests/test_model_gateway_real.py), pero se SALTA en lugar de pasar en falso.",
+      "how_to_close": "Definir AI_SWE_MODEL_API_KEY, AI_SWE_MODEL_NAME y AI_SWE_MODEL_PROVIDER en .env y ejecutar: AI_SWE_RUN_REAL_PROVIDER_TESTS=1 python -m pytest tests/test_model_gateway_real.py -m real_provider",
+      "decision": "APLAZADA por decision del Arquitecto (2026-10-07): se sigue trabajando con FakeModelAdapter y el fallback determinista para mantener la suite rapida y offline.",
+      "risk_if_unclosed": "Un fallo de integracion real (forma de la respuesta, cabeceras, formato de usage del proveedor) no se detectaria hasta el primer uso con un proveedor de verdad."
+    }
+  ],
+  "f3_caveats": [
+    "Only `interpret`, `plan` and `coder` are connected to the gateway; every other node stays deterministic",
+    "The real-provider test is opt-in and was NOT executed: no credentials in the environment (see technical_debt TD-01)",
+    "AI_SWE_MODEL_PRICING is empty in the repository, so cost is None (unknown), never 0",
+    "The pricing table has a loading mechanism but no tariff is asserted as current",
+    "No authentication yet (open finding from the external audit)"
+  ],
+  "f4_caveats": [
+    "RunPlan is the contract that bounds the plan: DFS cycle detection, unique ids, existing dependencies, <=32 subtasks, agent != supervisor, non-empty allowed_tools",
+    "max_review_cycles is clamped to the run budget when the model asks for more; the clamp is declared in the rationale",
+    "Topology edges are static: a plan -circular or gigantic- can never introduce a loop in the execution",
+    "The deterministic fallback is declared with a recoverable MODEL_FALLBACK error, never silent"
+  ],
+  "f5_caveats": [
+    "Execution is now subtask-by-subtask via plan_index; the router reads the index and sends to the next agent",
+    "Evidence accumulates immutably: each researcher execution concatenates findings to the previous ones",
+    "All executor nodes (researcher, coder) advance plan_index by 1; the router only compares, never calculates",
+    "The plan is consumed sequentially; dependencies (depends_on) are NOT yet respected before execution (F6)",
+    "When the plan is exhausted, execution goes to finalize regardless of intent (the plan is the source of truth)"
+  ],
+  "f6_caveats": [
+    "The model generates a CodeProposal (path, operation, new_content, rationale); it never generates a CodeChange",
+    "The system -not the model- derives the unified diff, the added/removed line counts and every sha256: a model cannot know the hash of a file it has not written",
+    "FileOperation (create/modify/delete) exists because a deleted file with added=0/removed=N is indistinguishable from a modified one",
+    "The unified diff is line-level and has no old content: `create` treats the previous file as empty, `delete` as fully removed. F7 (sandbox) is what will hold both versions",
+    "Scope limits (max_files_changed, max_lines_changed) are enforced by trimming and the trim is declared with a SCOPE_TRIMMED error, never silent",
+    "The fallback is a controlled EMPTY change plus a recoverable MODEL_FALLBACK error: no invented patch, ever",
+    "The Coder consumes budget and writes NOTHING to disk; applying the patch is F7",
+    "ProjectRequirements does not exist (NOT_IMPLEMENTED per the F2 audit): the Coder works from TaskInterpretation, Evidence and the current Subtask"
+  ],
+  "f7_caveats": [
+    "The sandbox is a real `git worktree` per run, created detached at HEAD under workspace_root (var/workspaces/<run_id>), which is gitignored: the original repo never sees the changes",
+    "The sandbox requires a real git repository and a commit: `git worktree add` cannot work without a HEAD",
+    "Confinement is four barriers per write: normalize_rel_path (syntax) + path_within_scope (declared scope) + Policy Engine decide() (role/subtask/protection/budget) + the physical check that the resolved path stays inside the sandbox root",
+    "A blocked path is a DENIAL, not a fault: it is recorded in `denegados` and the rest of the change still applies - one malicious file does not abort a legitimate change",
+    "The unified diff is now real (difflib, old vs new content) when the sandbox supplies the previous content; without it the diff still degrades to the F6 whole-file form and the `/dev/null` header declares it",
+    "`git diff HEAD` does not see untracked files: the sandbox runs `git add -N` first, otherwise a `create` would report an empty diff",
+    "The Coder CANNOT delete: `delete_file` is Supervisor-only and approval-gated, so a proposed `delete` is denied by policy and the file survives in the sandbox",
+    "The sandbox is NOT yet wired into the graph: F7 provides the mechanism (create/apply/teardown) plus tests; promotion of changes to the user repo is not implemented",
+    "The fourth barrier (physical root check) is covered by a test that INJECTS the resolution for the destination path, because the canonical attack vector - a symlink inside the worktree pointing outside - cannot be constructed on this Windows machine: `os.symlink` for directories creates a link that neither `Path.resolve()` nor `os.path.realpath()` follows, so resolution never leaves the root and the barrier has nothing to judge. `test_la_plataforma_no_permite_construir_el_vector_de_enlace` asserts the observable platform behaviour instead of skipping and pretending coverage",
+    "The teardown has redundant safety nets on this git (2.55.0): `git worktree remove --force` with an absolute path already removes the tree AND the `.git/worktrees/` entry, both for a present tree and for a ghost whose directory vanished. `prune` and the trailing `rmtree` are therefore defence-in-depth whose observable effect is nil today; they are kept, but credited to nobody",
+    "`git worktree add <path> HEAD` already detaches on its own (HEAD is a commit-ish), so `--detach` is redundant whenever HEAD is passed; the dangerous form is `git worktree add <path>` with no commit-ish, which creates a branch named after the directory and registers it in the user's repo",
+    "A mutation is only valid if it describes a failure the code can actually commit: three F7 mutations targeted redundant lines and passed green with and without them. They were rewritten to attack observable behaviour, not counted as caught",
+    "A pytest timeout used to be recorded as `cazada`, which is a false positive: no test ran and failed. `_run_pytest` now returns None on timeout and the verdict is NO CONCLUYENTE; LIMITE_PYTEST was raised 300 -> 600 s because the mutated suite is slower than the base one"
+  ],
+  "rules": [
+    "Keep LangGraph",
+    "Keep RunState typed",
+    "LLM proposes; deterministic code validates",
+    "No direct Coder writes to main workspace",
+    "No shell=True with LLM-generated commands",
+    "No MCP/Graphify before M2 E2E",
+    "No exposure beyond localhost before auth",
+    "New Budget fields enter with defaults; only removal/rename bumps schema version",
+    "A passing test proves nothing until a mutation makes it fail",
+    "No agent imports a provider SDK; all go through ModelGateway",
+    "Only models/providers/ may know about a concrete provider",
+    "The standard suite must pass without internet, credentials or an external provider",
+    "F3: only `interpret` may talk to the gateway; the deterministic classifier is the permanent fallback",
+    "F3: a model failure degrades to the fallback and leaves a recoverable error; it is never silent",
+    "F3: the interpreter's scope comes from the user, never from the model",
+    "F4: the plan is data, not topology; edges are written by hand and never generated from the plan",
+    "F4: the plan always passes through the RunPlan contract; model_construct is never used",
+    "F4: a model failure degrades to a deterministic plan and leaves a recoverable error; it is never silent",
+    "F4: a plan can never promise more review cycles than the run budget allows",
+    "F5: plan_index is the single source of truth for progress; it lives in RunState, not duplicated elsewhere",
+    "F5: the executor node advances plan_index; the router only reads it, never calculates",
+    "F5: evidence accumulates immutably; no executor overwrites the output of a previous subtask",
+    "F5: when the plan is exhausted, execution finalizes; the static M1 route does not apply",
+    "F6: the model proposes content; the code derives diff, line counts and hashes -the model never supplies a hash",
+    "F6: CodeProposal is what the model generates and CodeChange is what the system derives; they are different contracts on purpose",
+    "F6: a `delete` carries no new_content and a `create`/`modify` requires it; the contract rejects the incoherence at the boundary",
+    "F6: exceeding Scope limits trims and declares (SCOPE_TRIMMED); it never truncates silently and never discards the whole change",
+    "F6: a model failure degrades to a controlled EMPTY change with a recoverable error; inventing a patch is forbidden",
+    "F6: the Coder never writes to disk; it only fills RunState.outputs.coder_output (F7 applies the patch)",
+    "F6: a model failure must APPEND its error to the existing ones; it must never overwrite the errors of earlier phases",
+    "F7: the Coder proposes, the sandbox applies; the Coder never writes to disk and never to the user repo",
+    "F7: every write inside the sandbox passes confinement before any effect - never once at the start, always per file",
+    "F7: confinement is four barriers (syntax, declared scope, policy, physical root check); any one of them denies",
+    "F7: a denied path is recorded and skipped; the remaining legitimate files of the same change still apply",
+    "F7: the sandbox is a git worktree, created detached, under a gitignored workspace root, and teardown removes AND prunes",
+    "F7: the diff is a real unified diff when the previous content is available; without it, the degradation is declared, never silent",
+    "F7: the Coder cannot delete files; destructiveness requires approval and the Supervisor role",
+    "F7: the fourth barrier is tested by injecting the resolution outcome, not by planting a symlink: the platform cannot produce a symlink that resolution follows, and a link the system does not resolve proves nothing about the code that judges the resolved path",
+    "F7: a mutation must describe a failure the code can commit; a mutation over a redundant line passes green with and without it and verifies nothing",
+    "F7: a pytest timeout is NOT a caught mutation -no test failed-; it is reported as non-conclusive, never silently counted as caught",
+    "F7: redundancy in the teardown is proven against the filesystem, not assumed; `prune`/`rmtree` are kept as defence in depth but are not credited as the mechanism"
+  ],
+  "tests_passing": 435,
+  "snapshot_location": "repository root (consolidated 2026-10-08; the docs/auditoria-2026-10-06/ duplicate was removed to resolve AUD-01)",
+  "component_status": [
+    {
+      "component": "Contracts (Pydantic v2: state, tasks, outputs, tools, api)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Single source of truth; cross-field invariants via model_validator. Covered by tests/test_contracts.py."
+    },
+    {
+      "component": "RunState / Budget / Evidence contracts",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Typed shared state; new fields enter with defaults (project rule)."
+    },
+    {
+      "component": "ModelGateway (models/gateway.py)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Structured output, typed errors, retries with backoff, fallback, timeout, budget accounting. tests/test_model_gateway.py (68 tests)."
+    },
+    {
+      "component": "Provider adapters (FakeAdapter, OpenAICompatibleAdapter, registry)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "FakeAdapter drives the offline suite. The OpenAI-compatible adapter is written but has NEVER run against a real provider (TD-01)."
+    },
+    {
+      "component": "PricingTable (models/pricing.py)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Loading mechanism real; the table is EMPTY by default, so cost is None ('unknown'), never 0. No tariff is asserted as current."
+    },
+    {
+      "component": "Policy Engine (tools/policy.py, tools/registry.py)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Role/subtask/protection/scope/budget rules. tests/test_policy.py (27 tests)."
+    },
+    {
+      "component": "Secret redaction + logging filter (security/)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Centralised; verified by mutation (8/8). tests/test_redaction.py (28 tests)."
+    },
+    {
+      "component": "State persistence (state/store.py, SQLite)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "LangGraph checkpointer over SQLite; schema version pinned. tests/test_store.py."
+    },
+    {
+      "component": "LangGraph engine + API (api/app.py, graph/engine.py)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "FastAPI + SSE. tests/test_api.py (26), tests/test_workflow.py (27)."
+    },
+    {
+      "component": "interpret node — Requirements Analyst (F3)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Uses the gateway; deterministic classifier is the permanent fallback. Model cannot widen scope."
+    },
+    {
+      "component": "plan node — Supervisor (F4)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "RunPlan contract; review cycles clamped to budget; plan is data, not topology."
+    },
+    {
+      "component": "researcher node (F5)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Deterministic rglob enumeration; accumulates Evidence immutably; advances plan_index. NOT wired to the model."
+    },
+    {
+      "component": "coder node (F6)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Model generates CodeProposal; the system derives diff, line counts and sha256. Writes NOTHING to disk."
+    },
+    {
+      "component": "Sandbox + patch applicator (F7)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "git worktree per run; four-barrier confinement per write; real unified diff. tests/test_f7_sandbox.py (31 defs / 36 cases)."
+    },
+    {
+      "component": "Sandbox wired into the graph",
+      "status": "NOT_IMPLEMENTED",
+      "observations": "F7 provides the mechanism; no `sandbox` node exists between coder and run_tests. This is M3."
+    },
+    {
+      "component": "Promotion of sandbox changes to the user repo",
+      "status": "NOT_IMPLEMENTED",
+      "observations": "Deliberate: promotion must go through human approval (HITL)."
+    },
+    {
+      "component": "run_tests node — real Test Runner (F8)",
+      "status": "NOT_IMPLEMENTED",
+      "observations": "The node passes the Policy Engine and then records TEST_EXECUTOR_NOT_IMPLEMENTED. It does NOT fabricate a TestRun."
+    },
+    {
+      "component": "reviewer node — semantic Reviewer (F9)",
+      "status": "PARTIAL",
+      "observations": "A DETERMINISTIC reviewer exists (verdict from registered test evidence) and routes REQUEST_CHANGES back to the coder with a cycle limit. It is not model-driven and has no test evidence source yet, so in practice it escalates."
+    },
+    {
+      "component": "Answer/limit/approval/escalate/finalize nodes",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "HITL via approval_gate + mark_awaiting; terminal states validated."
+    },
+    {
+      "component": "API authentication",
+      "status": "NOT_IMPLEMENTED",
+      "observations": "Open finding from the external audit. Localhost-only exposure is the current rule."
+    },
+    {
+      "component": "POST /runs/{id}/cancel",
+      "status": "NOT_IMPLEMENTED",
+      "observations": "Returns 501 by design."
+    },
+    {
+      "component": "Frontend (frontend/index.html, contracts.json)",
+      "status": "PARTIAL",
+      "observations": "Served and driven by the API; verified by tools/verify_frontend.py (a SEPARATE harness, not the pytest suite). No jsdom/CSS coverage — declared debt."
+    },
+    {
+      "component": "STT — FakeAdapter (stt/base.py)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Drives the /transcriptions endpoint offline."
+    },
+    {
+      "component": "STT — FasterWhisperAdapter",
+      "status": "NOT_IMPLEMENTED",
+      "observations": "Raises NotImplementedError. Declared M5."
+    },
+    {
+      "component": "Dockerfile / docker-compose.yml",
+      "status": "PARTIAL",
+      "observations": "Files exist and are written for real; NOT executed as part of this audit, so no runtime evidence."
+    },
+    {
+      "component": "agents/ package",
+      "status": "NOT_IMPLEMENTED",
+      "observations": "Docstring only. The agents actually live in graph/nodes.py; this package is a declared M2 placeholder."
+    },
+    {
+      "component": "mcp/ package",
+      "status": "NOT_IMPLEMENTED",
+      "observations": "Docstring only. Declared F13/M3. `mcp` is an optional extra, never installed."
+    },
+    {
+      "component": "observability/ package",
+      "status": "NOT_IMPLEMENTED",
+      "observations": "Docstring only. Structured JSON logs exist via security/logging.py; Langfuse is declared M6."
+    },
+    {
+      "component": "evaluation/ harness (MET-01..14, EXP-01..07)",
+      "status": "NOT_IMPLEMENTED",
+      "observations": "Docstring only. Declared M2/M6."
+    },
+    {
+      "component": "Knowledge graph / Graphify",
+      "status": "NOT_IMPLEMENTED",
+      "observations": "A [PROP] proposal (docs/05-graphify-evaluacion.md), never implemented."
+    }
+  ],
+  "m2_definition_of_done": {
+    "source": "docs/auditoria-2026-10-06/11_DEFINITION_OF_DONE_M2.md",
+    "items": [
+      {
+        "n": 1,
+        "item": "Entrada del usuario",
+        "met": true
+      },
+      {
+        "n": 2,
+        "item": "Requirements Analyst",
+        "met": true
+      },
+      {
+        "n": 3,
+        "item": "Confirmacion humana de requisitos",
+        "met": false,
+        "note": "HITL exists at approval_gate, but not specifically as a requirements-confirmation step"
+      },
+      {
+        "n": 4,
+        "item": "RunPlan valido",
+        "met": true
+      },
+      {
+        "n": 5,
+        "item": "Researcher con evidencia",
+        "met": true
+      },
+      {
+        "n": 6,
+        "item": "Coder genera CodeChange",
+        "met": true
+      },
+      {
+        "n": 7,
+        "item": "Cambio aplicado en workspace aislado",
+        "met": false,
+        "note": "Sandbox exists (F7) but is NOT wired into the graph"
+      },
+      {
+        "n": 8,
+        "item": "Test Runner ejecuta targets autorizados",
+        "met": false,
+        "note": "NOT_IMPLEMENTED — F8"
+      },
+      {
+        "n": 9,
+        "item": "Reviewer evalua requisitos + cambio + tests",
+        "met": false,
+        "note": "Only a deterministic reviewer with no test evidence"
+      },
+      {
+        "n": 10,
+        "item": "REQUEST_CHANGES vuelve al Coder",
+        "met": true,
+        "note": "route_after_review routes to coder while review_cycles_used < max_review_cycles"
+      },
+      {
+        "n": 11,
+        "item": "Ciclo respeta budget y limite de revisiones",
+        "met": true
+      },
+      {
+        "n": 12,
+        "item": "ACCEPT conduce a HITL",
+        "met": true
+      },
+      {
+        "n": 13,
+        "item": "Aprobacion/rechazo humano",
+        "met": true
+      },
+      {
+        "n": 14,
+        "item": "Estado terminal valido",
+        "met": true
+      },
+      {
+        "n": 15,
+        "item": "Persistencia y trazabilidad completas",
+        "met": true
+      }
+    ],
+    "met_count": 11,
+    "total": 15,
+    "verdict": "M2 NOT COMPLETE — blocked on F8 (Test Runner) and M3 (wire the sandbox into the graph)"
+  },
+  "repository": {
+    "vcs": "git",
+    "branch": "main",
+    "remote_configured": false,
+    "last_commit": "211eb90 feat(f6): implement real coder node with deterministic diffs and CodeProposal contracts",
+    "commit_history": [
+      "211eb90 feat(f6): implement real coder node with deterministic diffs and CodeProposal contracts",
+      "2ff2c7d feat(f5): implement plan-driven iterative execution via plan_index and dynamic routing",
+      "fc2c68f feat(f4): implement supervisor planning node with budget clamping and deterministic fallback",
+      "00c52a1 feat(f3): implement requirements analyst with deterministic fallback and budget consumption",
+      "04b7581 F2 implement provider-agnostic model gateway",
+      "d556960 F1 reproducibility and pre-M2 security hardening",
+      "7446bdf Cerrar baseline: plan de reproducibilidad y reporte post-documentacion",
+      "23a6375 Anadir .gitattributes: normalizacion LF en el repositorio",
+      "11a13cb M1 VERIFIED BASELINE"
+    ],
+    "uncommitted_work": [
+      "M .gitignore",
+      "M docs/auditoria-2026-10-06/PROJECT_SNAPSHOT.json",
+      "M src/ai_swe/graph/nodes.py",
+      "M tools/mutation_check.py",
+      "?? docs/BASELINE-F7-SANDBOX.md",
+      "?? src/ai_swe/sandbox.py",
+      "?? src/ai_swe/tools/patcher.py",
+      "?? tests/test_f7_sandbox.py"
+    ],
+    "uncommitted_note": "F7 is implemented and verified but NOT committed: the Arquitecto's F7 authorization asked to stop after the evidence and await review."
+  },
+  "tests_executed": {
+    "command": "python -m pytest -p no:cacheprovider --junitxml=_audit_suite.xml -q",
+    "environment": "local, offline, no credentials, no network",
+    "tests": 435,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "skip_reason": "TD-01 — real-provider integration test is opt-in (`-m real_provider`) and requires AI_SWE_MODEL_API_KEY; it SKIPS rather than passing falsely",
+    "verdict": "GREEN",
+    "mutations": {
+      "f1_f2": "35/35 (verified at the time)",
+      "redaction": "8/8",
+      "f3": "8/8",
+      "f4": "8/8",
+      "f5": "6/6",
+      "f6": "14/14",
+      "f7": "12/12 (after fixing 4 uncaught mutations and a false-positive timeout verdict)"
+    }
+  },
+  "blockers_and_debt": [
+    {
+      "id": "TD-01",
+      "title": "E2E validation against a real model provider",
+      "status": "OPEN — mechanism ready, execution pending",
+      "detail": "The full chain (Settings -> adapter -> gateway -> provider -> usage -> Pydantic validation) has NEVER run against a real provider: no credentials. tests/test_model_gateway_real.py SKIPS instead of passing falsely.",
+      "how_to_close": "Set AI_SWE_MODEL_API_KEY / AI_SWE_MODEL_NAME / AI_SWE_MODEL_PROVIDER and run: AI_SWE_RUN_REAL_PROVIDER_TESTS=1 python -m pytest tests/test_model_gateway_real.py -m real_provider",
+      "risk": "A real integration failure (response shape, headers, usage format) would only surface on first real use."
+    },
+    {
+      "id": "AUD-01",
+      "title": "Two PROJECT_SNAPSHOT.json files (root + docs)",
+      "status": "RESOLVED (2026-10-08)",
+      "detail": "The Arquitecto asked for the snapshot at the root; the project convention kept it at docs/auditoria-2026-10-06/. Two files with the same name desynced.",
+      "how_to_close": "Consolidated: the root PROJECT_SNAPSHOT.json is now the canonical snapshot (phase detail + component status + M2 DoD) and the docs copy was removed."
+    },
+    {
+      "id": "AUD-02",
+      "title": "The canonical snapshot had an internal desync",
+      "status": "FIXED during this audit",
+      "detail": "verified.tests_passing said 429 while the root key said 435.",
+      "how_to_close": "Corrected to 435 in PROJECT_SNAPSHOT.json (now at the repository root)."
+    },
+    {
+      "id": "AUD-03",
+      "title": "F7 is verified but UNCOMMITTED",
+      "status": "OPEN",
+      "detail": "8 files (4 modified, 4 new) sit in the working tree. Nothing is lost, but the phase has no commit boundary.",
+      "how_to_close": "A senior-level commit once the Arquitecto approves F7."
+    },
+    {
+      "id": "AUD-04",
+      "title": "Test Runner (F8) absent",
+      "status": "OPEN",
+      "detail": "The M2 DoD cannot close without it: no test evidence means the reviewer has nothing to judge.",
+      "how_to_close": "Implement F8: run only ALLOWED_TEST_TARGETS through the sandbox, record real TestRun evidence."
+    },
+    {
+      "id": "AUD-05",
+      "title": "The sandbox is not wired into the graph",
+      "status": "OPEN",
+      "detail": "F7 proves isolation in tests, but no run applies a patch yet.",
+      "how_to_close": "M3: a `sandbox` node between coder and run_tests."
+    },
+    {
+      "id": "AUD-06",
+      "title": "No authentication on the API",
+      "status": "OPEN",
+      "detail": "Open finding from the external audit; mitigated only by localhost-only exposure.",
+      "how_to_close": "Auth before any exposure beyond localhost (project rule)."
+    },
+    {
+      "id": "AUD-07",
+      "title": "Frontend verification is a separate harness",
+      "status": "OPEN",
+      "detail": "tools/verify_frontend.py is not part of the pytest suite, and there is no CSS/jsdom coverage.",
+      "how_to_close": "Fold the frontend checks into the standard suite, or declare the gap explicitly."
+    },
+    {
+      "id": "AUD-08",
+      "title": "Docs naming differs from the Arquitecto's expectation",
+      "status": "RESOLVED (2026-10-08)",
+      "detail": "The requested 00-PROJECT-BRIEF.md / 01-ARCHITECTURE.md / 02-CONTRACTS.md / 03-SECURITY.md / 04-ROADMAP.md / 05-DECISIONS.md / 06-EVALUATION.md do NOT exist. The real docs are 01-arquitectura.md .. 06-contrato-frontend-backend.md plus auditoria-2026-10-06/00..13 and BASELINE-*.md. There are NO ADRs (decisions live as DEC-xx in 01-arquitectura.md).",
+      "how_to_close": "Resolved with an index layer: docs/00-PROJECT-BRIEF.md .. 06-EVALUATION.md were added as aliases pointing to the canonical documents, and DEC-01..DEC-11 were extracted into docs/05-DECISIONS.md (plus DEC-12..DEC-17 for the M2 phase decisions)."
+    }
+  ],
+  "next_step_proposed": {
+    "phase": "F8 — real Test Runner",
+    "why": "It is the first unmet item of the M2 Definition of Done and it unblocks the reviewer (item 9). Without test evidence there is nothing for the reviewer to judge.",
+    "scope": "Run ONLY the identifiers in AI_SWE_ALLOWED_TEST_TARGETS, inside the sandbox, and record real TestRun evidence. No free-form commands, ever. Keep the deterministic path: no executor => typed error, never a fabricated TestRun.",
+    "prerequisite": "Decide the fate of the uncommitted F7 work (commit or not) before layering F8 on top.",
+    "awaiting": "explicit human authorization"
+  }
+}

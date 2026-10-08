@@ -14,6 +14,7 @@ peor que uno que admite que no las ejecuto.
 
 from __future__ import annotations
 
+import difflib
 import hashlib
 import logging
 from datetime import UTC, datetime
@@ -854,37 +855,56 @@ def _contar_lineas(texto: str) -> int:
     return len(lineas)
 
 
-def _diff_unificado(propuesta: FileProposal) -> str:
-    """Genera un diff unificado minimo y determinista para un archivo.
+def _diff_unificado(propuesta: FileProposal, contenido_previo: str | None = None) -> str:
+    """Diff unificado **real** para un archivo: compara el contenido viejo con el nuevo.
 
-    **Por que no lo genera el modelo.** Un diff escrito a mano por el modelo es
-    fragil y no verificable: no hay forma de comprobar que sus trozos se
-    corresponden con el contenido. Aqui se deriva del contenido, asi que el diff
-    y el contenido no pueden divergir.
+    **Resuelve la deuda declarada en F6.** Con solo el contenido nuevo el diff era de
+    lineas completas -trataba el archivo como si se anadiera entero-, porque el Coder
+    no podia leer el original. Ahora el contenido previo se pasa como argumento, y el
+    diff sale de `difflib.unified_diff`: contexto real, lineas `-`/`+`/` ` correctas y
+    cabeceras `@@` con los rangos verdaderos.
 
-    Es un diff de **lineas completas**: el archivo anterior se trata como vacio en
-    `create` (todo se anade) y como el contenido nuevo en `delete` (todo se
-    elimina). Sin el contenido viejo no se puede hacer mejor, y F7 -el sandbox- es
-    quien tendra ambas versiones.
+    **De donde sale `contenido_previo`.** No de que el Coder lea el repositorio del
+    usuario -no debe, y no puede-. Lo aporta quien tiene acceso legitimo: en F7, el
+    sandbox, que lee el archivo dentro del worktree aislado antes de aplicar el
+    parche. Si no se pasa -el camino del Coder puro, sin sandbox-, el diff degrada al
+    comportamiento de F6 y **lo declara en la cabecera**, para que nadie confunda un
+    diff sin contexto con un diff real.
+
+    Un `create` no tiene contenido previo por definicion, y se marca con
+    `--- /dev/null`, que es la convencion de git.
     """
     ruta = propuesta.path
-    if propuesta.operation is FileOperation.CREATE:
-        viejo, nuevo = "", propuesta.new_content or ""
-    elif propuesta.operation is FileOperation.DELETE:
-        viejo, nuevo = "", ""
+    nuevo = propuesta.new_content or ""
+
+    if propuesta.operation is FileOperation.DELETE:
+        viejo = contenido_previo or ""
+        nuevo = ""
+        etiqueta_vieja, etiqueta_nueva = f"a/{ruta}", "/dev/null"
+    elif propuesta.operation is FileOperation.CREATE or contenido_previo is None:
+        viejo = ""
+        etiqueta_vieja, etiqueta_nueva = "/dev/null", f"b/{ruta}"
     else:
-        viejo, nuevo = "", propuesta.new_content or ""
+        viejo = contenido_previo
+        etiqueta_vieja, etiqueta_nueva = f"a/{ruta}", f"b/{ruta}"
 
-    lineas_viejas = [f"-{l}" for l in viejo.split("\n") if l]
-    lineas_nuevas = [f"+{l}" for l in nuevo.split("\n") if l]
+    trozos = difflib.unified_diff(
+        viejo.splitlines(keepends=True),
+        nuevo.splitlines(keepends=True),
+        fromfile=etiqueta_vieja,
+        tofile=etiqueta_nueva,
+        n=3,
+    )
+    texto = "".join(trozos)
 
-    cabecera = f"--- a/{ruta}\n+++ b/{ruta}\n"
-    if propuesta.operation is FileOperation.CREATE:
-        cabecera = f"--- /dev/null\n+++ b/{ruta}\n"
-    elif propuesta.operation is FileOperation.DELETE:
-        cabecera = f"--- a/{ruta}\n+++ /dev/null\n"
-
-    return cabecera + "\n".join(lineas_viejas + lineas_nuevas) + ("\n" if lineas_nuevas else "")
+    # Un `delete` **siempre** produce un trozo, aunque no haya contenido previo.
+    # `difflib` no emite nada cuando ambos lados son iguales -y dos cadenas vacias lo
+    # son-, asi que sin esto un borrado quedaba como un diff vacio: indistinguible de
+    # "no hay cambio". Se sintetiza la cabecera, que es lo que git escribe para un
+    # archivo eliminado.
+    if not texto and propuesta.operation is FileOperation.DELETE:
+        return f"--- {etiqueta_vieja}\n+++ {etiqueta_nueva}\n"
+    return texto
 
 
 def _respetar_limites(propuesta: CodeProposal, scope: Scope) -> tuple[CodeProposal, str | None]:
@@ -927,23 +947,52 @@ def _respetar_limites(propuesta: CodeProposal, scope: Scope) -> tuple[CodePropos
     return propuesta.model_copy(update={"files": archivos}), motivo
 
 
-def _cambio_desde_propuesta(propuesta: CodeProposal) -> CodeChange:
+def _contar_desde_diff(trozo: str) -> tuple[int, int]:
+    """Cuenta anadidas y eliminadas leyendo el diff, no el contenido.
+
+    Se cuentan las lineas que empiezan por `+` o `-` **excluyendo las cabeceras**
+    (`+++`/`---`). Contar sobre el diff y no sobre el texto es lo que hace que el
+    numero y el parche no puedan divergir: si el diff dice que se anaden tres lineas,
+    el conteo dice tres, porque sale de las mismas lineas.
+    """
+    anadidas = eliminadas = 0
+    for linea in trozo.splitlines():
+        if linea.startswith("+++") or linea.startswith("---"):
+            continue
+        if linea.startswith("+"):
+            anadidas += 1
+        elif linea.startswith("-"):
+            eliminadas += 1
+    return anadidas, eliminadas
+
+
+def _cambio_desde_propuesta(
+    propuesta: CodeProposal, *, contenidos_previos: dict[str, str | None] | None = None
+) -> CodeChange:
     """Convierte la propuesta del modelo en el `CodeChange` derivado.
 
     Aqui se calcula **toda** la metainformacion de forma determinista: conteo de
     lineas, diff unificado y hashes. El modelo nunca aporta un hash, porque no
     puede conocerlo; si lo aportara, seria un dato inventado.
+
+    **`contenidos_previos` es la entrada de F7.** El Coder puro no lo pasa -no lee el
+    repositorio- y obtiene el diff de F6 (sin contexto). Cuando F7 aplica el parche,
+    pasa el contenido que leyo del sandbox, y entonces el diff y los conteos son
+    reales: `added` y `removed` reflejan el cambio de verdad, no el archivo entero.
     """
+    previos = contenidos_previos or {}
     cambios: list[FileChange] = []
     trozos_dif: list[str] = []
 
     for archivo in propuesta.files:
+        # El sha256 es siempre del contenido **resultante**: es la huella del archivo
+        # tal como queda, que es lo que permite comprobar despues que se aplico.
         contenido = archivo.new_content or ""
         nuevo_sha = hashlib.sha256(contenido.encode("utf-8")).hexdigest()
-        if archivo.operation is FileOperation.DELETE:
-            anadidas, eliminadas = 0, 0
-        else:
-            anadidas, eliminadas = _contar_lineas(contenido), 0
+
+        trozo = _diff_unificado(archivo, previos.get(archivo.path))
+        anadidas, eliminadas = _contar_desde_diff(trozo)
+
         cambios.append(
             FileChange(
                 path=archivo.path,
@@ -952,7 +1001,7 @@ def _cambio_desde_propuesta(propuesta: CodeProposal) -> CodeChange:
                 sha256=nuevo_sha,
             )
         )
-        trozos_dif.append(_diff_unificado(archivo))
+        trozos_dif.append(trozo)
 
     diferencias = "".join(trozos_dif)
     return CodeChange(

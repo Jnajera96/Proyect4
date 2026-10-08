@@ -42,7 +42,19 @@ DIARIO = RAIZ / "_mutation_journal.json"
 # Limite por invocacion de pytest. Una mutacion puede dejar una prueba esperando
 # un tiempo de espera largo (los flujos SSE esperan a `run.done`). Sin limite, el
 # verificador se cuelga y no hay forma de saber en cual.
-LIMITE_PYTEST = 90.0
+#
+# Historial: 90 -> 300 (F7) -> 600 (F7, correccion). Motivo del primer salto: la
+# suite crecio con las pruebas del sandbox, que crean repositorios git **de verdad**
+# y tardan ~36s de base, de modo que la propia linea base se cortaba con 90s.
+#
+# **Por que 600 y no 300.** Con 300 se observo -en la misma ejecucion de F7- que
+# varias mutaciones tardaban 300.1-300.2s: es decir, **cortaban**, no fallaban. Con
+# el limite justo por encima de la duracion real, el verificador corre el riesgo de
+# informar de sus propios cortes como cazadas. Eso ya no puede pasar a partir de
+# esta correccion -un corte devuelve `None` y cuenta como NO CONCLUYENTE-, pero el
+# limite debe seguir dando margen sobre la suite mutada, que es mas lenta que la
+# suite base. 600s es ese margen.
+LIMITE_PYTEST = 600.0
 
 # Limite para las herramientas de verificacion externas (el navegador).
 LIMITE_COMANDO = 180.0
@@ -606,6 +618,120 @@ MUTACIONES: list[Mutation] = [
         '        if False:\n            raise ValueError(\n                f"\'{self.path}\': la operacion \'{self.operation.value}\' exige new_content"\n            )',
         "test_f6_real_coder.py",
     ),
+    # ------------------------------------------------------------------ F7
+    Mutation(
+        "F7: el confinamiento deja pasar una ruta que escapa",
+        SRC / "sandbox.py",
+        "        normalizada = normalize_rel_path(ruta_relativa)\n        if normalizada is None:",
+        "        normalizada = ruta_relativa.replace(\"\\\\\", \"/\").strip().strip(\"./\") or ruta_relativa\n        if normalizada is None:",
+        "test_f7_sandbox.py",
+    ),
+    Mutation(
+        "F7: la comprobacion fisica de raiz deja de hacerse",
+        SRC / "sandbox.py",
+        "        if destino != raiz_resuelta and raiz_resuelta not in destino.parents:",
+        "        if False:",
+        "test_f7_sandbox.py",
+    ),
+    Mutation(
+        "F7: el aplicador escribe sin pasar por el Policy Engine",
+        SRC / "tools" / "patcher.py",
+        "    decision = decide(herramienta, {\"path\": normalizada}, ctx)\n    if decision.effect is not PolicyEffect.ALLOW:",
+        "    decision = decide(herramienta, {\"path\": normalizada}, ctx)\n    if False:",
+        "test_f7_sandbox.py",
+    ),
+    Mutation(
+        "F7: el aplicador no comprueba el alcance declarado",
+        SRC / "tools" / "patcher.py",
+        "    if not path_within_scope(normalizada, allowed_paths):",
+        "    if False:",
+        "test_f7_sandbox.py",
+    ),
+    Mutation(
+        "F7: el aplicador escribe en el repositorio original en lugar del sandbox",
+        SRC / "tools" / "patcher.py",
+        "                sandbox.escribir(ruta, contenidos[ruta] or \"\")",
+        "                _objetivo = Path(sandbox.repo_original) / ruta\n                _objetivo.parent.mkdir(parents=True, exist_ok=True)\n                _objetivo.write_text(contenidos[ruta] or \"\", encoding=\"utf-8\")",
+        "test_f7_sandbox.py",
+    ),
+    Mutation(
+        # **Mutacion corregida en F7.** La version anterior retiraba solo la linea de
+        # `prune` y resulto **no observable**: en este git (2.55.0) `worktree remove
+        # --force` con ruta absoluta limpia por si solo la entrada administrativa,
+        # tanto si el arbol esta como si su directorio ya desaparecio. Ninguna prueba
+        # podia cazarla porque el efecto observable no cambiaba -y una mutacion que no
+        # se puede cazar no verifica nada, solo infla el recuento-.
+        #
+        # Se sustituye por una que **si** es observable y protege el mismo contrato
+        # (el teardown no deja fantasmas): se retiran `remove` y `prune` a la vez, de
+        # modo que el worktree queda registrado aunque su directorio se borre.
+        "F7: el teardown deja la entrada de worktree registrada (fantasma)",
+        SRC / "sandbox.py",
+        "        _git(*orden, cwd=sandbox.repo_original, check=False)\n        _git(\"worktree\", \"prune\", cwd=sandbox.repo_original, check=False)",
+        "        pass  # MUTACION: sin remove ni prune",
+        "test_f7_sandbox.py",
+    ),
+    Mutation(
+        # **Mutacion corregida en F7.** La version anterior retiraba el bloque
+        # `shutil.rmtree` del teardown y resulto **no observable**: `worktree remove
+        # --force` ya borra el directorio por si solo, de modo que el `rmtree` es red
+        # de seguridad y su ausencia no cambia ningun resultado visible.
+        #
+        # Se sustituye por una que **si** es observable y protege un invariante
+        # distinto del teardown: que un worktree que **no creamos nosotros** no se
+        # destruya. Es una salvaguarda real -un `Sandbox` puede construirse a mano
+        # para reabrir uno existente-, y retirarla hace que un `destruir` sobre un
+        # sandbox ajeno lo borre.
+        "F7: el teardown destruye tambien el sandbox que no creamos nosotros",
+        SRC / "sandbox.py",
+        "    if not sandbox.creado_por_nosotros:\n        return",
+        "    if False:\n        return",
+        "test_f7_sandbox.py",
+    ),
+    Mutation(
+        "F7: un archivo nuevo no aparece en el diff (falta add -N)",
+        SRC / "sandbox.py",
+        '        _git("add", "-N", "--", ".", cwd=self.raiz, check=False)\n        result = _git("diff", "HEAD", "--no-color", cwd=self.raiz, check=False)',
+        '        result = _git("diff", "HEAD", "--no-color", cwd=self.raiz, check=False)',
+        "test_f7_sandbox.py",
+    ),
+    Mutation(
+        "F7: el diff vuelve a ser de lineas completas (ignora el contenido previo)",
+        SRC / "graph" / "nodes.py",
+        "    elif propuesta.operation is FileOperation.CREATE or contenido_previo is None:\n        viejo = \"\"",
+        "    elif propuesta.operation is FileOperation.CREATE or True:\n        viejo = \"\"",
+        "test_f7_sandbox.py",
+    ),
+    Mutation(
+        "F7: un borrado puede producir un diff vacio",
+        SRC / "graph" / "nodes.py",
+        "    if not texto and propuesta.operation is FileOperation.DELETE:",
+        "    if False and propuesta.operation is FileOperation.DELETE:",
+        "test_f7_sandbox.py",
+    ),
+    Mutation(
+        "F7: el conteo de lineas se toma del contenido entero otra vez",
+        SRC / "graph" / "nodes.py",
+        "        trozo = _diff_unificado(archivo, previos.get(archivo.path))\n        anadidas, eliminadas = _contar_desde_diff(trozo)",
+        "        trozo = _diff_unificado(archivo, previos.get(archivo.path))\n        anadidas, eliminadas = _contar_lineas(archivo.new_content or \"\"), 0",
+        "test_f7_sandbox.py",
+    ),
+    Mutation(
+        # **Mutacion corregida en F7.** La version anterior retiraba solo `--detach`
+        # dejando `... str(raiz), "HEAD"`, y resulto **no observable**: se comprobo a
+        # mano que pasar un commit-ish (`HEAD`) en lugar de un nombre de rama detacha
+        # por si solo, asi que la rama no se creaba igualmente.
+        #
+        # La forma realmente peligrosa es `git worktree add <ruta>` **sin** commit-ish:
+        # git crea una rama con el nombre del directorio y la registra en el
+        # repositorio del usuario -justo lo que `--detach` y el `HEAD` evitan-. La
+        # mutacion ahora quita ambos, que es el fallo de verdad.
+        "F7: el sandbox se crea sin --detach ni HEAD (crea una rama en el repo del usuario)",
+        SRC / "sandbox.py",
+        '    _git("worktree", "add", "--detach", str(raiz), "HEAD", cwd=repo)',
+        '    _git("worktree", "add", str(raiz), cwd=repo)',
+        "test_f7_sandbox.py",
+    ),
 ]
 
 
@@ -650,11 +776,19 @@ def _veredicto_del_informe(ruta: Path, desde_ns: int) -> tuple[bool, str] | None
     return (fallos == 0 and errores == 0), f"{pruebas} pruebas, {fallos} fallos, {errores} errores"
 
 
-def _run_pytest(target: str | None = None, intentos: int = 2) -> tuple[bool, str]:
+def _run_pytest(target: str | None = None, intentos: int = 2) -> tuple[bool | None, str]:
     """Ejecuta pytest y devuelve (verde, salida).
 
-    El veredicto sale del **informe XML**, no del codigo de salida. Se reintenta
-    solo cuando no hay informe, que es cuando el proceso no llego a terminar.
+    El veredicto sale del **informe XML**, no del codigo de salida (ver
+    `_veredicto_del_informe`). El primer miembro del resultado es `True` (verde),
+    `False` (rojo) o **`None` cuando no se pudo concluir** -pytest no llego a
+    emitir informe, ni siquiera tras los reintentos-.
+
+    **Por que `None` y no `False` en un corte.** Un corte por tiempo de espera no
+    es una mutacion cazada: **no se ejecuto ninguna prueba que fallara**. Devolver
+    `False` aqui haria que el verificador anunciara "cazada" sin que nada hubiera
+    demostrado que la prueba protege el codigo -un falso positivo, y de la peor
+    clase, porque infla la confianza-. El llamador trata `None` como NO CONCLUYENTE.
     """
     informe = RAIZ / "_mutation_report.xml"
     cmd = [
@@ -673,10 +807,9 @@ def _run_pytest(target: str | None = None, intentos: int = 2) -> tuple[bool, str
             )
             salida = _limpiar(result.stdout + result.stderr) + f"\n[returncode={result.returncode}]"
         except subprocess.TimeoutExpired:
-            # Una mutacion puede dejar una prueba esperando un tiempo de espera
-            # largo (los flujos SSE esperan a `run.done`). Sin limite, el
-            # verificador se queda colgado y no hay forma de saber en cual.
-            return False, f"[la ejecucion supero {LIMITE_PYTEST}s: se considera cazada]"
+            # Un corte por tiempo **no es una cazada**. Se devuelve `None` para que
+            # el veredicto quede como NO CONCLUYENTE: no hay prueba que haya fallado.
+            return None, f"[la ejecucion supero {LIMITE_PYTEST}s sin emitir informe: NO CONCLUYENTE]"
 
         veredicto = _veredicto_del_informe(informe, desde_ns)
         if veredicto is not None:
@@ -731,6 +864,14 @@ def main() -> int:
 
     print("== linea base ==", flush=True)
     verde, salida = _run_pytest()
+    if verde is None:
+        # La linea base no llego a emitir informe. No es "roja": es que no se
+        # pudo medir. Abortar es lo unico honesto -una mutacion "cazada" sobre una
+        # linea base que no se pudo medir no significa nada.
+        print("ABORTADO: la linea base no emitio veredicto (¿corte por tiempo?).")
+        print("\n--- salida de la linea base ---")
+        print(salida[-3000:])
+        return 1
     if not verde:
         print("ABORTADO: la linea base ya falla. Las mutaciones no significarian nada.")
         print("\n--- salida de la linea base ---")
@@ -792,7 +933,7 @@ def main() -> int:
     print("\n== restauracion ==")
     verde, salida = _run_pytest()
     if not verde:
-        print("FALLO AL RESTAURAR: el arbol quedo modificado.")
+        print("FALLO AL RESTAURAR: el arbol quedo modificado (o no se pudo verificar).")
         print("\n--- salida tras restaurar ---")
         print(salida[-3000:])
         return 1

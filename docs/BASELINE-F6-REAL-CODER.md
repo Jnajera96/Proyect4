@@ -335,7 +335,7 @@ Sin `_mutation_journal.json` pendiente: la restauracion dejo el arbol limpio.
 | `tests/test_model_gateway.py` | la prueba estructural autoriza `_coder_del_modelo` (F6 conecta `coder`) |
 | `tools/mutation_check.py` | 14 mutaciones F6 |
 | `frontend/contracts.json` | regenerado (15 contratos) |
-| `docs/auditoria-2026-10-06/PROJECT_SNAPSHOT.json` | fase F6, contadores, reglas y caveats |
+| `PROJECT_SNAPSHOT.json` | fase F6, contadores, reglas y caveats |
 
 ---
 
