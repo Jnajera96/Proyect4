@@ -4,12 +4,18 @@ Dos niveles:
 
   1. **Comportamiento del camino real de M1**, sin sustituciones: cada intencion
      termina en un estado terminal y ninguna queda colgada (`MET-13 = 0`).
-  2. **Topologia de promocion**, sustituyendo los dos nodos que dependen del modelo
-     (`coder`, `run_tests`) por lo que la fase M2 implementara. Es la unica forma de
-     ejercitar el camino completo hasta la puerta de aprobacion hoy, porque en M1 el
-     Coder no puede producir cambios y el ejecutor de pruebas no existe. Los
-     sustitutos son explicitos y estan en una sola prueba, para que no se confundan
-     con el comportamiento real del sistema.
+  2. **Topologia de promocion**, sustituyendo los nodos que dependen de recursos
+     externos (`coder`, `apply_sandbox`, `run_tests`) por lo que la fase M2
+     implementara. Es la unica forma de ejercitar el camino completo hasta la puerta
+     de aprobacion en un test rapido: `apply_sandbox` necesita un repositorio git
+     real y `run_tests` lanza subprocesos. Los sustitutos son explicitos y estan en
+     una sola prueba, para que no se confundan con el comportamiento real.
+
+     **F8:** el fixture pasa a sustituir tambien `apply_sandbox`. Antes de F8 la
+     arista `coder -> run_tests` era directa; ahora el parche debe existir en un
+     arbol de trabajo antes de poder probarlo, asi que el nodo entra en el camino.
+     El sandbox real se ejercita en `tests/test_f7_sandbox.py` y
+     `tests/test_f8_test_runner.py`, que si crean repositorios de verdad.
 """
 
 from __future__ import annotations
@@ -193,10 +199,11 @@ def test_el_estado_persiste_tras_la_ejecucion(tmp_path) -> None:
 
 @pytest.fixture
 def nodos_de_m2(monkeypatch):
-    """Sustituye `coder` y `run_tests` por lo que implementara M2.
+    """Sustituye `coder`, `apply_sandbox` y `run_tests` por lo que implementara M2.
 
-    Se sustituyen solo estos dos porque son los unicos que dependen del modelo y
-    del ejecutor de pruebas. Todo lo demas del grafo es el de produccion.
+    Se sustituyen solo estos tres porque son los unicos que dependen de recursos
+    externos: el modelo, el sistema de archivos (worktree) y los subprocesos de
+    prueba. Todo lo demas del grafo es el de produccion.
     """
 
     def coder_de_m2(state: RunState) -> dict:
@@ -209,6 +216,20 @@ def nodos_de_m2(monkeypatch):
         ).model_dump()
         return {"outputs": datos}
 
+    def apply_sandbox_de_m2(state: RunState) -> dict:
+        """Simula que el parche quedo aplicado en un worktree.
+
+        No crea un repositorio: esta prueba es sobre la puerta de aprobacion, no
+        sobre el sandbox. El sandbox real se ejercita en las pruebas de F7 y F8,
+        que si crean arboles de trabajo de verdad.
+        """
+        datos = state.artifacts.model_dump()
+        datos["worktree_path"] = "/workspaces/run-promocion"
+        datos["base_commit"] = SHA
+        datos["changed_files"] = state.outputs.coder_output.files_changed
+        datos["diff"] = "--- a\n+++ b\n"
+        return {"artifacts": datos, "next_step": "run_tests"}
+
     def run_tests_de_m2(state: RunState) -> dict:
         datos = state.evidence.model_dump()
         datos["test_runs"] = [
@@ -217,6 +238,7 @@ def nodos_de_m2(monkeypatch):
         return {"evidence": datos}
 
     monkeypatch.setattr(nodes, "coder", coder_de_m2)
+    monkeypatch.setattr(nodes, "apply_sandbox", apply_sandbox_de_m2)
     monkeypatch.setattr(nodes, "run_tests", run_tests_de_m2)
 
 
@@ -458,10 +480,14 @@ def test_el_grafo_no_tiene_aristas_de_escritura_desde_lectura() -> None:
 
     `researcher` y `reviewer` solo pueden llevar a nodos que no escriben. Se
     comprueba sobre el conjunto de nodos alcanzables, no sobre un comentario.
+
+    **F8:** `apply_sandbox` se anade al conjunto. Es un nodo que **escribe** -crea
+    el worktree y aplica el parche-, asi que su posicion importa: solo es
+    alcanzable desde `coder`, y `researcher`/`reviewer` no tienen arista hacia el.
     """
     grafo = construir_grafo().compile().get_graph()
     nombres = set(grafo.nodes)
-    assert {"researcher", "coder", "reviewer", "approval_gate", "finalize"} <= nombres
+    assert {"researcher", "coder", "apply_sandbox", "reviewer", "approval_gate", "finalize"} <= nombres
     # Los nodos que escriben y los que solo leen deben ser conjuntos distintos.
     assert "approval_gate" in nombres, "toda promocion debe poder pasar por la puerta"
     assert "escalate" in nombres and "escalate_no_changes" in nombres

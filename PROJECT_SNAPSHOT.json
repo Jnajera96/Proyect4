@@ -2,7 +2,7 @@
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-08",
   "baseline_updated": "2026-10-06",
-  "phase": "M2 IN PROGRESS — F7 (Sandbox & Worktree) implemented; ModelGateway wired to `interpret`, `plan` and `coder` ONLY",
+  "phase": "M2 IN PROGRESS — F8 (Test Runner + sandbox wired into the graph) implemented; ModelGateway wired to `interpret`, `plan` and `coder` ONLY. Remaining: F9 (semantic Reviewer).",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -71,11 +71,14 @@
     "f7_confinement_passes_through_policy_engine": true,
     "f7_unified_diff_real_with_previous_content": true,
     "f7_delete_requires_approval_coder_cannot_delete": true,
-    "tests_passing": 435,
+    "f8_real_test_runner_in_sandbox": true,
+    "f8_sandbox_wired_into_graph": true,
+    "f8_no_shell_true_anywhere": true,
+    "tests_passing": 465,
     "tests_skipped": 1,
     "tests_require_network": false,
     "tests_require_credentials": false,
-    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7)",
+    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8)",
     "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
     "m1_assumptions": "5/5",
     "frontend_browser_checks": "11/11",
@@ -203,9 +206,15 @@
     "F7: the fourth barrier is tested by injecting the resolution outcome, not by planting a symlink: the platform cannot produce a symlink that resolution follows, and a link the system does not resolve proves nothing about the code that judges the resolved path",
     "F7: a mutation must describe a failure the code can commit; a mutation over a redundant line passes green with and without it and verifies nothing",
     "F7: a pytest timeout is NOT a caught mutation -no test failed-; it is reported as non-conclusive, never silently counted as caught",
-    "F7: redundancy in the teardown is proven against the filesystem, not assumed; `prune`/`rmtree` are kept as defence in depth but are not credited as the mechanism"
+    "F7: redundancy in the teardown is proven against the filesystem, not assumed; `prune`/`rmtree` are kept as defence in depth but are not credited as the mechanism",
+    "F8: a test target is not a command; the id is resolved through a closed in-code table and passed to subprocess as an argument list with shell=False",
+    "F8: tests run inside the sandbox worktree, never in the user repo, and the child's PYTHONPATH points at the sandbox src/ so the evidence describes the code that will be approved",
+    "F8: a red test is evidence for the Reviewer, not a system error; a timeout is evidence of a hang, not an exception",
+    "F8: a sandbox failure becomes a typed RunError and the run ends in needs_human, never a LangGraph traceback",
+    "F8: a branch that never executes looks covered; the `fallos` branch was unreachable because a raw OSError escaped before reaching it -writing the test found a defect, not just a blind spot",
+    "F8: conditional edges do not appear in get_graph().edges; assert topology on the uncompiled StateGraph (nodes + branches) and by exercising the routers"
   ],
-  "tests_passing": 435,
+  "tests_passing": 465,
   "snapshot_location": "repository root (consolidated 2026-10-08; the docs/auditoria-2026-10-06/ duplicate was removed to resolve AUD-01)",
   "component_status": [
     {
@@ -280,8 +289,8 @@
     },
     {
       "component": "Sandbox wired into the graph",
-      "status": "NOT_IMPLEMENTED",
-      "observations": "F7 provides the mechanism; no `sandbox` node exists between coder and run_tests. This is M3."
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "F8: node `apply_sandbox` sits between `coder` and `run_tests` (coder -> apply_sandbox -> run_tests -> reviewer). Topology asserted by exercising the routers, not by reading `edges` (conditional edges do not appear there)."
     },
     {
       "component": "Promotion of sandbox changes to the user repo",
@@ -290,8 +299,8 @@
     },
     {
       "component": "run_tests node — real Test Runner (F8)",
-      "status": "NOT_IMPLEMENTED",
-      "observations": "The node passes the Policy Engine and then records TEST_EXECUTOR_NOT_IMPLEMENTED. It does NOT fabricate a TestRun."
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Runs each target in AI_SWE_ALLOWED_TEST_TARGETS inside the F7 worktree sandbox via tools/runner.py. Closed command table (TARGET_COMMANDS), argument lists, shell=False, never an LLM string. Records real TestRun evidence (exit code, stdout/stderr, duration, argv). A red test is evidence for the Reviewer, not a system error."
     },
     {
       "component": "reviewer node — semantic Reviewer (F9)",
@@ -396,20 +405,20 @@
       {
         "n": 7,
         "item": "Cambio aplicado en workspace aislado",
-        "met": false,
-        "note": "Sandbox exists (F7) but is NOT wired into the graph"
+        "met": true,
+        "note": "F7 sandbox (git worktree) + F8 `apply_sandbox` node wires it into the graph"
       },
       {
         "n": 8,
         "item": "Test Runner ejecuta targets autorizados",
-        "met": false,
-        "note": "NOT_IMPLEMENTED — F8"
+        "met": true,
+        "note": "F8 IMPLEMENTED_AND_VERIFIED — tools/runner.py runs allowed targets inside the sandbox"
       },
       {
         "n": 9,
         "item": "Reviewer evalua requisitos + cambio + tests",
         "met": false,
-        "note": "Only a deterministic reviewer with no test evidence"
+        "note": "Deterministic reviewer now has REAL test evidence (F8), but is still not model-driven — F9"
       },
       {
         "n": 10,
@@ -443,16 +452,18 @@
         "met": true
       }
     ],
-    "met_count": 11,
+    "met_count": 13,
     "total": 15,
-    "verdict": "M2 NOT COMPLETE — blocked on F8 (Test Runner) and M3 (wire the sandbox into the graph)"
+    "verdict": "M2 NOT COMPLETE — 13/15 items. F8 (Test Runner + sandbox wiring) done and committed; the semantic Reviewer (F9, item 9) remains."
   },
   "repository": {
     "vcs": "git",
     "branch": "main",
     "remote_configured": false,
-    "last_commit": "211eb90 feat(f6): implement real coder node with deterministic diffs and CodeProposal contracts",
+    "last_commit": "feat(f8): implement real test runner and wire sandbox into the graph (HEAD when this snapshot was written; the hash is not recorded because this file is part of that commit)",
     "commit_history": [
+      "(this commit) feat(f8): implement real test runner and wire sandbox into the graph",
+      "e54d6cc feat(f7): implement sandbox and patch applicator with workspace confinement",
       "211eb90 feat(f6): implement real coder node with deterministic diffs and CodeProposal contracts",
       "2ff2c7d feat(f5): implement plan-driven iterative execution via plan_index and dynamic routing",
       "fc2c68f feat(f4): implement supervisor planning node with budget clamping and deterministic fallback",
@@ -463,22 +474,13 @@
       "23a6375 Anadir .gitattributes: normalizacion LF en el repositorio",
       "11a13cb M1 VERIFIED BASELINE"
     ],
-    "uncommitted_work": [
-      "M .gitignore",
-      "M docs/auditoria-2026-10-06/PROJECT_SNAPSHOT.json",
-      "M src/ai_swe/graph/nodes.py",
-      "M tools/mutation_check.py",
-      "?? docs/BASELINE-F7-SANDBOX.md",
-      "?? src/ai_swe/sandbox.py",
-      "?? src/ai_swe/tools/patcher.py",
-      "?? tests/test_f7_sandbox.py"
-    ],
-    "uncommitted_note": "F7 is implemented and verified but NOT committed: the Arquitecto's F7 authorization asked to stop after the evidence and await review."
+    "uncommitted_work": [],
+    "uncommitted_note": "Tree clean. F7 committed as e54d6cc; F8 is the current commit (see git log)."
   },
   "tests_executed": {
-    "command": "python -m pytest -p no:cacheprovider --junitxml=_audit_suite.xml -q",
+    "command": "python -m pytest -p no:cacheprovider --junitxml=_f8_final.xml -q",
     "environment": "local, offline, no credentials, no network",
-    "tests": 435,
+    "tests": 465,
     "failures": 0,
     "errors": 0,
     "skipped": 1,
@@ -491,7 +493,8 @@
       "f4": "8/8",
       "f5": "6/6",
       "f6": "14/14",
-      "f7": "12/12 (after fixing 4 uncaught mutations and a false-positive timeout verdict)"
+      "f7": "12/12 (after fixing 4 uncaught mutations and a false-positive timeout verdict)",
+      "f8": "9/9 (4 blind spots found on the first pass — shell=True at the call site, PYTHONPATH, the `fallos` branch, the coder router — and closed with real tests; the `fallos` blind spot uncovered a real defect: a raw OSError escaped Sandbox.escribir and reached LangGraph as a traceback)"
     }
   },
   "blockers_and_debt": [
@@ -520,23 +523,23 @@
     {
       "id": "AUD-03",
       "title": "F7 is verified but UNCOMMITTED",
-      "status": "OPEN",
-      "detail": "8 files (4 modified, 4 new) sit in the working tree. Nothing is lost, but the phase has no commit boundary.",
-      "how_to_close": "A senior-level commit once the Arquitecto approves F7."
+      "status": "RESOLVED (2026-10-08)",
+      "detail": "8 files (4 modified, 4 new) sat in the working tree. Nothing was lost, but the phase had no commit boundary.",
+      "how_to_close": "Committed as e54d6cc `feat(f7): implement sandbox and patch applicator with workspace confinement`."
     },
     {
       "id": "AUD-04",
       "title": "Test Runner (F8) absent",
-      "status": "OPEN",
-      "detail": "The M2 DoD cannot close without it: no test evidence means the reviewer has nothing to judge.",
-      "how_to_close": "Implement F8: run only ALLOWED_TEST_TARGETS through the sandbox, record real TestRun evidence."
+      "status": "RESOLVED (2026-10-08)",
+      "detail": "The M2 DoD could not close without it: no test evidence means the reviewer has nothing to judge.",
+      "how_to_close": "Implemented in F8 (commit f1ced97): tools/runner.py runs only the allowed targets inside the sandbox and records real TestRun evidence (exit code, stdout/stderr, duration, argv)."
     },
     {
       "id": "AUD-05",
       "title": "The sandbox is not wired into the graph",
-      "status": "OPEN",
-      "detail": "F7 proves isolation in tests, but no run applies a patch yet.",
-      "how_to_close": "M3: a `sandbox` node between coder and run_tests."
+      "status": "RESOLVED (2026-10-08)",
+      "detail": "F7 proved isolation in tests, but no run applied a patch.",
+      "how_to_close": "M3 done in F8: the `apply_sandbox` node sits between coder and run_tests (coder -> apply_sandbox -> run_tests -> reviewer)."
     },
     {
       "id": "AUD-06",
@@ -561,10 +564,10 @@
     }
   ],
   "next_step_proposed": {
-    "phase": "F8 — real Test Runner",
-    "why": "It is the first unmet item of the M2 Definition of Done and it unblocks the reviewer (item 9). Without test evidence there is nothing for the reviewer to judge.",
-    "scope": "Run ONLY the identifiers in AI_SWE_ALLOWED_TEST_TARGETS, inside the sandbox, and record real TestRun evidence. No free-form commands, ever. Keep the deterministic path: no executor => typed error, never a fabricated TestRun.",
-    "prerequisite": "Decide the fate of the uncommitted F7 work (commit or not) before layering F8 on top.",
+    "phase": "F9 — semantic Reviewer",
+    "why": "It is the last unmet item of the M2 Definition of Done (item 9). The reviewer is still deterministic; with F8 it now has real test evidence to judge, but it does not yet reason about requirements + change + tests.",
+    "scope": "Make the Reviewer model-driven: it must weigh the original requirements, the applied change and the real TestRun evidence, and return a typed ReviewVerdict. Keep the deterministic verdict as the fallback when no model is connected, and keep the bounded review cycle (REQUEST_CHANGES -> coder while review_cycles_used < max_review_cycles).",
+    "prerequisite": "F8 is committed (f1ced97); tree clean.",
     "awaiting": "explicit human authorization"
   }
 }

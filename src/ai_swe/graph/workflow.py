@@ -7,8 +7,9 @@ Topologia (docs/03-flujo-e-implementacion.md, seccion 3.5):
       explain_limits -> finalize
       plan --primera subtarea--> researcher
       researcher --siguiente subtarea?--> <agente> | finalize
-      coder --hay cambios?--> run_tests | escalate_no_changes
+      coder --hay cambios?--> apply_sandbox | escalate_no_changes
       escalate_no_changes -> finalize
+      apply_sandbox --aplicado?--> run_tests | finalize
       run_tests --terminal?--> finalize | reviewer
       reviewer --veredicto--> coder | escalate | mark_awaiting
       escalate -> finalize
@@ -61,6 +62,7 @@ def construir_grafo() -> StateGraph:
     grafo.add_node("answer_direct", nodes.answer_direct)
     grafo.add_node("explain_limits", nodes.explain_limits)
     grafo.add_node("coder", nodes.coder)
+    grafo.add_node("apply_sandbox", nodes.apply_sandbox)
     grafo.add_node("run_tests", nodes.run_tests)
     grafo.add_node("reviewer", nodes.reviewer)
     grafo.add_node("mark_awaiting", nodes.mark_awaiting)
@@ -77,6 +79,7 @@ def construir_grafo() -> StateGraph:
     grafo.add_edge("answer_direct", "finalize")
     grafo.add_conditional_edges("coder", nodes.route_after_coder)
     grafo.add_edge("escalate_no_changes", "finalize")
+    grafo.add_conditional_edges("apply_sandbox", nodes.route_after_apply)
     grafo.add_conditional_edges("run_tests", nodes.route_after_tests)
     grafo.add_conditional_edges("reviewer", nodes.route_after_review)
     grafo.add_edge("escalate", "finalize")

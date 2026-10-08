@@ -26,6 +26,7 @@ from ai_swe.contracts import (
     AgentRole,
     Approval,
     ApprovalDecision,
+    Artifacts,
     Budget,
     CodeChange,
     CodeProposal,
@@ -48,8 +49,13 @@ from ai_swe.contracts import (
     Severity,
     Subtask,
     TaskInterpretation,
+    TestRun,
 )
+from ai_swe.sandbox import Sandbox, SandboxError, crear
+from ai_swe.tools.patcher import aplicar
 from ai_swe.tools.policy import DecisionContext, decide
+from ai_swe.tools.runner import RunnerError
+from ai_swe.tools.runner import ejecutar as ejecutar_target
 
 log = logging.getLogger(__name__)
 
@@ -125,6 +131,18 @@ def _con_evidencia(state: RunState, **cambios) -> Evidence:
     datos = state.evidence.model_dump()
     datos.update(cambios)
     return Evidence.model_validate(datos)
+
+
+def _con_artefactos(state: RunState, **cambios) -> Artifacts:
+    """Constructor inmutable de los artefactos (F8).
+
+    Se construye el objeto **completo** y no un parche parcial: el delta de
+    LangGraph **reemplaza** el valor de la clave, no lo fusiona campo a campo. Un
+    `Artifacts(worktree_path=...)` suelto borraria `base_commit` y `changed_files`.
+    """
+    datos = state.artifacts.model_dump()
+    datos.update(cambios)
+    return Artifacts.model_validate(datos)
 
 
 def _error(
@@ -1174,48 +1192,249 @@ def coder(state: RunState) -> dict:
     return salida
 
 
-def run_tests(state: RunState) -> dict:
-    """Solicita ejecutar pruebas.
+# --------------------------------------------------------------- F8: sandbox
+#
+# Inyeccion por atributo de modulo, con el mismo criterio que `usar_gateway`: una
+# prueba puede fijar la raiz de worktrees y los targets permitidos sin depender de
+# variables de entorno ni del orden de ejecucion.
 
-    Pasa por el Policy Engine de verdad, y despues comprueba si existe un
-    ejecutor. En M1 no lo hay, asi que registra un error tipado. **No se devuelve
-    un `TestRun` con exito**: inventar evidencia de pruebas es el peor fallo
-    posible en un sistema cuyo valor es precisamente la evidencia.
+_WORKSPACE_ROOT: Path | None = None
+_TARGETS_PERMITIDOS: tuple[str, ...] | None = None
+
+
+def usar_workspace_root(raiz: Path | str | None) -> None:
+    """Fija la raiz donde se crean los worktrees. `None` = leerla de la configuracion."""
+    global _WORKSPACE_ROOT
+    _WORKSPACE_ROOT = Path(raiz) if raiz is not None else None
+
+
+def usar_targets_permitidos(targets: tuple[str, ...] | list[str] | None) -> None:
+    """Fija los objetivos de prueba permitidos. `None` = leerlos de la configuracion."""
+    global _TARGETS_PERMITIDOS
+    _TARGETS_PERMITIDOS = tuple(targets) if targets is not None else None
+
+
+def _workspace_root() -> Path:
+    if _WORKSPACE_ROOT is not None:
+        return _WORKSPACE_ROOT
+    from ai_swe.config import load_settings
+
+    return load_settings().workspace_root
+
+
+def _targets_permitidos() -> tuple[str, ...]:
+    if _TARGETS_PERMITIDOS is not None:
+        return _TARGETS_PERMITIDOS
+    from ai_swe.config import load_settings
+
+    return tuple(load_settings().allowed_test_targets)
+
+
+def apply_sandbox(state: RunState) -> dict:
+    """Aplica el cambio del Coder en un worktree aislado (F8).
+
+    Es el nodo que convierte una **propuesta** en un arbol de trabajo real, sin
+    tocar el repositorio del usuario. Hasta F8 el `CodeChange` vivia solo en el
+    estado; aqui se materializa donde las pruebas puedan ejercitarlo.
+
+    **El sandbox no se destruye aqui ni al final del grafo** (`DEC-16`). Destruirlo
+    antes de la aprobacion humana destruiria justo lo que se esta aprobando. La
+    limpieza ocurre al recrear con el mismo `run_id`, que ya hace `crear()`.
+
+    **Un rechazo de ruta escala.** El patcher (F7) no aborta el cambio por una ruta
+    denegada -los demas archivos siguen siendo legitimamente aplicables-, pero en el
+    grafo un rechazo significa que el Coder propuso escribir **fuera** de lo
+    autorizado. Eso no es un resultado normal: se registra como error y se escala a
+    un humano en lugar de continuar como si nada.
+
+    Nunca propaga una excepcion: un fallo del sandbox se convierte en un error
+    tipado y la ejecucion termina en `needs_human`, no en una traza de LangGraph.
     """
-    objetivo = "pytest.unit"
-    decision = decide(
-        "run_tests",
-        {"target": objetivo},
-        DecisionContext(
-            run_id=state.run_id,
-            agent=AgentRole.CODER,
-            allowed_test_targets=("pytest.unit",),
-            budget_exhausted=state.budget.exhausted,
-        ),
-    )
-    if decision.effect is not PolicyEffect.ALLOW:
+    cambio = state.outputs.coder_output
+    if cambio is None or not cambio.files_changed:
         return _escalar(
             state,
             _error(
                 state,
-                "POLICY_DENIED",
+                "SANDBOX_NOTHING_TO_APPLY",
                 AgentRole.CODER.value,
-                f"el Policy Engine no permitio ejecutar pruebas: {decision.reason}",
+                "no hay propuesta de cambio que aplicar en el sandbox",
                 recuperable=False,
             ),
         )
 
-    return _escalar(
-        state,
-        _error(
+    alcance = _alcance(state)
+    repo = Path(alcance.repo_path)
+    if not repo.is_dir():
+        return _escalar(
             state,
-            "TEST_EXECUTOR_NOT_IMPLEMENTED",
-            AgentRole.CODER.value,
-            "el Policy Engine autorizo la ejecucion, pero M1 no incluye ejecutor de "
-            "pruebas. No se registra evidencia de pruebas porque no se ejecuto ninguna.",
-            recuperable=False,
-        ),
+            _error(
+                state,
+                "SANDBOX_NO_REPO",
+                AgentRole.CODER.value,
+                f"el repositorio autorizado '{alcance.repo_path}' no existe; sin "
+                "repositorio no hay worktree que crear",
+                recuperable=False,
+            ),
+        )
+
+    try:
+        sandbox = crear(repo, state.run_id, workspace_root=_workspace_root())
+    except SandboxError as exc:
+        return _escalar(
+            state,
+            _error(
+                state,
+                "SANDBOX_CREATE_FAILED",
+                AgentRole.CODER.value,
+                str(exc),
+                recuperable=False,
+            ),
+        )
+
+    resultado = aplicar(
+        sandbox,
+        cambio,
+        allowed_paths=tuple(alcance.allowed_paths),
+        protected_paths=tuple(alcance.protected_paths),
     )
+
+    if resultado.denegados:
+        detalle = "; ".join(f"{ruta}: {motivo}" for ruta, motivo in resultado.denegados.items())
+        return _escalar(
+            state,
+            _error(
+                state,
+                "SANDBOX_PATH_DENIED",
+                AgentRole.CODER.value,
+                f"el cambio propone rutas que el confinamiento rechaza: {detalle}",
+                recuperable=False,
+            ),
+        )
+
+    if resultado.fallos:
+        detalle = "; ".join(f"{ruta}: {motivo}" for ruta, motivo in resultado.fallos.items())
+        return _escalar(
+            state,
+            _error(
+                state,
+                "SANDBOX_APPLY_FAILED",
+                AgentRole.CODER.value,
+                f"no se pudo aplicar el cambio en el sandbox: {detalle}",
+                recuperable=False,
+            ),
+        )
+
+    return {
+        "artifacts": _con_artefactos(
+            state,
+            worktree_path=str(sandbox.raiz),
+            base_commit=sandbox.base_commit,
+            changed_files=cambio.files_changed,
+            diff=sandbox.diff(),
+        ),
+        "next_step": "run_tests",
+        "updated_at": _ahora(),
+    }
+
+
+def run_tests(state: RunState) -> dict:
+    """Ejecuta de verdad los objetivos autorizados dentro del sandbox (F8).
+
+    Sustituye al marcador de M1, que registraba `TEST_EXECUTOR_NOT_IMPLEMENTED`
+    porque no habia ejecutor. Ahora lo hay, y **la evidencia es real**: target,
+    codigo de salida, salida capturada, duracion y el comando exacto.
+
+    **Solo se ejecutan objetivos de la lista permitida**, y cada uno pasa por el
+    Policy Engine antes de lanzarse. El identificador no es un comando: se traduce
+    con la tabla cerrada de `tools/runner.py` y se pasa a `subprocess` como lista
+    de argumentos con `shell=False`.
+
+    **Un fallo de pruebas no es un error del sistema.** Un `TestRun` con codigo
+    distinto de cero es un **resultado**: se registra como evidencia y se deja que
+    el Reviewer juzgue. Escalar aqui impediria que el ciclo de correccion
+    Coder↔Reviewer hiciera su trabajo.
+
+    Nunca propaga una excepcion: un fallo del ejecutor se convierte en un error
+    tipado y la ejecucion termina en `needs_human`.
+    """
+    ruta_worktree = state.artifacts.worktree_path
+    if not ruta_worktree:
+        return _escalar(
+            state,
+            _error(
+                state,
+                "TEST_NO_SANDBOX",
+                AgentRole.CODER.value,
+                "no hay worktree aplicado: las pruebas se ejecutan sobre el cambio "
+                "aplicado, y sin sandbox no hay nada que probar",
+                recuperable=False,
+            ),
+        )
+
+    permitidos = _targets_permitidos()
+    sandbox = Sandbox(
+        raiz=Path(ruta_worktree),
+        repo_original=Path(_alcance(state).repo_path),
+        base_commit=state.artifacts.base_commit or "",
+        run_id=state.run_id,
+        # No lo creamos en este nodo: se reconstruye desde el estado. Con `False`,
+        # un teardown accidental no destruiria un arbol que no abrimos aqui.
+        creado_por_nosotros=False,
+    )
+
+    evidencia: list[TestRun] = []
+    errores = list(state.errors)
+    llamadas = state.budget.used_tool_calls
+
+    for target in permitidos:
+        decision = decide(
+            "run_tests",
+            {"target": target},
+            DecisionContext(
+                run_id=state.run_id,
+                agent=AgentRole.CODER,
+                allowed_test_targets=permitidos,
+                budget_exhausted=state.budget.exhausted,
+            ),
+        )
+        if decision.effect is not PolicyEffect.ALLOW:
+            errores = _error(
+                state,
+                "POLICY_DENIED",
+                AgentRole.CODER.value,
+                f"el Policy Engine no permitio ejecutar '{target}': {decision.reason}",
+                recuperable=False,
+            )
+            continue
+
+        try:
+            corrida = ejecutar_target(sandbox, target, permitidos=permitidos)
+        except RunnerError as exc:
+            errores = _error(
+                state,
+                "TEST_EXECUTOR_FAILED",
+                AgentRole.CODER.value,
+                f"no se pudo ejecutar '{target}': {exc}",
+                recuperable=False,
+            )
+            continue
+
+        evidencia.append(corrida)
+        llamadas += 1
+
+    if not evidencia:
+        return _escalar(state, errores)
+
+    return {
+        "evidence": _con_evidencia(
+            state, test_runs=[*state.evidence.test_runs, *evidencia]
+        ),
+        "budget": _con_presupuesto(state, used_tool_calls=llamadas),
+        "errors": errores,
+        "next_step": "reviewer",
+        "updated_at": _ahora(),
+    }
 
 
 def reviewer(state: RunState) -> dict:
@@ -1481,8 +1700,24 @@ def route_after_research(state: RunState) -> str:
 
 
 def route_after_coder(state: RunState) -> str:
+    """Un cambio propuesto va al sandbox; sin cambios, no hay nada que probar.
+
+    F8 introduce `apply_sandbox` entre el Coder y las pruebas: el parche debe
+    existir en un arbol de trabajo **antes** de que `run_tests` pueda ejercitarlo.
+    Antes de F8 esta arista iba directo a `run_tests`, que no tenia donde correr.
+    """
     salida = state.outputs.coder_output
-    return "run_tests" if salida and salida.files_changed else "escalate_no_changes"
+    return "apply_sandbox" if salida and salida.files_changed else "escalate_no_changes"
+
+
+def route_after_apply(state: RunState) -> str:
+    """Si el cambio se aplico, se prueba; si el sandbox fallo, se cierra.
+
+    Un fallo del sandbox ya dejo el estado en terminal (`needs_human`) con su error
+    tipado. Se comprueba el estado y no el resultado del nodo: el nodo solo devuelve
+    un delta, y la unica fuente de verdad de "ocurrio un fallo" es `RunState.status`.
+    """
+    return "finalize" if state.status.is_terminal else "run_tests"
 
 
 def route_after_tests(state: RunState) -> str:

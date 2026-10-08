@@ -159,10 +159,26 @@ class Sandbox:
         entera -normalizacion y comprobacion fisica- y solo despues se crea el
         directorio padre y se escribe. No hay ninguna ventana en la que una ruta sin
         validar llegue al sistema de archivos.
+
+        **Un fallo del sistema de archivos se envuelve en `SandboxError`.** No
+        basta con confinar la ruta: escribir puede fallar por causas que no son de
+        seguridad -un directorio padre que es un archivo, disco lleno, permisos-.
+        Si ese `OSError` escapara crudo, el llamante (`patcher.aplicar`) no lo
+        capturaria -solo captura `SandboxError`- y la excepcion subiria hasta
+        LangGraph, tumbando la ejecucion con una traza en lugar de registrarse como
+        un `fallo` tipado. Se envuelve **aqui**, en el borde del efecto, que es
+        donde se sabe que la operacion era escribir.
         """
         destino = self.resolver_destino(ruta_relativa)
-        destino.parent.mkdir(parents=True, exist_ok=True)
-        destino.write_text(contenido, encoding="utf-8")
+        try:
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            destino.write_text(contenido, encoding="utf-8")
+        except OSError as exc:
+            raise SandboxError(
+                "escribir",
+                f"no se pudo escribir '{ruta_relativa}' en el sandbox: "
+                f"{type(exc).__name__}: {exc}",
+            ) from exc
         return destino
 
     def leer(self, ruta_relativa: str) -> str | None:

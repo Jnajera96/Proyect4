@@ -732,6 +732,96 @@ MUTACIONES: list[Mutation] = [
         '    _git("worktree", "add", str(raiz), cwd=repo)',
         "test_f7_sandbox.py",
     ),
+    # ---------------------------------------------------------------- F8: runner
+    Mutation(
+        # El fallo mas grave posible del ejecutor: dejar de comprobar la lista.
+        # Un objetivo que no esta permitido se lanzaria igualmente. La mutacion
+        # hace que la comprobacion sea un no-op, no que pase a permitir uno en
+        # concreto: asi se comprueba la guarda entera, no una entrada.
+        "F8: el runner ejecuta un target que no esta permitido",
+        SRC / "tools" / "runner.py",
+        "    if target not in permitidos:\n        raise TargetNoPermitido(target, permitidos)",
+        "    if False:\n        raise TargetNoPermitido(target, permitidos)",
+        "test_f8_test_runner.py",
+    ),
+    Mutation(
+        # `shell=True` convierte la lista en una linea de shell: es exactamente el
+        # fallo que todo el modulo existe para evitar. La mutacion no puede pasar
+        # desapercibida porque ademas una lista con `shell=True` no es un uso
+        # valido de subprocess sin `command=`.
+        "F8: el runner lanza el comando con shell=True",
+        SRC / "tools" / "runner.py",
+        "            timeout=timeout,\n            shell=False,",
+        "            timeout=timeout,\n            shell=True,",
+        "test_f8_test_runner.py",
+    ),
+    Mutation(
+        # Un timeout debe producir evidencia de que se colgo (EXIT_TIMEOUT). Si se
+        # deja propagar, el objetivo colgado tumba el grafo en lugar de registrarlo.
+        "F8: un timeout del runner se propaga en vez de registrarse",
+        SRC / "tools" / "runner.py",
+        "    except subprocess.TimeoutExpired as exc:\n        duracion = time.perf_counter() - inicio",
+        "    except subprocess.TimeoutExpired as exc:\n        raise\n        duracion = time.perf_counter() - inicio",
+        "test_f8_test_runner.py",
+    ),
+    Mutation(
+        # El `PYTHONPATH` mal apuntado es el fallo mas silencioso del modulo: las
+        # pruebas importarian el paquete del repositorio original y la evidencia
+        # diria "pasa" sobre un codigo que no es el que se va a aprobar.
+        "F8: el runner deja el PYTHONPATH del repo original (prueba el codigo equivocado)",
+        SRC / "tools" / "runner.py",
+        '    raiz_src = sandbox.raiz / "src"\n    if raiz_src.is_dir():\n        entorno["PYTHONPATH"] = str(raiz_src)',
+        '    raiz_src = sandbox.raiz / "src"\n    if False:\n        entorno["PYTHONPATH"] = str(raiz_src)',
+        "test_f8_test_runner.py",
+    ),
+    Mutation(
+        # Sin avanzar `plan_index`, la ruta de cierre estatica no se alcanza igual;
+        # pero el fallo real es que `run_tests` deje de acumular la evidencia: el
+        # Reviewer se quedaria sin nada que juzgar.
+        "F8: run_tests no acumula la evidencia (el Reviewer juzga a ciegas)",
+        SRC / "graph" / "nodes.py",
+        "        \"evidence\": _con_evidencia(\n            state, test_runs=[*state.evidence.test_runs, *evidencia]\n        ),",
+        "        \"evidence\": _con_evidencia(\n            state, test_runs=[*state.evidence.test_runs]\n        ),",
+        "test_f8_test_runner.py",
+    ),
+    Mutation(
+        # Un rechazo de ruta en el sandbox debe escalar a un humano. Si se ignora,
+        # la ejecucion continuaria como si el cambio se hubiera aplicado, y el
+        # humano aprobaria algo que no existe.
+        "F8: apply_sandbox ignora las rutas denegadas",
+        SRC / "graph" / "nodes.py",
+        "    if resultado.denegados:\n        detalle =",
+        "    if False:\n        detalle =",
+        "test_f8_test_runner.py",
+    ),
+    Mutation(
+        # Un fallo al aplicar el parche no puede pasar por "aplicado": la ejecucion
+        # probaria un arbol que no contiene el cambio.
+        "F8: apply_sandbox ignora los fallos de aplicacion",
+        SRC / "graph" / "nodes.py",
+        "    if resultado.fallos:\n        detalle =",
+        "    if False:\n        detalle =",
+        "test_f8_test_runner.py",
+    ),
+    Mutation(
+        # El router del Coder debe mandar al sandbox solo si hay cambios. Si manda
+        # siempre, un cambio vacio crea un worktree sin nada que aplicar.
+        "F8: el router del Coder manda al sandbox aunque no haya cambios",
+        SRC / "graph" / "nodes.py",
+        '    return "apply_sandbox" if salida and salida.files_changed else "escalate_no_changes"',
+        '    return "apply_sandbox"',
+        "test_f8_test_runner.py",
+    ),
+    Mutation(
+        # Si el router del sandbox no distingue el estado terminal, un sandbox
+        # fallido seguiria a `run_tests`, que escalaria por falta de worktree: el
+        # error real (SANDBOX_*) se perderia.
+        "F8: el router del sandbox no respeta el estado terminal",
+        SRC / "graph" / "nodes.py",
+        '    return "finalize" if state.status.is_terminal else "run_tests"',
+        '    return "run_tests"',
+        "test_f8_test_runner.py",
+    ),
 ]
 
 

@@ -1284,6 +1284,15 @@
         "TestRun": {
           "description": "Evidencia de una ejecucion de pruebas. Es la senal objetiva del sistema.",
           "properties": {
+            "argv": {
+              "description": "El comando exacto que se ejecuto, como lista de argumentos (F8). Se registra para que la evidencia sea auditable: 'paso un target' no dice que se ejecuto. Un campo nuevo entra con default, asi que no sube la version de esquema.",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 64,
+              "title": "Argv",
+              "type": "array"
+            },
             "duration_s": {
               "minimum": 0.0,
               "title": "Duration S",

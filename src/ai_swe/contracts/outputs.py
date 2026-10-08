@@ -158,6 +158,16 @@ class TestRun(BaseModel):
         default=False,
         description="El Reviewer re-ejecuta para confirmar que el resultado es reproducible.",
     )
+    argv: list[str] = Field(
+        default_factory=list,
+        max_length=64,
+        description=(
+            "El comando exacto que se ejecuto, como lista de argumentos (F8). Se "
+            "registra para que la evidencia sea auditable: 'paso un target' no dice "
+            "que se ejecuto. Un campo nuevo entra con default, asi que no sube la "
+            "version de esquema."
+        ),
+    )
 
     @property
     def passed(self) -> bool:
