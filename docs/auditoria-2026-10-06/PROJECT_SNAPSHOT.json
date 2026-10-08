@@ -2,7 +2,7 @@
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-06",
   "baseline_updated": "2026-10-06",
-  "phase": "M2 IN PROGRESS — F3 (Requirements Analyst) implemented; ModelGateway wired to the `interpret` node ONLY",
+  "phase": "M2 IN PROGRESS — F4 (Supervisor) implemented; ModelGateway wired to `interpret` and `plan` ONLY",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -39,18 +39,24 @@
     "f3_node_revalidates_even_though_the_gateway_does": true,
     "pricing_table_loaded_from_settings": true,
     "pricing_table_empty_by_default": true,
-    "tests_passing": 312,
+    "f4_supervisor_plan_uses_gateway": true,
+    "f4_plan_injected_into_runstate": true,
+    "f4_deterministic_fallback_preserved": true,
+    "f4_plan_review_cycles_clamped_to_budget": true,
+    "f4_budget_accounting_in_plan": true,
+    "f4_fallback_is_declared_not_silent": true,
+    "f4_plan_is_data_not_topology": true,
+    "tests_passing": 351,
     "tests_skipped": 1,
     "tests_require_network": false,
     "tests_require_credentials": false,
-    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8 F3 mutations added and verified separately (see docs/BASELINE-F3-REQUIREMENTS-ANALYST.md)",
+    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3, see docs/BASELINE-F3-REQUIREMENTS-ANALYST.md); 8/8 (F4, filtered run: 8 de 51)",
     "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
     "m1_assumptions": "5/5",
     "frontend_browser_checks": "11/11"
   },
   "not_implemented": [
     "llm_wired_to_other_langgraph_nodes",
-    "reasoning_supervisor",
     "real_coder",
     "real_test_executor",
     "mcp",
@@ -58,12 +64,14 @@
     "real_stt",
     "full_observability",
     "authentication",
-    "agent_prompts_beyond_interpret"
+    "agent_prompts_beyond_interpret_and_plan",
+    "subtask_level_execution_driven_by_the_plan"
   ],
-  "next_milestone": "F4 — Reasoning Supervisor",
+  "next_milestone": "F5 — plan-driven execution (subtask-level scheduling, Coder/Reviewer wired to the plan)",
   "ready_for_model_gateway": "YES",
   "model_gateway_ready": "YES",
   "f3_requirements_analyst_ready": "YES",
+  "f4_supervisor_ready": "YES",
   "technical_debt": [
     {
       "id": "TD-01",
@@ -76,11 +84,18 @@
     }
   ],
   "f3_caveats": [
-    "Only `interpret` is connected to the gateway; every other node stays deterministic",
+    "Only `interpret` and `plan` are connected to the gateway; every other node stays deterministic",
     "The real-provider test is opt-in and was NOT executed: no credentials in the environment (see technical_debt TD-01)",
     "AI_SWE_MODEL_PRICING is empty in the repository, so cost is None (unknown), never 0",
     "The pricing table has a loading mechanism but no tariff is asserted as current",
     "No authentication yet (open finding from the external audit)"
+  ],
+  "f4_caveats": [
+    "The plan is produced and injected into RunState.plan; execution is still driven by the intent, not yet subtask-by-subtask (F5)",
+    "RunPlan is the contract that bounds the plan: DFS cycle detection, unique ids, existing dependencies, <=32 subtasks, agent != supervisor, non-empty allowed_tools",
+    "max_review_cycles is clamped to the run budget when the model asks for more; the clamp is declared in the rationale",
+    "Topology edges are static: a plan -circular or gigantic- can never introduce a loop in the execution",
+    "The deterministic fallback is declared with a recoverable MODEL_FALLBACK error, never silent"
   ],
   "rules": [
     "Keep LangGraph",
@@ -97,6 +112,10 @@
     "The standard suite must pass without internet, credentials or an external provider",
     "F3: only `interpret` may talk to the gateway; the deterministic classifier is the permanent fallback",
     "F3: a model failure degrades to the fallback and leaves a recoverable error; it is never silent",
-    "F3: the interpreter's scope comes from the user, never from the model"
+    "F3: the interpreter's scope comes from the user, never from the model",
+    "F4: the plan is data, not topology; edges are written by hand and never generated from the plan",
+    "F4: the plan always passes through the RunPlan contract; model_construct is never used",
+    "F4: a model failure degrades to a deterministic plan and leaves a recoverable error; it is never silent",
+    "F4: a plan can never promise more review cycles than the run budget allows"
   ]
 }

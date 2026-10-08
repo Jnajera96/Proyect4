@@ -36,10 +36,12 @@ from ai_swe.contracts import (
     ReviewDecision,
     ReviewVerdict,
     RunError,
+    RunPlan,
     RunState,
     RunStatus,
     Scope,
     Severity,
+    Subtask,
     TaskInterpretation,
 )
 from ai_swe.tools.policy import DecisionContext, decide
@@ -398,10 +400,248 @@ def _es_fallo_esperado(exc: BaseException) -> bool:
     o un `KeyError` en el codigo propio son defectos, y tragarselos los convertiria
     en un fallback silencioso que nunca se depuraria. Lo que se degrada es el fallo
     del **modelo o de su configuracion**, no un error de programacion.
+
+    Se comparte entre `interpret` (F3) y `plan` (F4): el contrato de degradacion es
+    el mismo en las dos fases, y duplicarlo permitiria que divergieran.
     """
     from ai_swe.models import ModelGatewayError
 
     return isinstance(exc, ModelGatewayError)
+
+
+# ------------------------------------------------------ F4: Supervisor (plan)
+
+# Planificacion determinista de respaldo. No es un andamio temporal: es la via por
+# la que el sistema sigue planificando sin credenciales, sin red o con el proveedor
+# caido, y la garantia de que la suite offline y el desarrollo local funcionan.
+#
+# Herramientas por rol: se declaran **subconjuntos** de `ROLE_TOOLS` (ver
+# `tools/registry.py`). La asignacion efectiva es la interseccion, asi que declarar
+# una herramienta que el rol no tiene no ampliaria permisos: solo daria un plan que
+# promete algo que no se puede ejecutar.
+_HERRAMIENTAS_RESEARCHER = ("list_files", "read_file", "search_text", "git_status", "git_diff")
+_HERRAMIENTAS_CODER = ("read_file", "write_file", "apply_patch")
+
+
+def _plan_determinista(state: RunState, *, motivo: str) -> RunPlan:
+    """Plan minimo y seguro: investigar y, si procede, aplicar cambios.
+
+    Es **duro** a proposito: dos subtareas fijas, sin dependencias creativas y con
+    criterios de termino explicitos. Un plan de respaldo que intentara adivinar la
+    estructura de la tarea seria un plan inventado, y eso es peor que uno generico:
+    el generico se lee y se ve que es generico.
+
+    La intencion decide la forma. Para `modify` se encadenan investigacion y cambio
+    (la segunda depende de la primera); para el resto, solo investigacion, porque
+    planificar una escritura cuando el usuario pregunto algo seria un plan que no
+    corresponde a la peticion.
+    """
+    intencion = state.interpretation.intent if state.interpretation else Intent.INSPECT
+
+    investigar = Subtask(
+        id="investigar",
+        description="Investigar el repositorio y reunir la evidencia necesaria.",
+        agent=AgentRole.RESEARCHER,
+        depends_on=[],
+        allowed_tools=list(_HERRAMIENTAS_RESEARCHER),
+        done_criteria="Se han enumerado los archivos relevantes y citado rutas reales.",
+    )
+
+    subtareas = [investigar]
+    if intencion is Intent.MODIFY:
+        subtareas.append(
+            Subtask(
+                id="aplicar_cambios",
+                description="Aplicar los cambios propuestos sobre la evidencia reunida.",
+                agent=AgentRole.CODER,
+                depends_on=["investigar"],
+                allowed_tools=list(_HERRAMIENTAS_CODER),
+                done_criteria="Los cambios estan aplicados y el diff es revisable.",
+            )
+        )
+
+    return RunPlan(
+        subtasks=subtareas,
+        max_review_cycles=state.budget.max_review_cycles,
+        rationale=(
+            "plan determinista de respaldo: "
+            f"{len(subtareas)} subtarea(s) para la intencion '{intencion.value}'"
+            f"; motivo del fallback: {motivo}"
+        ),
+    )
+
+
+# Instruccion del sistema para planificar. Se pide **solo** el objeto `RunPlan`: el
+# esquema se deriva del contrato en el gateway, igual que en F3. Aqui se explican
+# las reglas que el contrato **no** puede expresar por si solo (que herramienta
+# tiene cada rol, que no se puede planificar algo fuera de alcance).
+PROMPT_PLANIFICACION = """\
+Eres el Supervisor de un sistema de ingenieria de software. Recibes una
+interpretacion ya validada de la peticion del usuario y debes producir un PLAN de
+ejecucion. No ejecutas nada: solo planificas.
+
+Reglas obligatorias:
+  - Cada subtarea se asigna a un agente: "researcher" (solo lectura del repositorio),
+    "coder" (puede escribir) o "reviewer" (revisa, no escribe). NUNCA "supervisor".
+  - `allowed_tools` debe enumerar solo herramientas validas para ese agente:
+      researcher: list_files, read_file, search_text, git_status, git_log, git_diff
+      coder:      read_file, write_file, apply_patch, run_tests
+      reviewer:   list_files, read_file, search_text, git_status, git_log, git_diff, run_tests
+    Una subtarea sin herramientas no ejecuta nada: nunca dejes la lista vacia.
+  - `depends_on` solo puede nombrar ids de OTRAS subtareas de este mismo plan. No
+    inventes ids ni crees ciclos: si A depende de B, B no puede depender de A.
+  - Usa como maximo unas pocas subtareas. Un plan de una sola tarea es valido y a
+    menudo preferible a uno inflado.
+  - `done_criteria` debe ser comprobable, no una intencion vaga.
+  - Si la intencion es "question" o "inspect", planifica SOLO trabajo de lectura: no
+    incluyas ninguna subtarea que escriba.
+  - Si la intencion es "out_of_scope", no planifiques la accion prohibida.
+"""
+
+
+def _plan_del_modelo(state: RunState) -> tuple[RunPlan, Budget, int] | None:
+    """Intenta planificar con el modelo. `None` si hay que caer al fallback.
+
+    Devuelve `(plan, presupuesto_consumido, tokens)` cuando el modelo responde y el
+    plan **cumple el contrato**. La validacion no se relaja: el gateway valida con
+    `RunPlan` -que aplica el DFS de ciclos, la unicidad de ids y el limite de 32
+    subtareas- y si no cumple, lanza `StructuredOutputError` y aqui se cae al
+    fallback. El modelo **propone**; el contrato **decide**.
+    """
+    from ai_swe.models import (
+        MessageRole,
+        ModelMessage,
+        ModelRequest,
+        StructuredOutputError,
+    )
+    from pydantic import ValidationError
+
+    gateway = _GATEWAY
+    if isinstance(gateway, _SinGateway):
+        return None
+    gateway = _gateway_por_defecto() if gateway is None else gateway
+
+    interpretacion = state.interpretation
+    contexto = (
+        "Interpretacion de la peticion:\n"
+        f"- intencion: {interpretacion.intent.value if interpretacion else 'desconocida'}\n"
+        f"- alcance: {interpretacion.scope.model_dump_json() if interpretacion else '{}'}\n"
+        f"- restricciones: {interpretacion.constraints if interpretacion else []}\n\n"
+        f"Peticion original del usuario:\n{state.instruction.text}"
+    )
+
+    peticion = ModelRequest(
+        messages=[
+            ModelMessage(role=MessageRole.SYSTEM, content=PROMPT_PLANIFICACION),
+            ModelMessage(role=MessageRole.USER, content=contexto),
+        ],
+        max_output_tokens=2048,
+        temperature=0.0,
+        agent_role=AgentRole.SUPERVISOR,
+        run_id=state.run_id,
+        trace_id=state.trace_id,
+    )
+    respuesta = gateway.generate_structured(
+        peticion, response_model=RunPlan, budget=state.budget
+    )
+    datos = respuesta.structured_data
+    if datos is None:  # pragma: no cover - el gateway nunca devuelve None validado
+        raise StructuredOutputError("structured_data vacio tras la validacion")
+    # Revalidacion defensiva, igual que en F3: si un dia el gateway cambiara, el
+    # nodo no debe pasar a aceptar un plan sin comprobar. Y se envuelve el error
+    # para que un dato fuera de contrato degrade al fallback en lugar de abortar.
+    try:
+        plan = RunPlan.model_validate(datos)
+    except ValidationError as exc:
+        raise StructuredOutputError(
+            "el modelo devolvio un plan que no cumple RunPlan",
+            provider=respuesta.provider,
+            detail=str(exc)[:600],
+        ) from exc
+
+    plan = _acotar_al_presupuesto_plan(plan, state)
+    nuevo_presupuesto = gateway.consume(state.budget, respuesta)
+    tokens = nuevo_presupuesto.used_tokens - state.budget.used_tokens
+    return plan, nuevo_presupuesto, tokens
+
+
+def _acotar_al_presupuesto_plan(plan: RunPlan, state: RunState) -> RunPlan:
+    """Devuelve un plan cuyos ciclos de revision no excedan el presupuesto.
+
+    **Por que no basta con el contrato.** `RunPlan.max_review_cycles` esta acotado a
+    [0,5], pero el presupuesto de la ejecucion puede ser menor. Un plan que pidiera
+    5 ciclos cuando `Budget.max_review_cycles` es 2 prometeria un trabajo que el
+    sistema no va a poder pagar, y el bucle de revision se cortaria antes de cumplir
+    lo planificado: el plan quedaria mintiendo.
+
+    Devuelve un objeto **nuevo** en lugar de mutar el recibido: mutar un modelo
+    Pydantic en su lugar deja el objeto en un estado que no ha pasado por sus
+    validadores, y el siguiente que lo lea no puede confiar en el.
+    """
+    if plan.max_review_cycles <= state.budget.max_review_cycles:
+        return plan
+
+    motivo = (
+        f" [acotado: max_review_cycles reducido a {state.budget.max_review_cycles} "
+        "por el presupuesto de la ejecucion]"
+    )
+    return plan.model_copy(
+        update={
+            "max_review_cycles": state.budget.max_review_cycles,
+            "rationale": (plan.rationale + motivo)[:4000],
+        }
+    )
+
+
+def plan(state: RunState) -> dict:
+    """Planificacion del Supervisor. **Segundo nodo conectado al modelo (F4).**
+
+    Recibe la `TaskInterpretation` de `interpret` y produce un `RunPlan` que se
+    guarda en `RunState.plan`. Es el paso 6 de `docs/03-flujo-e-implementacion.md`.
+
+    Igual que en F3, si no hay modelo o el que hay falla, se aplica un **fallback
+    determinista transparente y declarado**: un `RunError` recuperable con
+    `error_class=MODEL_FALLBACK` y el motivo. La ejecucion nunca se queda sin plan.
+    """
+    try:
+        resultado = _plan_del_modelo(state)
+    except Exception as exc:  # noqa: BLE001 - la frontera convierte cualquier fallo
+        if not _es_fallo_esperado(exc):
+            raise
+        motivo = f"{type(exc).__name__}: {exc}"[:500]
+        log.warning("plan: el modelo no respondio, se usa el fallback (%s)", motivo)
+        plan_fallback = _plan_determinista(state, motivo="modelo no disponible")
+        return {
+            "plan": plan_fallback,
+            "errors": _error(
+                state,
+                "MODEL_FALLBACK",
+                AgentRole.SUPERVISOR.value,
+                f"plan determinista de respaldo: el modelo no se pudo usar ({motivo})",
+                recuperable=True,
+            ),
+            "status": RunStatus.RUNNING,
+            "next_step": plan_fallback.subtasks[0].agent.value,
+            "updated_at": _ahora(),
+        }
+
+    if resultado is None:
+        plan_fallback = _plan_determinista(state, motivo="modelo no conectado")
+        return {
+            "plan": plan_fallback,
+            "status": RunStatus.RUNNING,
+            "next_step": plan_fallback.subtasks[0].agent.value,
+            "updated_at": _ahora(),
+        }
+
+    plan_modelo, presupuesto, _tokens = resultado
+    return {
+        "plan": plan_modelo,
+        "budget": presupuesto,
+        "status": RunStatus.RUNNING,
+        "next_step": plan_modelo.subtasks[0].agent.value,
+        "updated_at": _ahora(),
+    }
 
 
 def researcher(state: RunState) -> dict:
@@ -767,6 +1007,14 @@ def finalize(state: RunState) -> dict:
 
 
 def route_intent(state: RunState) -> str:
+    """Mapea la intencion al nodo de destino **de la rama de trabajo**.
+
+    Antes de F4 esta funcion era la arista de salida de `interpret`. Ahora esa
+    arista es `route_after_interpret`, que decide primero si hay que planificar.
+    Se conserva porque es el mapa puro intencion -> nodo y sigue siendo la
+    referencia de a donde va cada intencion una vez planificada; eliminarla
+    dejaria el mapeo sin una unica fuente de verdad.
+    """
     intencion = state.interpretation.intent if state.interpretation else Intent.INSPECT
     return {
         Intent.QUESTION: "researcher",
@@ -774,6 +1022,33 @@ def route_intent(state: RunState) -> str:
         Intent.MODIFY: "researcher",
         Intent.OUT_OF_SCOPE: "explain_limits",
     }[intencion]
+
+
+def route_after_interpret(state: RunState) -> str:
+    """Tras interpretar: planificar, o explicar los limites. **Nunca las dos.**
+
+    Una instruccion fuera de alcance no se planifica. Planificar algo que el sistema
+    ya sabe que no va a hacer produciria un plan que no corresponde a ninguna accion
+    posible, y ademas gastaria una llamada al modelo para justificar una negativa.
+    La rama `explain_limits` explica por que no se puede, que es la respuesta util.
+    """
+    intencion = state.interpretation.intent if state.interpretation else Intent.INSPECT
+    if intencion is Intent.OUT_OF_SCOPE:
+        return "explain_limits"
+    return "plan"
+
+
+def route_after_plan(state: RunState) -> str:
+    """Tras planificar, se empieza por el agente de la primera subtarea.
+
+    Se enruta por la **primera subtarea del plan** en lugar de asumir `researcher`,
+    de modo que un plan que empiece por otro agente no se contradiga con la
+    topologia. Si no hay plan -no deberia ocurrir, el nodo siempre produce uno- se
+    cae a `researcher`, que es el comienzo seguro.
+    """
+    if state.plan is None or not state.plan.subtasks:
+        return "researcher"
+    return state.plan.subtasks[0].agent.value
 
 
 def route_after_research(state: RunState) -> str:

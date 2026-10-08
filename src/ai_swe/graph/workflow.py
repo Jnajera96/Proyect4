@@ -3,8 +3,9 @@
 Topologia (docs/03-flujo-e-implementacion.md, seccion 3.5):
 
     START -> interpret
-      interpret --intencion--> researcher | explain_limits
+      interpret --fuera de alcance?--> explain_limits | plan
       explain_limits -> finalize
+      plan --primera subtarea--> researcher
       researcher --intencion--> coder | answer_direct | finalize
       answer_direct -> finalize
       coder --hay cambios?--> run_tests | escalate_no_changes
@@ -26,6 +27,17 @@ Invariantes que la topologia hace cumplir por si misma:
   - **El ciclo de revision esta acotado.** `route_after_review` comprueba
     `review_cycles_used` contra `max_review_cycles`; agotado el limite va a
     `escalate`, no vuelve al Coder.
+  - **Una instruccion fuera de alcance no se planifica** (`F4`). `route_after_interpret`
+    la manda a `explain_limits`: planificar lo que el sistema ya sabe que no hara
+    produciria un plan sin accion posible, y gastaria una llamada al modelo para
+    justificar una negativa.
+
+**El plan es dato, no topologia (`F4`).** `RunPlan` se guarda en `RunState.plan`,
+pero el grafo tiene una forma **fija**: las aristas estan escritas arriba y no se
+generan a partir del plan. Por eso ningun plan -ni circular ni gigante- puede crear
+un bucle en la ejecucion, y el contrato `RunPlan` (ids unicos, dependencias
+existentes, DFS de ciclos, maximo de 32 subtareas) acota el dato antes de que entre
+al estado.
 """
 
 from __future__ import annotations
@@ -40,6 +52,7 @@ def construir_grafo() -> StateGraph:
     grafo = StateGraph(RunState)
 
     grafo.add_node("interpret", nodes.interpret)
+    grafo.add_node("plan", nodes.plan)
     grafo.add_node("researcher", nodes.researcher)
     grafo.add_node("answer_direct", nodes.answer_direct)
     grafo.add_node("explain_limits", nodes.explain_limits)
@@ -53,7 +66,8 @@ def construir_grafo() -> StateGraph:
     grafo.add_node("finalize", nodes.finalize)
 
     grafo.add_edge(START, "interpret")
-    grafo.add_conditional_edges("interpret", nodes.route_intent)
+    grafo.add_conditional_edges("interpret", nodes.route_after_interpret)
+    grafo.add_conditional_edges("plan", nodes.route_after_plan)
     grafo.add_edge("explain_limits", "finalize")
     grafo.add_conditional_edges("researcher", nodes.route_after_research)
     grafo.add_edge("answer_direct", "finalize")

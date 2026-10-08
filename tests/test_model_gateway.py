@@ -800,8 +800,12 @@ def test_ningun_modulo_importa_un_sdk_de_proveedor() -> None:
     assert infractores == []
 
 
-def test_solo_interpret_habla_con_el_gateway() -> None:
-    """**F3**: de todos los nodos del grafo, solo `interpret` usa el gateway.
+def test_solo_interpret_y_plan_hablan_con_el_gateway() -> None:
+    """**F3 y F4**: de todos los nodos del grafo, solo `interpret` y `plan` usan el gateway.
+
+    Los dos son pasos del Supervisor en `docs/03-flujo-e-implementacion.md` (paso 5,
+    interpretacion; paso 6, planificacion). Ningun otro nodo puede hablar con el
+    modelo: cada fase conecta el nodo que le toca y no todos a la vez.
 
     La version anterior de esta prueba afirmaba que *ningun* fichero del grafo
     contuviera la cadena `ai_swe.models`, y buscaba subcadenas con `in` sobre el
@@ -827,10 +831,12 @@ def test_solo_interpret_habla_con_el_gateway() -> None:
     raiz = Path(__file__).resolve().parent.parent / "src" / "ai_swe" / "graph"
 
     # Las funciones que pueden importar el gateway. Todo lo demas es una violacion
-    # de la regla «una fase conecta un nodo».
+    # de la regla «una fase conecta un nodo»: F3 conecto `interpret`, F4 anadio
+    # `plan`. Las dos son pasos del Supervisor (docs/03, pasos 5 y 6).
     funciones_autorizadas = {
         "_gateway_por_defecto",
         "_interpretacion_del_modelo",
+        "_plan_del_modelo",
         "_es_fallo_esperado",
     }
     funciones_con_modelo: set[str] = set()

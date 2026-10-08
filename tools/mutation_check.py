@@ -404,6 +404,66 @@ MUTACIONES: list[Mutation] = [
         "    interpretacion = TaskInterpretation.model_construct(**datos)",
         "test_f3_interpret_analyst.py",
     ),
+    # ------------------------------------------------------------------ F4
+    # Cuatro de estas ocho tocan las dos propiedades que el Arquitecto pidio
+    # vigilar de forma explicita: **el consumo de presupuesto** (F4-presupuesto-*)
+    # y **el comportamiento del fallback** (F4-fallback-*).
+    Mutation(
+        "F4: plan ignora el modelo aunque este conectado",
+        SRC / "graph" / "nodes.py",
+        "        resultado = _plan_del_modelo(state)",
+        "        resultado = None",
+        "test_f4_supervisor_plan.py",
+    ),
+    Mutation(
+        "F4: un fallo del modelo se traga en vez de caer al fallback",
+        SRC / "graph" / "nodes.py",
+        "        if not _es_fallo_esperado(exc):\n            raise\n        motivo = f\"{type(exc).__name__}: {exc}\"[:500]\n        log.warning(\"plan:",
+        "        if False:\n            raise\n        motivo = f\"{type(exc).__name__}: {exc}\"[:500]\n        log.warning(\"plan:",
+        "test_f4_supervisor_plan.py",
+    ),
+    Mutation(
+        "F4-fallback: no hay plan cuando no hay modelo",
+        SRC / "graph" / "nodes.py",
+        "    if resultado is None:\n        plan_fallback = _plan_determinista(state, motivo=\"modelo no conectado\")",
+        "    if resultado is None:\n        plan_fallback = RunPlan(subtasks=[]),",
+        "test_f4_supervisor_plan.py",
+    ),
+    Mutation(
+        "F4-fallback: el plan de respaldo no encadena investigacion y cambio",
+        SRC / "graph" / "nodes.py",
+        "    subtareas = [investigar]\n    if intencion is Intent.MODIFY:",
+        "    subtareas = [investigar]\n    if False:",
+        "test_f4_supervisor_plan.py",
+    ),
+    Mutation(
+        "F4-presupuesto: la planificacion no se contabiliza",
+        SRC / "graph" / "nodes.py",
+        "    nuevo_presupuesto = gateway.consume(state.budget, respuesta)\n    tokens = nuevo_presupuesto.used_tokens - state.budget.used_tokens\n    return plan, nuevo_presupuesto, tokens",
+        "    return plan, state.budget, 0",
+        "test_f4_supervisor_plan.py",
+    ),
+    Mutation(
+        "F4-presupuesto: el plan puede pedir mas ciclos de los presupuestados",
+        SRC / "graph" / "nodes.py",
+        "    if plan.max_review_cycles <= state.budget.max_review_cycles:\n        return plan",
+        "    if True:\n        return plan",
+        "test_f4_supervisor_plan.py",
+    ),
+    Mutation(
+        "F4: el plan estructurado se salta la validacion Pydantic del nodo",
+        SRC / "graph" / "nodes.py",
+        "        plan = RunPlan.model_validate(datos)",
+        "        plan = RunPlan.model_construct(**datos)",
+        "test_f4_supervisor_plan.py",
+    ),
+    Mutation(
+        "F4: una instruccion fuera de alcance se planifica igualmente",
+        SRC / "graph" / "nodes.py",
+        '    if intencion is Intent.OUT_OF_SCOPE:\n        return "explain_limits"\n    return "plan"',
+        '    return "plan"',
+        "test_f4_supervisor_plan.py",
+    ),
 ]
 
 
