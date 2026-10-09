@@ -1437,18 +1437,152 @@ def run_tests(state: RunState) -> dict:
     }
 
 
-def reviewer(state: RunState) -> dict:
-    """Juzga el resultado con la evidencia disponible."""
+# ---------------------------------------------------- F9: Reviewer semantico
+#
+# **El segundo nodo conectado al modelo.** Hasta F8 el Reviewer era un reflejo del
+# `exit_code`: aprobaba si las pruebas pasaban y pedia cambios si no. Eso no es
+# revisar, es leer un semaforo. F9 le da criterio -compara la peticion, el plan, el
+# cambio y la evidencia- y le pone **tres guardas deterministas** encima, porque un
+# modelo que aprueba un cambio con pruebas en rojo no puede tener la ultima palabra.
+#
+# Regla de la fase: **el modelo juzga, el codigo decide.** El veredicto del modelo
+# es una propuesta; las guardas son las que lo convierten en decision.
+
+PROMPT_REVISION = """\
+Eres el Reviewer de un sistema de ingenieria de software. Recibes la peticion del
+usuario, la interpretacion validada, la subtarea planificada, el cambio que propuso
+el Coder y la evidencia REAL de ejecucion de pruebas. Tu tarea es JUZGAR, no
+arreglar: no escribes codigo y no propones parches.
+
+Elige exactamente una decision:
+  - "accept": el cambio cumple la peticion y la evidencia lo respalda.
+  - "request_changes": el cambio no cumple, o la evidencia no lo respalda, y hay
+    algo concreto y accionable que corregir. **Exige** `required_fixes` no vacio.
+  - "escalate": no puedes juzgar con lo que tienes (falta evidencia, la peticion es
+    ambigua, o el problema excede lo que un cambio de codigo puede resolver).
+
+Reglas obligatorias:
+  - **No apruebes con pruebas en rojo.** Si alguna ejecucion tiene codigo de salida
+    distinto de cero, la decision no puede ser "accept". El sistema lo vetara de
+    todos modos, pero aprobarlo tu seria un error de criterio.
+  - Cada `finding` necesita `evidence` real: un fragmento de la salida de las
+    pruebas, del diff o de la peticion. Sin evidencia, un hallazgo es una opinion.
+  - `summary` resume el juicio en una o dos frases. No repitas la evidencia entera.
+  - Si el cambio no toca lo que pedia la subtarea, dilo aunque las pruebas pasen:
+    unas pruebas verdes sobre el cambio equivocado no son un exito.
+"""
+
+
+# El modelo del Reviewer se inyecta por atributo de modulo, con el mismo criterio
+# que `usar_gateway`: una prueba puede fijarlo sin tocar el entorno ni la
+# configuracion, y `usar_modelo_reviewer(None)` vuelve a leer `Settings`.
+_MODELO_REVIEWER: str | None = None
+
+
+def usar_modelo_reviewer(modelo: str | None) -> None:
+    """Fija el modelo del Reviewer. `None` = leerlo de la configuracion."""
+    global _MODELO_REVIEWER
+    _MODELO_REVIEWER = modelo
+
+
+def _modelo_del_reviewer() -> str | None:
+    """Modelo asignado al Reviewer, o `None` para usar el general.
+
+    Un valor vacio en configuracion significa "usa `model_name`", y eso se traduce
+    a `None` en la peticion: el gateway distingue "no se pide modelo concreto" de
+    "se pide la cadena vacia".
+    """
+    if _MODELO_REVIEWER is not None:
+        return _MODELO_REVIEWER or None
+    from ai_swe.config import load_settings
+
+    return load_settings().reviewer_model.strip() or None
+
+
+def _resumen_de_pruebas(pruebas: list[TestRun]) -> str:
+    """Evidencia de pruebas en texto, con la cola del fallo cuando lo hay.
+
+    La cola -no la cabecera- porque el motivo del fallo esta al final de la salida
+    de pytest. Se acota para no volcar una salida entera al contexto del modelo.
+    """
+    if not pruebas:
+        return "(no hay ninguna ejecucion de pruebas registrada)"
+    lineas: list[str] = []
+    for p in pruebas:
+        if p.passed:
+            lineas.append(f"- {p.target}: OK (exit 0)")
+            continue
+        cola = (p.stderr or p.stdout or "").strip().splitlines()[-8:]
+        detalle = "\n      " + "\n      ".join(cola) if cola else ""
+        lineas.append(f"- {p.target}: FALLO (exit {p.exit_code}){detalle}")
+    return "\n".join(lineas)
+
+
+def _contexto_de_revision(state: RunState) -> str:
+    """Contexto estructurado que recibe el Reviewer.
+
+    **No existe un contrato `ProjectRequirements`.** El encargo de F9 lo nombra, pero
+    en este repositorio los requisitos se representan con `Instruction` (lo que el
+    usuario pidio) y `TaskInterpretation` (lo que el sistema entendio: intencion,
+    alcance y restricciones). Inventar aqui un tipo paralelo duplicaria esos datos y
+    daria dos fuentes de verdad para lo mismo; se envian los contratos reales.
+    """
+    interpretacion = state.interpretation
+    subtarea = _subtarea_actual(state)
+    cambio = state.outputs.coder_output
+
+    restricciones = interpretacion.constraints if interpretacion else []
+    rutas = (
+        ", ".join(interpretacion.scope.allowed_paths) if interpretacion and interpretacion.scope.allowed_paths
+        else "(sin restriccion de rutas declarada)"
+    )
+    resumen_plan = (
+        "\n".join(f"  {i}. [{s.agent.value}] {s.description}" for i, s in enumerate(state.plan.subtasks))
+        if state.plan
+        else "(no hay plan)"
+    )
+    archivos = (
+        ", ".join(f.path for f in cambio.files_changed) if cambio and cambio.files_changed else "(sin archivos)"
+    )
+    diff = cambio.diff if cambio else ""
+
+    return (
+        f"Peticion original del usuario:\n{state.instruction.text}\n\n"
+        "Requisitos interpretados (TaskInterpretation):\n"
+        f"- intencion: {interpretacion.intent.value if interpretacion else 'desconocida'}\n"
+        f"- restricciones declaradas: {restricciones}\n"
+        f"- rutas autorizadas: {rutas}\n\n"
+        f"Plan completo:\n{resumen_plan}\n\n"
+        "Subtarea actual:\n"
+        f"- descripcion: {subtarea.description if subtarea else 'no declarada'}\n"
+        f"- criterio de termino: {subtarea.done_criteria if subtarea else 'no declarado'}\n\n"
+        f"Cambio propuesto (archivos: {archivos}):\n"
+        f"--- diff ---\n{diff}\n--- fin del diff ---\n\n"
+        f"Evidencia real de pruebas:\n{_resumen_de_pruebas(state.evidence.test_runs)}"
+    )
+
+
+def _veredicto_determinista(state: RunState) -> ReviewVerdict:
+    """Veredicto por evidencia, sin modelo. Es el **fallback** de F9 (REGLA 3).
+
+    No es codigo muerto: es la via por la que el sistema sigue revisando sin
+    credenciales, sin red o con el proveedor caido. Su `summary` **dice** que fue
+    determinista, porque un fallback que no se declara es indistinguible de un
+    acierto.
+    """
     pruebas = state.evidence.test_runs
 
     if not pruebas:
-        veredicto = ReviewVerdict(
+        return ReviewVerdict(
             decision=ReviewDecision.ESCALATE,
             findings=[],
-            summary="no hay evidencia de pruebas que revisar; no se puede aceptar ni rechazar",
+            summary=(
+                "revision determinista: no hay evidencia de pruebas que revisar; "
+                "no se puede aceptar ni rechazar"
+            ),
         )
-    elif all(p.passed for p in pruebas):
-        veredicto = ReviewVerdict(
+    if all(p.passed for p in pruebas):
+        return ReviewVerdict(
             decision=ReviewDecision.ACCEPT,
             findings=[
                 Finding(
@@ -1458,30 +1592,230 @@ def reviewer(state: RunState) -> dict:
                     evidence="; ".join(f"{p.target} -> exit {p.exit_code}" for p in pruebas),
                 )
             ],
-            summary="el cambio pasa las pruebas registradas",
-        )
-    else:
-        fallidas = [p.target for p in pruebas if not p.passed]
-        veredicto = ReviewVerdict(
-            decision=ReviewDecision.REQUEST_CHANGES,
-            findings=[
-                Finding(
-                    severity=Severity.HIGH,
-                    path="(pruebas)",
-                    explanation="hay ejecuciones de prueba con codigo de salida distinto de cero",
-                    evidence=f"objetivos fallidos: {', '.join(fallidas)}",
-                )
-            ],
-            required_fixes=[f"corregir el fallo en {t}" for t in fallidas],
-            summary=f"{len(fallidas)} objetivo(s) de prueba en rojo",
+            summary="revision determinista: el cambio pasa las pruebas registradas",
         )
 
-    return {
+    fallidas = [p.target for p in pruebas if not p.passed]
+    return ReviewVerdict(
+        decision=ReviewDecision.REQUEST_CHANGES,
+        findings=[
+            Finding(
+                severity=Severity.HIGH,
+                path="(pruebas)",
+                explanation="hay ejecuciones de prueba con codigo de salida distinto de cero",
+                evidence=f"objetivos fallidos: {', '.join(fallidas)}",
+            )
+        ],
+        required_fixes=[f"corregir el fallo en {t}" for t in fallidas],
+        summary=f"revision determinista: {len(fallidas)} objetivo(s) de prueba en rojo",
+    )
+
+
+def _veredicto_del_modelo(state: RunState) -> tuple[ReviewVerdict, Budget] | None:
+    """Intenta revisar con el modelo. `None` si hay que caer al fallback.
+
+    Devuelve `(veredicto, presupuesto_consumido)`. La validacion no se relaja: el
+    gateway lanza `StructuredOutputError` si el JSON no cumple `ReviewVerdict`, y
+    ese caso cae al fallback. El contrato Pydantic sigue siendo la puerta absoluta.
+    """
+    from ai_swe.models import (
+        MessageRole,
+        ModelMessage,
+        ModelRequest,
+        StructuredOutputError,
+    )
+    from pydantic import ValidationError
+
+    gateway = _GATEWAY
+    if isinstance(gateway, _SinGateway):
+        return None
+    gateway = _gateway_por_defecto() if gateway is None else gateway
+
+    peticion = ModelRequest(
+        messages=[
+            ModelMessage(role=MessageRole.SYSTEM, content=PROMPT_REVISION),
+            ModelMessage(role=MessageRole.USER, content=_contexto_de_revision(state)),
+        ],
+        model=_modelo_del_reviewer(),
+        max_output_tokens=2048,
+        temperature=0.0,
+        agent_role=AgentRole.REVIEWER,
+        run_id=state.run_id,
+        trace_id=state.trace_id,
+    )
+    respuesta = gateway.generate_structured(
+        peticion, response_model=ReviewVerdict, budget=state.budget
+    )
+    datos = respuesta.structured_data
+    if datos is None:  # pragma: no cover - el gateway nunca devuelve None validado
+        raise StructuredOutputError("structured_data vacio tras la validacion")
+    # Revalidacion defensiva, igual que en F3/F4/F6: si un dia el gateway cambiara,
+    # el nodo no debe aceptar datos sin comprobar. Se envuelve para que un dato
+    # fuera de contrato degrade al fallback en lugar de abortar la ejecucion.
+    try:
+        veredicto = ReviewVerdict.model_validate(datos)
+    except ValidationError as exc:
+        raise StructuredOutputError(
+            "el modelo devolvio un veredicto que no cumple ReviewVerdict",
+            provider=respuesta.provider,
+            detail=str(exc)[:600],
+        ) from exc
+    return veredicto, gateway.consume(state.budget, respuesta)
+
+
+# ------------------------------------------------------------------ guardas
+#
+# **Software over LLM.** Las tres reglas son codigo, no prompt: un prompt se puede
+# ignorar, una guarda no. Se aplican al veredicto **venga de donde venga** -modelo o
+# fallback-, para que la garantia no dependa del camino.
+
+
+def _guarda_pruebas(state: RunState, veredicto: ReviewVerdict) -> ReviewVerdict:
+    """REGLA 1: un test en rojo invalida cualquier `ACCEPT`.
+
+    El modelo no puede aprobar un cambio cuyas pruebas fallan. Si lo intenta, se
+    convierte en `REQUEST_CHANGES` y el resumen del fallo se anade a los hallazgos,
+    para que el Coder sepa **que** corregir y no solo que hay que corregir.
+    """
+    fallidas = [p for p in state.evidence.test_runs if not p.passed]
+    if not fallidas or veredicto.decision is not ReviewDecision.ACCEPT:
+        return veredicto
+
+    resumen = "; ".join(f"{p.target} -> exit {p.exit_code}" for p in fallidas)
+    hallazgo = Finding(
+        severity=Severity.HIGH,
+        path="(pruebas)",
+        explanation=(
+            "veto determinista: el modelo aprobo el cambio pero hay pruebas con "
+            "codigo de salida distinto de cero"
+        ),
+        evidence=resumen,
+    )
+    datos = veredicto.model_dump()
+    datos["decision"] = ReviewDecision.REQUEST_CHANGES
+    datos["findings"] = [*veredicto.findings, hallazgo]
+    # El contrato exige `required_fixes` no vacio para `REQUEST_CHANGES`. Se anaden
+    # a los que ya trajera el modelo; como `fallidas` no esta vacio, nunca queda vacio.
+    datos["required_fixes"] = [
+        *veredicto.required_fixes,
+        *(f"corregir el fallo en {p.target}" for p in fallidas),
+    ]
+    datos["summary"] = f"veto por pruebas en rojo ({resumen}). {veredicto.summary}"
+    # Se revalida en lugar de `model_copy`: un veredicto construido a mano debe
+    # seguir pasando el contrato, y `model_copy` no ejecuta los validadores.
+    return ReviewVerdict.model_validate(datos)
+
+
+def _guarda_ciclos(state: RunState, veredicto: ReviewVerdict) -> ReviewVerdict:
+    """REGLA 2: agotado el limite de ciclos, `REQUEST_CHANGES` se convierte en `ESCALATE`.
+
+    Sin esto, un Coder que no converge y un Reviewer que siempre pide cambios se
+    turnarian hasta agotar el presupuesto. El limite convierte ese bucle en una
+    decision humana, que es donde debe acabar.
+    """
+    if veredicto.decision is not ReviewDecision.REQUEST_CHANGES:
+        return veredicto
+
+    usados = state.budget.review_cycles_used
+    maximo = state.budget.max_review_cycles
+    if usados < maximo:
+        return veredicto
+
+    hallazgo = Finding(
+        severity=Severity.HIGH,
+        path="(ciclos de revision)",
+        explanation=(
+            "veto determinista: se agotaron los ciclos de revision sin converger; "
+            "se escala a un humano en lugar de seguir iterando"
+        ),
+        evidence=f"ciclos usados {usados} de un maximo de {maximo}",
+    )
+    datos = veredicto.model_dump()
+    datos["decision"] = ReviewDecision.ESCALATE
+    datos["findings"] = [*veredicto.findings, hallazgo]
+    datos["summary"] = (
+        f"ciclos de revision agotados ({usados}/{maximo}); se escala a un humano. "
+        f"{veredicto.summary}"
+    )
+    return ReviewVerdict.model_validate(datos)
+
+
+def _aplicar_guardas(state: RunState, veredicto: ReviewVerdict) -> ReviewVerdict:
+    """Aplica las guardas deterministas en orden.
+
+    El orden importa: primero el veto por pruebas (REGLA 1), que puede **crear** un
+    `REQUEST_CHANGES`; despues el limite de ciclos (REGLA 2), que debe ver ese
+    `REQUEST_CHANGES` para poder escalarlo. Al reves, un `ACCEPT` con pruebas en rojo
+    pasaria el limite de ciclos sin tocarse -no es `REQUEST_CHANGES`- y se colaria.
+    """
+    return _guarda_ciclos(state, _guarda_pruebas(state, veredicto))
+
+
+def _siguiente_tras_revision(veredicto: ReviewVerdict) -> str:
+    """Destino del grafo segun el veredicto. **Fuente unica** de esta decision.
+
+    La usan el nodo (para `next_step`) y el router, de modo que no puedan divergir.
+    El limite de ciclos **no** se comprueba aqui: cuando el veredicto llega, la
+    guarda ya lo convirtio en `ESCALATE` si tocaba. Comprobarlo otra vez seria una
+    linea redundante que ninguna prueba podria distinguir.
+    """
+    if veredicto.decision is ReviewDecision.ACCEPT:
+        return "mark_awaiting"
+    if veredicto.decision is ReviewDecision.REQUEST_CHANGES:
+        return "coder"
+    return "escalate"
+
+
+def reviewer(state: RunState) -> dict:
+    """Juzga el cambio con criterio del modelo y guardas deterministas (F9).
+
+    Camino: se intenta el modelo; si falla o no hay, se usa el veredicto
+    determinista. En ambos casos se aplican las guardas (REGLA 1 y REGLA 2) antes de
+    decidir la ruta. `review_cycles_used` **solo** avanza cuando de verdad se vuelve
+    al Coder: un `ACCEPT` o un `ESCALATE` no gastan ciclo.
+    """
+    errores = list(state.errors)
+    presupuesto = state.budget
+
+    try:
+        resultado = _veredicto_del_modelo(state)
+    except Exception as exc:  # noqa: BLE001 - la frontera convierte cualquier fallo
+        if not _es_fallo_esperado(exc):
+            raise
+        motivo = f"{type(exc).__name__}: {exc}"[:500]
+        log.warning("reviewer: el modelo no respondio, se usa el fallback (%s)", motivo)
+        veredicto = _veredicto_determinista(state)
+        errores = _error(
+            state,
+            "MODEL_FALLBACK",
+            AgentRole.REVIEWER.value,
+            f"revision determinista: el modelo no se pudo usar ({motivo})",
+            recuperable=True,
+        )
+    else:
+        if resultado is None:
+            veredicto = _veredicto_determinista(state)
+        else:
+            veredicto, presupuesto = resultado
+
+    veredicto = _aplicar_guardas(state, veredicto)
+
+    ciclos = presupuesto.review_cycles_used
+    if veredicto.decision is ReviewDecision.REQUEST_CHANGES:
+        ciclos += 1
+    presupuesto = Budget.model_validate(
+        {**presupuesto.model_dump(), "review_cycles_used": ciclos}
+    )
+
+    salida = {
         "outputs": _con_salidas(state, reviewer_output=veredicto),
-        "budget": _con_presupuesto(state, review_cycles_used=state.budget.review_cycles_used + 1),
-        "next_step": "approval_gate" if veredicto.decision is ReviewDecision.ACCEPT else "escalate",
+        "budget": presupuesto,
+        "next_step": _siguiente_tras_revision(veredicto),
         "updated_at": _ahora(),
     }
+    if errores != list(state.errors):
+        salida["errors"] = errores
+    return salida
 
 
 def mark_awaiting(state: RunState) -> dict:
@@ -1725,11 +2059,16 @@ def route_after_tests(state: RunState) -> str:
 
 
 def route_after_review(state: RunState) -> str:
+    """Ruta tras la revision: `ACCEPT` -> HITL, `REQUEST_CHANGES` -> Coder, resto -> escalar.
+
+    **F9: el limite de ciclos ya no se comprueba aqui.** La guarda determinista del
+    nodo `reviewer` convierte en `ESCALATE` un `REQUEST_CHANGES` sin ciclos
+    disponibles, asi que cuando este router ve el veredicto, la decision ya es
+    definitiva. Repetir la comparacion seria una linea redundante -las dos darian el
+    mismo resultado siempre- y una mutacion sobre ella no se podria cazar. La
+    logica vive en un solo sitio: `_siguiente_tras_revision`.
+    """
     veredicto = state.outputs.reviewer_output
     if veredicto is None:
         return "escalate"
-    if veredicto.decision is ReviewDecision.REQUEST_CHANGES:
-        return "coder" if state.budget.review_cycles_used < state.budget.max_review_cycles else "escalate"
-    if veredicto.decision is ReviewDecision.ACCEPT:
-        return "mark_awaiting"
-    return "escalate"
+    return _siguiente_tras_revision(veredicto)

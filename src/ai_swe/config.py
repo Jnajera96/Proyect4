@@ -30,6 +30,18 @@ class Settings(BaseSettings):
     # --- Proveedor de modelo -------------------------------------------------
     model_provider: str = Field(default="openai", description="Proveedor del Foundation Model.")
     model_name: str = Field(default="", description="Identificador del modelo a usar.")
+    # Modelo especifico del Reviewer (F9). Vacio = usa `model_name`.
+    #
+    # **Por que un campo aparte y no reutilizar `model_name`.** Criticar no es
+    # producir: el rol de revision se beneficia de un modelo distinto (mas capaz de
+    # razonar, o al reves, mas barato si el volumen es alto), y R1 en
+    # `docs/01-arquitectura.md` lo deja dicho -un mismo prompt no se optimiza a la
+    # vez para explorar, producir y criticar-. Vacio por defecto para no obligar a
+    # configurar nada: sin valor, el Reviewer usa el modelo general.
+    reviewer_model: str = Field(
+        default="",
+        description="Modelo del Reviewer. Vacio = usar `model_name`.",
+    )
     model_api_key: SecretStr = Field(
         default=SecretStr(""),
         description="Secreto: solo desde el entorno. Nunca se registra en claro.",

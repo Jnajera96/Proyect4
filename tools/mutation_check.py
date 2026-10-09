@@ -822,6 +822,80 @@ MUTACIONES: list[Mutation] = [
         '    return "run_tests"',
         "test_f8_test_runner.py",
     ),
+    # ------------------------------------------------------- F9: reviewer
+    Mutation(
+        # REGLA 1 desactivada: el modelo podria aprobar un cambio con las pruebas en
+        # rojo y se promoveria. Es el fallo mas grave que F9 puede cometer.
+        "F9: el modelo puede aprobar con pruebas en rojo (guarda de pruebas desactivada)",
+        SRC / "graph" / "nodes.py",
+        "    if not fallidas or veredicto.decision is not ReviewDecision.ACCEPT:\n        return veredicto",
+        "    if True:\n        return veredicto",
+        "test_f9_reviewer.py",
+    ),
+    Mutation(
+        # REGLA 2 desactivada: un Coder que no converge y un Reviewer que siempre pide
+        # cambios se turnarian hasta agotar el presupuesto.
+        "F9: los ciclos agotados no escalan (guarda de ciclos desactivada)",
+        SRC / "graph" / "nodes.py",
+        "    if usados < maximo:\n        return veredicto",
+        "    if True:\n        return veredicto",
+        "test_f9_reviewer.py",
+    ),
+    Mutation(
+        # El orden de las guardas importa: si el limite de ciclos se evalua antes del
+        # veto por pruebas, no ve el `request_changes` que la guarda de pruebas crea,
+        # y un `accept` roto se cuela sin pasar por el limite.
+        "F9: las guardas se aplican en orden invertido (el veto por pruebas no pasa por el limite)",
+        SRC / "graph" / "nodes.py",
+        "    return _guarda_ciclos(state, _guarda_pruebas(state, veredicto))",
+        "    return _guarda_pruebas(state, _guarda_ciclos(state, veredicto))",
+        "test_f9_reviewer.py",
+    ),
+    Mutation(
+        # Un fallback que no se declara es indistinguible de un acierto: no se podria
+        # saber que el modelo no llego a usarse.
+        "F9: el fallback determinista no deja error tipado (degrada en silencio)",
+        SRC / "graph" / "nodes.py",
+        '            "MODEL_FALLBACK",\n            AgentRole.REVIEWER.value,',
+        '            "MODEL_FALLBACK_SILENCIOSO_NO_USAR",\n            AgentRole.REVIEWER.value,',
+        "test_f9_reviewer.py",
+    ),
+    Mutation(
+        # El modelo asignado al Reviewer debe viajar en la peticion; si no, la
+        # configuracion `reviewer_model` no tendria ningun efecto.
+        "F9: la peticion del Reviewer no lleva su modelo asignado",
+        SRC / "graph" / "nodes.py",
+        "        model=_modelo_del_reviewer(),",
+        "        model=None,",
+        "test_f9_reviewer.py",
+    ),
+    Mutation(
+        # Aprobar o escalar no son iterar: contar siempre los ciclos agota el limite
+        # sin haber rehecho nada.
+        "F9: cualquier veredicto consume un ciclo de revision",
+        SRC / "graph" / "nodes.py",
+        "    ciclos = presupuesto.review_cycles_used\n    if veredicto.decision is ReviewDecision.REQUEST_CHANGES:\n        ciclos += 1",
+        "    ciclos = presupuesto.review_cycles_used + 1",
+        "test_f9_reviewer.py",
+    ),
+    Mutation(
+        # El router debe traducir `accept` a la puerta HITL; si no, un cambio aprobado
+        # no llegaria nunca a aprobacion humana.
+        "F9: un ACCEPT no encamina a la puerta de aprobacion",
+        SRC / "graph" / "nodes.py",
+        '    if veredicto.decision is ReviewDecision.ACCEPT:\n        return "mark_awaiting"',
+        '    if veredicto.decision is ReviewDecision.ACCEPT:\n        return "escalate"',
+        "test_f9_reviewer.py",
+    ),
+    Mutation(
+        # El Reviewer debe juzgar con la evidencia delante. Sin ella, revisa el diff
+        # a ciegas y su criterio no vale mas que el de F8.
+        "F9: el contexto del Reviewer omite la evidencia de pruebas",
+        SRC / "graph" / "nodes.py",
+        '        f"Evidencia real de pruebas:\\n{_resumen_de_pruebas(state.evidence.test_runs)}"',
+        '        "(evidencia de pruebas omitida)"',
+        "test_f9_reviewer.py",
+    ),
 ]
 
 

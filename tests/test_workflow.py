@@ -38,6 +38,7 @@ from ai_swe.contracts import (
     InstructionSource,
     Intent,
     Outputs,
+    ReviewDecision,
     RunError,
     RunOptions,
     RunState,
@@ -348,7 +349,17 @@ def test_enrutado_por_intencion(tmp_path, intencion: Intent, destino: str) -> No
 
 
 def test_el_ciclo_de_revision_se_agota_en_lugar_de_repetirse(tmp_path) -> None:
-    """Un ciclo sin limite es un bucle infinito disfrazado de revision."""
+    """Un ciclo sin limite es un bucle infinito disfrazado de revision.
+
+    **F9 mueve la garantia del router al nodo.** Antes el router comparaba
+    `review_cycles_used` con el maximo; ahora esa comparacion vive en la guarda
+    determinista del `reviewer`, que convierte en `escalate` un `request_changes`
+    sin ciclos. El router se limita a traducir el veredicto ya definitivo. Se
+    comprueban las dos mitades para que la frontera no se difumine:
+
+      - el router **no** recorta por ciclos (traduce siempre lo que ve);
+      - el nodo **si** recorta (es quien tiene el presupuesto a mano).
+    """
     store, motor = _motor(tmp_path)
     try:
         estado = motor.crear_estado("corrige algo")
@@ -364,9 +375,23 @@ def test_el_ciclo_de_revision_se_agota_en_lugar_de_repetirse(tmp_path) -> None:
         datos["budget"] = {"max_review_cycles": 2, "review_cycles_used": 1}
         assert nodes.route_after_review(RunState.model_validate(datos)) == "coder"
 
+        # Con el limite agotado, el router sigue traduciendo: no es su trabajo recortar.
         datos["budget"] = {"max_review_cycles": 2, "review_cycles_used": 2}
-        assert nodes.route_after_review(RunState.model_validate(datos)) == "escalate"
+        assert nodes.route_after_review(RunState.model_validate(datos)) == "coder"
+
+        # Quien recorta es el nodo. Sin modelo conectado el veredicto es determinista;
+        # con una prueba en rojo pide cambios, y sin ciclos la guarda lo escala.
+        nodes.usar_gateway(nodes.SIN_GATEWAY)
+        datos["evidence"] = {
+            "test_runs": [
+                {"target": "pytest.unit", "exit_code": 1, "duration_s": 0.1, "stdout": "1 failed"}
+            ]
+        }
+        salida = nodes.reviewer(RunState.model_validate(datos))
+        assert salida["outputs"].reviewer_output.decision is ReviewDecision.ESCALATE
+        assert salida["next_step"] == "escalate"
     finally:
+        nodes.usar_gateway(nodes.SIN_GATEWAY)
         store.close()
 
 

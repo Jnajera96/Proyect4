@@ -24,9 +24,10 @@ Invariantes que la topologia hace cumplir por si misma:
     forma del grafo, no solo en un prompt.
   - **Toda promocion pasa por la puerta de aprobacion.** La unica arista que llega
     a `finalize` desde la rama de modificacion pasa por `approval_gate`.
-  - **El ciclo de revision esta acotado.** `route_after_review` comprueba
-    `review_cycles_used` contra `max_review_cycles`; agotado el limite va a
-    `escalate`, no vuelve al Coder.
+  - **El ciclo de revision esta acotado.** El nodo `reviewer` (F9) aplica la guarda
+    determinista: un `REQUEST_CHANGES` sin ciclos disponibles se convierte en
+    `ESCALATE`. El router `route_after_review` solo traduce el veredicto ya
+    definitivo a una ruta, asi que no puede volver al Coder mas alla del limite.
   - **Una instruccion fuera de alcance no se planifica** (`F4`). `route_after_interpret`
     la manda a `explain_limits`: planificar lo que el sistema ya sabe que no hara
     produciria un plan sin accion posible, y gastaria una llamada al modelo para

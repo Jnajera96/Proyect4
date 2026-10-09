@@ -801,14 +801,15 @@ def test_ningun_modulo_importa_un_sdk_de_proveedor() -> None:
 
 
 def test_solo_los_nodos_autorizados_hablan_con_el_gateway() -> None:
-    """**F3, F4 y F6**: de todos los nodos del grafo, solo los autorizados usan el gateway.
+    """**F3, F4, F6 y F9**: de todos los nodos del grafo, solo los autorizados usan el gateway.
 
-    Los tres son pasos con contrato de `docs/03-flujo-e-implementacion.md`: `interpret`
-    (paso 5, interpretacion), `plan` (paso 6, planificacion) y `coder` (paso 8, proponer
-    cambios). Ningun otro nodo puede hablar con el modelo: cada fase conecta el nodo
-    que le toca y no todos a la vez. `researcher` (F5) sigue siendo determinista a
-    proposito -enumera con `rglob`-, asi que importar el gateway ahi seguiria siendo
-    una violacion, y esta prueba la cazaria.
+    Los cuatro son pasos con contrato de `docs/03-flujo-e-implementacion.md`:
+    `interpret` (paso 5, interpretacion), `plan` (paso 6, planificacion), `coder`
+    (paso 8, proponer cambios) y `reviewer` (paso 9, revision). Ningun otro nodo
+    puede hablar con el modelo: cada fase conecta el nodo que le toca y no todos a
+    la vez. `researcher` (F5) sigue siendo determinista a proposito -enumera con
+    `rglob`-, asi que importar el gateway ahi seguiria siendo una violacion, y esta
+    prueba la cazaria.
 
     La version anterior de esta prueba afirmaba que *ningun* fichero del grafo
     contuviera la cadena `ai_swe.models`, y buscaba subcadenas con `in` sobre el
@@ -835,15 +836,17 @@ def test_solo_los_nodos_autorizados_hablan_con_el_gateway() -> None:
 
     # Las funciones que pueden importar el gateway. Todo lo demas es una violacion
     # de la regla «una fase conecta un nodo»: F3 conecto `interpret`, F4 anadio
-    # `plan`, F6 anadio `coder`. Las tres son pasos con contrato (docs/03).
-    # `_coder_del_modelo` es la funcion que aisla la llamada del Coder al modelo:
-    # `coder` la invoca y trata el resultado, pero el `import` vive aqui, que es
-    # donde se concentra el acceso al gateway.
+    # `plan`, F6 anadio `coder` y F9 anadio `reviewer`. Las cuatro son pasos con
+    # contrato (docs/03). `_coder_del_modelo` y `_veredicto_del_modelo` son las
+    # funciones que aislan la llamada del Coder y del Reviewer respectivamente: el
+    # nodo las invoca y trata el resultado, pero el `import` vive aqui, que es donde
+    # se concentra el acceso al gateway.
     funciones_autorizadas = {
         "_gateway_por_defecto",
         "_interpretacion_del_modelo",
         "_plan_del_modelo",
         "_coder_del_modelo",
+        "_veredicto_del_modelo",
         "_es_fallo_esperado",
     }
     funciones_con_modelo: set[str] = set()
