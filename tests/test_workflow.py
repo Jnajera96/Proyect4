@@ -72,6 +72,37 @@ def _motor(tmp_path) -> tuple[RunStore, RunEngine]:
     return store, RunEngine(store)
 
 
+def _hasta_terminal(motor: RunEngine, estado: RunState, *, max_pasos: int = 5) -> RunState:
+    """Reanuda las puertas humanas hasta llegar a un estado terminal.
+
+    **M2 anade una puerta al principio del flujo.** `MET-13` exige que ninguna
+    ejecucion quede colgada, y una espera humana no es colgarse -es una ejecucion
+    detenida a proposito-, pero para comprobarlo hay que recorrerla. Esta funcion
+    confirma lo que haga falta y devuelve el estado final.
+
+    Se acota el numero de reanudaciones para que un bucle infinito **falle** en
+    lugar de colgar la suite: un limite sin agotar es indistinguible de un exito.
+    """
+    for _ in range(max_pasos):
+        if estado.status.is_terminal:
+            return estado
+        assert estado.status.is_awaiting_human, (
+            f"estado no terminal que no es una espera humana: {estado.status}"
+        )
+        estado = motor.resume(estado.run_id, "approved")
+    raise AssertionError(f"no se alcanzo un estado terminal en {max_pasos} reanudaciones")
+
+
+def _confirmar_requisitos(app, cfg) -> RunState:
+    """Confirma la puerta de requisitos (M2, item 3) y devuelve el estado.
+
+    La puerta es la primera decision humana del flujo: sin confirmarla el grafo no
+    planifica. Casi todas las pruebas de este fichero ejercitan **otra** cosa, asi
+    que se confirma aqui en lugar de repetir el paso en cada una.
+    """
+    return RunState.model_validate(app.invoke(Command(resume="approved"), cfg))
+
+
 def _estado_listo_para_promover(run_id: str = "run-promocion") -> RunState:
     """Estado con un cambio y pruebas en verde: lo que M2 producira de verdad."""
     return RunState(
@@ -135,7 +166,12 @@ def test_una_accion_externa_no_se_confunde_con_una_modificacion_local() -> None:
 def test_una_pregunta_termina_en_completed(tmp_path) -> None:
     store, motor = _motor(tmp_path)
     try:
-        final = motor.start(motor.crear_estado("¿Dónde se valida el token de sesión?"))
+        # M2: la ejecucion se detiene primero en la puerta de requisitos. Una espera
+        # humana no es un estado terminal, asi que hay que confirmarla para seguir.
+        inicial = motor.start(motor.crear_estado("¿Dónde se valida el token de sesión?"))
+        assert inicial.status is RunStatus.AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION
+
+        final = motor.resume(inicial.run_id, "approved")
         assert final.status is RunStatus.COMPLETED
         assert final.final_report is not None
         assert final.errors == []
@@ -160,7 +196,12 @@ def test_modificar_sin_modelo_escala_con_un_error_tipado(tmp_path) -> None:
     """En M1 no hay modelo, asi que no hay parche. Se escala, no se inventa."""
     store, motor = _motor(tmp_path)
     try:
-        final = motor.start(motor.crear_estado("Corrige el error de parseo en el archivo de config."))
+        inicial = motor.start(
+            motor.crear_estado("Corrige el error de parseo en el archivo de config.")
+        )
+        assert inicial.status is RunStatus.AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION
+
+        final = motor.resume(inicial.run_id, "approved")
         assert final.status is RunStatus.NEEDS_HUMAN
         assert [e.error_class for e in final.errors] == ["CODER_PRODUCED_NO_CHANGES"]
         assert final.outputs.coder_output is not None
@@ -170,12 +211,18 @@ def test_modificar_sin_modelo_escala_con_un_error_tipado(tmp_path) -> None:
 
 
 def test_ninguna_ejecucion_queda_colgada(tmp_path) -> None:
-    """`MET-13`: cero terminaciones anomalas. Es el criterio de aceptacion de M1."""
+    """`MET-13`: cero terminaciones anomalas. Es el criterio de aceptacion de M1.
+
+    **M2:** una ejecucion detenida en una puerta humana **no** es una anomalia, es
+    una espera. Se recorren las puertas hasta el estado terminal y se comprueba que
+    ninguna se queda a medias: si una espera no tuviera salida, esta prueba lo diria.
+    """
     store, motor = _motor(tmp_path)
     anomalas = []
     try:
         for i, texto in enumerate(INSTRUCCIONES):
-            final = motor.start(motor.crear_estado(texto or "   "))
+            inicial = motor.start(motor.crear_estado(texto or "   "))
+            final = _hasta_terminal(motor, inicial)
             if not final.status.is_terminal:
                 anomalas.append((i, texto, final.status))
     finally:
@@ -187,7 +234,8 @@ def test_ninguna_ejecucion_queda_colgada(tmp_path) -> None:
 def test_el_estado_persiste_tras_la_ejecucion(tmp_path) -> None:
     store, motor = _motor(tmp_path)
     try:
-        final = motor.start(motor.crear_estado("Explica el módulo de autenticación."))
+        inicial = motor.start(motor.crear_estado("Explica el módulo de autenticación."))
+        final = _hasta_terminal(motor, inicial)
         recuperado = motor.get(final.run_id)
         assert recuperado == final
         assert recuperado.final_report is not None
@@ -258,6 +306,11 @@ def test_la_promocion_se_pausa_esperando_aprobacion(tmp_path, nodos_de_m2) -> No
         salida = app.invoke(estado, cfg)
         assert salida.get("__interrupt__"), "la ejecucion no se pauso"
 
+        # M2: la **primera** pausa es la puerta de requisitos, no la de aprobacion.
+        primera = RunState.model_validate(app.get_state(cfg).values)
+        assert primera.status is RunStatus.AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION
+
+        _confirmar_requisitos(app, cfg)
         pausado = RunState.model_validate(app.get_state(cfg).values)
         assert pausado.status is RunStatus.AWAITING_APPROVAL
         assert pausado.approvals == []
@@ -275,6 +328,7 @@ def test_la_reanudacion_con_aprobacion_completa_la_ejecucion(tmp_path, nodos_de_
         cfg = {"configurable": {"thread_id": estado.run_id}}
 
         app.invoke(estado, cfg)
+        _confirmar_requisitos(app, cfg)
         final = RunState.model_validate(app.invoke(Command(resume="approved"), cfg))
 
         assert final.status is RunStatus.COMPLETED
@@ -294,6 +348,7 @@ def test_rechazar_la_aprobacion_escala_en_lugar_de_completar(tmp_path, nodos_de_
         cfg = {"configurable": {"thread_id": estado.run_id}}
 
         app.invoke(estado, cfg)
+        _confirmar_requisitos(app, cfg)
         final = RunState.model_validate(app.invoke(Command(resume="rejected"), cfg))
 
         assert final.status is RunStatus.NEEDS_HUMAN
@@ -312,6 +367,7 @@ def test_una_decision_desconocida_se_trata_como_rechazo(tmp_path, nodos_de_m2) -
         cfg = {"configurable": {"thread_id": estado.run_id}}
 
         app.invoke(estado, cfg)
+        _confirmar_requisitos(app, cfg)
         final = RunState.model_validate(app.invoke(Command(resume="lo que sea"), cfg))
         assert final.status is RunStatus.NEEDS_HUMAN
         assert final.approvals[0].decision is ApprovalDecision.REJECTED
@@ -475,7 +531,8 @@ def test_reanudar_una_ejecucion_que_no_espera_nada_falla(tmp_path) -> None:
 
     store, motor = _motor(tmp_path)
     try:
-        final = motor.start(motor.crear_estado("¿Dónde se valida el token?"))
+        inicial = motor.start(motor.crear_estado("¿Dónde se valida el token?"))
+        final = _hasta_terminal(motor, inicial)
         assert final.status.is_terminal
         with pytest.raises(NothingToResume):
             motor.resume(final.run_id, ApprovalDecision.APPROVED)
@@ -536,7 +593,7 @@ def test_el_researcher_lee_el_repositorio_de_verdad(tmp_path) -> None:
     store, motor = _motor(tmp_path)
     try:
         estado = motor.crear_estado("Analiza el proyecto", options=RunOptions(repo_path=str(repo)))
-        final = motor.start(estado)
+        final = _hasta_terminal(motor, motor.start(estado))
         salida = final.outputs.researcher_output
         assert salida is not None
         assert set(salida.files_read) == {"README.md", "src/a.py", "vacio.txt"}
@@ -551,7 +608,7 @@ def test_el_researcher_solo_devuelve_rutas_relativas(tmp_path) -> None:
     store, motor = _motor(tmp_path)
     try:
         estado = motor.crear_estado("Analiza el proyecto", options=RunOptions(repo_path=str(repo)))
-        final = motor.start(estado)
+        final = _hasta_terminal(motor, motor.start(estado))
         for ruta in final.outputs.researcher_output.files_read:
             assert not ruta.startswith("/"), f"ruta absoluta filtrada: {ruta}"
             assert ":" not in ruta, f"ruta con unidad de disco filtrada: {ruta}"
@@ -565,9 +622,10 @@ def test_el_researcher_declara_sus_incognitas(tmp_path) -> None:
     repo = _repo_de_prueba(tmp_path)
     store, motor = _motor(tmp_path)
     try:
-        final = motor.start(
+        inicial = motor.start(
             motor.crear_estado("Analiza el proyecto", options=RunOptions(repo_path=str(repo)))
         )
+        final = _hasta_terminal(motor, inicial)
         assert final.outputs.researcher_output.unknowns, "no declaro ninguna incognita"
     finally:
         store.close()
@@ -576,7 +634,7 @@ def test_el_researcher_declara_sus_incognitas(tmp_path) -> None:
 def test_sin_repositorio_el_researcher_lo_dice_en_lugar_de_fallar(tmp_path) -> None:
     store, motor = _motor(tmp_path)
     try:
-        final = motor.start(motor.crear_estado("Analiza el proyecto"))
+        final = _hasta_terminal(motor, motor.start(motor.crear_estado("Analiza el proyecto")))
         assert final.outputs.researcher_output.files_read == []
         assert any(
             "no se configuro repositorio" in u
@@ -590,11 +648,12 @@ def test_sin_repositorio_el_researcher_lo_dice_en_lugar_de_fallar(tmp_path) -> N
 def test_una_ruta_inexistente_no_derriba_la_ejecucion(tmp_path) -> None:
     store, motor = _motor(tmp_path)
     try:
-        final = motor.start(
+        inicial = motor.start(
             motor.crear_estado(
                 "Analiza el proyecto", options=RunOptions(repo_path=str(tmp_path / "no-existe"))
             )
         )
+        final = _hasta_terminal(motor, inicial)
         assert final.status.is_terminal
         assert any("no es un directorio" in u for u in final.outputs.researcher_output.unknowns)
     finally:

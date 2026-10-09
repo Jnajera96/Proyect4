@@ -56,6 +56,61 @@ def cliente(tmp_path):
         store.close()
 
 
+# ------------------------------------------------------------- puertas humanas
+
+
+def _esperar_estado(cliente: TestClient, run_id: str, objetivo: str, timeout: float) -> dict:
+    limite = time.perf_counter() + timeout
+    cuerpo = cliente.get(f"/runs/{run_id}").json()
+    while time.perf_counter() < limite:
+        cuerpo = cliente.get(f"/runs/{run_id}").json()
+        if cuerpo["status"] == objetivo:
+            return cuerpo
+        time.sleep(0.02)
+    raise AssertionError(f"{run_id} no llego a '{objetivo}': se quedo en '{cuerpo['status']}'")
+
+
+def _esperar_reposo(
+    cliente: TestClient, run_id: str, *, excluir: str | None = None, timeout: float = 20.0
+) -> dict:
+    """Espera a un estado de reposo: terminal o una puerta humana.
+
+    `excluir` descarta un estado de reposo concreto. Hace falta porque el trabajador
+    reanuda de forma **asincrona**: justo despues de `POST /approve` el estado sigue
+    siendo el de la puerta que se acaba de responder, y sin excluirlo la espera
+    devolveria ese mismo estado sin que la reanudacion hubiera ocurrido.
+    """
+    limite = time.perf_counter() + timeout
+    cuerpo = cliente.get(f"/runs/{run_id}").json()
+    while time.perf_counter() < limite:
+        cuerpo = cliente.get(f"/runs/{run_id}").json()
+        estado = cuerpo["status"]
+        en_reposo = estado in TERMINALES or estado.startswith("awaiting_")
+        if en_reposo and estado != excluir:
+            return cuerpo
+        time.sleep(0.02)
+    raise AssertionError(f"{run_id} no llego a un estado de reposo: '{cuerpo['status']}'")
+
+
+def confirmar_requisitos(cliente: TestClient, run_id: str, timeout: float = 20.0) -> dict:
+    """Confirma la puerta de requisitos (M2, item 3) y espera al siguiente reposo.
+
+    **Por que sondea el estado y no el flujo de eventos.** Una ejecucion de M2 tiene
+    **dos** altos humanos, y el flujo SSE replaya los eventos desde el principio
+    cuando no recibe `Last-Event-ID`: esperar `run.done` a secas devolveria el
+    primero de ellos otra vez. El estado es la fuente autoritativa de "donde esta
+    ahora", y es lo que hace falta para encadenar dos esperas.
+
+    Se usa el **mismo endpoint** que la puerta de aprobacion: para el cliente, las
+    dos puertas son "hay una decision pendiente".
+    """
+    pausa = "awaiting_human_requirements_confirmation"
+    _esperar_estado(cliente, run_id, pausa, timeout)
+    respuesta = cliente.post(f"/runs/{run_id}/approve", json={"decision": "approved"})
+    assert respuesta.status_code == 200, respuesta.text
+    return _esperar_reposo(cliente, run_id, excluir=pausa, timeout=timeout)
+
+
 # -------------------------------------------------------------------- salud
 
 
@@ -177,6 +232,7 @@ def test_el_progreso_se_emite_por_nodo(cliente) -> None:
 def test_los_pasos_nombran_el_nodo_ejecutado(cliente) -> None:
     creada = cliente.post("/runs", json={"instruction": "¿Dónde se valida el token?"})
     run_id = creada.json()["run_id"]
+    confirmar_requisitos(cliente, run_id)
     with cliente.stream("GET", f"/runs/{run_id}/events") as s:
         cuerpo = "".join(s.iter_lines())
 
@@ -213,7 +269,7 @@ def test_varias_ejecuciones_a_la_vez_no_se_pisan(cliente) -> None:
         cliente.post("/runs", json={"instruction": f"Analiza el módulo {i}"}).json()["run_id"]
         for i in range(6)
     ]
-    estados = [esperar(cliente, run_id)["status"] for run_id in ids]
+    estados = [confirmar_requisitos(cliente, run_id)["status"] for run_id in ids]
     assert estados == ["completed"] * 6
 
     # Y cada uno conserva su propia instruccion.
@@ -227,7 +283,7 @@ def test_varias_ejecuciones_a_la_vez_no_se_pisan(cliente) -> None:
 def test_crear_ejecucion_de_texto(cliente) -> None:
     creada = cliente.post("/runs", json={"instruction": "¿Dónde se valida el token de sesión?"})
     assert creada.status_code == 202
-    final = esperar(cliente, creada.json()["run_id"])
+    final = confirmar_requisitos(cliente, creada.json()["run_id"])
     assert final["status"] == "completed"
     assert final["interpretation"]["intent"] == "question"
     assert final["final_report"] is not None
@@ -274,7 +330,7 @@ def test_listar_ejecuciones(cliente) -> None:
         cliente.post("/runs", json={"instruction": "¿Dónde se valida el token?"}).json(),
     ]
     for creada in creadas:
-        esperar(cliente, creada["run_id"])
+        confirmar_requisitos(cliente, creada["run_id"])
 
     listado = cliente.get("/runs").json()
     assert len(listado) == 2
@@ -315,7 +371,9 @@ def test_el_flujo_de_eventos_cierra_al_terminar(cliente) -> None:
 
 def test_aprobar_una_ejecucion_que_no_espera_da_409(cliente) -> None:
     creada = cliente.post("/runs", json={"instruction": "¿Dónde se valida el token?"}).json()
-    esperar(cliente, creada["run_id"])
+    # Se confirma la puerta de requisitos para que la ejecucion llegue a su fin: si
+    # se dejara pausada, `approve` seria legitimo y no habria 409 que comprobar.
+    confirmar_requisitos(cliente, creada["run_id"])
     r = cliente.post(f"/runs/{creada['run_id']}/approve", json={"decision": "approved"})
     assert r.status_code == 409
     assert "no esta esperando aprobacion" in r.json()["detail"]

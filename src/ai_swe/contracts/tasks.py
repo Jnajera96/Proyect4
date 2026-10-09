@@ -9,6 +9,7 @@ from __future__ import annotations
 from enum import StrEnum
 
 from pydantic import BaseModel, Field, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 
 class Intent(StrEnum):
@@ -68,6 +69,17 @@ class TaskInterpretation(BaseModel):
     )
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str = Field(min_length=1, max_length=2000)
+    confirmed_by_user: SkipJsonSchema[bool] = Field(
+        default=False,
+        description=(
+            "Confirmacion humana de esta interpretacion (M2, item 3 del DoD). "
+            "**Excluido del esquema JSON que se envia al modelo** a proposito: la "
+            "confirmacion la da una persona, no el modelo. Si viajara en el esquema, "
+            "el modelo podria rellenarla y la puerta de confirmacion seria decorativa "
+            "-el sistema se estaria auto-confirmando-. Se marca a `True` solo el nodo "
+            "`confirm_requirements_gate`, con el valor de la reanudacion."
+        ),
+    )
 
 
 class Subtask(BaseModel):

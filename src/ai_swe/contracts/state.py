@@ -33,12 +33,18 @@ SCHEMA_VERSION = "1.0.0"
 class RunStatus(StrEnum):
     """Estados de una ejecucion.
 
-    `AWAITING_APPROVAL` no es terminal: la ejecucion espera y debe sobrevivir a
-    la caida del proceso (RF-11, RF-12).
+    **Dos estados de espera, no uno.** `AWAITING_APPROVAL` espera la aprobacion de
+    un cambio ya aplicado y probado; `AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION`
+    espera la confirmacion de lo que el sistema **entendio** de la peticion, antes
+    de planificar nada. Son decisiones distintas y en momentos distintos, asi que no
+    comparten estado: fusionarlos haria que un cliente no pudiera saber que se le
+    esta pidiendo. Ninguno de los dos es terminal: la ejecucion espera y debe
+    sobrevivir a la caida del proceso (RF-11, RF-12).
     """
 
     PLANNED = "planned"
     RUNNING = "running"
+    AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION = "awaiting_human_requirements_confirmation"
     AWAITING_APPROVAL = "awaiting_approval"
     COMPLETED = "completed"
     FAILED = "failed"
@@ -52,6 +58,19 @@ class RunStatus(StrEnum):
             RunStatus.FAILED,
             RunStatus.NEEDS_HUMAN,
             RunStatus.CANCELLED,
+        }
+
+    @property
+    def is_awaiting_human(self) -> bool:
+        """Si la ejecucion esta detenida esperando una decision humana.
+
+        Se usa en la red de seguridad de `MET-13`: una espera legitima no es una
+        anomalia, y sin esta distincion un grafo pausado en la puerta de requisitos
+        se forzaria a `needs_human` como si se hubiera quedado colgado.
+        """
+        return self in {
+            RunStatus.AWAITING_APPROVAL,
+            RunStatus.AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION,
         }
 
 

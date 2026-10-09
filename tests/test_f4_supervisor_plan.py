@@ -611,9 +611,28 @@ def test_una_instruccion_fuera_de_alcance_no_se_planifica() -> None:
 @pytest.mark.parametrize(
     "intencion", [Intent.QUESTION, Intent.INSPECT, Intent.MODIFY]
 )
-def test_una_instruccion_planificable_va_al_nodo_de_plan(intencion: Intent) -> None:
-    """Todo lo que tiene accion posible pasa por el plan antes de trabajar."""
-    assert nodes.route_after_interpret(estado(intencion=intencion)) == "plan"
+def test_una_instruccion_planificable_pasa_por_la_puerta_de_requisitos(
+    intencion: Intent,
+) -> None:
+    """Todo lo que tiene accion posible pasa por el plan, **previa confirmacion**.
+
+    **M2 (item 3 del DoD):** `route_after_interpret` ya no lleva directo a `plan`.
+    Una interpretacion sin confirmar humana se detiene en la puerta de requisitos;
+    confirmada, planifica. Se comprueban las dos mitades: si solo se comprobara la
+    segunda, el router podria estar ignorando la confirmacion sin que se notara.
+    """
+    sin_confirmar = estado(intencion=intencion)
+    assert sin_confirmar.interpretation.confirmed_by_user is False
+    assert nodes.route_after_interpret(sin_confirmar) == "mark_awaiting_requirements"
+
+    confirmada = sin_confirmar.model_copy(
+        update={
+            "interpretation": sin_confirmar.interpretation.model_copy(
+                update={"confirmed_by_user": True}
+            )
+        }
+    )
+    assert nodes.route_after_interpret(confirmada) == "plan"
 
 
 def test_tras_planificar_se_empieza_por_la_primera_subtarea() -> None:

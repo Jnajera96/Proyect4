@@ -1818,6 +1818,130 @@ def reviewer(state: RunState) -> dict:
     return salida
 
 
+# ------------------------------- M2 (DoD item 3): confirmacion de requisitos
+#
+# La puerta de requisitos es la **primera** decision humana del flujo y la mas
+# barata de corregir: confirmar que el sistema entendio la peticion antes de
+# planificar. Si la interpretacion esta desviada, arreglarla aqui cuesta una
+# frase; descubrirlo despues cuesta un plan, un parche, un sandbox y una revision.
+#
+# Se implementa con **dos nodos**, igual que `mark_awaiting` + `approval_gate`, y
+# por el mismo motivo comprobado: `interrupt()` no confirma las escrituras del
+# nodo en el que se llama, porque el nodo se reejecuta al reanudar. Un solo nodo
+# que marcara el estado e interrumpiera dejaria el estado sin marcar -se verifico
+# a mano con un grafo minimo antes de escribir esto-.
+
+
+def mark_awaiting_requirements(state: RunState) -> dict:
+    """Marca la ejecucion como pendiente de confirmar los requisitos.
+
+    Nodo aparte por la razon de arriba: el estado tiene que quedar escrito **antes**
+    de que el siguiente nodo interrumpa, o la espera no seria visible desde fuera.
+    """
+    return {
+        "status": RunStatus.AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION,
+        "next_step": "confirm_requirements_gate",
+        "updated_at": _ahora(),
+    }
+
+
+def _confirmacion_del_humano(valor: object) -> tuple[ApprovalDecision, dict]:
+    """Normaliza la reanudacion de la puerta de requisitos.
+
+    Acepta las dos formas que puede tomar:
+
+      - una `ApprovalDecision` en texto (`"approved"`, `"modified"`, `"rejected"`),
+        que es lo que envia la API;
+      - un diccionario `{"decision": ..., "constraints": [...], "rationale": ...}`,
+        que permite al humano **corregir** la interpretacion y no solo aceptarla.
+
+    Un valor irreconocible se trata como `REJECTED`, nunca como `APPROVED`: ante la
+    duda, no se confirma en nombre de nadie.
+    """
+    if isinstance(valor, dict):
+        crudo = str(valor.get("decision", "rejected"))
+        cambios = {
+            clave: valor[clave]
+            for clave in ("intent", "constraints", "rationale")
+            if clave in valor
+        }
+    else:
+        crudo = str(valor)
+        cambios = {}
+    try:
+        return ApprovalDecision(crudo), cambios
+    except ValueError:
+        return ApprovalDecision.REJECTED, {}
+
+
+def confirm_requirements_gate(state: RunState) -> dict:
+    """Interrumpe para que un humano confirme lo que el sistema entendio.
+
+    Marca `TaskInterpretation.confirmed_by_user = True` con el valor de la
+    reanudacion y deja pasar a `plan`. Un rechazo **no** se convierte en un plan:
+    planificar sobre unos requisitos que el humano ha rechazado produciria trabajo
+    sobre una premisa que ya se sabe falsa.
+    """
+    interpretacion = state.interpretation
+    if interpretacion is None:
+        return _escalar(
+            state,
+            _error(
+                state,
+                "REQUIREMENTS_MISSING",
+                AgentRole.SUPERVISOR.value,
+                "no hay interpretacion que confirmar; el nodo `interpret` no produjo ninguna",
+                recuperable=False,
+            ),
+        )
+
+    decision = interrupt(
+        {
+            "pregunta": "¿confirmas que el sistema ha entendido bien tu peticion?",
+            "run_id": state.run_id,
+            "intencion": interpretacion.intent.value,
+            "restricciones": list(interpretacion.constraints),
+            "resumen": interpretacion.rationale,
+        }
+    )
+
+    eleccion, cambios = _confirmacion_del_humano(decision)
+
+    if eleccion is ApprovalDecision.REJECTED:
+        return _escalar(
+            state,
+            _error(
+                state,
+                "REQUIREMENTS_REJECTED",
+                AgentRole.SUPERVISOR.value,
+                "el humano rechazo la interpretacion de los requisitos; no se planifica "
+                "sobre una premisa rechazada",
+                recuperable=False,
+            ),
+        )
+
+    datos = interpretacion.model_dump()
+    datos.update(cambios)
+    datos["confirmed_by_user"] = True
+    actualizada = TaskInterpretation.model_validate(datos)
+
+    return {
+        "interpretation": actualizada,
+        "status": RunStatus.RUNNING,
+        "next_step": "plan",
+        "updated_at": _ahora(),
+    }
+
+
+def route_after_requirements_gate(state: RunState) -> str:
+    """Tras la puerta: planificar si se confirmo; cerrar si se rechazo.
+
+    Se mira el **estado** y no el valor de la reanudacion: la unica fuente de verdad
+    de "ocurrio un rechazo" es `RunState.status`, que es lo que persiste.
+    """
+    return "finalize" if state.status.is_terminal else "plan"
+
+
 def mark_awaiting(state: RunState) -> dict:
     """Marca la ejecucion como pendiente de aprobacion.
 
@@ -1963,17 +2087,31 @@ def route_intent(state: RunState) -> str:
 
 
 def route_after_interpret(state: RunState) -> str:
-    """Tras interpretar: planificar, o explicar los limites. **Nunca las dos.**
+    """Tras interpretar: explicar los limites, confirmar requisitos, o planificar.
 
-    Una instruccion fuera de alcance no se planifica. Planificar algo que el sistema
-    ya sabe que no va a hacer produciria un plan que no corresponde a ninguna accion
-    posible, y ademas gastaria una llamada al modelo para justificar una negativa.
-    La rama `explain_limits` explica por que no se puede, que es la respuesta util.
+    **Nunca dos cosas a la vez.** El orden de las comprobaciones es el orden en que
+    se descartan los caminos:
+
+      1. Fuera de alcance -> `explain_limits`. Planificar algo que el sistema ya sabe
+         que no va a hacer produciria un plan sin accion posible, y ademas gastaria
+         una llamada al modelo para justificar una negativa. Explicar por que no se
+         puede es la respuesta util.
+      2. Interpretacion sin confirmar -> `mark_awaiting_requirements` (M2, item 3).
+         La puerta va **antes** de planificar: un plan construido sobre una
+         interpretacion desviada hay que rehacerlo entero, y el humano lo corrige en
+         una frase.
+      3. Interpretacion confirmada -> `plan`.
+
+    El punto 2 se comprueba **despues** del 1 a proposito: pedir a alguien que
+    confirme unos requisitos que el sistema va a rechazar de todos modos seria
+    gastar una decision humana en algo ya decidido.
     """
     intencion = state.interpretation.intent if state.interpretation else Intent.INSPECT
     if intencion is Intent.OUT_OF_SCOPE:
         return "explain_limits"
-    return "plan"
+    if state.interpretation is not None and state.interpretation.confirmed_by_user:
+        return "plan"
+    return "mark_awaiting_requirements"
 
 
 def route_after_plan(state: RunState) -> str:

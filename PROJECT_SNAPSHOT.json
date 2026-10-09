@@ -2,7 +2,7 @@
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-08",
   "baseline_updated": "2026-10-06",
-  "phase": "M2 ALMOST COMPLETE — F9 (model-driven Reviewer with deterministic guards) implemented; ModelGateway wired to `interpret`, `plan`, `coder` and `reviewer`. Only DoD item #3 (requirements confirmation) remains.",
+  "phase": "M2 COMPLETE — 15/15 DoD items. ModelGateway wired to `interpret`, `plan`, `coder` and `reviewer`; two human gates (requirements confirmation, change approval); sandbox and test runner in the loop. Next: API (M3/F10) and Frontend, awaiting explicit authorization.",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -78,7 +78,10 @@
     "f9_test_failure_vetoes_accept": true,
     "f9_review_cycle_limit_forces_escalate": true,
     "f9_deterministic_fallback_declared": true,
-    "tests_passing": 491,
+    "m2_requirements_confirmation_gate": true,
+    "m2_two_human_gates_distinct": true,
+    "m2_full_chain_e2e": true,
+    "tests_passing": 500,
     "tests_skipped": 1,
     "tests_require_network": false,
     "tests_require_credentials": false,
@@ -223,9 +226,15 @@
     "F9: guard order matters - the test veto runs before the cycle limit, so a vetoed ACCEPT still passes through the limit instead of slipping past it",
     "F9: the deterministic reviewer is the fallback when the model fails (REGLA 3) and it declares itself as such; a fallback that does not say so is indistinguishable from a success",
     "F9: `ProjectRequirements` does not exist as a contract; the requirements are `Instruction` + `TaskInterpretation`, and no parallel duplicate type was invented",
-    "F9: `review_cycles_used` advances only on REQUEST_CHANGES; an ACCEPT or an ESCALATE does not consume a cycle"
+    "F9: `review_cycles_used` advances only on REQUEST_CHANGES; an ACCEPT or an ESCALATE does not consume a cycle",
+    "M2: the confirmation of the interpretation is a human act -`TaskInterpretation.confirmed_by_user` is excluded from the JSON schema sent to the model, so the system cannot confirm itself",
+    "M2: two human gates, two states, two moments -requirements are confirmed before planning, the change is approved after testing; merging them would leave a client unable to tell what it is being asked",
+    "M2: a rejected or unrecognised resumption never confirms and never plans; the failure direction matters, because a client error must not confirm on the human's behalf",
+    "M2: the requirements gate is skipped for out-of-scope instructions -asking a human to confirm requirements the system is going to refuse anyway spends a human decision on something already decided",
+    "M2: a write before `interrupt()` is lost, because the node re-runs on resume; the awaiting state must be set by the **previous** node (verified by experiment before designing the gate)",
+    "M2: `MET-13` must treat a human wait as legitimate -`RunStatus.is_awaiting_human` covers both gates, or a paused run is forced to needs_human as if the topology were broken"
   ],
-  "tests_passing": 491,
+  "tests_passing": 500,
   "snapshot_location": "repository root (consolidated 2026-10-08; the docs/auditoria-2026-10-06/ duplicate was removed to resolve AUD-01)",
   "component_status": [
     {
@@ -319,6 +328,11 @@
       "observations": "Model-driven: sends Instruction + TaskInterpretation (requirements), the current subtask, the CodeProposal diff and the real TestRun evidence to the gateway and validates the output against ReviewVerdict. Three deterministic guards on top: REGLA 1 (a failing TestRun vetoes ACCEPT -> REQUEST_CHANGES), REGLA 2 (exhausted review_cycles -> ESCALATE), REGLA 3 (deterministic fallback, declared, on model failure). Uses reviewer_model when set."
     },
     {
+      "component": "requirements confirmation gate — `confirm_requirements_gate` (M2, DoD item 3)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Two nodes between `interpret` and `plan`: `mark_awaiting_requirements` sets AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION, `confirm_requirements_gate` interrupts. On resume it accepts a confirmation or a human correction (intent/constraints/rationale) and marks `confirmed_by_user`; a rejection or an unrecognised value escalates to needs_human without planning. `TaskInterpretation.confirmed_by_user` is a SkipJsonSchema field, so the model never sees it."
+    },
+    {
       "component": "Answer/limit/approval/escalate/finalize nodes",
       "status": "IMPLEMENTED_AND_VERIFIED",
       "observations": "HITL via approval_gate + mark_awaiting; terminal states validated."
@@ -395,8 +409,8 @@
       {
         "n": 3,
         "item": "Confirmacion humana de requisitos",
-        "met": false,
-        "note": "HITL exists at approval_gate, but not specifically as a requirements-confirmation step"
+        "met": true,
+        "note": "M2 IMPLEMENTED_AND_VERIFIED — `confirm_requirements_gate` interrupts between `interpret` and `plan`, marks AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION, and only a human confirmation (or a human correction) lets the run reach `plan`. The flag is excluded from the model-facing JSON schema so the system cannot confirm itself."
       },
       {
         "n": 4,
@@ -463,17 +477,18 @@
         "met": true
       }
     ],
-    "met_count": 14,
+    "met_count": 15,
     "total": 15,
-    "verdict": "M2 ALMOST COMPLETE — 14/15 items. F9 (model-driven reviewer) done and committed. The only unmet item is #3 (human confirmation of requirements as a distinct step; HITL exists at approval_gate but not as a requirements gate)."
+    "verdict": "M2 COMPLETE — 15/15 items (100%). The full chain runs end to end: entry -> requirements analyst -> human confirmation -> RunPlan -> researcher -> coder -> sandbox -> test runner -> reviewer -> cycle limit -> HITL -> terminal state, with persistence and traceability. Verified by tests/test_m2_e2e.py."
   },
   "repository": {
     "vcs": "git",
     "branch": "main",
     "remote_configured": false,
-    "last_commit": "feat(f9): implement model-driven reviewer with deterministic test enforcement and cycle limits (HEAD when this snapshot was written; the hash is not recorded because this file is part of that commit)",
+    "last_commit": "feat(m2): implement requirements confirmation gate and achieve 100% M2 DoD (HEAD when this snapshot was written; the hash is not recorded because this file is part of that commit)",
     "commit_history": [
-      "(this commit) feat(f9): implement model-driven reviewer with deterministic test enforcement and cycle limits",
+      "(this commit) feat(m2): implement requirements confirmation gate and achieve 100% M2 DoD",
+      "2e52658 feat(f9): implement model-driven reviewer with deterministic test enforcement and cycle limits",
       "4c46193 feat(f8): implement real test runner and wire sandbox into the graph",
       "e54d6cc feat(f7): implement sandbox and patch applicator with workspace confinement",
       "211eb90 feat(f6): implement real coder node with deterministic diffs and CodeProposal contracts",
@@ -487,12 +502,12 @@
       "11a13cb M1 VERIFIED BASELINE"
     ],
     "uncommitted_work": [],
-    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = the current commit (see git log)."
+    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = the current commit (see git log)."
   },
   "tests_executed": {
-    "command": "python -m pytest -p no:cacheprovider --junitxml=_f9_suite.xml -q",
+    "command": "python -m pytest -p no:cacheprovider --junitxml=_m2_final.xml -q",
     "environment": "local, offline, no credentials, no network",
-    "tests": 491,
+    "tests": 500,
     "failures": 0,
     "errors": 0,
     "skipped": 1,
@@ -507,7 +522,8 @@
       "f6": "14/14",
       "f7": "12/12 (after fixing 4 uncaught mutations and a false-positive timeout verdict)",
       "f8": "9/9 (4 blind spots found on the first pass — shell=True at the call site, PYTHONPATH, the `fallos` branch, the coder router — and closed with real tests; the `fallos` blind spot uncovered a real defect: a raw OSError escaped Sandbox.escribir and reached LangGraph as a traceback)",
-      "f9": "8/8 — the test veto (REGLA 1), the cycle limit (REGLA 2), the guard order, the declared fallback (REGLA 3), the reviewer model wiring, the cycle accounting, the ACCEPT route and the test evidence in the context"
+      "f9": "8/8 — the test veto (REGLA 1), the cycle limit (REGLA 2), the guard order, the declared fallback (REGLA 3), the reviewer model wiring, the cycle accounting, the ACCEPT route and the test evidence in the context",
+      "m2": "7/7 — the requirements gate being skipped, the awaiting state not being marked, the confirmation not being recorded, a rejection planning anyway, human modifications being discarded, an unrecognised resumption being treated as approved, and the MET-13 safety net confusing a wait with a hang"
     }
   },
   "blockers_and_debt": [
@@ -581,13 +597,20 @@
       "status": "RESOLVED (2026-10-08, F9)",
       "detail": "The reviewer read the TestRun exit_code and returned a verdict from it: a traffic light, not a review. DoD item 9 (requirements + change + tests) could not be met by a node that never saw the requirements.",
       "how_to_close": "F9: the reviewer calls the ModelGateway with ReviewVerdict, sending the requirements (Instruction + TaskInterpretation), the current subtask, the CodeProposal diff and the real TestRun evidence, with three deterministic guards on top (test veto, cycle limit, declared fallback)."
+    },
+    {
+      "id": "AUD-10",
+      "title": "No human confirmation of the interpreted requirements (DoD item 3)",
+      "status": "RESOLVED (2026-10-09, M2)",
+      "detail": "HITL existed only at the approval gate, after the work was done. The system could plan and build on a misreading of the request without anyone confirming the reading first.",
+      "how_to_close": "M2: `confirm_requirements_gate` between `interpret` and `plan`, with `AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION`. The human can confirm or correct the interpretation; a rejection escalates without planning."
     }
   ],
   "next_step_proposed": {
-    "phase": "M2 closure — DoD item #3 (requirements confirmation) or the E2E integration",
-    "why": "F9 closes the last technical item of the M2 DoD (the reviewer). What remains is item #3: a human confirmation of the interpreted requirements as a distinct step. Everything else (1,2,4-15) is met.",
-    "scope": "Either add an explicit requirements-confirmation gate after `interpret` (HITL on the TaskInterpretation), or proceed to the M2 E2E integration (API + frontend over the full chain). Both are outside F9 and require the Arquitecto's decision.",
-    "prerequisite": "F9 is committed; tree clean.",
-    "awaiting": "explicit human authorization"
+    "phase": "M3 / F10 — FastAPI surface and Frontend",
+    "why": "M2 is complete: the whole chain runs end to end and the DoD is 15/15. What remains for a usable system is exposing it: the API endpoints for the two human gates and the frontend that drives them.",
+    "scope": "Wire the requirements gate and the approval gate into the API/frontend flow (the `awaiting_human_requirements_confirmation` status is already in the exported contracts), plus the remaining open blockers (AUD-06 auth, AUD-07 frontend harness, TD-01 real provider).",
+    "prerequisite": "M2 is committed; tree clean.",
+    "awaiting": "explicit authorization from the Arquitecto — NOT to be started without it"
   }
 }

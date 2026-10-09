@@ -670,6 +670,7 @@ def test_el_grafo_ejecuta_el_camino_completo_hasta_la_aprobacion(
     puerta de aprobacion.
     """
     from langgraph.checkpoint.memory import InMemorySaver
+    from langgraph.types import Command
 
     from ai_swe.graph.workflow import construir_grafo
 
@@ -679,7 +680,10 @@ def test_el_grafo_ejecuta_el_camino_completo_hasta_la_aprobacion(
         estado = _estado(repo, run_id="run-e2e")
         cfg = {"configurable": {"thread_id": estado.run_id}}
 
-        salida = app.invoke(estado, cfg)
+        # M2: la primera parada es la puerta de requisitos, no la de aprobacion.
+        primera = app.invoke(estado, cfg)
+        assert primera.get("__interrupt__"), "no se pauso en la puerta de requisitos"
+        salida = app.invoke(Command(resume="approved"), cfg)
     finally:
         nodes.usar_gateway(nodes.SIN_GATEWAY)
 
@@ -716,6 +720,7 @@ def test_un_fallo_del_sandbox_no_tumba_el_grafo(tmp_path: Path) -> None:
     quiere probar.
     """
     from langgraph.checkpoint.memory import InMemorySaver
+    from langgraph.types import Command
 
     from ai_swe.graph.workflow import construir_grafo
 
@@ -735,7 +740,10 @@ def test_un_fallo_del_sandbox_no_tumba_el_grafo(tmp_path: Path) -> None:
         )
         cfg = {"configurable": {"thread_id": estado.run_id}}
 
-        salida = app.invoke(estado, cfg)
+        # M2: hay que confirmar los requisitos antes de que el grafo planifique.
+        primera = app.invoke(estado, cfg)
+        assert primera.get("__interrupt__"), "no se pauso en la puerta de requisitos"
+        salida = app.invoke(Command(resume="approved"), cfg)
     finally:
         nodes.usar_gateway(nodes.SIN_GATEWAY)
 
@@ -833,6 +841,7 @@ def test_el_sandbox_no_se_destruye_al_final_de_la_ejecucion(repo: Path) -> None:
     nada que ver con lo que se quiere comprobar.
     """
     from langgraph.checkpoint.memory import InMemorySaver
+    from langgraph.types import Command
 
     from ai_swe.graph.workflow import construir_grafo
 
@@ -841,7 +850,10 @@ def test_el_sandbox_no_se_destruye_al_final_de_la_ejecucion(repo: Path) -> None:
         app = construir_grafo().compile(checkpointer=InMemorySaver())
         estado = _estado(repo, run_id="run-persiste")
         cfg = {"configurable": {"thread_id": estado.run_id}}
-        app.invoke(estado, cfg)
+        # M2: la puerta de requisitos va primero; hay que confirmarla para avanzar.
+        primera = app.invoke(estado, cfg)
+        assert primera.get("__interrupt__"), "no se pauso en la puerta de requisitos"
+        app.invoke(Command(resume="approved"), cfg)
     finally:
         nodes.usar_gateway(nodes.SIN_GATEWAY)
 

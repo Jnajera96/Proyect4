@@ -225,7 +225,15 @@ def test_el_indice_refleja_el_estado(tmp_path) -> None:
     try:
         motor = RunEngine(store)
         estado = motor.crear_estado("¿Dónde se valida el token?")
-        final = motor.start(estado)
+        inicial = motor.start(estado)
+
+        # M2: la primera parada es la puerta de requisitos, y el indice la refleja.
+        assert inicial.status is RunStatus.AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION
+        assert store.summary(inicial.run_id).status is (
+            RunStatus.AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION
+        )
+
+        final = motor.resume(inicial.run_id, "approved")
 
         resumen = store.summary(final.run_id)
         assert resumen is not None

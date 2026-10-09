@@ -3,8 +3,10 @@
 Topologia (docs/03-flujo-e-implementacion.md, seccion 3.5):
 
     START -> interpret
-      interpret --fuera de alcance?--> explain_limits | plan
+      interpret --fuera de alcance?--> explain_limits | confirmar requisitos | plan
       explain_limits -> finalize
+      mark_awaiting_requirements -> confirm_requirements_gate
+      confirm_requirements_gate --confirmado?--> plan | finalize (rechazado)
       plan --primera subtarea--> researcher
       researcher --siguiente subtarea?--> <agente> | finalize
       coder --hay cambios?--> apply_sandbox | escalate_no_changes
@@ -22,8 +24,12 @@ Invariantes que la topologia hace cumplir por si misma:
   - **Solo el Coder lleva a escritura.** No hay arista desde `researcher` ni desde
     `reviewer` hacia un nodo con efectos. La separacion de permisos esta en la
     forma del grafo, no solo en un prompt.
-  - **Toda promocion pasa por la puerta de aprobacion.** La unica arista que llega
-    a `finalize` desde la rama de modificacion pasa por `approval_gate`.
+  - **Dos puertas humanas, en dos momentos distintos (M2).** `confirm_requirements_gate`
+    confirma lo que el sistema **entendio**, antes de planificar; `approval_gate`
+    aprueba lo que el sistema **hizo**, despues de probarlo. Ninguna se puede saltar:
+    la unica arista hacia `plan` desde la rama de interpretacion pasa por la primera,
+    y la unica arista hacia `finalize` desde la rama de modificacion pasa por la
+    segunda.
   - **El ciclo de revision esta acotado.** El nodo `reviewer` (F9) aplica la guarda
     determinista: un `REQUEST_CHANGES` sin ciclos disponibles se convierte en
     `ESCALATE`. El router `route_after_review` solo traduce el veredicto ya
@@ -58,6 +64,8 @@ def construir_grafo() -> StateGraph:
     grafo = StateGraph(RunState)
 
     grafo.add_node("interpret", nodes.interpret)
+    grafo.add_node("mark_awaiting_requirements", nodes.mark_awaiting_requirements)
+    grafo.add_node("confirm_requirements_gate", nodes.confirm_requirements_gate)
     grafo.add_node("plan", nodes.plan)
     grafo.add_node("researcher", nodes.researcher)
     grafo.add_node("answer_direct", nodes.answer_direct)
@@ -74,6 +82,10 @@ def construir_grafo() -> StateGraph:
 
     grafo.add_edge(START, "interpret")
     grafo.add_conditional_edges("interpret", nodes.route_after_interpret)
+    grafo.add_edge("mark_awaiting_requirements", "confirm_requirements_gate")
+    grafo.add_conditional_edges(
+        "confirm_requirements_gate", nodes.route_after_requirements_gate
+    )
     grafo.add_conditional_edges("plan", nodes.route_after_plan)
     grafo.add_edge("explain_limits", "finalize")
     grafo.add_conditional_edges("researcher", nodes.route_after_execution)

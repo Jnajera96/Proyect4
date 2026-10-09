@@ -896,6 +896,70 @@ MUTACIONES: list[Mutation] = [
         '        "(evidencia de pruebas omitida)"',
         "test_f9_reviewer.py",
     ),
+    # ------------------------------ M2 (item 3): puerta de confirmacion de requisitos
+    Mutation(
+        # Sin la puerta, el sistema planifica sobre lo que entendio sin que nadie lo
+        # haya confirmado. Es el fallo que el item 3 del DoD existe para impedir.
+        "M2: se planifica sin confirmar los requisitos (puerta saltada)",
+        SRC / "graph" / "nodes.py",
+        '    if state.interpretation is not None and state.interpretation.confirmed_by_user:\n        return "plan"\n    return "mark_awaiting_requirements"',
+        '    return "plan"',
+        "test_m2_e2e.py",
+    ),
+    Mutation(
+        # Si el nodo no marca el estado de espera, la ejecucion se interrumpe pero
+        # nadie puede saber que esta esperando: la puerta seria invisible.
+        "M2: la espera de requisitos no se marca en el estado",
+        SRC / "graph" / "nodes.py",
+        '        "status": RunStatus.AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION,\n        "next_step": "confirm_requirements_gate",',
+        '        "status": RunStatus.RUNNING,\n        "next_step": "confirm_requirements_gate",',
+        "test_m2_e2e.py",
+    ),
+    Mutation(
+        # Sin marcar la confirmacion, el estado miente: dice que no esta confirmado
+        # aunque el humano ya lo haya hecho.
+        "M2: la confirmacion humana no se registra en la interpretacion",
+        SRC / "graph" / "nodes.py",
+        '    datos["confirmed_by_user"] = True\n',
+        '',
+        "test_m2_e2e.py",
+    ),
+    Mutation(
+        # Un rechazo que planificara produciria trabajo sobre una premisa que el
+        # humano acaba de declarar falsa.
+        "M2: un rechazo de requisitos planifica igualmente",
+        SRC / "graph" / "nodes.py",
+        "    if eleccion is ApprovalDecision.REJECTED:\n        return _escalar(",
+        "    if False:\n        return _escalar(",
+        "test_m2_e2e.py",
+    ),
+    Mutation(
+        # Ignorar las modificaciones del humano convertiria la reanudacion en un
+        # simple "si" y la correccion de los requisitos en un gesto vacio.
+        "M2: las modificaciones humanas se descartan",
+        SRC / "graph" / "nodes.py",
+        "    datos = interpretacion.model_dump()\n    datos.update(cambios)\n",
+        "    datos = interpretacion.model_dump()\n",
+        "test_m2_e2e.py",
+    ),
+    Mutation(
+        # Una respuesta que no se entiende no puede confirmar en nombre de nadie.
+        "M2: una reanudacion irreconocible se trata como aprobada",
+        SRC / "graph" / "nodes.py",
+        "    except ValueError:\n        return ApprovalDecision.REJECTED, {}",
+        "    except ValueError:\n        return ApprovalDecision.APPROVED, {}",
+        "test_m2_e2e.py",
+    ),
+    Mutation(
+        # La red de seguridad de MET-13 debe distinguir esperar de colgarse. Si solo
+        # reconoce la puerta de aprobacion, una ejecucion detenida en la de
+        # requisitos se fuerza a needs_human como si la topologia estuviera rota.
+        "M2: la espera de requisitos se confunde con una ejecucion colgada",
+        SRC / "graph" / "engine.py",
+        "        if estado.status.is_terminal or estado.status.is_awaiting_human:",
+        "        if estado.status.is_terminal or estado.status is RunStatus.AWAITING_APPROVAL:",
+        "test_m2_e2e.py",
+    ),
 ]
 
 

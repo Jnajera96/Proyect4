@@ -1103,10 +1103,11 @@
           "type": "object"
         },
         "RunStatus": {
-          "description": "Estados de una ejecucion.\n\n`AWAITING_APPROVAL` no es terminal: la ejecucion espera y debe sobrevivir a\nla caida del proceso (RF-11, RF-12).",
+          "description": "Estados de una ejecucion.\n\n**Dos estados de espera, no uno.** `AWAITING_APPROVAL` espera la aprobacion de\nun cambio ya aplicado y probado; `AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION`\nespera la confirmacion de lo que el sistema **entendio** de la peticion, antes\nde planificar nada. Son decisiones distintas y en momentos distintos, asi que no\ncomparten estado: fusionarlos haria que un cliente no pudiera saber que se le\nesta pidiendo. Ninguno de los dos es terminal: la ejecucion espera y debe\nsobrevivir a la caida del proceso (RF-11, RF-12).",
           "enum": [
             "planned",
             "running",
+            "awaiting_human_requirements_confirmation",
             "awaiting_approval",
             "completed",
             "failed",
@@ -1512,6 +1513,7 @@
       "enum": [
         "planned",
         "running",
+        "awaiting_human_requirements_confirmation",
         "awaiting_approval",
         "completed",
         "failed",
@@ -1524,10 +1526,11 @@
     "RunSummary": {
       "$defs": {
         "RunStatus": {
-          "description": "Estados de una ejecucion.\n\n`AWAITING_APPROVAL` no es terminal: la ejecucion espera y debe sobrevivir a\nla caida del proceso (RF-11, RF-12).",
+          "description": "Estados de una ejecucion.\n\n**Dos estados de espera, no uno.** `AWAITING_APPROVAL` espera la aprobacion de\nun cambio ya aplicado y probado; `AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION`\nespera la confirmacion de lo que el sistema **entendio** de la peticion, antes\nde planificar nada. Son decisiones distintas y en momentos distintos, asi que no\ncomparten estado: fusionarlos haria que un cliente no pudiera saber que se le\nesta pidiendo. Ninguno de los dos es terminal: la ejecucion espera y debe\nsobrevivir a la caida del proceso (RF-11, RF-12).",
           "enum": [
             "planned",
             "running",
+            "awaiting_human_requirements_confirmation",
             "awaiting_approval",
             "completed",
             "failed",

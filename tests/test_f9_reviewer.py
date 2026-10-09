@@ -627,6 +627,7 @@ def test_el_grafo_aprueba_y_llega_a_la_aprobacion_humana(
     verdad y acepta el cambio porque la evidencia lo respalda.
     """
     from langgraph.checkpoint.memory import InMemorySaver
+    from langgraph.types import Command
 
     from ai_swe.graph.workflow import construir_grafo
 
@@ -641,7 +642,10 @@ def test_el_grafo_aprueba_y_llega_a_la_aprobacion_humana(
     estado = _estado_grafo(repo)
     cfg = {"configurable": {"thread_id": estado.run_id}}
 
-    salida = app.invoke(estado, cfg)
+    # M2: la primera parada es la puerta de requisitos, no la de aprobacion.
+    primera = app.invoke(estado, cfg)
+    assert primera.get("__interrupt__"), "no se pauso en la puerta de requisitos"
+    salida = app.invoke(Command(resume="approved"), cfg)
 
     assert salida.get("__interrupt__"), "no se llego a la puerta de aprobacion"
     pausado = RunState.model_validate(app.get_state(cfg).values)
@@ -666,6 +670,7 @@ def test_el_grafo_veta_y_escala_cuando_las_pruebas_no_se_arreglan(
     Prueba las dos guardas y las dos rutas de una vez, sobre el grafo real.
     """
     from langgraph.checkpoint.memory import InMemorySaver
+    from langgraph.types import Command
 
     from ai_swe.graph.workflow import construir_grafo
 
@@ -677,7 +682,10 @@ def test_el_grafo_veta_y_escala_cuando_las_pruebas_no_se_arreglan(
     estado = _estado_grafo(repo_roto, max_ciclos=1)
     cfg = {"configurable": {"thread_id": estado.run_id}}
 
-    app.invoke(estado, cfg)
+    # M2: hay que confirmar los requisitos antes de que empiece el trabajo.
+    primera = app.invoke(estado, cfg)
+    assert primera.get("__interrupt__"), "no se pauso en la puerta de requisitos"
+    app.invoke(Command(resume="approved"), cfg)
     final = RunState.model_validate(app.get_state(cfg).values)
 
     assert final.status is RunStatus.NEEDS_HUMAN
@@ -692,8 +700,15 @@ def test_el_grafo_veta_y_escala_cuando_las_pruebas_no_se_arreglan(
 def test_el_reviewer_no_escribe_en_el_repositorio_del_usuario(
     repo: Path, tmp_path: Path
 ) -> None:
-    """Revisar es juzgar: el nodo no toca el arbol del usuario."""
+    """Revisar es juzgar: el nodo no toca el arbol del usuario.
+
+    Se confirman los requisitos y se comprueba que la ejecucion **llego de verdad** a
+    la puerta de aprobacion antes de afirmar que el repositorio esta intacto. Sin
+    eso, la prueba pasaria por un motivo falso: un grafo detenido en la puerta de
+    requisitos no ha tocado nada simplemente porque no ha hecho nada.
+    """
     from langgraph.checkpoint.memory import InMemorySaver
+    from langgraph.types import Command
 
     from ai_swe.graph.workflow import construir_grafo
 
@@ -705,7 +720,15 @@ def test_el_reviewer_no_escribe_en_el_repositorio_del_usuario(
 
     app = construir_grafo().compile(checkpointer=InMemorySaver())
     estado = _estado_grafo(repo)
-    app.invoke(estado, {"configurable": {"thread_id": estado.run_id}})
+    cfg = {"configurable": {"thread_id": estado.run_id}}
+    app.invoke(estado, cfg)
+    app.invoke(Command(resume="approved"), cfg)
+
+    final = RunState.model_validate(app.get_state(cfg).values)
+    assert final.status is RunStatus.AWAITING_APPROVAL, (
+        "la ejecucion no llego a trabajar, asi que no probo nada"
+    )
+    assert final.artifacts.worktree_path, "no hubo sandbox: no se ejercito la escritura"
 
     assert (repo / "src" / "app.py").read_text(encoding="utf-8") == antes
     assert _git(repo, "status", "--porcelain").strip() == ""

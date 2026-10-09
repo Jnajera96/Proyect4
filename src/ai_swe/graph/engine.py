@@ -298,11 +298,12 @@ class RunEngine:
     def _aplicar_red_de_seguridad(estado: RunState) -> RunState:
         """Garantiza que ninguna ejecucion queda colgada (`MET-13`).
 
-        `awaiting_approval` no es anomalia: es una espera legitima. Cualquier otro
-        estado no terminal al volver del grafo si lo es, y significa que la
-        topologia tiene un camino sin salida.
+        Una espera humana no es anomalia: es una ejecucion detenida a proposito, y
+        las dos puertas del flujo -confirmacion de requisitos y aprobacion de
+        cambios- cuentan. Cualquier otro estado no terminal al volver del grafo si
+        lo es, y significa que la topologia tiene un camino sin salida.
         """
-        if estado.status.is_terminal or estado.status is RunStatus.AWAITING_APPROVAL:
+        if estado.status.is_terminal or estado.status.is_awaiting_human:
             return estado
 
         datos = estado.model_dump()
