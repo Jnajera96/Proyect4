@@ -41,6 +41,10 @@ _mutation_journal.json
 # scratch de la sesion: el resultado que vale es el que se transcribe al acta.
 _*.log
 _*.xml
+_*.txt
+# Sondas de reproduccion de un fallo concreto (`_repro_*.py`). Se escriben para
+# diagnosticar y se borran al cerrar la fase; no son codigo del producto ni pruebas.
+_repro_*.py
 # Sonda de la verificacion del frontend: se sobrescribe en cada ejecucion y NO se
 # borra, porque en este entorno un borrado bloqueado mata el proceso que verifica.
 frontend/_verify.html

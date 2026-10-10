@@ -28,12 +28,17 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
+import sqlite3
+import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
@@ -43,6 +48,9 @@ from ai_swe.contracts import (
     ApprovalDecision,
     EventKind,
     InstructionSource,
+    Intent,
+    Project,
+    ProjectRequest,
     RunOptions,
     RunState,
     RunStatus,
@@ -51,6 +59,8 @@ from ai_swe.contracts import (
 )
 from ai_swe.graph.engine import NothingToResume, RunEngine, RunNotFound
 from ai_swe.graph.worker import RunWorker
+from ai_swe.models import BudgetExceededError
+from ai_swe.sandbox import SandboxError, validar_repositorio
 from ai_swe.security import install_redacting_filter
 from ai_swe.state import RunStore
 from ai_swe.stt.base import FakeAdapter, STTAdapter, Transcript
@@ -81,10 +91,53 @@ class RunRequest(BaseModel):
     source: InstructionSource = InstructionSource.TEXT
     transcript_meta: TranscriptMeta | None = None
     options: RunOptions = Field(default_factory=RunOptions)
+    project_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description=(
+            "Proyecto registrado contra el que ejecutar. Si se indica, su "
+            "`repo_path` manda sobre el de `options`: el proyecto es la ruta "
+            "**validada** en el alta, y dejar que una peticion la sustituya "
+            "esquivaria esa validacion."
+        ),
+    )
 
 
 class ApproveRequest(BaseModel):
     decision: ApprovalDecision = ApprovalDecision.APPROVED
+
+
+class ConfirmRequirementsRequest(BaseModel):
+    """Respuesta a la puerta de requisitos (M2, item 3 del DoD).
+
+    Ademas de confirmar o rechazar, permite **corregir** lo que el sistema
+    entendio. Los campos de correccion son opcionales: sin ellos la peticion es una
+    confirmacion limpia.
+    """
+
+    decision: ApprovalDecision = ApprovalDecision.APPROVED
+    intent: Intent | None = None
+    constraints: list[str] | None = None
+    rationale: str | None = Field(default=None, max_length=2000)
+
+
+def _valor_de_confirmacion(peticion: ConfirmRequirementsRequest) -> str | dict:
+    """Traduce la peticion a lo que espera la puerta de requisitos.
+
+    Sin correcciones se manda la decision como texto, que es la forma simple. Con
+    correcciones se manda un objeto, porque es la unica forma de que viajen. La
+    puerta acepta las dos (ver `nodes._confirmacion_del_humano`).
+    """
+    correcciones: dict = {}
+    if peticion.intent is not None:
+        correcciones["intent"] = peticion.intent.value
+    if peticion.constraints is not None:
+        correcciones["constraints"] = peticion.constraints
+    if peticion.rationale is not None:
+        correcciones["rationale"] = peticion.rationale
+    if not correcciones:
+        return peticion.decision.value
+    return {"decision": peticion.decision.value, **correcciones}
 
 
 def _detalle_validacion(exc: ValidationError) -> list[dict]:
@@ -104,6 +157,60 @@ def _detalle_validacion(exc: ValidationError) -> list[dict]:
         }
         for error in exc.errors()
     ]
+
+
+def _nuevo_project_id(nombre: str) -> str:
+    """Identificador legible y unico para un proyecto.
+
+    Legible porque aparece en las rutas y en los registros; unico por el sufijo
+    aleatorio, porque dos proyectos pueden llamarse igual y el id es la clave
+    primaria. Se normaliza al patron del contrato (`[a-z0-9][a-z0-9_-]*`).
+    """
+    base = re.sub(r"[^a-z0-9]+", "-", nombre.lower()).strip("-")[:40] or "proyecto"
+    return f"{base}-{uuid.uuid4().hex[:8]}"
+
+
+def registrar_manejadores_de_error(app: FastAPI) -> None:
+    """Mapea las excepciones tipadas de dominio a respuestas HTTP estructuradas.
+
+    **Por que centralizado y no un `try` por ruta.** Una excepcion de dominio que
+    escape sin mapear llega al cliente como un 500 con una traza, que no dice que
+    paso ni de quien es la culpa. Con un manejador por tipo, la respuesta es
+    **accionable** y el mismo mapeo vale para toda ruta presente y futura.
+
+    Se devuelve siempre un cuerpo con `error_class`, para que un cliente pueda
+    ramificar por tipo sin leer el texto del mensaje.
+
+    Nota sobre `PolicyViolationError`: **no existe en este repositorio**. El Policy
+    Engine no lanza: devuelve `PolicyEffect.DENY` (`contracts/tools.py`), y una
+    denegacion viaja como `RunError` tipado **dentro** de la ejecucion, no como una
+    excepcion que cruce la frontera HTTP. Se mapea lo que de verdad puede escapar,
+    no lo que una lista de deseos menciona.
+    """
+
+    def _cuerpo(exc: BaseException, error_class: str) -> dict:
+        return {"detail": str(exc), "error_class": error_class}
+
+    @app.exception_handler(RunNotFound)
+    async def _no_encontrado(_peticion: Request, exc: RunNotFound):
+        return JSONResponse(status_code=404, content=_cuerpo(exc, "RUN_NOT_FOUND"))
+
+    @app.exception_handler(NothingToResume)
+    async def _nada_que_reanudar(_peticion: Request, exc: NothingToResume):
+        return JSONResponse(status_code=409, content=_cuerpo(exc, "NOTHING_TO_RESUME"))
+
+    @app.exception_handler(SandboxError)
+    async def _sandbox(_peticion: Request, exc: SandboxError):
+        # 422 y no 500: el sandbox falla por algo del **entorno o de la peticion**
+        # (una ruta que no es un repositorio, un worktree que no se puede crear),
+        # no por un defecto del servidor.
+        return JSONResponse(status_code=422, content=_cuerpo(exc, "SANDBOX_ERROR"))
+
+    @app.exception_handler(BudgetExceededError)
+    async def _presupuesto(_peticion: Request, exc: BudgetExceededError):
+        # 429: el recurso que se agoto es el presupuesto, y el cliente puede
+        # reintentar mas tarde con uno mayor. No es un fallo del servidor.
+        return JSONResponse(status_code=429, content=_cuerpo(exc, "BUDGET_EXCEEDED"))
 
 
 def crear_app(
@@ -173,15 +280,54 @@ def crear_app(
     app.state.engine = motor
     app.state.worker = trabajador
 
+    registrar_manejadores_de_error(app)
+
     # ------------------------------------------------------------------ salud
     @app.get("/health")
     def salud() -> dict:
         return {
             "status": "ok",
-            "fase": "M1",
+            "fase": "M3",
             "stt": adaptador_stt.health(),
             "ejecuciones": len(almacen.list_summaries(limit=1000)),
+            "proyectos": len(almacen.listar_proyectos(limit=1000)),
         }
+
+    # ------------------------------------------------------------- proyectos
+    @app.post("/projects", response_model=Project, status_code=201)
+    def crear_proyecto(peticion: ProjectRequest) -> Project:
+        """Registra un repositorio para poder ejecutar contra el.
+
+        La ruta se **valida aqui**, en el alta, y no al lanzar una ejecucion: un
+        repositorio inexistente o que no sea git se rechaza en el momento en que
+        alguien lo declara, con un 422 que dice que pasa, en lugar de dentro de una
+        ejecucion ya en marcha. Es la razon de que el proyecto exista como concepto
+        en vez de llevar la ruta suelta en cada peticion.
+        """
+        ruta = validar_repositorio(peticion.repo_path)
+        proyecto = Project(
+            project_id=_nuevo_project_id(peticion.name),
+            name=peticion.name,
+            repo_path=str(ruta),
+            created_at=datetime.now(UTC),
+        )
+        try:
+            return almacen.crear_proyecto(proyecto)
+        except sqlite3.IntegrityError as exc:  # pragma: no cover - colision de id
+            raise HTTPException(
+                status_code=409, detail=f"ya existe un proyecto con id {proyecto.project_id}"
+            ) from exc
+
+    @app.get("/projects", response_model=list[Project])
+    def listar_proyectos(limit: int = 50) -> list[Project]:
+        return almacen.listar_proyectos(limit)
+
+    @app.get("/projects/{project_id}", response_model=Project)
+    def obtener_proyecto(project_id: str) -> Project:
+        proyecto = almacen.proyecto(project_id)
+        if proyecto is None:
+            raise HTTPException(status_code=404, detail=f"no existe el proyecto {project_id}")
+        return proyecto
 
     # ----------------------------------------------------------- transcripcion
     @app.post("/transcriptions", response_model=Transcript)
@@ -204,10 +350,24 @@ def crear_app(
         Responde 202 con el `run_id` para que el cliente pueda suscribirse al
         progreso de inmediato.
         """
+        opciones = peticion.options
+        if peticion.project_id is not None:
+            proyecto = almacen.proyecto(peticion.project_id)
+            if proyecto is None:
+                raise HTTPException(
+                    status_code=404, detail=f"no existe el proyecto {peticion.project_id}"
+                )
+            # `model_validate` y no `model_copy`: una copia no ejecuta los
+            # validadores de `RunOptions`, y el alcance es una restriccion de
+            # seguridad que no debe poder quedar sin comprobar.
+            opciones = RunOptions.model_validate(
+                {**opciones.model_dump(), "repo_path": proyecto.repo_path}
+            )
+
         try:
             estado = motor.crear_estado(
                 peticion.instruction,
-                options=peticion.options,
+                options=opciones,
                 source=peticion.source.value,
                 transcript_meta=peticion.transcript_meta,
             )
@@ -226,10 +386,8 @@ def crear_app(
 
     @app.get("/runs/{run_id}", response_model=RunState)
     def obtener_run(run_id: str) -> RunState:
-        try:
-            return motor.get(run_id)
-        except RunNotFound as exc:
-            raise HTTPException(status_code=404, detail=f"no existe la ejecucion {run_id}") from exc
+        # `RunNotFound` la mapea el manejador central a un 404 estructurado.
+        return motor.get(run_id)
 
     @app.get("/runs/{run_id}/events")
     async def eventos_run(
@@ -291,23 +449,53 @@ def crear_app(
         # conexion inactiva. Sin el, una ejecucion larga se corta en silencio.
         return EventSourceResponse(flujo(), ping=10)
 
+    # ------------------------------------------------------- puertas humanas
+    #
+    # **Dos puertas, dos rutas.** No se unifican en una sola con un parametro
+    # "que puerta": responden a momentos distintos del flujo y a decisiones
+    # distintas (confirmar lo que se entendio / aprobar lo que se hizo). Una ruta
+    # unica obligaria al cliente a saber cual esta pendiente para elegir el cuerpo,
+    # que es justo lo que el estado ya le dice.
+
+    @app.post("/runs/{run_id}/confirm-requirements", response_model=RunState)
+    def confirmar_requisitos(
+        run_id: str, peticion: ConfirmRequirementsRequest
+    ) -> RunState:
+        """Reanuda la puerta `confirm_requirements_gate` (M2, item 3 del DoD).
+
+        Acepta confirmar, rechazar o **corregir** lo que el sistema entendio. La
+        reanudacion vuelve al trabajador: el cliente recibe el estado en cuanto el
+        grafo arranca de nuevo, no cuando termina.
+
+        La comprobacion y la reserva del derecho a reanudar son **una sola
+        operacion** (`reclamar_reanudacion`), no dos. Comprobar aqui y encolar
+        despues dejaba una ventana en la que dos peticiones concurrentes -dos
+        pestanas, un doble clic, un reintento- pasaban ambas y devolvian 200.
+        """
+        motor.reclamar_reanudacion(
+            run_id, puerta_esperada="confirm_requirements_gate"
+        )
+        try:
+            trabajador.submit_resume(run_id, _valor_de_confirmacion(peticion))
+        except Exception:
+            motor.olvidar_reclamacion(run_id)
+            raise
+        return motor.get(run_id)
+
     @app.post("/runs/{run_id}/approve", response_model=RunState)
     def aprobar_run(run_id: str, peticion: ApproveRequest) -> RunState:
-        """Aprueba o rechaza la accion pendiente y reanuda el grafo.
+        """Aprueba o rechaza el cambio pendiente y reanuda la puerta `approval_gate`.
 
-        La reanudacion vuelve al trabajador: el cliente recibe el estado en cuanto
-        el grafo arranca de nuevo, no cuando termina.
+        La reanudacion vuelve al trabajador: el cliente recibe el estado en cuanto el
+        grafo arranca de nuevo, no cuando termina. Misma reserva atomica que la puerta
+        de requisitos.
         """
+        motor.reclamar_reanudacion(run_id, puerta_esperada="approval_gate")
         try:
-            if not motor.pendiente_de_aprobacion(run_id):
-                # Fuerza el error tipado correcto (404 o 409) sin reanudar nada.
-                motor.resume(run_id, peticion.decision)
-        except RunNotFound as exc:
-            raise HTTPException(status_code=404, detail=f"no existe la ejecucion {run_id}") from exc
-        except NothingToResume as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-        trabajador.submit_resume(run_id, peticion.decision)
+            trabajador.submit_resume(run_id, peticion.decision)
+        except Exception:
+            motor.olvidar_reclamacion(run_id)
+            raise
         return motor.get(run_id)
 
     @app.post("/runs/{run_id}/cancel", status_code=501)

@@ -319,8 +319,17 @@ def main() -> int:
     comprobar("la aplicacion no emitio errores", not errores, "; ".join(errores[:3]))
     comprobar("los contratos se cargaron", campos.get("CONTRATOS") == "15",
               f"CONTRATOS={campos.get('CONTRATOS')}")
-    comprobar("el servidor se declara vivo", "fase M1" in campos.get("CHIP_SALUD", ""),
-              campos.get("CHIP_SALUD", ""))
+    # El chip de salud tiene que **decir la fase que el servidor declara**, no una
+    # concreta: fijar "fase M1" hacia que esta comprobacion fallara en cada cambio de
+    # hito -y F10 la puso en M3- por un motivo que no tiene nada que ver con que el
+    # frontend funcione. Se comprueba que el chip refleja `/health`, que es lo que
+    # importa: que el cableado siga vivo.
+    chip_salud = campos.get("CHIP_SALUD", "")
+    comprobar(
+        "el servidor se declara vivo",
+        "servidor ok" in chip_salud and "fase " in chip_salud,
+        chip_salud,
+    )
     comprobar("la lista de ejecuciones se pinto", campos.get("LISTA_CARGADA") == "true")
     comprobar("el panel de la ejecucion se abrio", campos.get("PANEL_RUN_VISIBLE") == "true")
     comprobar("el cliente recibio un run_id", campos.get("RUN_ID", "").startswith("run-"),

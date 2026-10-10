@@ -68,7 +68,11 @@ class RunWorker:
 
     def _reanudar_seguro(self, run_id: str, decision) -> None:
         try:
-            self._engine.resume(run_id, decision)
+            # `reanudar_reclamada`, no `resume`: el derecho a reanudar ya se reclamo
+            # en el hilo de la peticion, de forma atomica con la comprobacion de que
+            # la puerta esperaba. Volver a comprobar aqui reabriria justo la ventana
+            # que la reclamacion cierra, porque la ejecucion llega con retraso.
+            self._engine.reanudar_reclamada(run_id, decision)
         except Exception as exc:  # noqa: BLE001
             log.exception("la reanudacion de %s fallo", run_id)
             self._engine.abortar(

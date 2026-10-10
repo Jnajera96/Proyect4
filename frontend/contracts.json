@@ -67,10 +67,17 @@
         "run.started",
         "run.step",
         "run.status",
-        "run.awaiting_approval",
         "run.report",
         "run.error",
-        "run.done"
+        "run.done",
+        "run.completed",
+        "run.failed",
+        "run.awaiting_human",
+        "run.awaiting_approval",
+        "requirements.completed",
+        "plan.completed",
+        "coder.completed",
+        "tests.completed"
       ],
       "title": "EventKind",
       "type": "string"
@@ -195,16 +202,23 @@
     "RunEvent": {
       "$defs": {
         "EventKind": {
-          "description": "Tipos de evento del flujo de progreso.\n\nSon un conjunto **cerrado**: el frontend puede hacer un `switch` exhaustivo y\nun tipo nuevo no se cuela sin que alguien lo note.",
+          "description": "Tipos de evento del flujo de progreso.\n\nSon un conjunto **cerrado**: el frontend puede hacer un `switch` exhaustivo y\nun tipo nuevo no se cuela sin que alguien lo note.\n\n**F10 anade los eventos de ciclo de vida por nodo.** Hasta F9 el progreso se\ncontaba con `run.step`, que lleva `{\"node\": \"<nodo>\"}`: suficiente para pintar\nuna lista, insuficiente para un `switch` exhaustivo, porque el nombre del nodo\nviaja como **dato** y no como **tipo**. Ahora cada hito tiene su propio tipo.\n\n**Los eventos antiguos se conservan.** `run.created`, `run.step`, `run.status`,\n`run.awaiting_approval`, `run.report`, `run.error` y `run.done` siguen\nemitiendose porque el frontend actual escucha varios de ellos (cierra el flujo\ncon `run.done`). Retirarlos ahora romperia una interfaz que **no** forma parte\nde esta fase. Quedan marcados como heredados y se retiraran cuando el frontend\nse reescriba, en la fase que lo autorice.",
           "enum": [
             "run.created",
             "run.started",
             "run.step",
             "run.status",
-            "run.awaiting_approval",
             "run.report",
             "run.error",
-            "run.done"
+            "run.done",
+            "run.completed",
+            "run.failed",
+            "run.awaiting_human",
+            "run.awaiting_approval",
+            "requirements.completed",
+            "plan.completed",
+            "coder.completed",
+            "tests.completed"
           ],
           "title": "EventKind",
           "type": "string"
@@ -387,6 +401,20 @@
         },
         "options": {
           "$ref": "#/$defs/RunOptions"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Proyecto registrado contra el que ejecutar. Si se indica, su `repo_path` manda sobre el de `options`: el proyecto es la ruta **validada** en el alta, y dejar que una peticion la sustituya esquivaria esa validacion.",
+          "title": "Project Id"
         },
         "source": {
           "$ref": "#/$defs/InstructionSource",

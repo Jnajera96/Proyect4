@@ -43,9 +43,10 @@ DIARIO = RAIZ / "_mutation_journal.json"
 # un tiempo de espera largo (los flujos SSE esperan a `run.done`). Sin limite, el
 # verificador se cuelga y no hay forma de saber en cual.
 #
-# Historial: 90 -> 300 (F7) -> 600 (F7, correccion). Motivo del primer salto: la
-# suite crecio con las pruebas del sandbox, que crean repositorios git **de verdad**
-# y tardan ~36s de base, de modo que la propia linea base se cortaba con 90s.
+# Historial: 90 -> 300 (F7) -> 600 (F7, correccion) -> 900 (F10). Motivo del primer
+# salto: la suite crecio con las pruebas del sandbox, que crean repositorios git
+# **de verdad** y tardan ~36s de base, de modo que la propia linea base se cortaba
+# con 90s.
 #
 # **Por que 600 y no 300.** Con 300 se observo -en la misma ejecucion de F7- que
 # varias mutaciones tardaban 300.1-300.2s: es decir, **cortaban**, no fallaban. Con
@@ -53,8 +54,15 @@ DIARIO = RAIZ / "_mutation_journal.json"
 # informar de sus propios cortes como cazadas. Eso ya no puede pasar a partir de
 # esta correccion -un corte devuelve `None` y cuenta como NO CONCLUYENTE-, pero el
 # limite debe seguir dando margen sobre la suite mutada, que es mas lenta que la
-# suite base. 600s es ese margen.
-LIMITE_PYTEST = 600.0
+# suite base.
+#
+# **Por que 900 en F10.** Con 600 el verificador **aborto en la linea base**: la
+# suite completa (522 pruebas, con el E2E de la API que crea un sandbox real y lanza
+# pytest anidado) supero los 600s. La suite base medida en reposo son **271s**, de
+# modo que 600 daba 2,2x -y una mutacion puede casi duplicar la duracion (se midio
+# una de 552s en F7)-. 900s da 3,3x sobre la base medida. El limite tiene que
+# superar con margen la suite **mutada**, no la base.
+LIMITE_PYTEST = 900.0
 
 # Limite para las herramientas de verificacion externas (el navegador).
 LIMITE_COMANDO = 180.0
@@ -959,6 +967,127 @@ MUTACIONES: list[Mutation] = [
         "        if estado.status.is_terminal or estado.status.is_awaiting_human:",
         "        if estado.status.is_terminal or estado.status is RunStatus.AWAITING_APPROVAL:",
         "test_m2_e2e.py",
+    ),
+    # ------------------------------------------------- F10: API REST y SSE
+    Mutation(
+        # El flujo SSE es una salida al navegador. Sin redactar en el punto por el
+        # que pasan todos los eventos, una clave en la instruccion llega en claro al
+        # cliente: el filtro de logging no la cubre, porque esto no pasa por logging.
+        "F10: los eventos se guardan sin redactar (una clave llega al navegador)",
+        SRC / "state" / "store.py",
+        "        redactado = redact_deep(data or {})",
+        "        redactado = data or {}",
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # `_persistir` corre tambien al detenerse en una puerta. Marcar esa espera
+        # como fallo le dice al cliente que algo salio mal justo cuando el sistema
+        # esta pidiendo una decision, que es lo que debe hacer.
+        "F10: una pausa humana se emite como run.failed",
+        SRC / "graph" / "engine.py",
+        "        if estado.status is RunStatus.COMPLETED:\n            resultado: EventKind | None = EventKind.RUN_COMPLETED\n        elif estado.status.is_terminal:\n            resultado = EventKind.RUN_FAILED\n        else:\n            resultado = None",
+        "        if estado.status is RunStatus.COMPLETED:\n            resultado: EventKind | None = EventKind.RUN_COMPLETED\n        else:\n            resultado = EventKind.RUN_FAILED",
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # Sin el resultado explicito, el cliente solo sabe que el flujo cerro, no
+        # como termino.
+        "F10: no se emite el resultado explicito (run.completed / run.failed)",
+        SRC / "graph" / "engine.py",
+        "        if resultado is not None:\n            self._store.append_event(",
+        "        if False:\n            self._store.append_event(",
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # Con dos puertas humanas, el evento general no puede llamarse como una de
+        # ellas: el cliente que solo conoce la de aprobacion mostraria la pantalla
+        # equivocada al parar en la de requisitos.
+        "F10: la espera humana se anuncia con el evento de la puerta equivocada",
+        SRC / "graph" / "engine.py",
+        "                    self._store.append_event(run_id, EventKind.RUN_AWAITING_HUMAN, carga)",
+        "                    self._store.append_event(run_id, EventKind.RUN_AWAITING_APPROVAL, carga)",
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # Sin hitos nombrados, el progreso vuelve a ser un `run.step` con el nodo
+        # como dato, y el cliente pierde el `switch` exhaustivo.
+        "F10: no se emiten los hitos por nodo",
+        SRC / "graph" / "engine.py",
+        '                if hito is not None:\n                    self._store.append_event(run_id, hito, {"node": nodo})',
+        '                if False:\n                    self._store.append_event(run_id, hito, {"node": nodo})',
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # Convertir a texto un diccionario de correcciones lo vuelve irreconocible y
+        # la puerta lo lee como rechazo: corregir los requisitos deja de funcionar.
+        "F10: el motor convierte a texto la reanudacion con correcciones",
+        SRC / "graph" / "engine.py",
+        "            valor = decision.value if isinstance(decision, ApprovalDecision) else decision",
+        "            valor = decision.value if isinstance(decision, ApprovalDecision) else str(decision)",
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # Validar en el alta es lo que evita que una ruta rota se descubra dentro de
+        # una ejecucion ya en marcha.
+        "F10: el alta de proyecto no valida el repositorio",
+        SRC / "api" / "app.py",
+        "        ruta = validar_repositorio(peticion.repo_path)",
+        "        ruta = Path(peticion.repo_path)",
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # El `repo_path` del proyecto es la ruta **validada**; si una peticion puede
+        # sustituirla, la validacion del alta se esquiva.
+        "F10: la ruta del proyecto no manda sobre la de la peticion",
+        SRC / "api" / "app.py",
+        '            opciones = RunOptions.model_validate(\n                {**opciones.model_dump(), "repo_path": proyecto.repo_path}\n            )',
+        "            opciones = opciones",
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # Un error de dominio que sale como 500 con traza no dice que paso ni de
+        # quien es la culpa.
+        "F10: SandboxError se mapea a 500 en lugar de a 422",
+        SRC / "api" / "app.py",
+        '        return JSONResponse(status_code=422, content=_cuerpo(exc, "SANDBOX_ERROR"))',
+        '        return JSONResponse(status_code=500, content=_cuerpo(exc, "SANDBOX_ERROR"))',
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # Sin autenticacion, escuchar en la red publica la capacidad de ejecutar
+        # codigo en la maquina.
+        "F10: el servidor escucha en todas las interfaces",
+        SRC / "__main__.py",
+        'HOST = "127.0.0.1"',
+        'HOST = "0.0.0.0"',
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # La reclamacion es lo que hace atomica la comprobacion y la reserva del
+        # derecho a reanudar. Sin ella, dos peticiones concurrentes pasan ambas y
+        # las dos devuelven 200: la segunda pisa la decision de la primera.
+        "F10: la reanudacion no reserva el derecho (dos peticiones ganan)",
+        SRC / "graph" / "engine.py",
+        "            with self._locks_guard:\n                self._reclamadas.add(run_id)",
+        "            with self._locks_guard:\n                pass",
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # Cada endpoint tiene que reclamar su propia puerta: `confirm-requirements`
+        # no puede consumir `approval_gate`.
+        "F10: confirm-requirements acepta la puerta de aprobacion",
+        SRC / "api" / "app.py",
+        'run_id, puerta_esperada="confirm_requirements_gate"',
+        'run_id, puerta_esperada="approval_gate"',
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # Y a la inversa, `approve` no puede saltarse la confirmacion de requisitos.
+        "F10: approve acepta la puerta de requisitos",
+        SRC / "api" / "app.py",
+        'motor.reclamar_reanudacion(run_id, puerta_esperada="approval_gate")',
+        'motor.reclamar_reanudacion(run_id, puerta_esperada="confirm_requirements_gate")',
+        "test_f10_api.py",
     ),
 ]
 

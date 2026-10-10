@@ -7,7 +7,14 @@ contrato HTTP y la validacion de las salidas del modelo.
 Regla de frontera: lo que no tiene contrato ni validacion no cruza un borde.
 """
 
-from ai_swe.contracts.api import EventKind, RunEvent, RunSummary
+from ai_swe.contracts.api import (
+    EVENTO_POR_NODO,
+    EventKind,
+    Project,
+    ProjectRequest,
+    RunEvent,
+    RunSummary,
+)
 from ai_swe.contracts.outputs import (
     Approval,
     ApprovalDecision,
@@ -64,6 +71,9 @@ __all__ = [
     "CodeChange",
     "CodeProposal",
     "EventKind",
+    "EVENTO_POR_NODO",
+    "Project",
+    "ProjectRequest",
     "Evidence",
     "FileChange",
     "FileOperation",

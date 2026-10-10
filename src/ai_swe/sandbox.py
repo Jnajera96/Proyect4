@@ -237,6 +237,22 @@ class Sandbox:
         return rutas
 
 
+def validar_repositorio(repo: Path | str) -> Path:
+    """Comprueba que la ruta es un repositorio git usable y la devuelve resuelta.
+
+    Se extrae de `crear` para que el alta de un proyecto (F10) y la creacion del
+    sandbox usen **la misma** comprobacion. Duplicarla dejaria dos definiciones de
+    "repositorio valido" que pueden divergir, y la que se ejecuta antes -la del
+    alta- seria la que no se prueba.
+
+    Lanza `SandboxError`, que es el tipo que la API mapea a un 4xx estructurado.
+    """
+    resuelto = Path(repo).resolve()
+    if not (resuelto / ".git").exists():
+        raise SandboxError("validar", f"'{resuelto}' no es un repositorio git")
+    return resuelto
+
+
 def crear(repo: Path, run_id: str, *, workspace_root: Path) -> Sandbox:
     """Crea un worktree aislado para `run_id` a partir de `repo`.
 
@@ -244,9 +260,7 @@ def crear(repo: Path, run_id: str, *, workspace_root: Path) -> Sandbox:
     repositorio fuente: un worktree cuyo directorio cuelga del arbol que pretende
     aislar no aisla nada -el `git status` del original lo veria como sucio-.
     """
-    repo = Path(repo).resolve()
-    if not (repo / ".git").exists():
-        raise SandboxError("crear", f"'{repo}' no es un repositorio git")
+    repo = validar_repositorio(repo)
 
     raiz = (Path(workspace_root) / run_id).resolve()
     if raiz == repo or repo in raiz.parents:

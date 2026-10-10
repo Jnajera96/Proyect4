@@ -2,7 +2,7 @@
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-08",
   "baseline_updated": "2026-10-06",
-  "phase": "M2 COMPLETE — 15/15 DoD items. ModelGateway wired to `interpret`, `plan`, `coder` and `reviewer`; two human gates (requirements confirmation, change approval); sandbox and test runner in the loop. Next: API (M3/F10) and Frontend, awaiting explicit authorization.",
+  "phase": "M3 IN PROGRESS — F10 (FastAPI REST surface + SSE event streaming) implemented and verified. M2 is complete at 15/15. Next: F11 (React frontend dashboard), awaiting explicit authorization.",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -81,11 +81,17 @@
     "m2_requirements_confirmation_gate": true,
     "m2_two_human_gates_distinct": true,
     "m2_full_chain_e2e": true,
-    "tests_passing": 500,
-    "tests_skipped": 1,
+    "f10_projects_endpoints": true,
+    "f10_confirm_requirements_endpoint": true,
+    "f10_node_lifecycle_events": true,
+    "f10_typed_error_mapping": true,
+    "f10_events_redacted": true,
+    "f10_loopback_binding": true,
+    "tests_passing": 523,
+    "tests_skipped": "2/523 (test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace needs a symlink privilege Windows does not grant -WinError 1314, environmental; test_model_gateway_real::test_llamada_real_controlada requires AI_SWE_RUN_REAL_PROVIDER_TESTS=1 + a provider key by design). Neither is a code defect and neither is a network/credential dependency of the offline suite.",
     "tests_require_network": false,
     "tests_require_credentials": false,
-    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block",
+    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block; 13/13 (F10, this run: baseline green, every mutant caught, tree restored green)",
     "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
     "m1_assumptions": "5/5",
     "frontend_browser_checks": "11/11",
@@ -232,9 +238,20 @@
     "M2: a rejected or unrecognised resumption never confirms and never plans; the failure direction matters, because a client error must not confirm on the human's behalf",
     "M2: the requirements gate is skipped for out-of-scope instructions -asking a human to confirm requirements the system is going to refuse anyway spends a human decision on something already decided",
     "M2: a write before `interrupt()` is lost, because the node re-runs on resume; the awaiting state must be set by the **previous** node (verified by experiment before designing the gate)",
-    "M2: `MET-13` must treat a human wait as legitimate -`RunStatus.is_awaiting_human` covers both gates, or a paused run is forced to needs_human as if the topology were broken"
+    "M2: `MET-13` must treat a human wait as legitimate -`RunStatus.is_awaiting_human` covers both gates, or a paused run is forced to needs_human as if the topology were broken",
+    "F10: a project is a repository **validated at registration**, not a loose path per request; the check is shared with the sandbox (`sandbox.validar_repositorio`) so there is one definition of a usable repo",
+    "F10: the node name is a **type**, not a datum -`requirements.completed` etc. allow an exhaustive client switch; the legacy `run.step` is kept while the current frontend listens to it",
+    "F10: `coder.completed`, not `coder.started` -the engine reads `stream_mode=updates`, which delivers a node **after** it finishes; naming that event `started` would misdate it",
+    "F10: a human wait is not an outcome -`_persistir` runs when the graph pauses, so `run.completed`/`run.failed` are emitted only for terminal states",
+    "F10: the outcome event goes **immediately before** `run.done`, which is what closes the SSE stream; anything written after can fall in the next batch and be lost",
+    "F10: every event is redacted at `append_event`, the single point all events pass through; the logging filter does not cover this path",
+    "F10: a domain exception that escapes unmapped reaches the client as a 500 with a traceback -typed handlers give 4xx with `error_class`; a `TypeError` is deliberately **not** mapped, so a server defect cannot masquerade as a client error",
+    "F10: `PolicyViolationError` does not exist in this repository -the Policy Engine returns `PolicyEffect.DENY` and a denial travels as a typed `RunError` inside the run; no type was invented that nothing raises",
+    "F10: the server binds to 127.0.0.1 as a **constant**, not an argument; with no auth (AUD-06) exposing it would publish the ability to run code, and a flag invites opening it `just to test`",
+    "F10: the SSE payload is the whole `RunEvent` envelope (`seq`/`at`/`kind`/`data`), not the bare payload -the envelope is what lets a client order and dedupe by `seq`",
+    "F10: reading a run's full event history **through SSE** is unreliable -the stream closes at the first `run.done` in the batch, and between human pauses the run is not terminal so the stream does not close until `timeout_s`. Read legs over SSE to prove delivery; read the record to assert the sequence"
   ],
-  "tests_passing": 500,
+  "tests_passing": 523,
   "snapshot_location": "repository root (consolidated 2026-10-08; the docs/auditoria-2026-10-06/ duplicate was removed to resolve AUD-01)",
   "component_status": [
     {
@@ -276,6 +293,11 @@
       "component": "State persistence (state/store.py, SQLite)",
       "status": "IMPLEMENTED_AND_VERIFIED",
       "observations": "LangGraph checkpointer over SQLite; schema version pinned. tests/test_store.py."
+    },
+    {
+      "component": "REST surface + SSE (F10: api/app.py, api/__init__.py, __main__.py)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "POST/GET /projects (repo validated at registration, shared check with the sandbox), POST /runs with optional project_id, GET /runs/{id}, the two HITL endpoints (confirm-requirements, approve), and GET /runs/{id}/events over SSE with per-node milestones (requirements.completed, plan.completed, coder.completed, tests.completed), run.awaiting_human, run.completed and run.failed. Typed error handlers (SandboxError 422, BudgetExceededError 429, RunNotFound 404, NothingToResume 409) with error_class. Every event is redacted at append_event. Server binds to 127.0.0.1."
     },
     {
       "component": "LangGraph engine + API (api/app.py, graph/engine.py)",
@@ -485,9 +507,10 @@
     "vcs": "git",
     "branch": "main",
     "remote_configured": false,
-    "last_commit": "feat(m2): implement requirements confirmation gate and achieve 100% M2 DoD (HEAD when this snapshot was written; the hash is not recorded because this file is part of that commit)",
+    "last_commit": "feat(f10): implement FastAPI REST endpoints and SSE event streaming (HEAD when this snapshot was written; the hash is not recorded because this file is part of that commit)",
     "commit_history": [
-      "(this commit) feat(m2): implement requirements confirmation gate and achieve 100% M2 DoD",
+      "(this commit) feat(f10): implement FastAPI REST endpoints and SSE event streaming",
+      "72613d9 feat(m2): implement requirements confirmation gate and achieve 100% M2 DoD",
       "2e52658 feat(f9): implement model-driven reviewer with deterministic test enforcement and cycle limits",
       "4c46193 feat(f8): implement real test runner and wire sandbox into the graph",
       "e54d6cc feat(f7): implement sandbox and patch applicator with workspace confinement",
@@ -502,16 +525,16 @@
       "11a13cb M1 VERIFIED BASELINE"
     ],
     "uncommitted_work": [],
-    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = the current commit (see git log)."
+    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = 72613d9, F10 = the current commit (see git log)."
   },
   "tests_executed": {
-    "command": "python -m pytest -p no:cacheprovider --junitxml=_m2_final.xml -q",
+    "command": "python -m pytest -p no:cacheprovider --junitxml=_f10_final_suite.xml -q",
     "environment": "local, offline, no credentials, no network",
-    "tests": 500,
+    "tests": 523,
     "failures": 0,
     "errors": 0,
-    "skipped": 1,
-    "skip_reason": "TD-01 — real-provider integration test is opt-in (`-m real_provider`) and requires AI_SWE_MODEL_API_KEY; it SKIPS rather than passing falsely",
+    "skipped": 2,
+    "skip_reason": "Two environmental/by-design skips, neither a code defect and neither a dependency of the offline suite: TD-01 — the real-provider integration test is opt-in and requires AI_SWE_MODEL_API_KEY, so it SKIPS rather than passing falsely; and test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace, which needs a symlink privilege Windows does not grant (WinError 1314).",
     "verdict": "GREEN",
     "mutations": {
       "f1_f2": "35/35 (verified at the time)",
@@ -523,7 +546,8 @@
       "f7": "12/12 (after fixing 4 uncaught mutations and a false-positive timeout verdict)",
       "f8": "9/9 (4 blind spots found on the first pass — shell=True at the call site, PYTHONPATH, the `fallos` branch, the coder router — and closed with real tests; the `fallos` blind spot uncovered a real defect: a raw OSError escaped Sandbox.escribir and reached LangGraph as a traceback)",
       "f9": "8/8 — the test veto (REGLA 1), the cycle limit (REGLA 2), the guard order, the declared fallback (REGLA 3), the reviewer model wiring, the cycle accounting, the ACCEPT route and the test evidence in the context",
-      "m2": "7/7 — the requirements gate being skipped, the awaiting state not being marked, the confirmation not being recorded, a rejection planning anyway, human modifications being discarded, an unrecognised resumption being treated as approved, and the MET-13 safety net confusing a wait with a hang"
+      "m2": "7/7 — the requirements gate being skipped, the awaiting state not being marked, the confirmation not being recorded, a rejection planning anyway, human modifications being discarded, an unrecognised resumption being treated as approved, and the MET-13 safety net confusing a wait with a hang",
+      "f10": "13/13 — events stored unredacted, a human pause emitted as run.failed, the outcome event not emitted, the human wait announced with the wrong gate's event, the per-node milestones not emitted, the engine stringifying a corrections resumption, project registration skipping repo validation, the project path not overriding the request's, SandboxError mapped to 500 instead of 422, the server listening on all interfaces, the resumption not reserving the right (two concurrent requests both winning), `confirm-requirements` accepting the approval gate, and `approve` accepting the requirements gate. The last three were added this phase; a `shutdown` mutation that had been counted earlier was retracted after proving it attacked a redundant line (the original `shutdown(wait=True)` already waits), and the underlying regression test was removed with it."
     }
   },
   "blockers_and_debt": [
@@ -604,13 +628,34 @@
       "status": "RESOLVED (2026-10-09, M2)",
       "detail": "HITL existed only at the approval gate, after the work was done. The system could plan and build on a misreading of the request without anyone confirming the reading first.",
       "how_to_close": "M2: `confirm_requirements_gate` between `interpret` and `plan`, with `AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION`. The human can confirm or correct the interpretation; a rejection escalates without planning."
+    },
+    {
+      "id": "AUD-11",
+      "title": "Legacy SSE event names kept for the current frontend",
+      "status": "OPEN — deliberate, tracked",
+      "detail": "F10 added the canonical event set (`requirements.completed`, `plan.completed`, `coder.completed`, `tests.completed`, `run.awaiting_human`, `run.completed`, `run.failed`) but kept `run.created`, `run.step`, `run.status`, `run.awaiting_approval`, `run.report`, `run.error` and `run.done` emitting, because `frontend/index.html` listens for `run.done`, `run.status`, `run.awaiting_approval` and `run.error`, and closes its stream on `run.done`. Retiring them now would break an interface that is not part of F10.",
+      "how_to_close": "Remove the legacy names in the phase that rewrites the frontend (F11), updating `index.html`, `_verify.html` and `tools/verify_frontend.py` in the same commit."
+    },
+    {
+      "id": "AUD-12",
+      "title": "Two defects in the resume path found only by driving the API",
+      "status": "FIXED during F10",
+      "detail": "(1) `RunEngine.resume` stringified any non-`ApprovalDecision` value, so a dict of requirement corrections became an unrecognisable string and the gate read it as a rejection: the corrections path never worked through the engine. (2) `_persistir` emitted `run.failed` on every non-`COMPLETED` state, including a human pause. Both were invisible to the M2 tests, which call `app.invoke(Command(resume=...))` directly and bypass `RunEngine.resume`.",
+      "how_to_close": "Fixed in F10 with tests in tests/test_f10_api.py that drive the same path the HTTP client uses. The lesson is recorded: a path only the API takes must be tested through the API."
+    },
+    {
+      "id": "AUD-13",
+      "title": "Stale phase label in the prototype frontend",
+      "status": "OPEN — tracked, deliberately untouched",
+      "detail": "`/health` reported `fase: \"M1\"` until F10, when it was corrected to \"M3\" (it was simply wrong). Two static strings in `frontend/index.html` still say \"fase M1\": line 69 (the descriptive paragraph) and line 85 (the STT note). The health **chip** is rendered from the API, so it already shows the correct phase -the page is therefore internally inconsistent. `tools/verify_frontend.py` was updated in F10 to assert that the chip reflects `/health` rather than pinning a milestone string, so the harness stays valid.",
+      "how_to_close": "Fix the two labels in the phase that rewrites the frontend (F11). The frontend was explicitly out of scope for F10, so they were left rather than edited silently."
     }
   ],
   "next_step_proposed": {
-    "phase": "M3 / F10 — FastAPI surface and Frontend",
-    "why": "M2 is complete: the whole chain runs end to end and the DoD is 15/15. What remains for a usable system is exposing it: the API endpoints for the two human gates and the frontend that drives them.",
-    "scope": "Wire the requirements gate and the approval gate into the API/frontend flow (the `awaiting_human_requirements_confirmation` status is already in the exported contracts), plus the remaining open blockers (AUD-06 auth, AUD-07 frontend harness, TD-01 real provider).",
-    "prerequisite": "M2 is committed; tree clean.",
+    "phase": "F11 — Frontend Dashboard (React)",
+    "why": "The REST surface and the event stream are in place and verified. What is missing for a usable system is the interface that drives them: the two human gates and the live progress timeline.",
+    "scope": "React dashboard over the F10 API: create a project, launch a run, answer the requirements gate, watch the per-node milestones live, and approve or reject the change. In the same phase, retire the legacy SSE event names (AUD-11) and fold the frontend checks into the standard suite (AUD-07).",
+    "prerequisite": "F10 is committed; tree clean.",
     "awaiting": "explicit authorization from the Arquitecto — NOT to be started without it"
   }
 }

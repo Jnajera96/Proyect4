@@ -34,8 +34,9 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from ai_swe.contracts import RunEvent, RunState, RunStatus, RunSummary
+from ai_swe.contracts import Project, RunEvent, RunState, RunStatus, RunSummary
 from ai_swe.contracts.api import EventKind
+from ai_swe.security import redact_deep
 
 # Version del esquema. Al cambiarla se recrean las tablas: es un prototipo y no
 # hay datos que preservar. Se declara en lugar de intentar migraciones silenciosas
@@ -90,6 +91,12 @@ CREATE TABLE IF NOT EXISTS run_events (
     kind   TEXT NOT NULL,
     data   TEXT NOT NULL DEFAULT '{}',
     PRIMARY KEY (run_id, seq)
+);
+CREATE TABLE IF NOT EXISTS projects (
+    project_id TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    repo_path  TEXT NOT NULL,
+    created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_runs_updated ON runs(updated_at DESC);
 """
@@ -265,6 +272,57 @@ class RunStore:
             ).fetchall()
         return [_a_resumen(f) for f in filas]
 
+    # ------------------------------------------------------------- proyectos
+    def crear_proyecto(self, proyecto: Project) -> Project:
+        """Registra un proyecto. El `project_id` lo decide quien llama.
+
+        `INSERT OR REPLACE` no: registrar dos veces el mismo id pisaria en silencio
+        la ruta del anterior, y una ejecucion lanzada contra el proyecto acabaria
+        trabajando sobre otro repositorio sin que nadie lo hubiera pedido. La
+        violacion de clave primaria es la respuesta correcta.
+        """
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO projects (project_id, name, repo_path, created_at) VALUES (?, ?, ?, ?)",
+                (
+                    proyecto.project_id,
+                    proyecto.name,
+                    proyecto.repo_path,
+                    _iso(proyecto.created_at),
+                ),
+            )
+            self._conn.commit()
+        return proyecto
+
+    def proyecto(self, project_id: str) -> Project | None:
+        with self._lock:
+            fila = self._conn.execute(
+                "SELECT * FROM projects WHERE project_id = ?", (project_id,)
+            ).fetchone()
+        if fila is None:
+            return None
+        return Project(
+            project_id=fila["project_id"],
+            name=fila["name"],
+            repo_path=fila["repo_path"],
+            created_at=_fecha(fila["created_at"]),
+        )
+
+    def listar_proyectos(self, limit: int = 50) -> list[Project]:
+        with self._lock:
+            filas = self._conn.execute(
+                "SELECT * FROM projects ORDER BY created_at DESC LIMIT ?", (max(1, limit),)
+            ).fetchall()
+        return [
+            Project(
+                project_id=f["project_id"],
+                name=f["name"],
+                repo_path=f["repo_path"],
+                created_at=_fecha(f["created_at"]),
+            )
+            for f in filas
+        ]
+
     def orphan_open_runs(self) -> list[str]:
         """Marca como escaladas las ejecuciones que quedaron a medias.
 
@@ -309,9 +367,18 @@ class RunStore:
         con un `SELECT MAX(seq)` previo. No es microoptimizacion: cada sentencia
         adicional es una transaccion mas compitiendo por el unico escritor de
         SQLite, y con varias ejecuciones a la vez esa contencion se nota.
+
+        **La carga pasa por el redactor (`RNF-S3`, F10).** Este es el unico punto
+        por el que un evento llega al registro y al flujo SSE, asi que redactar aqui
+        cubre **todos** los eventos, presentes y futuros, sin depender de que cada
+        emisor se acuerde. Un evento que llevara una clave en claro -por ejemplo una
+        instruccion del usuario que la incluya, o el mensaje de un error del
+        proveedor- la publicaria al navegador tal cual; el filtro de logging no la
+        veria, porque esto no pasa por el logging.
         """
         momento = datetime.now(UTC)
-        carga = json.dumps(data or {}, ensure_ascii=False, separators=(",", ":"))[:4000]
+        redactado = redact_deep(data or {})
+        carga = json.dumps(redactado, ensure_ascii=False, separators=(",", ":"))[:4000]
         with self._lock:
             fila = self._conn.execute(
                 "INSERT INTO run_events (run_id, seq, at, kind, data)"

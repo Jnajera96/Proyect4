@@ -101,12 +101,15 @@ def confirmar_requisitos(cliente: TestClient, run_id: str, timeout: float = 20.0
     primero de ellos otra vez. El estado es la fuente autoritativa de "donde esta
     ahora", y es lo que hace falta para encadenar dos esperas.
 
-    Se usa el **mismo endpoint** que la puerta de aprobacion: para el cliente, las
-    dos puertas son "hay una decision pendiente".
+    Se usa el endpoint de requisitos, que es distinto del de aprobacion final.
+    Aunque para el cliente ambas puertas son "hay una decision pendiente", el
+    contrato HTTP las separa para evitar que se responda a la puerta equivocada.
     """
     pausa = "awaiting_human_requirements_confirmation"
     _esperar_estado(cliente, run_id, pausa, timeout)
-    respuesta = cliente.post(f"/runs/{run_id}/approve", json={"decision": "approved"})
+    respuesta = cliente.post(
+        f"/runs/{run_id}/confirm-requirements", json={"decision": "approved"}
+    )
     assert respuesta.status_code == 200, respuesta.text
     return _esperar_reposo(cliente, run_id, excluir=pausa, timeout=timeout)
 
@@ -119,7 +122,7 @@ def test_health_responde(cliente) -> None:
     assert r.status_code == 200
     cuerpo = r.json()
     assert cuerpo["status"] == "ok"
-    assert cuerpo["fase"] == "M1"
+    assert cuerpo["fase"] == "M3"
     assert cuerpo["stt"] is True
 
 
@@ -324,6 +327,28 @@ def test_instruccion_vacia_es_rechazada(cliente) -> None:
     assert cliente.post("/runs", json={"instruction": ""}).status_code == 422
 
 
+def _esperar_listado(cliente: TestClient, run_ids: list[str], timeout: float = 20.0) -> list[dict]:
+    """Espera a que **el listado** refleje el estado terminal de esas ejecuciones.
+
+    `GET /runs` lee el **indice**, que se sincroniza **despues** del punto de
+    control: `_persistir` llama a `store.sync` y luego escribe los eventos. Esperar
+    al punto de control (`GET /runs/{id}`) y leer el indice acto seguido es una
+    carrera real -el indice puede ir un instante por detras- y hacia fallar esta
+    afirmacion de forma intermitente.
+
+    Se espera a la vista que se va a afirmar, no a otra distinta.
+    """
+    limite = time.perf_counter() + timeout
+    listado = cliente.get("/runs").json()
+    while time.perf_counter() < limite:
+        listado = cliente.get("/runs").json()
+        por_id = {r["run_id"]: r for r in listado}
+        if all(por_id.get(rid, {}).get("status") == "completed" for rid in run_ids):
+            return listado
+        time.sleep(0.02)
+    raise AssertionError(f"el listado no reflejo el estado terminal: {listado}")
+
+
 def test_listar_ejecuciones(cliente) -> None:
     creadas = [
         cliente.post("/runs", json={"instruction": "Analiza el módulo de autenticación"}).json(),
@@ -332,7 +357,7 @@ def test_listar_ejecuciones(cliente) -> None:
     for creada in creadas:
         confirmar_requisitos(cliente, creada["run_id"])
 
-    listado = cliente.get("/runs").json()
+    listado = _esperar_listado(cliente, [c["run_id"] for c in creadas])
     assert len(listado) == 2
     assert {r["intent"] for r in listado} == {"inspect", "question"}
     assert all(r["status"] == "completed" for r in listado)

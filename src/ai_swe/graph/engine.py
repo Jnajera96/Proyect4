@@ -33,6 +33,7 @@ from datetime import UTC, datetime
 from langgraph.types import Command
 
 from ai_swe.contracts import (
+    EVENTO_POR_NODO,
     ApprovalDecision,
     EventKind,
     Instruction,
@@ -80,6 +81,8 @@ class RunEngine:
         self._local = threading.local()
         self._locks: dict[str, threading.Lock] = {}
         self._locks_guard = threading.Lock()
+        # Reanudaciones ya reclamadas y todavia no terminadas. Ver `reclamar_reanudacion`.
+        self._reclamadas: set[str] = set()
 
     @property
     def _app(self):
@@ -110,6 +113,55 @@ class RunEngine:
     def pendiente_de_aprobacion(self, run_id: str) -> bool:
         instantanea = self._app.get_state(self._config(run_id))
         return bool(instantanea.values) and bool(instantanea.next)
+
+    def reclamar_reanudacion(self, run_id: str, *, puerta_esperada: str | None = None) -> None:
+        """Reserva el derecho a reanudar, o lanza `NothingToResume` si no lo hay.
+
+        **Por que existe.** Comprobar `pendiente_de_aprobacion` y luego encolar la
+        reanudacion son dos pasos, y la reanudacion se ejecuta despues, en el hilo
+        del trabajador. Dos peticiones concurrentes -dos pestanas, un doble clic, un
+        reintento del navegador- pasaban ambas la comprobacion antes de que ninguna
+        hubiera reanudado, y las dos devolvian 200. La segunda pisaba a la primera:
+        el contrato dice que una ejecucion que no espera da 409, y no lo hacia.
+
+        `puerta_esperada` distingue las dos rutas HITL: `confirm-requirements` no
+        puede consumir una espera en `approval_gate`, ni `approve` una espera en
+        `confirm_requirements_gate`. Un interrupt pendiente no basta; tiene que ser
+        el correcto para el endpoint que lo reanuda.
+
+        La reclamacion se toma bajo el **mismo cerrojo por ejecucion** que usa
+        `resume`, y se libera cuando la reanudacion termina (`olvidar_reclamacion`).
+        La segunda peticion encuentra el derecho tomado y recibe el `NothingToResume`
+        que corresponde.
+        """
+        with self._lock_de(run_id):
+            if self._store.summary(run_id) is None:
+                raise RunNotFound(run_id)
+            with self._locks_guard:
+                reclamada = run_id in self._reclamadas
+            if reclamada:
+                raise NothingToResume(
+                    f"la ejecucion {run_id} ya tiene una reanudacion en curso"
+                )
+            if not self.pendiente_de_aprobacion(run_id):
+                raise NothingToResume(
+                    f"la ejecucion {run_id} no esta esperando aprobacion: "
+                    "no hay punto de control que reanudar"
+                )
+            if puerta_esperada is not None:
+                puerta_actual = _puerta_pendiente(self._app, self._config(run_id))
+                if puerta_actual != puerta_esperada:
+                    raise NothingToResume(
+                        f"la ejecucion {run_id} espera en '{puerta_actual}', "
+                        f"no en '{puerta_esperada}'"
+                    )
+            with self._locks_guard:
+                self._reclamadas.add(run_id)
+
+    def olvidar_reclamacion(self, run_id: str) -> None:
+        """Libera la reclamacion. Se llama siempre al terminar la reanudacion."""
+        with self._locks_guard:
+            self._reclamadas.discard(run_id)
 
     def _lock_de(self, run_id: str) -> threading.Lock:
         with self._locks_guard:
@@ -175,20 +227,42 @@ class RunEngine:
             entrada = self._store.initial_state(run_id)
             return self._ejecutar(entrada, run_id)
 
-    def resume(self, run_id: str, decision: ApprovalDecision | str) -> RunState:
-        with self._lock_de(run_id):
-            # El orden importa: comprobar primero que existe. Si no, una ejecucion
-            # inexistente respondia 409 ("no esta esperando aprobacion") en lugar
-            # de 404, que es lo que corresponde y lo que espera cualquier cliente.
-            if self._store.summary(run_id) is None:
-                raise RunNotFound(run_id)
-            if not self.pendiente_de_aprobacion(run_id):
-                raise NothingToResume(
-                    f"la ejecucion {run_id} no esta esperando aprobacion: "
-                    "no hay punto de control que reanudar"
-                )
-            valor = decision.value if isinstance(decision, ApprovalDecision) else str(decision)
-            return self._ejecutar(Command(resume=valor), run_id)
+    def resume(self, run_id: str, decision: ApprovalDecision | str | dict) -> RunState:
+        """Reanuda una ejecucion detenida en una puerta humana.
+
+        Es la via **directa**: comprueba el derecho, lo toma y reanuda en el hilo que
+        llama. La usan las pruebas, los scripts y el camino sincrono. La API usa
+        `reclamar_reanudacion` + `reanudar_reclamada`, porque entre la comprobacion y
+        la ejecucion hay un trabajador de por medio y el derecho tiene que quedar
+        reservado en el hueco.
+        """
+        self.reclamar_reanudacion(run_id)
+        return self.reanudar_reclamada(run_id, decision)
+
+    def reanudar_reclamada(
+        self, run_id: str, decision: ApprovalDecision | str | dict
+    ) -> RunState:
+        """Reanuda una ejecucion cuyo derecho **ya** se reclamo con `reclamar_reanudacion`.
+
+        No vuelve a comprobar nada: la comprobacion y la reclamacion fueron atomicas
+        en `reclamar_reanudacion`, y repetirla aqui -cuando la reanudacion puede
+        llegar con retraso por el trabajador- reabriria justo la ventana que se
+        quiere cerrar. Libera la reclamacion al terminar, salga bien o mal.
+        """
+        try:
+            valor = decision.value if isinstance(decision, ApprovalDecision) else decision
+            # **No se convierte a texto lo que no sea una `ApprovalDecision`.** La
+            # version anterior hacia `str(decision)` para cualquier otra cosa, y eso
+            # convertia un diccionario de correcciones en la cadena
+            # `"{'decision': 'modified', ...}"`. La puerta de requisitos recibia una
+            # cadena irreconocible y la trataba -correctamente- como un rechazo: la
+            # via de corregir los requisitos **no funcionaba** a traves del motor.
+            # La conversion solo tiene sentido para el enum, que es lo que el grafo
+            # espera como texto.
+            with self._lock_de(run_id):
+                return self._ejecutar(Command(resume=valor), run_id)
+        finally:
+            self.olvidar_reclamacion(run_id)
 
     # ---------------------------------------------------------------- interno
     @staticmethod
@@ -202,11 +276,26 @@ class RunEngine:
         for trozo in self._app.stream(entrada, config, stream_mode="updates"):
             for nodo, salida in trozo.items():
                 if nodo == "__interrupt__":
-                    self._store.append_event(
-                        run_id, EventKind.RUN_AWAITING_APPROVAL, _carga_interrupcion(salida)
-                    )
+                    carga = _carga_interrupcion(salida)
+                    # F10: `run.awaiting_human` es el evento general de cualquier
+                    # puerta. Hasta M2 solo habia una y el nombre bastaba; ahora hay
+                    # dos (requisitos y aprobacion) y decir "awaiting_approval" al
+                    # parar en la de requisitos seria falso.
+                    self._store.append_event(run_id, EventKind.RUN_AWAITING_HUMAN, carga)
+                    # Compatibilidad: el frontend actual solo conoce la puerta de
+                    # aprobacion y escucha este nombre. Se emite **solo** cuando la
+                    # puerta pendiente es esa, no en la de requisitos, para no
+                    # mentirle. Se retira cuando el frontend se reescriba.
+                    if _puerta_pendiente(self._app, config) == "approval_gate":
+                        self._store.append_event(run_id, EventKind.RUN_AWAITING_APPROVAL, carga)
                     continue
                 self._store.append_event(run_id, EventKind.RUN_STEP, {"node": nodo})
+                # F10: hito nombrado del nodo, ademas del generico `run.step`. El
+                # nombre del nodo pasa de ser un dato a ser un tipo, que es lo que
+                # permite un `switch` exhaustivo en el cliente.
+                hito = EVENTO_POR_NODO.get(nodo)
+                if hito is not None:
+                    self._store.append_event(run_id, hito, {"node": nodo})
                 # Se sincroniza el indice en cada paso para que `GET /runs/{id}`
                 # refleje el avance mientras la ejecucion sigue en curso.
                 self._store.sync(self._estado_actual(config, run_id))
@@ -241,6 +330,27 @@ class RunEngine:
                 run_id,
                 EventKind.RUN_ERROR,
                 {"error_class": error.error_class, "agent": error.agent, "message": error.message},
+            )
+        # F10: resultado explicito. Se emite **antes** de `run.done` a proposito:
+        # `run.done` es el evento con el que el flujo SSE cierra, asi que cualquier
+        # cosa que se escriba despues puede perderse si cae en el lote siguiente.
+        #
+        # **Una espera humana no es un resultado.** `_persistir` se ejecuta tambien
+        # cuando el grafo se detiene en una puerta, y marcar eso como `run.failed`
+        # seria decirle al cliente que algo salio mal justo cuando el sistema esta
+        # haciendo lo que debe: pedir una decision. Solo los estados terminales
+        # tienen resultado.
+        if estado.status is RunStatus.COMPLETED:
+            resultado: EventKind | None = EventKind.RUN_COMPLETED
+        elif estado.status.is_terminal:
+            resultado = EventKind.RUN_FAILED
+        else:
+            resultado = None
+        if resultado is not None:
+            self._store.append_event(
+                run_id,
+                resultado,
+                {"status": estado.status.value, "error_count": len(estado.errors)},
             )
         self._store.append_event(run_id, EventKind.RUN_DONE, {"status": estado.status.value})
         return estado
@@ -324,6 +434,25 @@ class RunEngine:
         datos["next_step"] = None
         datos["updated_at"] = _ahora()
         return RunState.model_validate(datos)
+
+
+def _puerta_pendiente(app, config) -> str | None:
+    """Nombre del nodo que tiene la ejecucion detenida, o `None` si no espera.
+
+    `Snapshot.next` es la tupla de nodos que LangGraph ejecutara a continuacion;
+    con la ejecucion interrumpida es el nodo que interrumpio, que es lo que permite
+    distinguir **que** puerta humana esta esperando.
+
+    Se captura cualquier excepcion porque esto es **diagnostico**: se usa para
+    decidir que evento emitir, y un fallo al leerlo no puede tumbar una ejecucion
+    que por lo demas va bien. Si no se puede saber, se devuelve `None` y el evento
+    general `run.awaiting_human` ya se ha emitido de todos modos.
+    """
+    try:
+        siguiente = app.get_state(config).next
+    except Exception:  # noqa: BLE001 - diagnostico, nunca debe propagar
+        return None
+    return siguiente[0] if siguiente else None
 
 
 def _carga_interrupcion(salida) -> dict:
