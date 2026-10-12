@@ -12,78 +12,73 @@ la ejecución de forma trazable y entrega un resultado revisado con evidencia.
 
 ## Estado del proyecto
 
-**Fases M0 (diseño), M1 (esqueleto ejecutable), F1 (reproducibilidad + hardening
-pre-M2) y F2 (Model Gateway) completadas.**
+**14 fases completadas y verificadas: `M0`, `M1`, `F1`–`F14`.**
 
-> **Documentación.** El **estado real verificado** está en
-> [`docs/auditoria-2026-10-06/`](docs/auditoria-2026-10-06/) (derivado de la
-> auditoría técnica del 2026-10-06) y el **diseño** en `docs/01..06`.
-> Índice y jerarquía de evidencia: [`docs/README.md`](docs/README.md).
-> Reporte de la integración documental:
-> [`docs/BASELINE-M1-POST-DOCUMENTACION.md`](docs/BASELINE-M1-POST-DOCUMENTACION.md).
-> Acta de cierre de `F1` (reproducibilidad y seguridad pre-M2):
-> [`docs/BASELINE-PRE-M2.md`](docs/BASELINE-PRE-M2.md).
-> Model Gateway (`F2`): [`docs/MODEL-GATEWAY.md`](docs/MODEL-GATEWAY.md) y acta en
-> [`docs/BASELINE-MODEL-GATEWAY.md`](docs/BASELINE-MODEL-GATEWAY.md).
+El sistema está **funcional de extremo a extremo** en su alcance declarado:
+**prototipo local, un solo usuario, `127.0.0.1`, sin autenticación**.
 
-| Componente | Estado |
-|---|---|
-| Documento de arquitectura (diseño, M0) | ✅ `docs/01-arquitectura.md` |
-| Selección de tecnologías | ✅ `docs/02-tecnologias.md` |
-| Flujo de ejecución y plan de implementación | ✅ `docs/03-flujo-e-implementacion.md` |
-| Defensa arquitectónica | ✅ `docs/04-defensa.md` |
-| Evaluación de Graphify como capa de contexto | 🔵 propuesta `[PROP]`, **no implementada** |
-| Contrato entre frontend y backend | ✅ `docs/06-contrato-frontend-backend.md` |
-| Diagrama arquitectónico | ✅ `docs/diagrama-arquitectura.svg` / `.png` |
-| Auditoría externa y estado verificado | ✅ `docs/AUDITORIA-EXTERNA.md`, `docs/auditoria-2026-10-06/` |
-| Contratos entre componentes | ✅ `src/ai_swe/contracts/` |
-| Policy Engine y matriz de permisos | ✅ `src/ai_swe/tools/` |
-| Supuestos de M1 verificados (pausa y reanudación entre procesos) | ✅ `tools/verify_m1_assumptions.py` |
-| **M1: grafo, almacén de estado, API y frontend** | ✅ `src/ai_swe/`, `frontend/` |
-| Ejecución asíncrona con progreso en vivo por SSE | ✅ `graph/worker.py`, `api/app.py` |
-| Contrato exportado para el navegador | ✅ `frontend/contracts.json` |
-| Redacción centralizada de secretos (`RNF-S3`) | ✅ `src/ai_swe/security/` |
-| Reproducibilidad (lockfile, versión de Python fijada) | ✅ `uv.lock`, `.python-version` |
-| **Model Gateway (frontera única con el modelo)** | ✅ `src/ai_swe/models/` — `F2` |
-| **ProviderAdapter + FakeAdapter + adapter OpenAI-compatible** | ✅ `models/providers/` |
-| **Structured output validado con Pydantic** | ✅ `gateway.generate_structured` |
-| Suite de pruebas (280 pruebas, mutaciones en `tools/mutation_check.py`) | ✅ `tests/` |
-| **Model Gateway conectado a LangGraph** | 🔴 **no conectado** — fase `F3`+ |
-| **Requirements Analyst** | 🔴 **no existe** — fase `F3` |
-| **Supervisor con razonamiento / `RunPlan`** | 🔴 **no existe** — fase `F4` |
-| **Coder que genere parches** | 🔴 **no existe** — produce cambio vacío |
-| **Test Runner real** | 🔴 **no existe** — registra error tipado |
-| **Reviewer semántico** | 🔴 **no existe** — determinista |
-| **MCP** | 🔴 **no implementado** — fase `F13` |
-| **Graphify / Knowledge Graph** | 🔴 **no implementado** — fase `F12` |
-| **STT real (faster-whisper)** | 🔴 **no implementado** — fase `F14` |
-| **Observabilidad completa (Langfuse, logs JSON, métricas)** | 🔴 **no implementada** — fase `F15` |
-| **Autenticación** | 🔴 **no implementada** — fase `F16` |
+> **Documentación.** Índice único: [`docs/README.md`](docs/README.md).
+> Estado verificado: [`PROJECT_SNAPSHOT.json`](PROJECT_SNAPSHOT.json) y la auditoría
+> integral de [`docs/audit/`](docs/audit/). Actas de las fases anteriores:
+> [`docs/history/`](docs/history/). Modelo: [`docs/MODEL-GATEWAY.md`](docs/MODEL-GATEWAY.md).
 
-**Qué funciona hoy:** el sistema arranca, **acepta una instrucción y devuelve el
-`run_id` en 5 ms** (antes bloqueaba 166 ms), la ejecuta en un trabajador, y publica
-el progreso **nodo a nodo** por eventos que el navegador consume en vivo. Toda
-ejecución termina en un estado terminal explícito (`MET-13 = 0`). La puerta de
-**aprobación humana** funciona de verdad: aprobar y rechazar se han verificado
-de extremo a extremo.
+| Capacidad | Estado | Dónde |
+|---|---|---|
+| Grafo de orquestación (17 nodos, 2 puertas HITL) | ✅ verificado | `src/ai_swe/graph/` |
+| API REST + SSE (12 endpoints) | ✅ verificado | `src/ai_swe/api/app.py` |
+| Persistencia (SQLite + checkpoint) | ✅ verificado | `src/ai_swe/state/` |
+| Model Gateway + 2 proveedores + presupuesto | ✅ verificado | `src/ai_swe/models/` |
+| Requirements Analyst (`F3`) | ✅ verificado | `graph/nodes.py` |
+| Supervisor / `RunPlan` (`F4`) | ✅ verificado | `graph/nodes.py` |
+| Ejecución iterativa por subtareas (`F5`) | ✅ verificado | `graph/nodes.py` |
+| Coder con parches reales (`F6`) | ✅ verificado | `graph/nodes.py` |
+| Sandbox por `git worktree` (`F7`) | ✅ verificado | `src/ai_swe/sandbox.py` |
+| Test Runner real con targets cerrados (`F8`) | ✅ verificado | `src/ai_swe/tools/runner.py` |
+| Reviewer semántico + guardas deterministas (`F9`) | ✅ verificado | `graph/nodes.py` |
+| Frontend React + TypeScript + Vite (`F11`) | ✅ verificado | `frontend/` |
+| Promoción al repositorio del usuario (`F12`) | ✅ verificado | `src/ai_swe/tools/promoter.py` |
+| STT local `faster-whisper` (`F13`) | ✅ verificado | `src/ai_swe/stt/` |
+| Evaluación single vs multi agent (`F14`) | ✅ verificado | `src/ai_swe/evaluation/` |
+| Policy Engine y matriz de permisos | ✅ verificado | `src/ai_swe/tools/` |
+| Redacción centralizada de secretos (`RNF-S3`) | ✅ verificado | `src/ai_swe/security/` |
+| Contrato exportado para el navegador | ✅ verificado (GENERATED) | `frontend/contracts.json` |
+| Diagrama arquitectónico | ✅ generado con validación geométrica | `docs/diagrama-arquitectura.svg` |
+| **Autenticación** | 🔴 no implementada (`AUD-06`) | — |
+| **MCP** | 🔴 no implementado | `src/ai_swe/mcp/` (placeholder) |
+| **Observabilidad / Langfuse** | 🔴 no implementada | `src/ai_swe/observability/` (placeholder) |
+| **Knowledge Graph / Graphify** | 🔵 propuesta `[PROP]`, no implementada | `docs/05-graphify-evaluacion.md` |
+| **TTS** | 🔴 no implementado | — |
+| **Cancelación de ejecución** (`RF-16`) | 🔴 devuelve 501 | `api/app.py` |
+| **Aislamiento de proceso del sandbox** | 🔴 no implementado — solo confina escritura | ver `docs/audit/13-SANDBOX-EXECUTION-AUDIT.md` |
 
-**Qué no funciona todavía, y se declara:** no hay modelo conectado, así que el Coder no
-produce parches y las tareas de modificación terminan en `needs_human` con un error tipado.
-No hay ejecutor de pruebas, así que **no se registra evidencia de pruebas inventada**. El
-sistema prefiere admitir que no puede hacer algo antes que simular que lo hizo.
-**Y no hay autenticación:** cualquier navegador ve todas las ejecuciones.
+**Qué funciona hoy, de verdad:** el sistema arranca, acepta una instrucción y devuelve
+el `run_id` de inmediato; la ejecuta en un trabajador; publica el progreso **nodo a
+nodo** por SSE; se detiene en **dos puertas humanas** (confirmar requisitos y aprobar
+el cambio); aplica el parche en un `git worktree` aislado; ejecuta `pytest` real
+dentro; lo revisa con evidencia; y **promueve al repositorio del usuario** el cambio
+aprobado, con verificación de integridad SHA256. Toda ejecución termina en un estado
+terminal explícito (`MET-13 = 0`).
 
-**No se atribuya al sistema nada que no pueda demostrarse.** En concreto, hoy **no
-hay** agentes inteligentes, ni MCP, ni Graphify, ni Coder funcional, ni STT real, ni
-`ModelGateway`. Lo que existe es una infraestructura de orquestación, estado,
-persistencia y verificación **sólida y probada**, esperando el componente que le da
-nombre: el modelo.
+**Suite de pruebas: 601 casos, 0 fallos, 2 saltos opt-in** (sin red ni credenciales).
 
-El plan vigente por fases es el de **17 fases `F0`–`F16`** en
-`docs/auditoria-2026-10-06/09_ROADMAP.md`. El plan histórico por hitos `M0`–`M6`
-está en `docs/03-flujo-e-implementacion.md` §3.11 y el resultado de M1 en §3.13.
-El orden es deliberado: **MCP y Graphify llegan después** de que el flujo
-funcione de extremo a extremo; la voz es un adaptador de borde y llega tarde.
+**Qué no está listo, y se declara:**
+- **No hay autenticación** (`AUD-06`). Mitigado con el binding fijo a `127.0.0.1`.
+- **El «sandbox» no aísla el proceso.** Confina la *escritura* del Coder con cuatro
+  barreras, pero ejecuta el `pytest` del repositorio del usuario con el mismo usuario
+  del sistema, sin límites de CPU/memoria/procesos ni aislamiento de red. **No debe
+  exponerse a una red.**
+- **El sistema nunca se ha ejecutado contra un modelo real** (`TD-01`): funciona con
+  los fallbacks deterministas y con el proveedor falso.
+- **Cinco ajustes declarados en `.env.example` no se aplican todavía** (allowlist de
+  repositorios, bloqueo de red y tres límites de presupuesto).
+
+El detalle completo, con evidencia, está en la auditoría integral:
+[`docs/audit/00-EXECUTIVE-AUDIT.md`](docs/audit/00-EXECUTIVE-AUDIT.md).
+
+**No se atribuya al sistema nada que no pueda demostrarse.** Lo que existe es una
+cadena funcional completa y verificada —orquestación, estado, sandbox, pruebas,
+revisión, HITL, promoción y frontend— sobre la que la evolución controlada trabaja
+fase a fase.
 
 ---
 
@@ -168,7 +163,7 @@ python tools/verify_frontend.py
 Arranca el servidor, abre la interfaz en Chrome headless y **pulsa el botón**, en
 lugar de leer el HTML. Comprueba lo que un simulador de DOM no puede: si la página
 pintó, si el navegador se quejó y si los eventos llegaron de verdad. Ver
-`docs/06-contrato-frontend-backend.md` §4.
+`docs/07-contrato-frontend-backend.md` §4.
 
 Regeneración del contrato que consume el navegador:
 
@@ -308,7 +303,7 @@ Todas las variables llevan el prefijo `AI_SWE_`. `.env.example` documenta los
    por eventos. Con un navegador como interfaz, el cliente **no puede suscribirse a
    una ejecución cuyo identificador aún no tiene**: el progreso en vivo era
    estructuralmente imposible, no lento. Ver
-   `docs/06-contrato-frontend-backend.md`.
+   `docs/07-contrato-frontend-backend.md`.
 
 ---
 

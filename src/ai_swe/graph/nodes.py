@@ -2410,15 +2410,6 @@ def _ruta_estatica_m1(state: RunState) -> str:
     return "finalize"
 
 
-def route_after_research(state: RunState) -> str:
-    intencion = state.interpretation.intent if state.interpretation else Intent.INSPECT
-    if intencion is Intent.MODIFY:
-        return "coder"
-    if intencion is Intent.QUESTION:
-        return "answer_direct"
-    return "finalize"
-
-
 def route_after_coder(state: RunState) -> str:
     """Un cambio propuesto va al sandbox; sin cambios, no hay nada que probar.
 

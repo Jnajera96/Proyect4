@@ -13,7 +13,8 @@ license = { text = "Proprietary" }
 # Dependencias justificadas en docs/02-tecnologias.md. Ninguna entra sin
 # responder las ocho preguntas de esa seccion.
 #
-# Politica de versiones (docs/auditoria-2026-10-06/12-ter_POLITICA_VERSIONES.md):
+# Politica de versiones (aplicada desde F1; el conjunto documental del que salio
+# esta archivado en docs/history/auditoria-2026-10-06/):
 #   - Rango con techo de version MAYOR cuando la API se usa de verdad.
 #     El techo evita que una actualizacion mayor rompa el proyecto sin avisar,
 #     que es el fallo mas caro de diagnosticar.
