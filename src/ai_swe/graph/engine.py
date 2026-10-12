@@ -277,22 +277,20 @@ class RunEngine:
             for nodo, salida in trozo.items():
                 if nodo == "__interrupt__":
                     carga = _carga_interrupcion(salida)
-                    # F10: `run.awaiting_human` es el evento general de cualquier
-                    # puerta. Hasta M2 solo habia una y el nombre bastaba; ahora hay
-                    # dos (requisitos y aprobacion) y decir "awaiting_approval" al
-                    # parar en la de requisitos seria falso.
+                    # `run.awaiting_human` es el evento general de cualquier puerta.
+                    # Hasta M2 solo habia una y el nombre bastaba; con dos (requisitos
+                    # y aprobacion) decir "awaiting_approval" al parar en la de
+                    # requisitos seria falso. **Que** puerta espera se lee del estado
+                    # (`RunStatus`) o de `next_step`, no del nombre del evento.
                     self._store.append_event(run_id, EventKind.RUN_AWAITING_HUMAN, carga)
-                    # Compatibilidad: el frontend actual solo conoce la puerta de
-                    # aprobacion y escucha este nombre. Se emite **solo** cuando la
-                    # puerta pendiente es esa, no en la de requisitos, para no
-                    # mentirle. Se retira cuando el frontend se reescriba.
-                    if _puerta_pendiente(self._app, config) == "approval_gate":
-                        self._store.append_event(run_id, EventKind.RUN_AWAITING_APPROVAL, carga)
                     continue
-                self._store.append_event(run_id, EventKind.RUN_STEP, {"node": nodo})
-                # F10: hito nombrado del nodo, ademas del generico `run.step`. El
-                # nombre del nodo pasa de ser un dato a ser un tipo, que es lo que
-                # permite un `switch` exhaustivo en el cliente.
+                # F11 (AUD-11): `run.step` **se retiro**. El nombre del nodo deja de
+                # viajar como dato dentro de `run.step` y pasa a ser un **tipo** de
+                # evento (`requirements.completed`, `plan.completed`, ...), que es lo
+                # que permite al cliente un `switch` exhaustivo. Un nodo sin hito
+                # nombrado (p. ej. `research`) no emite nada: su avance queda
+                # registrado en el punto de control y en `GET /runs/{id}`, que es
+                # donde el cliente lee el estado.
                 hito = EVENTO_POR_NODO.get(nodo)
                 if hito is not None:
                     self._store.append_event(run_id, hito, {"node": nodo})
@@ -312,25 +310,20 @@ class RunEngine:
         estado = self._aplicar_red_de_seguridad(estado)
 
         self._store.sync(estado)
-        self._store.append_event(
-            run_id,
-            EventKind.RUN_STATUS,
-            {
-                "status": estado.status.value,
-                "next_step": estado.next_step,
-                "error_count": len(estado.errors),
-            },
-        )
-        if estado.final_report is not None:
-            self._store.append_event(
-                run_id, EventKind.RUN_REPORT, {"summary": estado.final_report.summary}
-            )
-        for error in estado.errors:
-            self._store.append_event(
-                run_id,
-                EventKind.RUN_ERROR,
-                {"error_class": error.error_class, "agent": error.agent, "message": error.message},
-            )
+        # F11 (AUD-11): `run.status`, `run.report` y `run.error` **se retiraron**.
+        #
+        # Que los sustituye:
+        #   - `run.status` -> el estado se lee de `GET /runs/{id}`, que es la fuente
+        #     autoritativa y no se pierde en el hueco entre lotes del flujo.
+        #   - `run.report` -> `final_report` viaja en el estado; el cliente lo lee al
+        #     llegar `run.completed`, sin un evento aparte que pueda desincronizarse.
+        #   - `run.error`  -> los errores viajan en `estado.errors` y el desenlace
+        #     terminal se anuncia con `run.failed`, que lleva el recuento.
+        #
+        # Se mantienen `run.created` y `run.started` (marcas de arranque sin
+        # sustituto canonico) y `run.done` (la senal de cierre del flujo, que no es
+        # un alias de nada).
+        #
         # F10: resultado explicito. Se emite **antes** de `run.done` a proposito:
         # `run.done` es el evento con el que el flujo SSE cierra, asi que cualquier
         # cosa que se escriba despues puede perderse si cae en el lote siguiente.
@@ -398,8 +391,14 @@ class RunEngine:
         self._app.update_state(config, nuevo.model_dump())
 
         self._store.sync(nuevo)
+        # F11 (AUD-11): se retiro `run.error`. El desenlace ya se anuncia con
+        # `run.failed` (que lleva el recuento de errores) y el error concreto viaja
+        # en `estado.errors`, que el cliente lee de `GET /runs/{id}`. Un evento de
+        # error aparte era una tercera copia de lo mismo.
         self._store.append_event(
-            run_id, EventKind.RUN_ERROR, {"error_class": error_class, "message": message}
+            run_id,
+            EventKind.RUN_FAILED,
+            {"status": RunStatus.NEEDS_HUMAN.value, "error_count": len(nuevo.errors)},
         )
         self._store.append_event(run_id, EventKind.RUN_DONE, {"status": RunStatus.NEEDS_HUMAN.value})
         return nuevo

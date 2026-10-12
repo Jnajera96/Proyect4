@@ -65,15 +65,10 @@
       "enum": [
         "run.created",
         "run.started",
-        "run.step",
-        "run.status",
-        "run.report",
-        "run.error",
         "run.done",
         "run.completed",
         "run.failed",
         "run.awaiting_human",
-        "run.awaiting_approval",
         "requirements.completed",
         "plan.completed",
         "coder.completed",
@@ -202,19 +197,14 @@
     "RunEvent": {
       "$defs": {
         "EventKind": {
-          "description": "Tipos de evento del flujo de progreso.\n\nSon un conjunto **cerrado**: el frontend puede hacer un `switch` exhaustivo y\nun tipo nuevo no se cuela sin que alguien lo note.\n\n**F10 anade los eventos de ciclo de vida por nodo.** Hasta F9 el progreso se\ncontaba con `run.step`, que lleva `{\"node\": \"<nodo>\"}`: suficiente para pintar\nuna lista, insuficiente para un `switch` exhaustivo, porque el nombre del nodo\nviaja como **dato** y no como **tipo**. Ahora cada hito tiene su propio tipo.\n\n**Los eventos antiguos se conservan.** `run.created`, `run.step`, `run.status`,\n`run.awaiting_approval`, `run.report`, `run.error` y `run.done` siguen\nemitiendose porque el frontend actual escucha varios de ellos (cierra el flujo\ncon `run.done`). Retirarlos ahora romperia una interfaz que **no** forma parte\nde esta fase. Quedan marcados como heredados y se retiraran cuando el frontend\nse reescriba, en la fase que lo autorice.",
+          "description": "Tipos de evento del flujo de progreso.\n\nSon un conjunto **cerrado**: el frontend puede hacer un `switch` exhaustivo y\nun tipo nuevo no se cuela sin que alguien lo note.\n\n**F10 anadio los eventos de ciclo de vida por nodo.** Hasta F9 el progreso se\ncontaba con `run.step`, que lleva `{\"node\": \"<nodo>\"}`: suficiente para pintar\nuna lista, insuficiente para un `switch` exhaustivo, porque el nombre del nodo\nviajaba como **dato** y no como **tipo**.\n\n**F11 retiro los nombres heredados (AUD-11).** Se fueron `run.step`,\n`run.status`, `run.report`, `run.error` y `run.awaiting_approval`, cada uno con\nun sustituto canonico:\n\n  - `run.step` -> los hitos por nodo (`requirements.completed`, ...);\n  - `run.status` -> `GET /runs/{id}`, que es la vista autoritativa del estado;\n  - `run.report` -> `final_report`, que viaja en el estado;\n  - `run.error` -> `estado.errors` + el desenlace `run.failed`;\n  - `run.awaiting_approval` -> `run.awaiting_human`, que cubre las dos puertas.\n\n**Se conservan** `run.created` y `run.started` (marcas de arranque sin\nsustituto canonico) y `run.done`, que **no es un alias** de nada: es la senal\ncon la que el flujo SSE se cierra en cada pausa y reanudacion.",
           "enum": [
             "run.created",
             "run.started",
-            "run.step",
-            "run.status",
-            "run.report",
-            "run.error",
             "run.done",
             "run.completed",
             "run.failed",
             "run.awaiting_human",
-            "run.awaiting_approval",
             "requirements.completed",
             "plan.completed",
             "coder.completed",

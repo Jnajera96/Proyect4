@@ -2,7 +2,7 @@
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-08",
   "baseline_updated": "2026-10-06",
-  "phase": "M3 IN PROGRESS — F10 (FastAPI REST surface + SSE event streaming) implemented and verified. M2 is complete at 15/15. Next: F11 (React frontend dashboard), awaiting explicit authorization.",
+  "phase": "M3 IN PROGRESS — F11 (React + TypeScript + Vite dashboard over the F10 API: live SSE streaming and both HITL gates) implemented and verified. AUD-11 (legacy SSE event names) and AUD-13 (stale phase label) are resolved in the same phase. M2 is complete at 15/15. Next: F12 (HITL code promotion from the sandbox to the user's repository).",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -87,14 +87,19 @@
     "f10_typed_error_mapping": true,
     "f10_events_redacted": true,
     "f10_loopback_binding": true,
+    "f11_react_vite_frontend": true,
+    "f11_live_sse_consumption": true,
+    "f11_dual_hitl_gates": true,
+    "f11_legacy_events_retired": true,
+    "f11_frontend_served_from_build": true,
     "tests_passing": 523,
     "tests_skipped": "2/523 (test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace needs a symlink privilege Windows does not grant -WinError 1314, environmental; test_model_gateway_real::test_llamada_real_controlada requires AI_SWE_RUN_REAL_PROVIDER_TESTS=1 + a provider key by design). Neither is a code defect and neither is a network/credential dependency of the offline suite.",
     "tests_require_network": false,
     "tests_require_credentials": false,
-    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block; 13/13 (F10, this run: baseline green, every mutant caught, tree restored green)",
+    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block; 12/13 (F10, re-run during F11 with the baseline green: 12 caught). The 13th, `the resumption not reserving the right (two concurrent requests both winning)`, did **not** fail under mutation in this run, having passed at F10 closure. Its regression test drives two threads through a barrier, so whether it observes the race is timing-dependent: the guard is weaker than the count suggests. Recorded rather than papered over; see the mutations block.",
     "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
     "m1_assumptions": "5/5",
-    "frontend_browser_checks": "11/11",
+    "frontend_browser_checks": "15/15",
     "f7_fourth_barrier_has_its_own_isolated_test": true,
     "f7_teardown_removes_ghost_worktrees": true,
     "f7_creation_leaves_no_branch_in_user_repo": true,
@@ -370,9 +375,9 @@
       "observations": "Returns 501 by design."
     },
     {
-      "component": "Frontend (frontend/index.html, contracts.json)",
-      "status": "PARTIAL",
-      "observations": "Served and driven by the API; verified by tools/verify_frontend.py (a SEPARATE harness, not the pytest suite). No jsdom/CSS coverage — declared debt."
+      "component": "Frontend (frontend/ — React + TypeScript + Vite, contracts.json)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "React 18 + TypeScript + Vite SPA built to frontend/dist and served by the API at /app (StaticFiles html=True; the SOURCE is not served — frontend/index.html points at /src/main.tsx and only works under the dev server). Consumes only the canonical F10 event set over EventSource, supports both HITL gates, and reads the authoritative state from GET /runs/{id} (with a 900 ms polling fallback, because a run can change state — e.g. leaving the requirements gate — without emitting an event). `npm run typecheck` and `npm run build` are clean. Verified in a real rendering engine by tools/verify_frontend.py (15/15), which drives the BUILT app. Still a separate harness, not part of the pytest suite (AUD-07); no jsdom/CSS coverage — declared debt."
     },
     {
       "component": "STT — FakeAdapter (stt/base.py)",
@@ -507,9 +512,10 @@
     "vcs": "git",
     "branch": "main",
     "remote_configured": false,
-    "last_commit": "feat(f10): implement FastAPI REST endpoints and SSE event streaming (HEAD when this snapshot was written; the hash is not recorded because this file is part of that commit)",
+    "last_commit": "feat(f11): implement React frontend dashboard with live SSE streaming and dual HITL gates (HEAD when this snapshot was written; the hash is not recorded because this file is part of that commit)",
     "commit_history": [
-      "(this commit) feat(f10): implement FastAPI REST endpoints and SSE event streaming",
+      "(this commit) feat(f11): implement React frontend dashboard with live SSE streaming and dual HITL gates",
+      "019af70 feat(f10): implement FastAPI REST endpoints and SSE event streaming",
       "72613d9 feat(m2): implement requirements confirmation gate and achieve 100% M2 DoD",
       "2e52658 feat(f9): implement model-driven reviewer with deterministic test enforcement and cycle limits",
       "4c46193 feat(f8): implement real test runner and wire sandbox into the graph",
@@ -525,10 +531,10 @@
       "11a13cb M1 VERIFIED BASELINE"
     ],
     "uncommitted_work": [],
-    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = 72613d9, F10 = the current commit (see git log)."
+    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = 72613d9, F10 = 019af70, F11 = the current commit (see git log)."
   },
   "tests_executed": {
-    "command": "python -m pytest -p no:cacheprovider --junitxml=_f10_final_suite.xml -q",
+    "command": "python -m pytest -q --ignore=tests/test_f12_promotion.py (F11 tree, 2026-10-11)",
     "environment": "local, offline, no credentials, no network",
     "tests": 523,
     "failures": 0,
@@ -547,7 +553,7 @@
       "f8": "9/9 (4 blind spots found on the first pass — shell=True at the call site, PYTHONPATH, the `fallos` branch, the coder router — and closed with real tests; the `fallos` blind spot uncovered a real defect: a raw OSError escaped Sandbox.escribir and reached LangGraph as a traceback)",
       "f9": "8/8 — the test veto (REGLA 1), the cycle limit (REGLA 2), the guard order, the declared fallback (REGLA 3), the reviewer model wiring, the cycle accounting, the ACCEPT route and the test evidence in the context",
       "m2": "7/7 — the requirements gate being skipped, the awaiting state not being marked, the confirmation not being recorded, a rejection planning anyway, human modifications being discarded, an unrecognised resumption being treated as approved, and the MET-13 safety net confusing a wait with a hang",
-      "f10": "13/13 — events stored unredacted, a human pause emitted as run.failed, the outcome event not emitted, the human wait announced with the wrong gate's event, the per-node milestones not emitted, the engine stringifying a corrections resumption, project registration skipping repo validation, the project path not overriding the request's, SandboxError mapped to 500 instead of 422, the server listening on all interfaces, the resumption not reserving the right (two concurrent requests both winning), `confirm-requirements` accepting the approval gate, and `approve` accepting the requirements gate. The last three were added this phase; a `shutdown` mutation that had been counted earlier was retracted after proving it attacked a redundant line (the original `shutdown(wait=True)` already waits), and the underlying regression test was removed with it."
+      "f10": "13/13 — events stored unredacted, a human pause emitted as run.failed, the outcome event not emitted, the human wait announced with the wrong gate's event, the per-node milestones not emitted, the engine stringifying a corrections resumption, project registration skipping repo validation, the project path not overriding the request's, SandboxError mapped to 500 instead of 422, the server listening on all interfaces, the resumption not reserving the right (two concurrent requests both winning), `confirm-requirements` accepting the approval gate, and `approve` accepting the requirements gate. The last three were added this phase; a `shutdown` mutation that had been counted earlier was retracted after proving it attacked a redundant line (the original `shutdown(wait=True)` already waits), and the underlying regression test was removed with it. RE-RUN DURING F11 (after AUD-11 retired `run.awaiting_approval`): 12/13 — the same run reported `la reanudacion no reserva el derecho` as NOT caught. That mutant removes the claim that makes `reclamar_reanudacion` atomic; the test that should catch it (`test_dos_confirmaciones_concurrentes_solo_reanudan_una_vez`) drives two threads through a barrier and asserts `sorted(codigos) == [200, 409]`, so it only observes the race when the worker thread has not yet finished the first resume. The verdict is therefore timing-dependent, and the guard is weaker than a 13/13 count implies. The mutant was retargeted in the same phase for AUD-11 (`run.awaiting_approval` no longer exists, so the old pattern could not apply)."
     }
   },
   "blockers_and_debt": [
@@ -632,9 +638,9 @@
     {
       "id": "AUD-11",
       "title": "Legacy SSE event names kept for the current frontend",
-      "status": "OPEN — deliberate, tracked",
-      "detail": "F10 added the canonical event set (`requirements.completed`, `plan.completed`, `coder.completed`, `tests.completed`, `run.awaiting_human`, `run.completed`, `run.failed`) but kept `run.created`, `run.step`, `run.status`, `run.awaiting_approval`, `run.report`, `run.error` and `run.done` emitting, because `frontend/index.html` listens for `run.done`, `run.status`, `run.awaiting_approval` and `run.error`, and closes its stream on `run.done`. Retiring them now would break an interface that is not part of F10.",
-      "how_to_close": "Remove the legacy names in the phase that rewrites the frontend (F11), updating `index.html`, `_verify.html` and `tools/verify_frontend.py` in the same commit."
+      "status": "RESOLVED (2026-10-11, F11)",
+      "detail": "F10 added the canonical event set (`requirements.completed`, `plan.completed`, `coder.completed`, `tests.completed`, `run.awaiting_human`, `run.completed`, `run.failed`) but kept `run.created`, `run.step`, `run.status`, `run.awaiting_approval`, `run.report`, `run.error` and `run.done` emitting, because `frontend/index.html` listened for the legacy names. Retiring them would have broken an interface that was not part of F10.",
+      "how_to_close": "F11 retired `run.step`, `run.status`, `run.report`, `run.error` and `run.awaiting_approval` at the source (`contracts/api.py`), in the engine (`_ejecutar`, `_persistir`, `abortar`), in the orphan-run recovery path (`state/store.py`) and in the mutation harness, and regenerated `frontend/contracts.json`. `run.created`, `run.started` and `run.done` are kept -they have no canonical substitute, and `run.done` is the signal that closes each SSE leg, not an alias of anything. The new frontend consumes only the canonical set, and `tools/verify_frontend.py` asserts that no legacy name is consumed."
     },
     {
       "id": "AUD-12",
@@ -646,16 +652,16 @@
     {
       "id": "AUD-13",
       "title": "Stale phase label in the prototype frontend",
-      "status": "OPEN — tracked, deliberately untouched",
-      "detail": "`/health` reported `fase: \"M1\"` until F10, when it was corrected to \"M3\" (it was simply wrong). Two static strings in `frontend/index.html` still say \"fase M1\": line 69 (the descriptive paragraph) and line 85 (the STT note). The health **chip** is rendered from the API, so it already shows the correct phase -the page is therefore internally inconsistent. `tools/verify_frontend.py` was updated in F10 to assert that the chip reflects `/health` rather than pinning a milestone string, so the harness stays valid.",
-      "how_to_close": "Fix the two labels in the phase that rewrites the frontend (F11). The frontend was explicitly out of scope for F10, so they were left rather than edited silently."
+      "status": "RESOLVED (2026-10-11, F11)",
+      "detail": "`/health` reported `fase: \"M1\"` until F10, when it was corrected to \"M3\" (it was simply wrong). Two static strings in `frontend/index.html` still said \"fase M1\" (the descriptive paragraph and the STT note). The health **chip** is rendered from the API, so it already showed the correct phase -the page was therefore internally inconsistent.",
+      "how_to_close": "F11 replaced `frontend/index.html` entirely: it is now the Vite source entry point and carries no phase string at all -the phase is read from `/health` and rendered by React. `tools/verify_frontend.py` asserts that no stale milestone label survives in the built page (`MENCIONA_M1=false`)."
     }
   ],
   "next_step_proposed": {
-    "phase": "F11 — Frontend Dashboard (React)",
-    "why": "The REST surface and the event stream are in place and verified. What is missing for a usable system is the interface that drives them: the two human gates and the live progress timeline.",
-    "scope": "React dashboard over the F10 API: create a project, launch a run, answer the requirements gate, watch the per-node milestones live, and approve or reject the change. In the same phase, retire the legacy SSE event names (AUD-11) and fold the frontend checks into the standard suite (AUD-07).",
-    "prerequisite": "F10 is committed; tree clean.",
+    "phase": "F12 — HITL code promotion from the sandbox to the user's repository",
+    "why": "The system can now be driven from a browser and stops at both human gates, but approving still does not write anything to the user's repository: the approved patch stays in the worktree. The last mile is missing.",
+    "scope": "Apply the approved unified diff from the sandbox worktree to the user's registered repository, only on an explicit ACCEPT at the approval gate; route REQUEST_CHANGES back to the Coder with the human's comments; cancel on REJECT without touching the repository; and tear the worktree down when the run finalises.",
+    "prerequisite": "F11 is committed; tree clean.",
     "awaiting": "explicit authorization from the Arquitecto — NOT to be started without it"
   }
 }

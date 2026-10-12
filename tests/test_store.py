@@ -267,7 +267,17 @@ def test_el_registro_de_eventos_es_monotono(tmp_path) -> None:
         eventos = store.events(final.run_id)
         assert [e.seq for e in eventos] == sorted(e.seq for e in eventos)
         assert eventos[0].kind == "run.created"
-        assert any(e.kind == "run.status" for e in eventos)
+        # `run.status` se retiro en F11 (AUD-11). Su sustituto para "el flujo dice
+        # en que estado quedo" es `run.done`, que se emite en **cada** cierre de
+        # tramo -tambien cuando la ejecucion se pausa en una puerta humana- y lleva
+        # el estado en su carga.
+        #
+        # No se comprueba `run.completed`: esta ejecucion se detiene en la puerta de
+        # requisitos y **no es terminal**, asi que ese evento no debe existir aqui.
+        # Afirmarlo era el error de la primera version de esta prueba.
+        cierres = [e for e in eventos if e.kind == "run.done"]
+        assert cierres, "el flujo no se cerro con run.done"
+        assert cierres[-1].data["status"] == final.status.value
 
         # `after_seq` filtra de verdad, no devuelve todo.
         assert store.events(final.run_id, after_seq=eventos[0].seq) == eventos[1:]

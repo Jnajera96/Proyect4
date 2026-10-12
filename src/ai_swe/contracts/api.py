@@ -28,35 +28,37 @@ class EventKind(StrEnum):
     Son un conjunto **cerrado**: el frontend puede hacer un `switch` exhaustivo y
     un tipo nuevo no se cuela sin que alguien lo note.
 
-    **F10 anade los eventos de ciclo de vida por nodo.** Hasta F9 el progreso se
+    **F10 anadio los eventos de ciclo de vida por nodo.** Hasta F9 el progreso se
     contaba con `run.step`, que lleva `{"node": "<nodo>"}`: suficiente para pintar
     una lista, insuficiente para un `switch` exhaustivo, porque el nombre del nodo
-    viaja como **dato** y no como **tipo**. Ahora cada hito tiene su propio tipo.
+    viajaba como **dato** y no como **tipo**.
 
-    **Los eventos antiguos se conservan.** `run.created`, `run.step`, `run.status`,
-    `run.awaiting_approval`, `run.report`, `run.error` y `run.done` siguen
-    emitiendose porque el frontend actual escucha varios de ellos (cierra el flujo
-    con `run.done`). Retirarlos ahora romperia una interfaz que **no** forma parte
-    de esta fase. Quedan marcados como heredados y se retiraran cuando el frontend
-    se reescriba, en la fase que lo autorice.
+    **F11 retiro los nombres heredados (AUD-11).** Se fueron `run.step`,
+    `run.status`, `run.report`, `run.error` y `run.awaiting_approval`, cada uno con
+    un sustituto canonico:
+
+      - `run.step` -> los hitos por nodo (`requirements.completed`, ...);
+      - `run.status` -> `GET /runs/{id}`, que es la vista autoritativa del estado;
+      - `run.report` -> `final_report`, que viaja en el estado;
+      - `run.error` -> `estado.errors` + el desenlace `run.failed`;
+      - `run.awaiting_approval` -> `run.awaiting_human`, que cubre las dos puertas.
+
+    **Se conservan** `run.created` y `run.started` (marcas de arranque sin
+    sustituto canonico) y `run.done`, que **no es un alias** de nada: es la senal
+    con la que el flujo SSE se cierra en cada pausa y reanudacion.
     """
 
     # --- ciclo de vida de la ejecucion ---------------------------------------
-    RUN_CREATED = "run.created"  # heredado
+    RUN_CREATED = "run.created"
     RUN_STARTED = "run.started"
-    RUN_STEP = "run.step"  # heredado: el nodo viaja en `data.node`
-    RUN_STATUS = "run.status"  # heredado
-    RUN_REPORT = "run.report"  # heredado
-    RUN_ERROR = "run.error"  # heredado: un error, no el final
-    RUN_DONE = "run.done"  # heredado: el frontend cierra el flujo con el
-    RUN_COMPLETED = "run.completed"  # F10: final feliz, explicito
-    RUN_FAILED = "run.failed"  # F10: final no feliz, explicito
+    RUN_DONE = "run.done"  # cierra el flujo SSE (no es un alias)
+    RUN_COMPLETED = "run.completed"  # final feliz, explicito
+    RUN_FAILED = "run.failed"  # final no feliz, explicito
 
     # --- puertas humanas ------------------------------------------------------
-    RUN_AWAITING_HUMAN = "run.awaiting_human"  # F10: cualquier puerta
-    RUN_AWAITING_APPROVAL = "run.awaiting_approval"  # heredado: solo la de aprobacion
+    RUN_AWAITING_HUMAN = "run.awaiting_human"  # cualquier puerta
 
-    # --- hitos por nodo (F10) -------------------------------------------------
+    # --- hitos por nodo -------------------------------------------------------
     REQUIREMENTS_COMPLETED = "requirements.completed"
     PLAN_COMPLETED = "plan.completed"
     CODER_COMPLETED = "coder.completed"

@@ -83,6 +83,10 @@ def _configurar_nivel_de_log(nivel: str) -> None:
         log.warning("nivel de log invalido en configuracion: %r", nivel)
 FRONTEND_DIR = Path(__file__).resolve().parents[3] / "frontend"
 
+#: Directorio **construido** que se sirve en `/app`. Ver el montaje al final de
+#: `crear_app`: se sirve lo compilado, no el fuente.
+FRONTEND_DIST = FRONTEND_DIR / "dist"
+
 
 class RunRequest(BaseModel):
     """Peticion de creacion de una ejecucion. Solo texto confirmado."""
@@ -512,8 +516,26 @@ def crear_app(
             ),
         )
 
-    # -------------------------------------------------------------- frontend
-    if FRONTEND_DIR.is_dir():
-        app.mount("/app", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    # ------------------------------------------------------------------ frontend
+    #
+    # **Se sirve el resultado de la construccion, no el codigo fuente.** Hasta F10
+    # el frontend era un `index.html` con un `<script>` en linea y se servia tal
+    # cual. Desde F11 es una aplicacion React que se compila con Vite: el
+    # `index.html` de la raiz es el punto de entrada del **fuente** (apunta a
+    # `/src/main.tsx`, que solo existe en el servidor de desarrollo) y no se puede
+    # servir. Lo que se sirve es `frontend/dist`, que produce `npm run build`.
+    #
+    # Si `dist/` no existe se avisa y **no se monta**: montar el directorio raiz
+    # serviria un `index.html` que el navegador no puede ejecutar, y el fallo
+    # apareceria como una pagina en blanco sin explicacion. Es mejor no montar nada
+    # y que el 404 diga que falta la construccion.
+    if FRONTEND_DIST.is_dir():
+        app.mount("/app", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="frontend")
+    else:
+        log.warning(
+            "no se encontro la construccion del frontend en %s; "
+            "ejecuta `npm install && npm run build` en frontend/",
+            FRONTEND_DIST,
+        )
 
     return app

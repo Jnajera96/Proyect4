@@ -1,0 +1,699 @@
+/*
+ * Sistema de diseno. Inspirado en los principios de Apple: claro y minimalista,
+ * jerarquia tipografica marcada, bordes suaves, sombras discretas y una sensacion
+ * de acabado cuidado.
+ *
+ * **Soporta tema claro y oscuro por `prefers-color-scheme`**, y las variables se
+ * definen una sola vez. Toda la interfaz toma sus colores de aqui; no hay
+ * literales sueltos en los componentes.
+ */
+
+:root {
+  /* Superficies */
+  --fondo: #f5f5f7;
+  --superficie: #ffffff;
+  --superficie-2: #fafafa;
+  --borde: #e5e5ea;
+  --borde-fuerte: #d1d1d6;
+
+  /* Texto */
+  --texto: #1d1d1f;
+  --texto-suave: #6e6e73;
+  --texto-tenue: #86868b;
+
+  /* Acentos */
+  --acento: #0071e3;
+  --acento-suave: #e8f1fd;
+  --ok: #1a7f37;
+  --ok-suave: #e6f4ea;
+  --aviso: #9a6700;
+  --aviso-suave: #fff8e5;
+  --error: #bf1d28;
+  --error-suave: #fdecec;
+  --violeta: #6e56cf;
+  --violeta-suave: #f0ecfb;
+
+  /* Codigo y diffs */
+  --dif-add-fondo: #e7f6ec;
+  --dif-add-texto: #10531f;
+  --dif-del-fondo: #fdeaea;
+  --dif-del-texto: #7a1119;
+  --dif-meta: #8a8a8e;
+
+  --radio: 14px;
+  --radio-sm: 9px;
+  --radio-xs: 6px;
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.05);
+  --sombra-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #000000;
+    --superficie: #1c1c1e;
+    --superficie-2: #2c2c2e;
+    --borde: #38383a;
+    --borde-fuerte: #48484a;
+
+    --texto: #f5f5f7;
+    --texto-suave: #a1a1a6;
+    --texto-tenue: #8e8e93;
+
+    --acento: #0a84ff;
+    --acento-suave: #0a2540;
+    --ok: #30d158;
+    --ok-suave: #0d2818;
+    --aviso: #ffd60a;
+    --aviso-suave: #2b2300;
+    --error: #ff453a;
+    --error-suave: #3a1210;
+    --violeta: #bf94ff;
+    --violeta-suave: #241a3a;
+
+    --dif-add-fondo: #0d2a17;
+    --dif-add-texto: #7ee2a0;
+    --dif-del-fondo: #34110f;
+    --dif-del-texto: #ff9d94;
+    --dif-meta: #8e8e93;
+
+    --sombra: 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 20px rgba(0, 0, 0, 0.4);
+    --sombra-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ------------------------------------------------------------------ Layout */
+
+.app {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.titulo {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.subtitulo {
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  margin: 0 0 1.75rem;
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 60rem) {
+  .rejilla-doble {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* ----------------------------------------------------------------- Paneles */
+
+.panel {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.panel-titulo {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.25rem;
+}
+
+.panel-nota {
+  color: var(--texto-suave);
+  font-size: 0.85rem;
+  margin: 0 0 1rem;
+}
+
+.seccion-titulo {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--texto-tenue);
+  margin: 1.5rem 0 0.6rem;
+}
+
+/* ------------------------------------------------------------------ Campos */
+
+label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+
+textarea,
+input[type="text"] {
+  width: 100%;
+  font: inherit;
+  color: var(--texto);
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  padding: 0.6rem 0.75rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+textarea:focus,
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--acento);
+  box-shadow: 0 0 0 3px var(--acento-suave);
+}
+
+/* ----------------------------------------------------------------- Botones */
+
+button {
+  font: inherit;
+  font-weight: 500;
+  color: var(--texto);
+  background: var(--superficie-2);
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 980px;
+  padding: 0.5rem 1.1rem;
+  cursor: pointer;
+  transition: transform 0.06s ease, background 0.15s ease, border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--acento);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.primario {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: #fff;
+}
+
+button.peligro {
+  background: transparent;
+  border-color: var(--error);
+  color: var(--error);
+}
+
+button.peligro:hover:not(:disabled) {
+  background: var(--error-suave);
+}
+
+button.sutil {
+  background: transparent;
+  border-color: transparent;
+  color: var(--acento);
+  padding: 0.35rem 0.6rem;
+}
+
+button.sutil:hover:not(:disabled) {
+  background: var(--acento-suave);
+}
+
+.fila {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.fila-sep {
+  margin-top: 0.85rem;
+}
+
+.crecer {
+  flex: 1;
+}
+
+/* ------------------------------------------------------------------- Chips */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.2rem 0.6rem;
+  border-radius: 980px;
+  border: 1px solid var(--borde-fuerte);
+  color: var(--texto-suave);
+  background: var(--superficie-2);
+  white-space: nowrap;
+}
+
+.chip.ok {
+  color: var(--ok);
+  border-color: transparent;
+  background: var(--ok-suave);
+}
+
+.chip.aviso {
+  color: var(--aviso);
+  border-color: transparent;
+  background: var(--aviso-suave);
+}
+
+.chip.error {
+  color: var(--error);
+  border-color: transparent;
+  background: var(--error-suave);
+}
+
+.chip.acento {
+  color: var(--acento);
+  border-color: transparent;
+  background: var(--acento-suave);
+}
+
+.chip.violeta {
+  color: var(--violeta);
+  border-color: transparent;
+  background: var(--violeta-suave);
+}
+
+.punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.punto.pulsa {
+  animation: pulso 1.4s ease-in-out infinite;
+}
+
+@keyframes pulso {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* -------------------------------------------------------------- Timeline */
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.timeline li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.55rem 0.25rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.timeline li:last-child {
+  border-bottom: 0;
+}
+
+.timeline .marca {
+  color: var(--texto-tenue);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+.timeline .hito {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.timeline .cuando {
+  color: var(--texto-tenue);
+  font-size: 0.78rem;
+  margin-left: auto;
+  font-family: var(--mono);
+}
+
+.icono-hito {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--acento);
+  flex: none;
+}
+
+/* --------------------------------------------------------------- Pending */
+
+.pendiente {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.25rem;
+  color: var(--texto-tenue);
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.pendiente:last-child {
+  border-bottom: 0;
+}
+
+.pendiente .punto {
+  background: var(--borde-fuerte);
+}
+
+/* ------------------------------------------------------------------ Listas */
+
+dl.datos {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 1rem;
+  font-size: 0.88rem;
+}
+
+dl.datos dt {
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+
+dl.datos dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+ul.limpia {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  font-size: 0.88rem;
+}
+
+ul.limpia li {
+  padding: 0.2rem 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+ul.limpia li:last-child {
+  border-bottom: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+th {
+  color: var(--texto-tenue);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+tr.clicable:hover {
+  background: var(--superficie-2);
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------ Aviso */
+
+.aviso {
+  border-left: 3px solid var(--aviso);
+  background: var(--aviso-suave);
+  padding: 0.6rem 0.85rem;
+  border-radius: 0 var(--radio-sm) var(--radio-sm) 0;
+  font-size: 0.85rem;
+  color: var(--texto);
+  margin-top: 0.85rem;
+}
+
+/* ------------------------------------------------------------------ Diffs */
+
+.diff {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  overflow: auto;
+  max-height: 26rem;
+  background: var(--superficie-2);
+  margin: 0;
+}
+
+.diff div {
+  padding: 0 0.65rem;
+  white-space: pre;
+}
+
+.diff .add {
+  background: var(--dif-add-fondo);
+  color: var(--dif-add-texto);
+}
+
+.diff .del {
+  background: var(--dif-del-fondo);
+  color: var(--dif-del-texto);
+}
+
+.diff .meta {
+  color: var(--dif-meta);
+}
+
+.diff .ctx {
+  color: var(--texto-suave);
+}
+
+.fichero-diff {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+
+.fichero-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--superficie-2);
+  border-bottom: 1px solid var(--borde);
+  font-size: 0.85rem;
+}
+
+.fichero-cabecera .ruta {
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+
+.fichero-diff .diff {
+  border: 0;
+  border-radius: 0;
+  max-height: 20rem;
+}
+
+.mas {
+  color: var(--ok);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.menos {
+  color: var(--error);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+/* ------------------------------------------------------------------ Tests */
+
+.test {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--superficie-2);
+}
+
+.test-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.test .comando {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+  overflow-wrap: anywhere;
+}
+
+pre.salida {
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-xs);
+  padding: 0.5rem 0.65rem;
+  margin: 0.5rem 0 0;
+  max-height: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------ Verdict */
+
+.veredicto {
+  border-radius: var(--radio-sm);
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--borde);
+  background: var(--superficie-2);
+  margin-bottom: 0.75rem;
+}
+
+.veredicto.accept {
+  border-color: var(--ok);
+  background: var(--ok-suave);
+}
+
+.veredicto.request_changes {
+  border-color: var(--aviso);
+  background: var(--aviso-suave);
+}
+
+.veredicto.escalate {
+  border-color: var(--error);
+  background: var(--error-suave);
+}
+
+.hallazgo {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--borde);
+  font-size: 0.85rem;
+}
+
+.hallazgo:last-child {
+  border-bottom: 0;
+}
+
+.sev {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  min-width: 4.5rem;
+}
+
+.sev.info { color: var(--texto-tenue); }
+.sev.low { color: var(--texto-suave); }
+.sev.medium { color: var(--aviso); }
+.sev.high { color: var(--error); }
+.sev.critical { color: var(--error); font-weight: 800; }
+
+.ruta-hallazgo {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------------ Vacio */
+
+.vacio {
+  color: var(--texto-tenue);
+  font-size: 0.88rem;
+  padding: 1rem 0.25rem;
+}
+
+.mono {
+  font-family: var(--mono);
+}
+
+.suave {
+  color: var(--texto-suave);
+}
+
+.tenue {
+  color: var(--texto-tenue);
+  font-size: 0.82rem;
+}
+
+.oculto {
+  display: none;
+}
+
+.stack > * + * {
+  margin-top: 0.75rem;
+}

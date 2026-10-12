@@ -347,8 +347,9 @@ class RunStore:
                 self._conn.commit()
             self.append_event(
                 run_id,
-                EventKind.RUN_ERROR,
+                EventKind.RUN_FAILED,
                 {
+                    "status": RunStatus.NEEDS_HUMAN.value,
                     "error_class": "ORPHANED_RUN",
                     "message": "el proceso que ejecutaba esta ejecucion ya no existe",
                 },

@@ -521,11 +521,13 @@ def test_los_hitos_por_nodo_llegan_por_sse(cliente, repo: Path, tmp_path: Path) 
 
 
 def test_la_espera_humana_distingue_que_puerta_espera(cliente, repo: Path) -> None:
-    """`run.awaiting_human` es general; `run.awaiting_approval`, solo de su puerta.
+    """Con dos puertas, la espera se anuncia una vez y **cual** se lee del estado.
 
-    Hasta M2 habia una sola puerta y el nombre bastaba. Con dos, emitir
-    `run.awaiting_approval` al parar en la de requisitos seria falso, y el cliente
-    que solo conoce la de aprobacion mostraria la pantalla equivocada.
+    Hasta F10 habia un evento aparte para la puerta de aprobacion
+    (`run.awaiting_approval`). F11 lo retiro (AUD-11): `run.awaiting_human` es el
+    unico evento de espera, y **que** puerta espera se lee del estado
+    (`RunStatus`), que es la vista autoritativa. Esta prueba fija esa decision: la
+    espera se anuncia con el evento general y el estado dice en cual esta.
     """
     creada = cliente.post(
         "/runs", json={"instruction": "corrige f", "options": {"repo_path": str(repo)}}
@@ -543,9 +545,13 @@ def test_la_espera_humana_distingue_que_puerta_espera(cliente, repo: Path) -> No
     tipos = [nombre for nombre, _ in _leer_eventos(cliente, run_id)]
 
     assert "run.awaiting_human" in tipos
-    assert "run.awaiting_approval" not in tipos, (
-        "se emitio el evento de la puerta de aprobacion al parar en la de requisitos"
-    )
+    # El evento de la puerta concreta ya no existe: el estado es quien distingue.
+    assert "run.awaiting_approval" not in tipos
+    assert "run.step" not in tipos
+
+    # El estado dice **en cual** de las dos puertas esta.
+    estado = cliente.get(f"/runs/{run_id}").json()
+    assert estado["status"] == "awaiting_human_requirements_confirmation"
 
 
 def test_el_resultado_se_emite_antes_del_cierre_del_flujo(cliente, repo: Path) -> None:
@@ -750,7 +756,12 @@ def test_el_puerto_configurable_se_valida(monkeypatch) -> None:
 
 
 def test_los_tipos_de_evento_nuevos_estan_declarados() -> None:
-    """El contrato exportado al frontend incluye los hitos de F10."""
+    """El contrato exportado al frontend incluye los hitos de F10.
+
+    Y desde F11 (AUD-11) **ya no incluye los nombres heredados**: se retiraron al
+    reescribirse el frontend, que era la condicion para poder quitarlos. Aqui se
+    comprueba en los dos sentidos: los canonicos estan y los heredados **no**.
+    """
     from ai_swe.contracts import EVENTO_POR_NODO
 
     valores = {k.value for k in EventKind}
@@ -765,8 +776,14 @@ def test_los_tipos_de_evento_nuevos_estan_declarados() -> None:
     ):
         assert esperado in valores, f"falta el tipo de evento '{esperado}'"
 
-    # Los heredados siguen existiendo: el frontend actual los escucha.
-    for heredado in ("run.created", "run.step", "run.status", "run.awaiting_approval", "run.done"):
-        assert heredado in valores, f"se retiro un evento heredado en uso: '{heredado}'"
+    # Los heredados se retiraron en F11. Si alguno volviera, seria una regresion de
+    # AUD-11: el conjunto cerrado dejaria de serlo.
+    for retirado in ("run.step", "run.status", "run.report", "run.error",
+                     "run.awaiting_approval"):
+        assert retirado not in valores, f"volvio un evento heredado retirado: '{retirado}'"
+
+    # Estos se conservan: marcas de arranque y la senal de cierre del flujo.
+    for conservado in ("run.created", "run.started", "run.done"):
+        assert conservado in valores, f"se retiro un evento que sigue en uso: '{conservado}'"
 
     assert set(EVENTO_POR_NODO) == {"interpret", "plan", "coder", "run_tests"}

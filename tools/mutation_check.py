@@ -999,13 +999,20 @@ MUTACIONES: list[Mutation] = [
         "test_f10_api.py",
     ),
     Mutation(
-        # Con dos puertas humanas, el evento general no puede llamarse como una de
-        # ellas: el cliente que solo conoce la de aprobacion mostraria la pantalla
-        # equivocada al parar en la de requisitos.
-        "F10: la espera humana se anuncia con el evento de la puerta equivocada",
+        # F11 (AUD-11): el unico evento de espera es `run.awaiting_human`, y **que**
+        # puerta espera se lee del estado (`RunStatus`), no del nombre del evento.
+        # Anunciar la espera con un hito (`requirements.completed`) en lugar del
+        # evento de espera rompe esa distincion: el cliente hace `switch` sobre el
+        # tipo de evento, no ve llegar `run.awaiting_human` y no pinta la pantalla
+        # de decision -se queda mostrando "en curso" cuando el sistema esta
+        # pidiendo una decision humana-. La mutacion anterior cambiaba el evento por
+        # `run.awaiting_approval`, que ya no existe tras el retiro de AUD-11; el
+        # fallo que describe -un aviso de espera que el cliente no reconoce- sigue
+        # siendo real y se ataca aqui por la otra via.
+        "F10: la espera humana se anuncia con un evento que no es el de espera",
         SRC / "graph" / "engine.py",
         "                    self._store.append_event(run_id, EventKind.RUN_AWAITING_HUMAN, carga)",
-        "                    self._store.append_event(run_id, EventKind.RUN_AWAITING_APPROVAL, carga)",
+        "                    self._store.append_event(run_id, EventKind.REQUIREMENTS_COMPLETED, carga)",
         "test_f10_api.py",
     ),
     Mutation(

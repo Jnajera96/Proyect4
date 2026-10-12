@@ -215,7 +215,13 @@ def test_la_api_delega_la_ejecucion_en_el_trabajador(tmp_path) -> None:
 
 
 def test_el_progreso_se_emite_por_nodo(cliente) -> None:
-    """Los eventos describen el avance real, nodo a nodo, no solo el resultado."""
+    """Los eventos describen el avance real, nodo a nodo, no solo el resultado.
+
+    Desde F11 (AUD-11) el avance por nodo se expresa con **hitos nombrados**
+    (`requirements.completed`, ...) y no con el generico `run.step`, que se retiro.
+    Un nodo sin hito propio (como `researcher`) no emite evento: su avance queda en
+    el punto de control y en `GET /runs/{id}`.
+    """
     creada = cliente.post("/runs", json={"instruction": "Analiza el proyecto y corrige el error."})
     run_id = creada.json()["run_id"]
 
@@ -228,7 +234,9 @@ def test_el_progreso_se_emite_por_nodo(cliente) -> None:
 
     assert tipos[0] == "run.created"
     assert "run.started" in tipos
-    assert tipos.count("run.step") >= 2, f"no se emitio progreso por nodo: {tipos}"
+    # El progreso por nodo llega como hitos nombrados, no como `run.step`.
+    assert "requirements.completed" in tipos, f"no se emitio el hito de requisitos: {tipos}"
+    assert "run.step" not in tipos, f"volvio el evento heredado run.step: {tipos}"
     assert tipos[-1] == "run.done"
 
 
@@ -240,8 +248,13 @@ def test_los_pasos_nombran_el_nodo_ejecutado(cliente) -> None:
         cuerpo = "".join(s.iter_lines())
 
     compacto = cuerpo.replace(" ", "")
+    # Los hitos por nodo llevan el nombre del nodo en `data.node`.
     assert '"node":"interpret"' in compacto
-    assert '"node":"researcher"' in compacto
+    # `plan` no tiene hito si la instruccion es una pregunta (no planifica substeps
+    # de codigo); el hito que si se emite siempre tras interpretar es el de
+    # requisitos, que ya se comprueba arriba. Aqui se verifica que el `data` del
+    # hito lleva el nodo, que es lo que permite mapear evento -> nodo.
+    assert "requirements.completed" in cuerpo
 
 
 def test_last_event_id_reanuda_solo_lo_que_falta(cliente) -> None:
@@ -413,14 +426,37 @@ def test_aprobar_una_ejecucion_inexistente_da_404(cliente) -> None:
 
 
 def test_el_frontend_se_sirve_desde_el_mismo_origen(cliente) -> None:
-    """Mismo origen significa que el prototipo no necesita CORS.
+    """Mismo origen significa que el frontend no necesita CORS.
 
     Es lo que evita una clase entera de fallos de integracion entre navegador y
     backend: preflight, credenciales y el origen `null` de `file://`.
+
+    **Desde F11 se sirve la construccion de Vite (`frontend/dist`), no el fuente.**
+    Si la construccion no existe, la aplicacion **no monta** `/app` -montar el
+    directorio fuente serviria un `index.html` que apunta a `/src/main.tsx`, que el
+    navegador no puede ejecutar, y el fallo apareceria como una pagina en blanco sin
+    explicacion-. El no montar es deliberado, asi que esta prueba acepta dos
+    resultados **explicables** y ninguno de ellos es un 200 mudo:
+
+      - con construccion: ``/app/`` responde 200 con `text/html` (lo que se afirma);
+      - sin construccion: ``/app/`` responde 404, que es la senal de que falta
+        `npm run build`, y la prueba lo **dice** en lugar de darlo por bueno.
+
+    Una prueba que pasara en los dos casos sin distinguirlos no comprobaria nada.
     """
+    from ai_swe.api.app import FRONTEND_DIST
+
     r = cliente.get("/app/")
-    assert r.status_code == 200
-    assert "text/html" in r.headers["content-type"]
+    if FRONTEND_DIST.is_dir():
+        assert r.status_code == 200, r.text
+        assert "text/html" in r.headers["content-type"]
+        # El punto de entrada construido tiene que ser el de React, no un stub.
+        assert '<div id="root">' in r.text or "id=\"root\"" in r.text
+    else:
+        assert r.status_code == 404, (
+            "sin construccion en frontend/dist, /app/ debe dar 404 (falta "
+            f"`npm run build`); respondio {r.status_code}"
+        )
 
 
 def test_sin_origenes_configurados_no_hay_cabeceras_cors(cliente) -> None:

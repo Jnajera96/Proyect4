@@ -33,6 +33,14 @@ venv/
 .ruff_cache/
 .mypy_cache/
 
+# Frontend (F11). Las dependencias y la construccion se regeneran; lo que se
+# versiona es el fuente de `frontend/src` y la configuracion. El `index.html` de la
+# raiz de `frontend/` es el punto de entrada del **fuente** de Vite (apunta a
+# `/src/main.tsx`); lo construido vive en `frontend/dist`, ya ignorado por `dist/`.
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
 # Artefactos de la verificacion por mutacion. Se regeneran en cada ejecucion.
 *.mutation_backup
 _mutation_report.xml
