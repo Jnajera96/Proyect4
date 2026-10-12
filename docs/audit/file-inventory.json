@@ -1,0 +1,1471 @@
+{
+  "audit_commit": "065db452ad7ea4a1fe3ee58299ee8f1c1f7a8567",
+  "generated_at": "2026-10-12T20:59:13+00:00",
+  "branch": "main",
+  "working_tree_clean": true,
+  "first_party_files": 150,
+  "files": [
+    {
+      "path": ".env.example",
+      "type": "config",
+      "size_bytes": 2742,
+      "lines": 61,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    },
+    {
+      "path": ".gitattributes",
+      "type": "config",
+      "size_bytes": 808,
+      "lines": 34,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    },
+    {
+      "path": ".gitignore",
+      "type": "config",
+      "size_bytes": 2896,
+      "lines": 88,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    },
+    {
+      "path": ".python-version",
+      "type": "config",
+      "size_bytes": 5,
+      "lines": 2,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    },
+    {
+      "path": "Dockerfile",
+      "type": "container",
+      "size_bytes": 1360,
+      "lines": 39,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    },
+    {
+      "path": "PROJECT_SNAPSHOT.json",
+      "type": "json",
+      "size_bytes": 59052,
+      "lines": 698,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    },
+    {
+      "path": "README.md",
+      "type": "markdown",
+      "size_bytes": 16345,
+      "lines": 330,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    },
+    {
+      "path": "data/tasks/README.md",
+      "type": "markdown",
+      "size_bytes": 2838,
+      "lines": 70,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    },
+    {
+      "path": "docker-compose.yml",
+      "type": "config",
+      "size_bytes": 1239,
+      "lines": 50,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    },
+    {
+      "path": "docs/00-PROJECT-BRIEF.md",
+      "type": "markdown",
+      "size_bytes": 2762,
+      "lines": 50,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/01-ARCHITECTURE.md",
+      "type": "markdown",
+      "size_bytes": 2371,
+      "lines": 39,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/01-arquitectura.md",
+      "type": "markdown",
+      "size_bytes": 88588,
+      "lines": 1287,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/02-CONTRACTS.md",
+      "type": "markdown",
+      "size_bytes": 2933,
+      "lines": 54,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/02-tecnologias.md",
+      "type": "markdown",
+      "size_bytes": 34871,
+      "lines": 345,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/03-SECURITY.md",
+      "type": "markdown",
+      "size_bytes": 3705,
+      "lines": 55,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/03-flujo-e-implementacion.md",
+      "type": "markdown",
+      "size_bytes": 36982,
+      "lines": 549,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/04-ROADMAP.md",
+      "type": "markdown",
+      "size_bytes": 2244,
+      "lines": 50,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/04-defensa.md",
+      "type": "markdown",
+      "size_bytes": 38295,
+      "lines": 659,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/05-DECISIONS.md",
+      "type": "markdown",
+      "size_bytes": 4781,
+      "lines": 46,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/05-graphify-evaluacion.md",
+      "type": "markdown",
+      "size_bytes": 20099,
+      "lines": 362,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/06-EVALUATION.md",
+      "type": "markdown",
+      "size_bytes": 6669,
+      "lines": 142,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/06-contrato-frontend-backend.md",
+      "type": "markdown",
+      "size_bytes": 14809,
+      "lines": 289,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/AUDITORIA-EXTERNA.md",
+      "type": "markdown",
+      "size_bytes": 71374,
+      "lines": 1169,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/AUDITORIA-F2-PARA-ARQUITECTO.md",
+      "type": "markdown",
+      "size_bytes": 35570,
+      "lines": 789,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/BASELINE-F3-REQUIREMENTS-ANALYST.md",
+      "type": "markdown",
+      "size_bytes": 11570,
+      "lines": 256,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/BASELINE-F4-SUPERVISOR.md",
+      "type": "markdown",
+      "size_bytes": 13905,
+      "lines": 306,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/BASELINE-F6-REAL-CODER.md",
+      "type": "markdown",
+      "size_bytes": 15007,
+      "lines": 364,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/BASELINE-F7-SANDBOX.md",
+      "type": "markdown",
+      "size_bytes": 22398,
+      "lines": 440,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/BASELINE-M1-POST-DOCUMENTACION.md",
+      "type": "markdown",
+      "size_bytes": 21457,
+      "lines": 386,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/BASELINE-MODEL-GATEWAY.md",
+      "type": "markdown",
+      "size_bytes": 21187,
+      "lines": 453,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/BASELINE-PRE-M2.md",
+      "type": "markdown",
+      "size_bytes": 18566,
+      "lines": 423,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/MODEL-GATEWAY-DESIGN.md",
+      "type": "markdown",
+      "size_bytes": 14485,
+      "lines": 356,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/MODEL-GATEWAY.md",
+      "type": "markdown",
+      "size_bytes": 10655,
+      "lines": 320,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/README.md",
+      "type": "markdown",
+      "size_bytes": 4939,
+      "lines": 93,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/00_ESTADO_ACTUAL.md",
+      "type": "markdown",
+      "size_bytes": 1277,
+      "lines": 41,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/01_ESTRUCTURA_PROYECTO.md",
+      "type": "markdown",
+      "size_bytes": 1629,
+      "lines": 51,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/02_ARQUITECTURA_ACTUAL.md",
+      "type": "markdown",
+      "size_bytes": 1155,
+      "lines": 34,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/03_ARQUITECTURA_OBJETIVO.md",
+      "type": "markdown",
+      "size_bytes": 1216,
+      "lines": 39,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/04_CONTRATOS_STATE_BUDGET.md",
+      "type": "markdown",
+      "size_bytes": 2616,
+      "lines": 57,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/05_INSTRUCCIONES_AGENTE_DESARROLLO.md",
+      "type": "markdown",
+      "size_bytes": 1095,
+      "lines": 33,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/06_MODEL_GATEWAY_M2.md",
+      "type": "markdown",
+      "size_bytes": 940,
+      "lines": 37,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/07_AGENTES_M2.md",
+      "type": "markdown",
+      "size_bytes": 1097,
+      "lines": 24,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/08_SEGURIDAD_SANDBOX_TOOLS.md",
+      "type": "markdown",
+      "size_bytes": 964,
+      "lines": 41,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/09_ROADMAP.md",
+      "type": "markdown",
+      "size_bytes": 2501,
+      "lines": 77,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/10_EVALUACION_METRICAS.md",
+      "type": "markdown",
+      "size_bytes": 982,
+      "lines": 33,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/11_DEFINITION_OF_DONE_M2.md",
+      "type": "markdown",
+      "size_bytes": 1004,
+      "lines": 27,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/12-bis_PLAN_REPRODUCIBILIDAD.md",
+      "type": "markdown",
+      "size_bytes": 5302,
+      "lines": 130,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/12_GIT_REPRODUCIBILIDAD.md",
+      "type": "markdown",
+      "size_bytes": 1575,
+      "lines": 41,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/13_PROXIMO_PROMPT_AGENTE.md",
+      "type": "markdown",
+      "size_bytes": 1420,
+      "lines": 30,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/UPLOAD_ORDER.md",
+      "type": "markdown",
+      "size_bytes": 956,
+      "lines": 29,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/auditoria-2026-10-06/_PROCEDENCIA.txt",
+      "type": "other",
+      "size_bytes": 1004,
+      "lines": 22,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/diagrama-arquitectura.png",
+      "type": "asset",
+      "size_bytes": 105415,
+      "lines": 782,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "docs/diagrama-arquitectura.svg",
+      "type": "asset",
+      "size_bytes": 14381,
+      "lines": 89,
+      "owner_module": "docs",
+      "runtime_relevance": "DOC_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "frontend/contracts.json",
+      "type": "json",
+      "size_bytes": 54976,
+      "lines": 1781,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/index.html",
+      "type": "html",
+      "size_bytes": 565,
+      "lines": 16,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "type": "json",
+      "size_bytes": 46809,
+      "lines": 1647,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/package.json",
+      "type": "json",
+      "size_bytes": 622,
+      "lines": 26,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/App.tsx",
+      "type": "react-component",
+      "size_bytes": 17603,
+      "lines": 477,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/components/Diff.tsx",
+      "type": "react-component",
+      "size_bytes": 1978,
+      "lines": 70,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/components/PuertaAprobacion.tsx",
+      "type": "react-component",
+      "size_bytes": 6551,
+      "lines": 189,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/components/PuertaRequisitos.tsx",
+      "type": "react-component",
+      "size_bytes": 7575,
+      "lines": 225,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/components/Timeline.tsx",
+      "type": "react-component",
+      "size_bytes": 2246,
+      "lines": 70,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/components/ui.tsx",
+      "type": "react-component",
+      "size_bytes": 1287,
+      "lines": 56,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/estilos.css",
+      "type": "stylesheet",
+      "size_bytes": 12959,
+      "lines": 700,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/hooks/useEventosRun.ts",
+      "type": "typescript",
+      "size_bytes": 4973,
+      "lines": 139,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/lib/api.ts",
+      "type": "typescript",
+      "size_bytes": 4324,
+      "lines": 134,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/lib/contracts.ts",
+      "type": "typescript",
+      "size_bytes": 7111,
+      "lines": 261,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/main.tsx",
+      "type": "react-component",
+      "size_bytes": 550,
+      "lines": 19,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/src/vite-env.d.ts",
+      "type": "typescript",
+      "size_bytes": 791,
+      "lines": 22,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/tsconfig.json",
+      "type": "json",
+      "size_bytes": 593,
+      "lines": 23,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "frontend/vite.config.ts",
+      "type": "typescript",
+      "size_bytes": 1249,
+      "lines": 34,
+      "owner_module": "frontend",
+      "runtime_relevance": "RUNTIME (navegador)",
+      "tracked": true
+    },
+    {
+      "path": "pyproject.toml",
+      "type": "config",
+      "size_bytes": 3772,
+      "lines": 95,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/__init__.py",
+      "type": "python",
+      "size_bytes": 399,
+      "lines": 12,
+      "owner_module": "(paquete raiz)",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/__main__.py",
+      "type": "python",
+      "size_bytes": 1922,
+      "lines": 59,
+      "owner_module": "(paquete raiz)",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/agents/__init__.py",
+      "type": "python",
+      "size_bytes": 509,
+      "lines": 14,
+      "owner_module": "agents",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/api/__init__.py",
+      "type": "python",
+      "size_bytes": 1459,
+      "lines": 40,
+      "owner_module": "api",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/api/app.py",
+      "type": "python",
+      "size_bytes": 26770,
+      "lines": 593,
+      "owner_module": "api",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/config.py",
+      "type": "python",
+      "size_bytes": 9085,
+      "lines": 205,
+      "owner_module": "(paquete raiz)",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/contracts/__init__.py",
+      "type": "python",
+      "size_bytes": 2091,
+      "lines": 111,
+      "owner_module": "contracts",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/contracts/api.py",
+      "type": "python",
+      "size_bytes": 5533,
+      "lines": 139,
+      "owner_module": "contracts",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/contracts/outputs.py",
+      "type": "python",
+      "size_bytes": 8307,
+      "lines": 231,
+      "owner_module": "contracts",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/contracts/state.py",
+      "type": "python",
+      "size_bytes": 13166,
+      "lines": 333,
+      "owner_module": "contracts",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/contracts/tasks.py",
+      "type": "python",
+      "size_bytes": 5722,
+      "lines": 157,
+      "owner_module": "contracts",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/contracts/tools.py",
+      "type": "python",
+      "size_bytes": 1969,
+      "lines": 73,
+      "owner_module": "contracts",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/contracts/validate.py",
+      "type": "python",
+      "size_bytes": 2449,
+      "lines": 85,
+      "owner_module": "contracts",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/evaluation/__init__.py",
+      "type": "python",
+      "size_bytes": 1640,
+      "lines": 56,
+      "owner_module": "evaluation",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/evaluation/runner.py",
+      "type": "python",
+      "size_bytes": 33298,
+      "lines": 786,
+      "owner_module": "evaluation",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/evaluation/tasks.py",
+      "type": "python",
+      "size_bytes": 25140,
+      "lines": 710,
+      "owner_module": "evaluation",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/graph/__init__.py",
+      "type": "python",
+      "size_bytes": 864,
+      "lines": 25,
+      "owner_module": "graph",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/graph/engine.py",
+      "type": "python",
+      "size_bytes": 22013,
+      "lines": 475,
+      "owner_module": "graph",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/graph/nodes.py",
+      "type": "python",
+      "size_bytes": 102097,
+      "lines": 2461,
+      "owner_module": "graph",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/graph/worker.py",
+      "type": "python",
+      "size_bytes": 4247,
+      "lines": 99,
+      "owner_module": "graph",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/graph/workflow.py",
+      "type": "python",
+      "size_bytes": 5803,
+      "lines": 116,
+      "owner_module": "graph",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/mcp/__init__.py",
+      "type": "python",
+      "size_bytes": 550,
+      "lines": 14,
+      "owner_module": "mcp",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/models/__init__.py",
+      "type": "python",
+      "size_bytes": 2876,
+      "lines": 113,
+      "owner_module": "models",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/models/budget.py",
+      "type": "python",
+      "size_bytes": 3866,
+      "lines": 91,
+      "owner_module": "models",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/models/contracts.py",
+      "type": "python",
+      "size_bytes": 6561,
+      "lines": 178,
+      "owner_module": "models",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/models/errors.py",
+      "type": "python",
+      "size_bytes": 4763,
+      "lines": 138,
+      "owner_module": "models",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/models/gateway.py",
+      "type": "python",
+      "size_bytes": 17079,
+      "lines": 430,
+      "owner_module": "models",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/models/pricing.py",
+      "type": "python",
+      "size_bytes": 6854,
+      "lines": 156,
+      "owner_module": "models",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/models/providers/__init__.py",
+      "type": "python",
+      "size_bytes": 707,
+      "lines": 25,
+      "owner_module": "models",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/models/providers/base.py",
+      "type": "python",
+      "size_bytes": 2407,
+      "lines": 66,
+      "owner_module": "models",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/models/providers/fake.py",
+      "type": "python",
+      "size_bytes": 5877,
+      "lines": 152,
+      "owner_module": "models",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/models/providers/openai_compatible.py",
+      "type": "python",
+      "size_bytes": 11716,
+      "lines": 291,
+      "owner_module": "models",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/models/registry.py",
+      "type": "python",
+      "size_bytes": 5445,
+      "lines": 133,
+      "owner_module": "models",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/observability/__init__.py",
+      "type": "python",
+      "size_bytes": 637,
+      "lines": 14,
+      "owner_module": "observability",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/sandbox.py",
+      "type": "python",
+      "size_bytes": 15119,
+      "lines": 353,
+      "owner_module": "(paquete raiz)",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/security/__init__.py",
+      "type": "python",
+      "size_bytes": 1099,
+      "lines": 40,
+      "owner_module": "security",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/security/logging.py",
+      "type": "python",
+      "size_bytes": 4518,
+      "lines": 120,
+      "owner_module": "security",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/security/redaction.py",
+      "type": "python",
+      "size_bytes": 15011,
+      "lines": 367,
+      "owner_module": "security",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/state/__init__.py",
+      "type": "python",
+      "size_bytes": 187,
+      "lines": 6,
+      "owner_module": "state",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/state/store.py",
+      "type": "python",
+      "size_bytes": 18021,
+      "lines": 431,
+      "owner_module": "state",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/stt/__init__.py",
+      "type": "python",
+      "size_bytes": 853,
+      "lines": 34,
+      "owner_module": "stt",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/stt/base.py",
+      "type": "python",
+      "size_bytes": 11564,
+      "lines": 284,
+      "owner_module": "stt",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/tools/__init__.py",
+      "type": "python",
+      "size_bytes": 495,
+      "lines": 23,
+      "owner_module": "tools",
+      "runtime_relevance": "RUNTIME (paquete)",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/tools/patcher.py",
+      "type": "python",
+      "size_bytes": 10490,
+      "lines": 248,
+      "owner_module": "tools",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/tools/policy.py",
+      "type": "python",
+      "size_bytes": 6974,
+      "lines": 183,
+      "owner_module": "tools",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/tools/promoter.py",
+      "type": "python",
+      "size_bytes": 10311,
+      "lines": 241,
+      "owner_module": "tools",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/tools/registry.py",
+      "type": "python",
+      "size_bytes": 4944,
+      "lines": 135,
+      "owner_module": "tools",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "src/ai_swe/tools/runner.py",
+      "type": "python",
+      "size_bytes": 9088,
+      "lines": 237,
+      "owner_module": "tools",
+      "runtime_relevance": "RUNTIME",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_api.py",
+      "type": "python",
+      "size_bytes": 20437,
+      "lines": 492,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_config_budget.py",
+      "type": "python",
+      "size_bytes": 5541,
+      "lines": 147,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_contracts.py",
+      "type": "python",
+      "size_bytes": 9285,
+      "lines": 273,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_diagram_layout.py",
+      "type": "python",
+      "size_bytes": 5637,
+      "lines": 169,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_f10_api.py",
+      "type": "python",
+      "size_bytes": 32119,
+      "lines": 790,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_f12_promotion.py",
+      "type": "python",
+      "size_bytes": 15833,
+      "lines": 405,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_f13_stt.py",
+      "type": "python",
+      "size_bytes": 15977,
+      "lines": 392,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_f14_evaluation.py",
+      "type": "python",
+      "size_bytes": 15489,
+      "lines": 381,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_f3_interpret_analyst.py",
+      "type": "python",
+      "size_bytes": 19359,
+      "lines": 485,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_f4_supervisor_plan.py",
+      "type": "python",
+      "size_bytes": 22944,
+      "lines": 650,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_f5_plan_driven_execution.py",
+      "type": "python",
+      "size_bytes": 8398,
+      "lines": 249,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_f6_real_coder.py",
+      "type": "python",
+      "size_bytes": 17434,
+      "lines": 509,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_f7_sandbox.py",
+      "type": "python",
+      "size_bytes": 30110,
+      "lines": 694,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_f8_test_runner.py",
+      "type": "python",
+      "size_bytes": 34659,
+      "lines": 863,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_f9_reviewer.py",
+      "type": "python",
+      "size_bytes": 27940,
+      "lines": 735,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_m2_e2e.py",
+      "type": "python",
+      "size_bytes": 21053,
+      "lines": 540,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_model_gateway.py",
+      "type": "python",
+      "size_bytes": 39330,
+      "lines": 996,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_model_gateway_real.py",
+      "type": "python",
+      "size_bytes": 3013,
+      "lines": 82,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_policy.py",
+      "type": "python",
+      "size_bytes": 9751,
+      "lines": 249,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_redaction.py",
+      "type": "python",
+      "size_bytes": 12960,
+      "lines": 373,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_store.py",
+      "type": "python",
+      "size_bytes": 11131,
+      "lines": 306,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tests/test_workflow.py",
+      "type": "python",
+      "size_bytes": 29725,
+      "lines": 741,
+      "owner_module": "tests",
+      "runtime_relevance": "TEST_ONLY",
+      "tracked": true
+    },
+    {
+      "path": "tools/build_diagram.py",
+      "type": "python",
+      "size_bytes": 16666,
+      "lines": 380,
+      "owner_module": "tools",
+      "runtime_relevance": "DEV_TOOL",
+      "tracked": true
+    },
+    {
+      "path": "tools/export_contracts.py",
+      "type": "python",
+      "size_bytes": 4226,
+      "lines": 127,
+      "owner_module": "tools",
+      "runtime_relevance": "DEV_TOOL",
+      "tracked": true
+    },
+    {
+      "path": "tools/mutation_check.py",
+      "type": "python",
+      "size_bytes": 72781,
+      "lines": 1484,
+      "owner_module": "tools",
+      "runtime_relevance": "DEV_TOOL",
+      "tracked": true
+    },
+    {
+      "path": "tools/verify_frontend.py",
+      "type": "python",
+      "size_bytes": 19823,
+      "lines": 478,
+      "owner_module": "tools",
+      "runtime_relevance": "DEV_TOOL",
+      "tracked": true
+    },
+    {
+      "path": "tools/verify_m1_assumptions.py",
+      "type": "python",
+      "size_bytes": 11202,
+      "lines": 299,
+      "owner_module": "tools",
+      "runtime_relevance": "DEV_TOOL",
+      "tracked": true
+    },
+    {
+      "path": "tools/verify_redaction_mutations.py",
+      "type": "python",
+      "size_bytes": 5160,
+      "lines": 128,
+      "owner_module": "tools",
+      "runtime_relevance": "DEV_TOOL",
+      "tracked": true
+    },
+    {
+      "path": "uv.lock",
+      "type": "lockfile",
+      "size_bytes": 456637,
+      "lines": 2396,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    },
+    {
+      "path": "var/evaluation_results.json",
+      "type": "json",
+      "size_bytes": 20421,
+      "lines": 642,
+      "owner_module": "(raiz)",
+      "runtime_relevance": "CONFIG/BUILD",
+      "tracked": true
+    }
+  ],
+  "dependency_dirs": [
+    {
+      "path": "frontend/node_modules",
+      "files": 2544,
+      "size_bytes": 65886753,
+      "ignored": true
+    },
+    {
+      "path": "frontend/dist",
+      "files": 5,
+      "size_bytes": 181186,
+      "ignored": true
+    },
+    {
+      "path": "var",
+      "files": 2,
+      "size_bytes": 761797,
+      "ignored": false
+    },
+    {
+      "path": ".pytest_cache",
+      "files": 5,
+      "size_bytes": 52118,
+      "ignored": true
+    },
+    {
+      "path": ".pytest_tmp",
+      "files": 6,
+      "size_bytes": 454656,
+      "ignored": true
+    }
+  ],
+  "root_scratch_files": [
+    "_api_check.txt",
+    "_audit_final.txt",
+    "_audit_suite.log",
+    "_audit_suite.xml",
+    "_base_time.xml",
+    "_f10_file.txt",
+    "_f10_final_suite.txt",
+    "_f10_final_suite.xml",
+    "_f10_iso.xml",
+    "_f10_mut.txt",
+    "_f10_mut2.txt",
+    "_f10_mut3.txt",
+    "_f10_mut_final.txt",
+    "_f10_rep.xml",
+    "_f10_rep1.xml",
+    "_f10_rep2.xml",
+    "_f10_rep3.xml",
+    "_f10_run1.xml",
+    "_f10_run2.xml",
+    "_f10_run4.xml",
+    "_f10_suite.xml",
+    "_f10_suite2.xml",
+    "_f10_totals.txt",
+    "_f10b.txt",
+    "_f10c.txt",
+    "_f10v.txt",
+    "_f7_full_mut.log",
+    "_f7_mutations.log",
+    "_f7full.log",
+    "_f7full.xml",
+    "_f8.xml",
+    "_f8_final.xml",
+    "_f8_pre.xml",
+    "_f9_final.xml",
+    "_f9_run.xml",
+    "_f9_suite.xml",
+    "_f9_targeted.xml",
+    "_final_suite.log",
+    "_final_suite.xml",
+    "_hitos.txt",
+    "_m2_final.xml",
+    "_m2_run1.xml",
+    "_m2_run2.xml",
+    "_m2_run3.xml",
+    "_mut_f10.log",
+    "_mut_f8.log",
+    "_mut_f8b.log",
+    "_mut_f9.log",
+    "_mut_m2.log",
+    "_pipe_time.xml",
+    "_raw_tail.txt",
+    "_repro_concurrencia.py",
+    "_repro_invariante.py",
+    "_repro_sabotage.py",
+    "_st1.txt",
+    "_st2.txt",
+    "_st3.txt",
+    "_suite.log",
+    "_suite_close.txt",
+    "_suite_close.xml",
+    "_suite_diagnostico.txt",
+    "_suite_f8.log",
+    "_suite_final.log",
+    "_suite_final.txt",
+    "_suite_final2.txt",
+    "_suite_latest.txt",
+    "_suite_latest.xml",
+    "_suite_report.xml",
+    "_suite_trace.txt",
+    "_suite_verbose.txt",
+    "_t1.xml",
+    "_t2.xml",
+    "_target_final.txt",
+    "_target_final2.txt"
+  ],
+  "root_temp_dirs": [
+    "tmp8g9yx7zt",
+    "tmpq6zgqajo"
+  ]
+}

@@ -1,0 +1,220 @@
+{
+  "audit_commit": "065db452ad7ea4a1fe3ee58299ee8f1c1f7a8567",
+  "audit_branch": "main",
+  "audit_timestamp": "2026-10-12T14:57:00-06:00",
+  "audit_mode": "READ_ONLY",
+  "working_tree_clean_at_start": true,
+  "remotes": [],
+  "submodules": [],
+  "tags": ["m1-verified-baseline"],
+
+  "files_first_party": 150,
+  "files_by_type": {
+    "python": 76,
+    "markdown": 43,
+    "react_component": 7,
+    "typescript": 5,
+    "json": 6,
+    "config": 12,
+    "asset": 2
+  },
+  "directories": {
+    "src/ai_swe": 48,
+    "tests": 22,
+    "docs": 44,
+    "frontend": 18,
+    "tools": 6,
+    "data": 1
+  },
+  "dependency_dirs": [
+    {"path": "frontend/node_modules", "files": 2544, "size_mb": 62.8, "ignored": true},
+    {"path": "frontend/dist", "files": 5, "size_mb": 0.2, "ignored": true},
+    {"path": "var", "files": 2, "size_mb": 0.7, "ignored": "partial (evaluation_results.json is versioned)"}
+  ],
+  "root_scratch_files": 74,
+  "root_temp_dirs": ["tmp8g9yx7zt", "tmpq6zgqajo"],
+
+  "tests": {
+    "collected": 601,
+    "passed": 599,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 2,
+    "duration_s": 969.85,
+    "verdict": "GREEN",
+    "command": "python -m pytest tests/ -q --junitxml=_audit_final.xml",
+    "exit_code_note": "pytest exited 1 because the environment's safe-delete guard aborted its bulk temp cleanup; the JUnit XML and the full progress output both show zero failures",
+    "skipped_reasons": [
+      "tests/test_model_gateway_real.py::test_llamada_real_controlada (opt-in, needs credentials)",
+      "tests/test_f13_stt.py::test_transcripcion_real_opt_in (opt-in, needs the voice extra)"
+    ],
+    "mutations_defined": 137,
+    "mutations_rerun_in_this_audit": false,
+    "frontend_verification": "separate harness, 15/15 (AUD-07)"
+  },
+
+  "features": {
+    "IMPLEMENTED_AND_VERIFIED": [
+      "projects (create/list/get)", "runs (create/execute/pause/resume/query)",
+      "SSE event stream", "FastAPI REST surface", "SQLite persistence + checkpoint",
+      "LangGraph engine + 17 nodes", "RunState contracts",
+      "HITL gate 1 (requirements)", "HITL gate 2 (approval)",
+      "promotion to user repo (F12)", "ModelGateway + 2 providers + budget + pricing",
+      "Requirements Analyst", "Supervisor", "Researcher (deterministic)", "Coder", "Reviewer",
+      "tools catalog + role matrix", "Policy Engine", "sandbox (write confinement)",
+      "test runner (closed targets)", "secret redaction + logging filter",
+      "STT local (F13)", "evaluation harness (F14)", "frontend dashboard (F11)"
+    ],
+    "PARTIAL": [
+      "cost accounting (pricing empty by default)", "sandbox resource limits (timeout only)",
+      "sandbox network isolation (setting unused)", "budget configurable from Settings (unused)",
+      "repository allowlist (declared, not enforced)", "STT usable by a human (no UI)",
+      "frontend in pytest (separate harness)", "schema migrations (none)"
+    ],
+    "PLANNED": ["MCP", "observability/Langfuse", "TTS", "knowledge graph (Graphify)", "EXP-02..EXP-08", "authentication"],
+    "PLACEHOLDER": ["src/ai_swe/agents/", "src/ai_swe/mcp/", "src/ai_swe/observability/"],
+    "ORPHANED": ["answer_direct (unreachable node)", "route_after_research", "_ruta_estatica_m1", "route_intent", "data/tasks/README.md"],
+    "NOT_IMPLEMENTED": ["HuggingFaceAdapter (as LLM)", "POST /runs/{id}/cancel (returns 501)", "GET /runs/{id}/trace", "DELETE /runs/{id}", "GET /config"],
+    "DEAD_CODE": ["RunOptions.dry_run (never read)", "TestRun.reproducible (never written/read)", "Subtask.status/attempts (never written)", "RunState.schema_version (never read)"],
+    "SUPERSEDED": ["docs/05-graphify-evaluacion.md [PROP]"],
+    "GENERATED": ["frontend/contracts.json", "docs/06-EVALUATION.md", "docs/diagrama-arquitectura.svg", "docs/diagrama-arquitectura.png", "var/evaluation_results.json"]
+  },
+
+  "security_findings": {
+    "total": 15,
+    "critical": 1,
+    "high": 3,
+    "medium": 6,
+    "low": 5,
+    "info": 0
+  },
+  "critical_findings": [
+    {
+      "id": "SEC-01",
+      "title": "API exposed without authentication by the Dockerfile",
+      "evidence": "Dockerfile CMD uses --host 0.0.0.0; no route validates identity",
+      "impact": "anyone reaching the port can launch runs that write and promote code",
+      "fix": "authenticate before exposing, or bind to 127.0.0.1"
+    }
+  ],
+  "high_findings": [
+    {"id": "SEC-02", "title": "User code executed without process isolation", "evidence": "tools/runner.py runs the repository's pytest as the server user", "fix": "disposable container with limits"},
+    {"id": "SEC-03", "title": "ApproveRequest.decision defaults to APPROVED", "evidence": "contracts/api.py", "fix": "make the field required"},
+    {"id": "SEC-04", "title": "Repository allowlist declared and not enforced", "evidence": "Settings.authorized_repos is never read", "fix": "enforce it in POST /projects, or remove it"}
+  ],
+  "medium_findings": [
+    {"id": "SEC-05", "title": "Audio upload has no size limit and no type validation"},
+    {"id": "SEC-06", "title": "Indirect prompt injection from repository content"},
+    {"id": "SEC-07", "title": "No network isolation for the test process"},
+    {"id": "SEC-08", "title": "No CPU/memory/process limits in the sandbox"},
+    {"id": "SEC-09", "title": "Unbounded SSE connections and pagination"},
+    {"id": "SEC-10", "title": "No HTTP security headers or TrustedHost"}
+  ],
+  "low_findings": [
+    {"id": "SEC-11", "title": "Worktree not cleaned on exception/orphan paths"},
+    {"id": "SEC-12", "title": "Placeholder credentials in docker-compose (observability profile)"},
+    {"id": "SEC-13", "title": "No observability or alerting"},
+    {"id": "SEC-14", "title": "No schema migrations"},
+    {"id": "SEC-15", "title": "No data retention or purge"}
+  ],
+
+  "cleanup_candidates": {
+    "high_confidence": [
+      {"path": "_* scratch files (74)", "action": "SAFE_DELETE"},
+      {"path": "_repro_*.py (3)", "action": "SAFE_DELETE"},
+      {"path": "tmp8g9yx7zt/, tmpq6zgqajo/", "action": "SAFE_DELETE"},
+      {"path": ".pytest_cache/, .pytest_tmp/", "action": "SAFE_DELETE"}
+    ],
+    "medium_confidence": [
+      {"path": "src/ai_swe/agents/", "action": "ARCHIVE_OR_DELETE"},
+      {"path": "src/ai_swe/mcp/", "action": "ARCHIVE (keep if MCP is defended)"},
+      {"path": "src/ai_swe/observability/", "action": "ARCHIVE"},
+      {"path": "data/tasks/README.md", "action": "ARCHIVE"},
+      {"path": "tools/verify_redaction_mutations.py", "action": "MERGE"},
+      {"path": "docs/0X-*.md (6 index files)", "action": "MERGE with the Spanish counterparts"}
+    ],
+    "manual_review": [
+      {"path": "graph/nodes.py: answer_direct, route_after_research, _ruta_estatica_m1, route_intent", "action": "REQUIRES_MANUAL_REVIEW"},
+      {"path": "docs/AUDITORIA-*.md, docs/BASELINE-*.md, docs/auditoria-2026-10-06/", "action": "ARCHIVE to docs/history/"}
+    ]
+  },
+
+  "user_actions": {
+    "required_now": [
+      "Configure a real model provider key and run the opt-in real test (closes TD-01)",
+      "Decide the provider and its base_url",
+      "Fill AI_SWE_MODEL_PRICING so MET-06 has data",
+      "Decide whether the API is exposed; if so, do NOT deploy the current Dockerfile",
+      "Run the real STT test if local voice is to be defended"
+    ],
+    "required_before_mvp": [
+      "Decide the delivery scope (local prototype vs product)",
+      "Fix README.md and ai_swe/__init__.py (both claim an old phase)",
+      "Authorise the scratch cleanup",
+      "Decide the fate of the historical docs",
+      "Decide whether the placeholder packages stay"
+    ],
+    "required_before_deployment": [
+      "Authentication", "Real execution isolation (container with limits)", "TLS / reverse proxy",
+      "Domain and certificates", "Backup destination and retention policy", "Secret management",
+      "Upload and SSE limits", "Legal/privacy decisions", "Monitoring and alerting", "HF_TOKEN if needed"
+    ],
+    "optional": ["Reviewer model choice", "AI_SWE_AUTHORIZED_REPOS (has no effect today)", "Langfuse (not implemented)", "git remote"],
+    "future": ["MCP", "Graphify context layer", "TTS"]
+  },
+
+  "frontend_capabilities": {
+    "core_available_today": [
+      "Dashboard (health, phase, counts)", "Projects list", "New project",
+      "New run (instruction + project + scope)", "Run detail (state + SSE)",
+      "Run timeline (milestones)", "Plan (subtasks)", "Requirements gate",
+      "Approval gate (diff + evidence + verdict)", "Final report", "Errors"
+    ],
+    "advanced_available_today": [
+      "Budget panel (tokens in/out, cost, calls, cycles)", "Run history",
+      "Approvals audit (actor, date, hash)", "Test evidence detail (argv, stdout, duration)",
+      "Reviewer findings (severity, evidence)", "Diff viewer",
+      "Security panel (policy denials)", "Fallback warning",
+      "Voice input (record -> transcribe -> confirm)", "STT status", "Scope editor"
+    ],
+    "requires_new_backend": [
+      "Model/provider selection (GET /config)", "Reviewer model selection",
+      "Cost display with real data (config, not API)", "Authorized repositories (and it is not enforced today)",
+      "Log level", "STT model/language"
+    ],
+    "not_available": [
+      "Run cancellation (501)", "Run purge/retention", "Evaluation dashboard", "Traces/observability",
+      "Knowledge graph", "MCP status", "Report export"
+    ]
+  },
+
+  "production_blockers": [
+    "No authentication",
+    "User code executed without process isolation",
+    "Dockerfile binds 0.0.0.0",
+    "No TLS",
+    "No resource limits (CPU/memory/processes/network)",
+    "No monitoring or alerting",
+    "No backups",
+    "No data retention policy",
+    "ApproveRequest.decision defaults to APPROVED"
+  ],
+
+  "next_steps": [
+    "1. Fix README.md and src/ai_swe/__init__.py (they claim phase M0/F2)",
+    "2. Make ApproveRequest.decision required",
+    "3. Decide the delivery scope",
+    "4. Apply or remove the five declared-but-unused settings",
+    "5. Clean up scratch artefacts and decide on the placeholders",
+    "6. Redesign the frontend over the 22 already-available capabilities"
+  ],
+
+  "verdicts": {
+    "PROJECT_FUNCTIONAL_STATUS": "COMPLETE",
+    "PROJECT_FUNCTIONAL_STATUS_note": "COMPLETE for the declared scope (single-user local prototype); INCOMPLETE against a deployable product",
+    "CLEANUP_READY": "YES",
+    "CYBERSECURITY_HARDENING_READY": "YES",
+    "FRONTEND_REDESIGN_READY": "YES",
+    "PRODUCTION_READY": "NO"
+  }
+}
