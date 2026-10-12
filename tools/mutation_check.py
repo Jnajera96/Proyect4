@@ -1218,6 +1218,55 @@ MUTACIONES: list[Mutation] = [
         "                initial_prompt=None,",
         "test_f13_stt.py",
     ),
+    # ------------------------------------------------ F14: evaluacion experimental
+    Mutation(
+        # El exito exige **las dos cosas**: estado terminal bueno y pruebas en verde.
+        # Quedarse solo con el estado convierte un `completed` con la suite en rojo en
+        # un exito, que es la unica forma de inflar la tasa de finalizacion (MET-01).
+        "F14: el exito no mira la evidencia de pruebas",
+        SRC / "evaluation" / "runner.py",
+        "    exito = estado.status is RunStatus.COMPLETED and bool(pruebas) and fallidos == 0",
+        "    exito = estado.status is RunStatus.COMPLETED",
+        "test_f14_evaluation.py",
+    ),
+    Mutation(
+        # El Reviewer tiene que juzgar la evidencia **vigente**: la ultima corrida de
+        # cada target. Sobre el historico entero, el primer fallo veta para siempre
+        # todo `ACCEPT` posterior y el ciclo Coder<->Reviewer no puede converger -el
+        # defecto real que encontro F14, y lo que hacia inalcanzable MET-08-.
+        "F14: el reviewer juzga el historico entero en lugar de la evidencia vigente",
+        SRC / "graph" / "nodes.py",
+        "    fallidas = [p for p in evidencia_vigente(state.evidence.test_runs) if not p.passed]",
+        "    fallidas = [p for p in state.evidence.test_runs if not p.passed]",
+        "test_f14_evaluation.py",
+    ),
+    Mutation(
+        # `evidencia_vigente` se queda con la **ultima** por target. Quedarse con la
+        # primera deja el juicio anclado en el intento mas antiguo.
+        "F14: la evidencia vigente se queda con la primera corrida de cada target",
+        SRC / "graph" / "nodes.py",
+        "        vigentes[prueba.target] = prueba",
+        "        vigentes.setdefault(prueba.target, prueba)",
+        "test_f14_evaluation.py",
+    ),
+    Mutation(
+        # El agregado se calcula sobre las corridas presentes. Sin el guardia del
+        # cero, una bateria vacia -o un modo que no corrio- revienta al agregar.
+        "F14: la tasa de exito divide por cero sin corridas",
+        SRC / "evaluation" / "runner.py",
+        '                "tasa_exito": (exitos / total) if total else 0.0,',
+        '                "tasa_exito": exitos / total,',
+        "test_f14_evaluation.py",
+    ),
+    Mutation(
+        # Las intervenciones humanas son una metrica de primera clase (MET-12): sin
+        # contarlas, el coste humano del multiagente desaparece del informe.
+        "F14: las intervenciones humanas no se cuentan",
+        SRC / "evaluation" / "runner.py",
+        "            intervenciones += 1",
+        "            pass  # mutado: no se cuenta la intervencion humana",
+        "test_f14_evaluation.py",
+    ),
 ]
 
 

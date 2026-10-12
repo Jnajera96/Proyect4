@@ -72,13 +72,19 @@ def _ahora() -> datetime:
 class RunEngine:
     """Orquesta el grafo y mantiene el indice y el registro de eventos."""
 
-    def __init__(self, store: RunStore) -> None:
+    def __init__(self, store: RunStore, *, constructor_grafo=None) -> None:
         self._store = store
         # El grafo se compila **por hilo**, no una sola vez. El checkpointer lleva
         # una conexion SQLite, y compartir una conexion entre el hilo de la
         # peticion y los trabajadores producia fallos intermitentes en el `commit`.
         # Compilar por hilo da a cada uno su propia conexion al mismo fichero.
         self._local = threading.local()
+        # F14: el constructor del grafo se puede sustituir para ejecutar **otra**
+        # topologia sobre la misma maquinaria (eventos, persistencia, reanudacion).
+        # Lo usa el arnes de evaluacion para comparar el flujo multiagente de
+        # produccion contra un flujo directo de un solo agente. Por defecto es el
+        # grafo de produccion, asi que la API no cambia de comportamiento.
+        self._constructor = constructor_grafo or compilar
         self._locks: dict[str, threading.Lock] = {}
         self._locks_guard = threading.Lock()
         # Reanudaciones ya reclamadas y todavia no terminadas. Ver `reclamar_reanudacion`.
@@ -88,7 +94,7 @@ class RunEngine:
     def _app(self):
         app = getattr(self._local, "app", None)
         if app is None:
-            app = compilar(self._store)
+            app = self._constructor(self._store)
             self._local.app = app
         return app
 

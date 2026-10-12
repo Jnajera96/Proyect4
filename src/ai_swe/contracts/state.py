@@ -159,6 +159,14 @@ class Budget(BaseModel):
     # --- Tokens ---------------------------------------------------------------
     max_tokens: int = Field(default=200_000, ge=1)
     used_tokens: int = Field(default=0, ge=0)
+    # F14: desglose entrada/salida. El total (`used_tokens`) ya existia, pero el
+    # arnes de evaluacion necesita las dos partes: la entrada mide **cuanto contexto
+    # se envia** (lo que encarece el flujo multiagente, con mas nodos leyendo el
+    # estado) y la salida mide **cuanto se genera**. Son dos costes distintos y una
+    # sola cifra no los separa. Entran con valor por defecto, asi que un estado
+    # serializado antes de existir se deserializa sin error.
+    used_input_tokens: int = Field(default=0, ge=0)
+    used_output_tokens: int = Field(default=0, ge=0)
     # --- Llamadas a herramienta ----------------------------------------------
     max_tool_calls: int = Field(default=60, ge=1)
     used_tool_calls: int = Field(default=0, ge=0)

@@ -625,10 +625,22 @@
               "title": "Used Cost",
               "type": "number"
             },
+            "used_input_tokens": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Used Input Tokens",
+              "type": "integer"
+            },
             "used_model_calls": {
               "default": 0,
               "minimum": 0,
               "title": "Used Model Calls",
+              "type": "integer"
+            },
+            "used_output_tokens": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Used Output Tokens",
               "type": "integer"
             },
             "used_tokens": {

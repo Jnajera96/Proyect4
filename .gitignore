@@ -7,7 +7,13 @@
 # Se ancla con `/` inicial a la RAIZ del repositorio. Sin anclar, `var/` coincide
 # con cualquier directorio llamado `var` a cualquier profundidad, y lo mismo con
 # los demas: un patron sin barra inicial no es "en la raiz", es "en cualquier sitio".
-/var/
+#
+# F14: los resultados de la evaluacion **si** se versionan -son la evidencia cruda
+# que sostiene `docs/06-EVALUATION.md`-. Por eso se ignora `/var/*` (el contenido) y
+# se re-incluye ese fichero: con `/var/` (el directorio) la negacion no funcionaria,
+# porque git no desciende a un directorio ya excluido.
+/var/*
+!/var/evaluation_results.json
 *.sqlite3
 *.sqlite3-journal
 *.sqlite3-wal

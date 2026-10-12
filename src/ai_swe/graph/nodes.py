@@ -1570,8 +1570,33 @@ def _contexto_de_revision(state: RunState) -> str:
         f"- criterio de termino: {subtarea.done_criteria if subtarea else 'no declarado'}\n\n"
         f"Cambio propuesto (archivos: {archivos}):\n"
         f"--- diff ---\n{diff}\n--- fin del diff ---\n\n"
-        f"Evidencia real de pruebas:\n{_resumen_de_pruebas(state.evidence.test_runs)}"
+        f"Evidencia real de pruebas:\n{_resumen_de_pruebas(evidencia_vigente(state.evidence.test_runs))}"
     )
+
+
+def evidencia_vigente(pruebas: list[TestRun]) -> list[TestRun]:
+    """Ultima ejecucion de cada target: la evidencia que describe el worktree **actual**.
+
+    `evidence.test_runs` es un **historial**: cada vuelta del ciclo Coder<->Reviewer
+    anade sus corridas. Pero el juicio del Reviewer no puede hacerse sobre el
+    historial entero, porque una corrida de una vuelta anterior describe un arbol de
+    trabajo que **ya no existe** -`apply_sandbox` recrea el worktree en cada vuelta-,
+    asi que su fallo no dice nada del cambio que se esta revisando ahora.
+
+    **Sin esta distincion el ciclo no converge nunca.** El primer fallo de pruebas
+    quedaba en la lista para siempre, `_guarda_pruebas` vetaba todo `ACCEPT` posterior
+    y la ejecucion escalaba siempre: el Coder podia arreglar el fallo y el sistema
+    seguia diciendo que estaba roto. Lo detecto el arnes de evaluacion de F14 -dos
+    tareas con "primer intento incorrecto" no se resolvian en **ningun** modo-. Es
+    tambien lo que hacia inalcanzable `MET-08` (correcciones que terminan en `accept`).
+
+    Se queda la **ultima** por target, que es la que corresponde al arbol vigente. El
+    historial completo sigue en `evidence.test_runs`, para poder auditarlo.
+    """
+    vigentes: dict[str, TestRun] = {}
+    for prueba in pruebas:
+        vigentes[prueba.target] = prueba
+    return list(vigentes.values())
 
 
 def _veredicto_determinista(state: RunState) -> ReviewVerdict:
@@ -1582,7 +1607,7 @@ def _veredicto_determinista(state: RunState) -> ReviewVerdict:
     determinista, porque un fallback que no se declara es indistinguible de un
     acierto.
     """
-    pruebas = state.evidence.test_runs
+    pruebas = evidencia_vigente(state.evidence.test_runs)
 
     if not pruebas:
         return ReviewVerdict(
@@ -1689,7 +1714,7 @@ def _guarda_pruebas(state: RunState, veredicto: ReviewVerdict) -> ReviewVerdict:
     convierte en `REQUEST_CHANGES` y el resumen del fallo se anade a los hallazgos,
     para que el Coder sepa **que** corregir y no solo que hay que corregir.
     """
-    fallidas = [p for p in state.evidence.test_runs if not p.passed]
+    fallidas = [p for p in evidencia_vigente(state.evidence.test_runs) if not p.passed]
     if not fallidas or veredicto.decision is not ReviewDecision.ACCEPT:
         return veredicto
 

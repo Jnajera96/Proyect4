@@ -2,7 +2,7 @@
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-08",
   "baseline_updated": "2026-10-06",
-  "phase": "M3 IN PROGRESS — F13 (local Speech-to-Text, FasterWhisperAdapter) implemented and verified. F12 (HITL code promotion from the sandbox to the user's repository), F11 (React + TypeScript + Vite dashboard) and F10 (FastAPI REST surface + SSE event streaming) are complete; M2 is complete at 15/15. Next: the experimental evaluation suite — awaiting explicit authorization.",
+  "phase": "M3 COMPLETE — F14 (experimental evaluation suite: SINGLE_AGENT vs MULTI_AGENT) implemented and verified. F13 (local Speech-to-Text), F12 (HITL code promotion), F11 (React dashboard) and F10 (REST + SSE) are complete; M2 is complete at 15/15. Next: final repository closure for the university delivery — awaiting explicit authorization.",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -102,11 +102,16 @@
     "f13_optional_dependency_declared_not_faked": true,
     "f13_api_maps_missing_dependency_to_503": true,
     "f13_model_loaded_lazily_once": true,
-    "tests_passing": 558,
-    "tests_skipped": "2/558 in the F13 run: (1) tests.test_model_gateway_real::test_llamada_real_controlada and (2) tests.test_f13_stt::test_transcripcion_real_opt_in are opt-in **by design** (the first needs AI_SWE_RUN_REAL_PROVIDER_TESTS=1 plus a provider key; the second needs the `voice` extra and AI_SWE_RUN_REAL_STT_TESTS=1, because it downloads a model), so they SKIP rather than passing falsely. The other skip recorded in earlier phases, test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace, is conditional: it skips only when Windows denies the symlink privilege (WinError 1314) and PASSED outright in this run. None is a code defect and none is a network/credential dependency of the offline suite.",
+    "f14_evaluation_harness": true,
+    "f14_single_vs_multi_measured": true,
+    "f14_metrics_from_execution_evidence": true,
+    "f14_report_is_generated": true,
+    "f14_review_cycle_converges_after_a_fixed_failure": true,
+    "tests_passing": 601,
+    "tests_skipped": "2/601 in the F14 run: (1) tests.test_model_gateway_real::test_llamada_real_controlada and (2) tests.test_f13_stt::test_transcripcion_real_opt_in are opt-in **by design** (the first needs AI_SWE_RUN_REAL_PROVIDER_TESTS=1 plus a provider key; the second needs the `voice` extra and AI_SWE_RUN_REAL_STT_TESTS=1, because it downloads a model), so they SKIP rather than passing falsely. The other skip recorded in earlier phases, test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace, is conditional: it skips only when Windows denies the symlink privilege (WinError 1314) and PASSED outright in this run. None is a code defect and none is a network/credential dependency of the offline suite.",
     "tests_require_network": false,
     "tests_require_credentials": false,
-    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block; 12/13 (F10, re-run during F11 with the baseline green: 12 caught). The 13th, `the resumption not reserving the right (two concurrent requests both winning)`, did **not** fail under mutation in this run, having passed at F10 closure. Its regression test drives two threads through a barrier, so whether it observes the race is timing-dependent: the guard is weaker than the count suggests. Recorded rather than papered over; see the mutations block. F12 and F13: see the mutations block.",
+    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block; 12/13 (F10, re-run during F11 with the baseline green: 12 caught). The 13th, `the resumption not reserving the right (two concurrent requests both winning)`, did **not** fail under mutation in this run, having passed at F10 closure. Its regression test drives two threads through a barrier, so whether it observes the race is timing-dependent: the guard is weaker than the count suggests. Recorded rather than papered over; see the mutations block. F12, F13 and F14: see the mutations block.",
     "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
     "m1_assumptions": "5/5",
     "frontend_browser_checks": "15/15",
@@ -118,15 +123,12 @@
   },
   "not_implemented": [
     "llm_wired_to_other_langgraph_nodes",
-    "real_reviewer",
-    "real_test_executor",
     "mcp",
     "knowledge_graph",
     "full_observability",
     "authentication",
     "agent_prompts_beyond_interpret_plan_and_coder",
-    "plan_dependencies_respected_before_execution",
-    "promotion_of_sandbox_changes_to_the_user_repo"
+    "plan_dependencies_respected_before_execution"
   ],
   "next_milestone": "M3 — wire the sandbox into the graph (a `sandbox` node between coder and run_tests) and promote reviewed changes via approval",
   "ready_for_model_gateway": "YES",
@@ -267,9 +269,13 @@
     "F13: the raw audio never crosses the STT boundary -the adapter returns a `Transcript` (text, language, confidence, segments) and nothing else, so `RF-03` holds **by construction**: there is no path by which the Supervisor or the model could receive audio",
     "F13: the local model is loaded **lazily, once**, and `/health` deliberately does NOT load it -probing health must not become a multi-hundred-megabyte download; `health()` only checks that the package imports",
     "F13: the missing dependency is declared, never faked -without the `voice` extra, `transcribe` raises `STTNotAvailable` and the API maps it to **503** (a capability that is not installed), not 500 (a server defect). A failed transcription is never replaced by invented text",
-    "F13: the default STT provider is the **real** local adapter, selected by `AI_SWE_STT_PROVIDER`; the previous default was `FakeAdapter`, which returned fixed text regardless of the audio -a fabricated transcription. Transcription runs in a threadpool so a long decode cannot block the event loop and stall an in-flight SSE stream"
+    "F13: the default STT provider is the **real** local adapter, selected by `AI_SWE_STT_PROVIDER`; the previous default was `FakeAdapter`, which returned fixed text regardless of the audio -a fabricated transcription. Transcription runs in a threadpool so a long decode cannot block the event loop and stall an in-flight SSE stream",
+    "F14: the success criterion is objective and the harness cannot inflate it -a task counts as solved only if the run reaches `completed` **and** the current test evidence is green. A `completed` with a red suite is a failure: the metric reads the evidence, not the status",
+    "F14: the Reviewer judges the **current** evidence (the latest run per target), not the accumulated history. Judging the history meant the first failed attempt vetoed every later `ACCEPT`, so the Coder<->Reviewer cycle could never converge and MET-08 was unreachable. The harness found it: two tasks resolved in **neither** mode until it was fixed",
+    "F14: the comparison is reproducible rather than impressive -the model is scripted per task, offline and deterministic, so the run measures the cost and benefit of the **orchestration**, not the quality of a model. Declared as a limitation inside the generated report",
+    "F14: `docs/06-EVALUATION.md` is **generated** from `var/evaluation_results.json` and carries the generation stamp; editing it by hand is lost on the next run. The raw JSON is the source of truth"
   ],
-  "tests_passing": 558,
+  "tests_passing": 601,
   "snapshot_location": "repository root (consolidated 2026-10-08; the docs/auditoria-2026-10-06/ duplicate was removed to resolve AUD-01)",
   "component_status": [
     {
@@ -423,9 +429,9 @@
       "observations": "Docstring only. Structured JSON logs exist via security/logging.py; Langfuse is declared M6."
     },
     {
-      "component": "evaluation/ harness (MET-01..14, EXP-01..07)",
-      "status": "NOT_IMPLEMENTED",
-      "observations": "Docstring only. Declared M2/M6."
+      "component": "evaluation/ harness (F14: EXP-01 single-agent vs multi-agent)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "src/ai_swe/evaluation/tasks.py holds 13 controlled tasks (EXP-01..EXP-13) over the eight categories the metrics document asks for, each with an objective success criterion: its validation suite fails before the change and passes after. src/ai_swe/evaluation/runner.py runs the same battery under SINGLE_AGENT (direct flow: interpret -> coder -> apply_sandbox -> run_tests -> finalize, no plan, no researcher, no reviewer, no HITL) and MULTI_AGENT (the full production graph), collects typed per-run metrics from execution evidence (success from TestRun exit codes, tokens and call counts from the persisted Budget, latency from the clock) and writes var/evaluation_results.json plus a GENERATED docs/06-EVALUATION.md. Offline and deterministic: the model is scripted per task, so the comparison measures the COST AND BENEFIT OF ORCHESTRATION, not model quality (declared limitation, same shape as TD-01). Result: 8/13 vs 12/13 success; the whole delta sits on the four tasks that need a second attempt, and one task (EXP-13) is a negative control where neither mode converges and the multi-agent escalates instead of looping. Only EXP-01 is covered; EXP-02..EXP-08 remain future work."
     },
     {
       "component": "Knowledge graph / Graphify",
@@ -545,12 +551,12 @@
       "11a13cb M1 VERIFIED BASELINE"
     ],
     "uncommitted_work": [],
-    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = 72613d9, F10 = 019af70, F11 = 57a2c29, F12 = e69b03a, F13 = the current commit (see git log)."
+    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = 72613d9, F10 = 019af70, F11 = 57a2c29, F12 = e69b03a, F13 = a950c69, F14 = the current commit (see git log)."
   },
   "tests_executed": {
-    "command": "python -m pytest -q --junitxml=_f13_suite.xml (F13 tree, 2026-10-12)",
+    "command": "python -m pytest -q --junitxml=_f14_suite.xml (F14 tree, 2026-10-12)",
     "environment": "local, offline, no credentials, no network",
-    "tests": 558,
+    "tests": 601,
     "failures": 0,
     "errors": 0,
     "skipped": 2,
@@ -569,7 +575,8 @@
       "m2": "7/7 — the requirements gate being skipped, the awaiting state not being marked, the confirmation not being recorded, a rejection planning anyway, human modifications being discarded, an unrecognised resumption being treated as approved, and the MET-13 safety net confusing a wait with a hang",
       "f10": "13/13 — events stored unredacted, a human pause emitted as run.failed, the outcome event not emitted, the human wait announced with the wrong gate's event, the per-node milestones not emitted, the engine stringifying a corrections resumption, project registration skipping repo validation, the project path not overriding the request's, SandboxError mapped to 500 instead of 422, the server listening on all interfaces, the resumption not reserving the right (two concurrent requests both winning), `confirm-requirements` accepting the approval gate, and `approve` accepting the requirements gate. The last three were added this phase; a `shutdown` mutation that had been counted earlier was retracted after proving it attacked a redundant line (the original `shutdown(wait=True)` already waits), and the underlying regression test was removed with it. RE-RUN DURING F11 (after AUD-11 retired `run.awaiting_approval`): 12/13 — the same run reported `la reanudacion no reserva el derecho` as NOT caught. That mutant removes the claim that makes `reclamar_reanudacion` atomic; the test that should catch it (`test_dos_confirmaciones_concurrentes_solo_reanudan_una_vez`) drives two threads through a barrier and asserts `sorted(codigos) == [200, 409]`, so it only observes the race when the worker thread has not yet finished the first resume. The verdict is therefore timing-dependent, and the guard is weaker than a 13/13 count implies. The mutant was retargeted in the same phase for AUD-11 (`run.awaiting_approval` no longer exists, so the old pattern could not apply).",
       "f12": "8/8 (this run: baseline green, every mutant caught, tree restored green) — promoting over an unauthorised repository, promoting a patch that changed after review (integrity), a path outside `allowed_paths`, a protected path, the sandbox not being torn down on finalize, a rejection marked as `completed`, requesting changes not spending a review cycle, and the human's comments not reaching the state. Every mutant is caught by tests/test_f12_promotion.py.",
-      "f13": "4/4 (this run: baseline green, every mutant caught, tree restored green) — the empty-audio guard (without it the model is loaded to transcribe nothing), an empty transcription being returned instead of declared, the low-confidence warning being switched off, and the vocabulary not being passed as a hint to the engine. Every mutant is caught by tests/test_f13_stt.py. This run also **confirms the F13 housekeeping**: with LIMITE_PYTEST raised to 1200s the restore check reports `arbol restaurado y suite en verde`, where at 900s it had timed out and reported NO CONCLUYENTE."
+      "f13": "4/4 (this run: baseline green, every mutant caught, tree restored green) — the empty-audio guard (without it the model is loaded to transcribe nothing), an empty transcription being returned instead of declared, the low-confidence warning being switched off, and the vocabulary not being passed as a hint to the engine. Every mutant is caught by tests/test_f13_stt.py. This run also **confirms the F13 housekeeping**: with LIMITE_PYTEST raised to 1200s the restore check reports `arbol restaurado y suite en verde`, where at 900s it had timed out and reported NO CONCLUYENTE.",
+      "f14": "5/5 (this run: baseline green, every mutant caught, tree restored green) — the success criterion ignoring the test evidence, the Reviewer judging the whole history instead of the current evidence (the AUD-14 defect this phase found), `evidencia_vigente` keeping the first run per target instead of the last, the success-rate aggregate dividing by zero with no runs, and the human interventions not being counted. Every mutant is caught by tests/test_f14_evaluation.py."
     }
   },
   "blockers_and_debt": [
@@ -671,13 +678,20 @@
       "status": "RESOLVED (2026-10-11, F11)",
       "detail": "`/health` reported `fase: \"M1\"` until F10, when it was corrected to \"M3\" (it was simply wrong). Two static strings in `frontend/index.html` still said \"fase M1\" (the descriptive paragraph and the STT note). The health **chip** is rendered from the API, so it already showed the correct phase -the page was therefore internally inconsistent.",
       "how_to_close": "F11 replaced `frontend/index.html` entirely: it is now the Vite source entry point and carries no phase string at all -the phase is read from `/health` and rendered by React. `tools/verify_frontend.py` asserts that no stale milestone label survives in the built page (`MENCIONA_M1=false`)."
+    },
+    {
+      "id": "AUD-14",
+      "title": "The Coder<->Reviewer cycle could never converge after a failed attempt",
+      "status": "RESOLVED (2026-10-12, F14)",
+      "detail": "`evidence.test_runs` is a history: every turn of the Coder<->Reviewer cycle appends its runs. But the Reviewer judged the **whole** list (`_guarda_pruebas` and `_veredicto_determinista`), so the first failing run stayed there forever and vetoed every later `ACCEPT`. The Coder could fix the failure and the system would still call it broken: after the cycle limit it escalated to `needs_human`. It made `MET-08` (corrections that end in `accept`) structurally unreachable, and it went unnoticed because the only existing cycle test kept the suite green in both turns -it exercised the model changing its mind, never a failure being fixed. Found by the F14 harness: two tasks (`EXP-02`, `EXP-09`) resolved in **neither** mode.",
+      "how_to_close": "Added `nodes.evidencia_vigente`, which keeps the **latest** run per target -the evidence that describes the worktree that actually exists, since `apply_sandbox` recreates it every turn. `_guarda_pruebas`, `_veredicto_determinista` and the Reviewer's prompt context all use it now; the full history is still kept in `evidence.test_runs` for audit. The evaluation harness uses the same function, so the system's criterion and the metric's criterion cannot drift apart. Regression tests: `test_un_fallo_superado_no_veta_el_siguiente_accept` and `test_la_evidencia_vigente_es_la_ultima_por_target`; mutation `F14: el reviewer juzga el historico entero en lugar de la evidencia vigente`."
     }
   ],
   "next_step_proposed": {
-    "phase": "The experimental evaluation suite (F13 closed the voice input)",
-    "why": "The functional chain is now closed end to end: the system can be driven from a browser, stops at both human gates, an approved change reaches the user's repository, and voice input is transcribed locally without the audio leaving the machine. What remains is the experimental evaluation the DoD asks for.",
-    "scope": "Build the experimental evaluation suite over the offline flow, with the same shape as the F1-F13 verification: a reproducible set of scenarios, declared metrics and a report. Optionally exercise the real STT path end to end (AI_SWE_RUN_REAL_STT_TESTS=1) as one of the scenarios.",
-    "prerequisite": "F13 is committed; tree clean.",
+    "phase": "Final repository closure for the university delivery",
+    "why": "All fourteen phases are implemented and verified. The functional chain is closed end to end -a browser drives the system, it stops at both human gates, an approved change reaches the user's repository, and voice input is transcribed locally without the audio leaving the machine- and the central academic question is now answered with reproducible evidence instead of opinion (docs/06-EVALUATION.md).",
+    "scope": "Close the repository for delivery: consolidate the documentation, produce the final report and the defence material, confirm the reproducibility baseline and tag the release. **No new functionality.**",
+    "prerequisite": "F14 is committed; tree clean.",
     "awaiting": "explicit authorization from the Arquitecto — NOT to be started without it"
   }
 }

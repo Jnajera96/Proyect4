@@ -75,6 +75,14 @@ def consume(
 
     if usage is not None and usage.known_total is not None:
         datos["used_tokens"] = budget.used_tokens + usage.known_total
+        # F14: el desglose entrada/salida. Solo se suma la parte que el proveedor
+        # reporto: `None` no se convierte en cero, porque cero afirmaria que no se
+        # consumio nada. Una respuesta sin desglose deja los contadores como estaban
+        # y el total sigue siendo correcto.
+        if usage.input_tokens is not None:
+            datos["used_input_tokens"] = budget.used_input_tokens + usage.input_tokens
+        if usage.output_tokens is not None:
+            datos["used_output_tokens"] = budget.used_output_tokens + usage.output_tokens
 
     if cost is not None:
         datos["used_cost"] = budget.used_cost + cost
