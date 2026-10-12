@@ -286,9 +286,20 @@ def nodos_de_m2(monkeypatch):
         ]
         return {"evidence": datos}
 
+    def promote_changes_de_m2(state: RunState) -> dict:
+        """Simula la promocion al repositorio del usuario (F12).
+
+        Se sustituye por la misma razon que el sandbox: `apply_sandbox_de_m2` finge un
+        worktree que no existe, y promover sobre el fallaria por un motivo que no
+        tiene nada que ver con lo que estas pruebas comprueban -la puerta humana-. El
+        sandbox real y la promocion real se ejercitan en `test_f12_promotion.py`.
+        """
+        return {"next_step": "finalize"}
+
     monkeypatch.setattr(nodes, "coder", coder_de_m2)
     monkeypatch.setattr(nodes, "apply_sandbox", apply_sandbox_de_m2)
     monkeypatch.setattr(nodes, "run_tests", run_tests_de_m2)
+    monkeypatch.setattr(nodes, "promote_changes", promote_changes_de_m2)
 
 
 def _compilar_con_checkpointer(store: RunStore):
@@ -340,7 +351,13 @@ def test_la_reanudacion_con_aprobacion_completa_la_ejecucion(tmp_path, nodos_de_
         store.close()
 
 
-def test_rechazar_la_aprobacion_escala_en_lugar_de_completar(tmp_path, nodos_de_m2) -> None:
+def test_rechazar_la_aprobacion_cancela_sin_promover(tmp_path, nodos_de_m2) -> None:
+    """F12: un rechazo cierra en `cancelled`, no en `needs_human`.
+
+    Antes de F12 rechazar escalaba (`needs_human`), porque "no aprobado" se trataba
+    como una anomalia. Con la promocion real, un rechazo es una **decision valida**
+    del humano: no hay nada que reparar, se cierra y el repositorio queda intacto.
+    """
     store = RunStore(tmp_path / "estado.db")
     try:
         app = _compilar_con_checkpointer(store)
@@ -351,7 +368,8 @@ def test_rechazar_la_aprobacion_escala_en_lugar_de_completar(tmp_path, nodos_de_
         _confirmar_requisitos(app, cfg)
         final = RunState.model_validate(app.invoke(Command(resume="rejected"), cfg))
 
-        assert final.status is RunStatus.NEEDS_HUMAN
+        assert final.status is RunStatus.CANCELLED
+        assert final.status.is_terminal
         assert final.approvals[0].decision is ApprovalDecision.REJECTED
         assert any(e.error_class == "APPROVAL_REJECTED" for e in final.errors)
     finally:
@@ -369,7 +387,7 @@ def test_una_decision_desconocida_se_trata_como_rechazo(tmp_path, nodos_de_m2) -
         app.invoke(estado, cfg)
         _confirmar_requisitos(app, cfg)
         final = RunState.model_validate(app.invoke(Command(resume="lo que sea"), cfg))
-        assert final.status is RunStatus.NEEDS_HUMAN
+        assert final.status is RunStatus.CANCELLED
         assert final.approvals[0].decision is ApprovalDecision.REJECTED
     finally:
         store.close()

@@ -1096,6 +1096,80 @@ MUTACIONES: list[Mutation] = [
         'motor.reclamar_reanudacion(run_id, puerta_esperada="confirm_requirements_gate")',
         "test_f10_api.py",
     ),
+    # ------------------------------------------------ F12: promocion al repo
+    Mutation(
+        # La promocion es el unico punto que escribe FUERA del sandbox. Si no
+        # comprueba que el destino es el repositorio que el usuario autorizo,
+        # escribe en el que diga el worktree: exactamente el fallo que la politica
+        # existe para impedir.
+        "F12: la promocion no comprueba que el repositorio sea el autorizado",
+        SRC / "tools" / "promoter.py",
+        "    if sandbox.repo_original.resolve() != repo:",
+        "    if False:",
+        "test_f12_promotion.py",
+    ),
+    Mutation(
+        # Se promueve **lo aprobado**. Sin esta comprobacion, un worktree que cambio
+        # despues de la revision se promueve igual: el humano aprobo un parche y se
+        # aplica otro.
+        "F12: la promocion no verifica la integridad del parche aprobado",
+        SRC / "tools" / "promoter.py",
+        "    if expected_diff is not None and parche != expected_diff:",
+        "    if False:",
+        "test_f12_promotion.py",
+    ),
+    Mutation(
+        # El confinamiento por alcance se reaplica al promover: una ruta que quedo
+        # fuera de `allowed_paths` no puede colarse al repositorio del usuario.
+        "F12: la promocion no confina las rutas al alcance declarado",
+        SRC / "tools" / "promoter.py",
+        "        if not path_within_scope(normalizada, allowed_paths):",
+        "        if False:",
+        "test_f12_promotion.py",
+    ),
+    Mutation(
+        # Y una ruta declarada como protegida exige permiso explicito tambien aqui.
+        "F12: la promocion no respeta las rutas protegidas",
+        SRC / "tools" / "promoter.py",
+        '            if p and (normalizada == p or normalizada.startswith(p + "/")):',
+        "            if False:",
+        "test_f12_promotion.py",
+    ),
+    Mutation(
+        # El worktree se limpia al cerrar la ejecucion. Sin esto, cada ejecucion deja
+        # un arbol y una entrada administrativa en el repositorio del usuario.
+        "F12: el sandbox no se limpia al finalizar",
+        SRC / "graph" / "nodes.py",
+        "    _limpiar_sandbox(state)",
+        "    pass  # mutado: no se limpia el sandbox",
+        "test_f12_promotion.py",
+    ),
+    Mutation(
+        # Un rechazo cierra en `cancelled`. Si se marcara `completed`, el sistema
+        # diria que la ejecucion salio bien justo cuando el humano dijo que no.
+        "F12: un rechazo se marca como completado",
+        SRC / "graph" / "nodes.py",
+        '        "status": RunStatus.CANCELLED,',
+        '        "status": RunStatus.COMPLETED,',
+        "test_f12_promotion.py",
+    ),
+    Mutation(
+        # Pedir cambios gasta un ciclo: sin contarlo, el bucle humano no tiene tope.
+        "F12: pedir cambios no gasta un ciclo de revision",
+        SRC / "graph" / "nodes.py",
+        '                "review_cycles_used": state.budget.review_cycles_used + 1,',
+        '                "review_cycles_used": state.budget.review_cycles_used,',
+        "test_f12_promotion.py",
+    ),
+    Mutation(
+        # Los comentarios del humano son lo unico que le dice al Coder que corregir;
+        # si no llegan al estado, volver al Coder no cambia nada.
+        "F12: los comentarios del humano no llegan al estado",
+        SRC / "graph" / "nodes.py",
+        '            "human_feedback": [*state.human_feedback, comentario] if comentario else state.human_feedback,',
+        '            "human_feedback": state.human_feedback,',
+        "test_f12_promotion.py",
+    ),
 ]
 
 

@@ -51,9 +51,10 @@ from ai_swe.contracts import (
     TaskInterpretation,
     TestRun,
 )
-from ai_swe.sandbox import Sandbox, SandboxError, crear
+from ai_swe.sandbox import Sandbox, SandboxError, crear, destruir
 from ai_swe.tools.patcher import aplicar
 from ai_swe.tools.policy import DecisionContext, decide
+from ai_swe.tools.promoter import PromotionError, promover, sha256_texto
 from ai_swe.tools.runner import RunnerError
 from ai_swe.tools.runner import ejecutar as ejecutar_target
 
@@ -1058,6 +1059,15 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str]] |
         for f in hallazgos
     ) or "(sin hallazgos previos)"
 
+    # F12: los comentarios que el humano dejo al **pedir cambios** en la puerta de
+    # aprobacion. Sin esto, volver al Coder no cambiaria nada: propondria el mismo
+    # parche que el humano acaba de rechazar. Se envian los ultimos, que son los
+    # vigentes.
+    retroalimentacion = state.human_feedback[-3:]
+    lineas_humano = "\n".join(f"- {comentario}" for comentario in retroalimentacion) or (
+        "(sin comentarios del usuario)"
+    )
+
     contexto = (
         "Interpretacion de la peticion:\n"
         f"- intencion: {interpretacion.intent.value if interpretacion else 'desconocida'}\n"
@@ -1066,6 +1076,8 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str]] |
         f"- descripcion: {subtarea.description if subtarea else 'no declarada'}\n"
         f"- criterio de termino: {subtarea.done_criteria if subtarea else 'no declarado'}\n\n"
         f"Evidencia acumulada por el Researcher:\n{lineas_evidencia}\n\n"
+        f"Comentarios del usuario que pidio cambios (obligatorio atenderlos):\n"
+        f"{lineas_humano}\n\n"
         f"Peticion original del usuario:\n{state.instruction.text}"
     )
 
@@ -1954,8 +1966,52 @@ def mark_awaiting(state: RunState) -> dict:
             "updated_at": _ahora()}
 
 
+def _decision_de_aprobacion(valor: object) -> tuple[ApprovalDecision, str]:
+    """Normaliza la reanudacion de la puerta de aprobacion (F12).
+
+    Acepta las dos formas que puede tomar, igual que la puerta de requisitos:
+
+      - una `ApprovalDecision` en texto (`"approved"`, `"rejected"`, `"modified"`);
+      - un diccionario `{"decision": ..., "comments": "..."}`, que es como viajan
+        los comentarios de un humano que **pide cambios** en lugar de aprobar.
+
+    La correspondencia con el vocabulario de la revision es directa:
+
+      - `APPROVED`  -> el humano **acepta**: se promueve el cambio.
+      - `MODIFIED`  -> el humano **pide cambios**: vuelve al Coder.
+      - `REJECTED`  -> el humano **rechaza**: no se promueve nada.
+
+    Un valor irreconocible se trata como `REJECTED`, nunca como `APPROVED`: ante la
+    duda, **no se promueve en nombre de nadie**.
+    """
+    if isinstance(valor, dict):
+        crudo = str(valor.get("decision", "rejected"))
+        comentario = str(valor.get("comments") or "").strip()
+    else:
+        crudo = str(valor)
+        comentario = ""
+    try:
+        return ApprovalDecision(crudo), comentario
+    except ValueError:
+        return ApprovalDecision.REJECTED, comentario
+
+
 def approval_gate(state: RunState) -> dict:
-    """Solicita aprobacion humana y reanuda con la decision."""
+    """Solicita aprobacion humana y traduce la decision a la ruta del grafo (F12).
+
+    **Es la puerta que autoriza la escritura en el repositorio del usuario.** Hasta
+    F11 aprobar no promovia nada; desde F12, `APPROVED` lleva al nodo
+    `promote_changes`, que es el unico que escribe fuera del sandbox. Las otras dos
+    decisiones **no** lo alcanzan:
+
+      - `MODIFIED` (pedir cambios) devuelve el flujo al Coder, con los comentarios
+        del humano en `human_feedback` y un ciclo de revision gastado. El limite de
+        ciclos se respeta: agotado, se escala en lugar de iterar sin fin.
+      - `REJECTED` deja la ejecucion en `cancelled` **sin tocar el repositorio**.
+
+    La `Approval` se registra en los tres casos: la trazabilidad (RNF-T2) exige
+    saber quien decidio que, incluso -sobre todo- cuando la decision fue no hacer.
+    """
     veredicto = state.outputs.reviewer_output
     decision = interrupt(
         {
@@ -1965,10 +2021,14 @@ def approval_gate(state: RunState) -> dict:
         }
     )
 
-    try:
-        eleccion = ApprovalDecision(str(decision))
-    except ValueError:
-        eleccion = ApprovalDecision.REJECTED
+    eleccion, comentario = _decision_de_aprobacion(decision)
+
+    if eleccion is ApprovalDecision.APPROVED:
+        motivo = "aprobado por el usuario"
+    elif eleccion is ApprovalDecision.MODIFIED:
+        motivo = comentario or "el usuario pidio cambios"
+    else:
+        motivo = comentario or "rechazado por el usuario"
 
     aprobacion = Approval(
         action="promote_changes",
@@ -1978,27 +2038,158 @@ def approval_gate(state: RunState) -> dict:
         if state.outputs.coder_output
         else hashlib.sha256(b"").hexdigest(),
         decision=eleccion,
-        reason="" if eleccion is ApprovalDecision.APPROVED else "rechazado por el usuario",
+        reason=motivo,
     )
 
-    if eleccion is not ApprovalDecision.APPROVED:
+    if eleccion is ApprovalDecision.APPROVED:
         return {
             "approvals": [*state.approvals, aprobacion],
-            "errors": _error(
-                state,
-                "APPROVAL_REJECTED",
-                AgentRole.SUPERVISOR.value,
-                "el usuario rechazo la promocion de cambios",
-                recuperable=False,
-            ),
-            "status": RunStatus.NEEDS_HUMAN,
-            "next_step": None,
+            "status": RunStatus.RUNNING,
+            "next_step": "promote_changes",
             "updated_at": _ahora(),
         }
 
+    if eleccion is ApprovalDecision.MODIFIED:
+        # El limite de ciclos es el mismo que usa el Reviewer: un humano que pide
+        # cambios una y otra vez sin que el Coder converja tiene que acabar en una
+        # decision humana, no en un bucle.
+        if state.budget.review_cycles_used >= state.budget.max_review_cycles:
+            return {
+                "approvals": [*state.approvals, aprobacion],
+                "errors": _error(
+                    state,
+                    "REVIEW_CYCLES_EXHAUSTED",
+                    AgentRole.SUPERVISOR.value,
+                    "se agotaron los ciclos de revision pidiendo cambios desde la "
+                    "puerta de aprobacion; se escala a un humano",
+                    recuperable=False,
+                ),
+                "status": RunStatus.NEEDS_HUMAN,
+                "next_step": None,
+                "updated_at": _ahora(),
+            }
+        presupuesto = Budget.model_validate(
+            {
+                **state.budget.model_dump(),
+                "review_cycles_used": state.budget.review_cycles_used + 1,
+            }
+        )
+        return {
+            "approvals": [*state.approvals, aprobacion],
+            "budget": presupuesto,
+            "human_feedback": [*state.human_feedback, comentario] if comentario else state.human_feedback,
+            "status": RunStatus.RUNNING,
+            "next_step": "coder",
+            "updated_at": _ahora(),
+        }
+
+    # REJECTED: se cierra sin promover. `cancelled` es terminal, asi que `next_step`
+    # tiene que quedar a `None` (lo impone el contrato de `RunState`).
     return {
         "approvals": [*state.approvals, aprobacion],
-        "status": RunStatus.RUNNING,
+        "errors": _error(
+            state,
+            "APPROVAL_REJECTED",
+            AgentRole.SUPERVISOR.value,
+            "el usuario rechazo la promocion de cambios; el repositorio no se ha modificado",
+            recuperable=False,
+        ),
+        "status": RunStatus.CANCELLED,
+        "next_step": None,
+        "updated_at": _ahora(),
+    }
+
+
+def route_after_approval(state: RunState) -> str:
+    """Ruta tras la puerta de aprobacion (F12). Se decide por el **estado**.
+
+    `approval_gate` ya dejo el destino en `next_step`; este router solo lo traduce.
+    Un estado terminal (rechazo -> `cancelled`, ciclos agotados -> `needs_human`)
+    cierra en `finalize`; pedir cambios vuelve al Coder; aprobar promueve.
+    """
+    if state.status.is_terminal:
+        return "finalize"
+    if state.next_step == "coder":
+        return "coder"
+    return "promote_changes"
+
+
+def promote_changes(state: RunState) -> dict:
+    """Promueve al repositorio del usuario el cambio aprobado (F12).
+
+    **Unico punto del sistema que escribe fuera del sandbox.** Solo se llega aqui
+    desde `approval_gate` con una `ApprovalDecision.APPROVED` registrada, y la
+    promocion en si (`promover`) vuelve a comprobar: que el destino sea el
+    repositorio autorizado, que el parche sea **el aprobado** (integridad SHA256) y
+    que ninguna ruta escape del alcance.
+
+    **Un fallo no deja el repositorio a medias.** `promover` valida el encaje antes
+    de escribir, verifica el resultado despues y revierte si no reproduce el
+    worktree. Un fallo o una denegacion se convierten en un error tipado y la
+    ejecucion escala a un humano: nunca se marca `completed` un cambio que no se
+    aplico.
+    """
+    aprobacion = state.approvals[-1] if state.approvals else None
+    if aprobacion is None or aprobacion.decision is not ApprovalDecision.APPROVED:
+        return _escalar(
+            state,
+            _error(
+                state,
+                "PROMOTION_NOT_APPROVED",
+                AgentRole.SUPERVISOR.value,
+                "no hay una aprobacion explicita que autorice la promocion; no se toca "
+                "el repositorio del usuario",
+                recuperable=False,
+            ),
+        )
+
+    ruta_worktree = state.artifacts.worktree_path
+    if not ruta_worktree:
+        return _escalar(
+            state,
+            _error(
+                state,
+                "PROMOTION_NO_SANDBOX",
+                AgentRole.CODER.value,
+                "no hay worktree que promover: la aprobacion no tiene cambio que aplicar",
+                recuperable=False,
+            ),
+        )
+
+    alcance = _alcance(state)
+    sandbox = Sandbox(
+        raiz=Path(ruta_worktree),
+        repo_original=Path(alcance.repo_path),
+        base_commit=state.artifacts.base_commit or "",
+        run_id=state.run_id,
+        # No lo creamos en este nodo, pero si en `apply_sandbox` de esta misma
+        # ejecucion: el teardown de `finalize` debe poder limpiarlo.
+        creado_por_nosotros=True,
+    )
+
+    try:
+        promover(
+            sandbox,
+            repo_autorizado=alcance.repo_path,
+            allowed_paths=tuple(alcance.allowed_paths),
+            protected_paths=tuple(alcance.protected_paths),
+            expected_diff=state.artifacts.diff,
+        )
+    except PromotionError as exc:
+        # `PromotionDenied` es una negativa de politica; el resto, una averia. Ambas
+        # significan lo mismo para el usuario: el repositorio **no** se modifico.
+        return _escalar(
+            state,
+            _error(
+                state,
+                "PROMOTION_DENIED" if type(exc).__name__ == "PromotionDenied" else "PROMOTION_FAILED",
+                AgentRole.SUPERVISOR.value,
+                f"no se pudo promover el cambio al repositorio del usuario: {exc}",
+                recuperable=False,
+            ),
+        )
+
+    return {
         "next_step": "finalize",
         "updated_at": _ahora(),
     }
@@ -2029,12 +2220,44 @@ def escalate_no_changes(state: RunState) -> dict:
     )
 
 
+def _limpiar_sandbox(state: RunState) -> None:
+    """Limpia el worktree de la ejecucion al finalizar (F12, revisa `DEC-16`).
+
+    **Por que aqui y no antes.** Hasta F11 el worktree **no se destruia nunca**
+    (`DEC-16`): destruirlo antes de la aprobacion destruiria justo lo que se esta
+    aprobando. F12 conserva esa mitad -el worktree sobrevive a la espera humana,
+    para poder inspeccionarlo- y anade la otra: cuando la ejecucion cierra, el
+    worktree ya no sirve a nadie y se limpia, con `git worktree prune` incluido
+    para no dejar referencias fantasma en el repositorio del usuario.
+
+    No propaga errores: `finalize` cierra la ejecucion y un fallo al limpiar no debe
+    cambiar su desenlace. `destruir` ya registra lo que ocurra.
+    """
+    ruta = state.artifacts.worktree_path
+    if not ruta:
+        return
+    sandbox = Sandbox(
+        raiz=Path(ruta),
+        repo_original=Path(_alcance(state).repo_path),
+        base_commit=state.artifacts.base_commit or "",
+        run_id=state.run_id,
+        creado_por_nosotros=True,
+    )
+    destruir(sandbox)
+
+
 def finalize(state: RunState) -> dict:
     """Cierra la ejecucion.
 
     Respeta un estado terminal ya fijado: si un nodo anterior escalo, finalizar no
     debe convertir ese `needs_human` en un `completed` exitoso.
+
+    **F12: limpia el sandbox.** Sea cual sea el desenlace -completado, cancelado,
+    escalado-, el worktree se destruye aqui. Es el unico punto por el que pasan
+    todas las rutas terminales del grafo.
     """
+    _limpiar_sandbox(state)
+
     if state.status.is_terminal:
         return {"updated_at": _ahora()}
 

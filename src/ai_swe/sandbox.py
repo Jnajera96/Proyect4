@@ -79,8 +79,18 @@ class EscapeDetectado(SandboxError):
         super().__init__("confinamiento", f"la ruta '{ruta}' {motivo}")
 
 
-def _git(*args: str, cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
-    """Ejecuta git de verdad. `shell=False` siempre: sin comandos construidos por texto."""
+def git(
+    *args: str,
+    cwd: Path | None = None,
+    check: bool = True,
+    entrada: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Ejecuta git de verdad. `shell=False` siempre: sin comandos construidos por texto.
+
+    `entrada` se entrega por la **entrada estandar** del proceso, que es la forma de
+    aplicar un parche (`git apply -`) sin escribir un fichero temporal. Sigue sin
+    haber `shell=True`: el parche viaja como **dato**, nunca como parte de la orden.
+    """
     orden = ["git", *args]
     try:
         result = subprocess.run(
@@ -88,11 +98,22 @@ def _git(*args: str, cwd: Path | None = None, check: bool = True) -> subprocess.
             cwd=str(cwd) if cwd else None,
             capture_output=True,
             text=True,
+            input=entrada,
             timeout=_TIEMPO_GIT_S,
             shell=False,
         )
     except FileNotFoundError as exc:
-        raise SandboxError("git", "no se encontro el ejecutable 'git'") from exc
+        raise SandboxError(
+            "git", f"no se encontro el ejecutable 'git' o el directorio '{cwd}' no existe"
+        ) from exc
+    except OSError as exc:
+        # Un `cwd` que no es un directorio (p. ej. el repositorio se borro a mitad de
+        # la ejecucion) lanza `NotADirectoryError` en Windows, que **no** es
+        # `FileNotFoundError`. Sin esta rama, el teardown de `finalize` propagaba una
+        # traza y tumbaba una ejecucion que por lo demas iba bien.
+        raise SandboxError(
+            "git", f"no se pudo ejecutar git (cwd={cwd}): {type(exc).__name__}: {exc}"
+        ) from exc
     except subprocess.TimeoutExpired as exc:
         raise SandboxError("git", f"'{' '.join(orden)}' supero {_TIEMPO_GIT_S}s") from exc
 
@@ -100,6 +121,11 @@ def _git(*args: str, cwd: Path | None = None, check: bool = True) -> subprocess.
         detalle = (result.stderr or result.stdout or "").strip()[:300]
         raise SandboxError("git", f"'{' '.join(orden)}' salio {result.returncode}: {detalle}")
     return result
+
+
+# Alias interno historico. El resto del modulo lo usa; se conserva para no tocar
+# cada llamada, pero la funcion publica es `git` (la usa tambien `tools/promoter.py`).
+_git = git
 
 
 @dataclass(frozen=True)

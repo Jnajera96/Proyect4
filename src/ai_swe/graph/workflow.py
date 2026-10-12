@@ -16,7 +16,9 @@ Topologia (docs/03-flujo-e-implementacion.md, seccion 3.5):
       reviewer --veredicto--> coder | escalate | mark_awaiting
       escalate -> finalize
       mark_awaiting -> approval_gate
-      approval_gate -> finalize
+      approval_gate --ACCEPT--> promote_changes -> finalize
+      approval_gate --REQUEST_CHANGES--> coder
+      approval_gate --REJECT/terminal--> finalize
       finalize -> END
 
 Invariantes que la topologia hace cumplir por si misma:
@@ -24,12 +26,15 @@ Invariantes que la topologia hace cumplir por si misma:
   - **Solo el Coder lleva a escritura.** No hay arista desde `researcher` ni desde
     `reviewer` hacia un nodo con efectos. La separacion de permisos esta en la
     forma del grafo, no solo en un prompt.
+  - **La unica arista al repositorio del usuario pasa por la puerta humana.** El
+    nodo `promote_changes` (F12) es el unico que escribe fuera del sandbox, y su
+    unica arista de entrada es `approval_gate`. No hay camino que lo alcance sin una
+    decision humana explicita.
   - **Dos puertas humanas, en dos momentos distintos (M2).** `confirm_requirements_gate`
     confirma lo que el sistema **entendio**, antes de planificar; `approval_gate`
     aprueba lo que el sistema **hizo**, despues de probarlo. Ninguna se puede saltar:
     la unica arista hacia `plan` desde la rama de interpretacion pasa por la primera,
-    y la unica arista hacia `finalize` desde la rama de modificacion pasa por la
-    segunda.
+    y la unica arista hacia el repositorio del usuario pasa por la segunda.
   - **El ciclo de revision esta acotado.** El nodo `reviewer` (F9) aplica la guarda
     determinista: un `REQUEST_CHANGES` sin ciclos disponibles se convierte en
     `ESCALATE`. El router `route_after_review` solo traduce el veredicto ya
@@ -76,6 +81,7 @@ def construir_grafo() -> StateGraph:
     grafo.add_node("reviewer", nodes.reviewer)
     grafo.add_node("mark_awaiting", nodes.mark_awaiting)
     grafo.add_node("approval_gate", nodes.approval_gate)
+    grafo.add_node("promote_changes", nodes.promote_changes)
     grafo.add_node("escalate", nodes.escalate)
     grafo.add_node("escalate_no_changes", nodes.escalate_no_changes)
     grafo.add_node("finalize", nodes.finalize)
@@ -97,7 +103,8 @@ def construir_grafo() -> StateGraph:
     grafo.add_conditional_edges("reviewer", nodes.route_after_review)
     grafo.add_edge("escalate", "finalize")
     grafo.add_edge("mark_awaiting", "approval_gate")
-    grafo.add_edge("approval_gate", "finalize")
+    grafo.add_conditional_edges("approval_gate", nodes.route_after_approval)
+    grafo.add_edge("promote_changes", "finalize")
     grafo.add_edge("finalize", END)
 
     return grafo

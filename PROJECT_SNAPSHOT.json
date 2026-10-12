@@ -2,7 +2,7 @@
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-08",
   "baseline_updated": "2026-10-06",
-  "phase": "M3 IN PROGRESS — F11 (React + TypeScript + Vite dashboard over the F10 API: live SSE streaming and both HITL gates) implemented and verified. AUD-11 (legacy SSE event names) and AUD-13 (stale phase label) are resolved in the same phase. M2 is complete at 15/15. Next: F12 (HITL code promotion from the sandbox to the user's repository).",
+  "phase": "M3 IN PROGRESS — F12 (HITL code promotion from the sandbox worktree to the user's repository) implemented and verified. F11 (React + TypeScript + Vite dashboard) and F10 (FastAPI REST surface + SSE event streaming) are complete; M2 is complete at 15/15. Next: F13 (local Speech-to-Text, FasterWhisperAdapter) or the experimental evaluation suite — awaiting explicit authorization.",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -92,11 +92,16 @@
     "f11_dual_hitl_gates": true,
     "f11_legacy_events_retired": true,
     "f11_frontend_served_from_build": true,
-    "tests_passing": 523,
-    "tests_skipped": "2/523 (test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace needs a symlink privilege Windows does not grant -WinError 1314, environmental; test_model_gateway_real::test_llamada_real_controlada requires AI_SWE_RUN_REAL_PROVIDER_TESTS=1 + a provider key by design). Neither is a code defect and neither is a network/credential dependency of the offline suite.",
+    "f12_promotion_to_user_repo": true,
+    "f12_promotion_requires_approval": true,
+    "f12_promotion_integrity_sha256": true,
+    "f12_policy_blocks_out_of_scope": true,
+    "f12_sandbox_teardown_on_finalize": true,
+    "tests_passing": 534,
+    "tests_skipped": "1/534 in the F12 run: tests.test_model_gateway_real::test_llamada_real_controlada is opt-in **by design** (it needs AI_SWE_RUN_REAL_PROVIDER_TESTS=1 plus a provider key), so it SKIPS rather than passing falsely. The second skip recorded in earlier phases, test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace, is conditional: it skips only when Windows denies the symlink privilege (WinError 1314) and PASSED outright in this run. Neither is a code defect and neither is a network/credential dependency of the offline suite.",
     "tests_require_network": false,
     "tests_require_credentials": false,
-    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block; 12/13 (F10, re-run during F11 with the baseline green: 12 caught). The 13th, `the resumption not reserving the right (two concurrent requests both winning)`, did **not** fail under mutation in this run, having passed at F10 closure. Its regression test drives two threads through a barrier, so whether it observes the race is timing-dependent: the guard is weaker than the count suggests. Recorded rather than papered over; see the mutations block.",
+    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block; 12/13 (F10, re-run during F11 with the baseline green: 12 caught). The 13th, `the resumption not reserving the right (two concurrent requests both winning)`, did **not** fail under mutation in this run, having passed at F10 closure. Its regression test drives two threads through a barrier, so whether it observes the race is timing-dependent: the guard is weaker than the count suggests. Recorded rather than papered over; see the mutations block. F12: see the mutations block.",
     "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
     "m1_assumptions": "5/5",
     "frontend_browser_checks": "15/15",
@@ -256,7 +261,7 @@
     "F10: the SSE payload is the whole `RunEvent` envelope (`seq`/`at`/`kind`/`data`), not the bare payload -the envelope is what lets a client order and dedupe by `seq`",
     "F10: reading a run's full event history **through SSE** is unreliable -the stream closes at the first `run.done` in the batch, and between human pauses the run is not terminal so the stream does not close until `timeout_s`. Read legs over SSE to prove delivery; read the record to assert the sequence"
   ],
-  "tests_passing": 523,
+  "tests_passing": 534,
   "snapshot_location": "repository root (consolidated 2026-10-08; the docs/auditoria-2026-10-06/ duplicate was removed to resolve AUD-01)",
   "component_status": [
     {
@@ -512,9 +517,10 @@
     "vcs": "git",
     "branch": "main",
     "remote_configured": false,
-    "last_commit": "feat(f11): implement React frontend dashboard with live SSE streaming and dual HITL gates (HEAD when this snapshot was written; the hash is not recorded because this file is part of that commit)",
+    "last_commit": "feat(f12): implement HITL code promotion from sandbox to user repository (HEAD when this snapshot was written; the hash is not recorded because this file is part of that commit)",
     "commit_history": [
-      "(this commit) feat(f11): implement React frontend dashboard with live SSE streaming and dual HITL gates",
+      "(this commit) feat(f12): implement HITL code promotion from sandbox to user repository",
+      "57a2c29 feat(f11): implement React frontend dashboard with live SSE streaming and dual HITL gates",
       "019af70 feat(f10): implement FastAPI REST endpoints and SSE event streaming",
       "72613d9 feat(m2): implement requirements confirmation gate and achieve 100% M2 DoD",
       "2e52658 feat(f9): implement model-driven reviewer with deterministic test enforcement and cycle limits",
@@ -531,16 +537,16 @@
       "11a13cb M1 VERIFIED BASELINE"
     ],
     "uncommitted_work": [],
-    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = 72613d9, F10 = 019af70, F11 = the current commit (see git log)."
+    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = 72613d9, F10 = 019af70, F11 = 57a2c29, F12 = the current commit (see git log)."
   },
   "tests_executed": {
-    "command": "python -m pytest -q --ignore=tests/test_f12_promotion.py (F11 tree, 2026-10-11)",
+    "command": "python -m pytest -q --junitxml=_f12_suite.xml (F12 tree, 2026-10-11)",
     "environment": "local, offline, no credentials, no network",
-    "tests": 523,
+    "tests": 534,
     "failures": 0,
     "errors": 0,
-    "skipped": 2,
-    "skip_reason": "Two environmental/by-design skips, neither a code defect and neither a dependency of the offline suite: TD-01 — the real-provider integration test is opt-in and requires AI_SWE_MODEL_API_KEY, so it SKIPS rather than passing falsely; and test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace, which needs a symlink privilege Windows does not grant (WinError 1314).",
+    "skipped": 1,
+    "skip_reason": "One by-design skip: the real-provider integration test is opt-in and requires AI_SWE_MODEL_API_KEY, so it SKIPS rather than passing falsely. The Windows symlink test (test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace) is conditional and passed outright in this run.",
     "verdict": "GREEN",
     "mutations": {
       "f1_f2": "35/35 (verified at the time)",
@@ -553,7 +559,8 @@
       "f8": "9/9 (4 blind spots found on the first pass — shell=True at the call site, PYTHONPATH, the `fallos` branch, the coder router — and closed with real tests; the `fallos` blind spot uncovered a real defect: a raw OSError escaped Sandbox.escribir and reached LangGraph as a traceback)",
       "f9": "8/8 — the test veto (REGLA 1), the cycle limit (REGLA 2), the guard order, the declared fallback (REGLA 3), the reviewer model wiring, the cycle accounting, the ACCEPT route and the test evidence in the context",
       "m2": "7/7 — the requirements gate being skipped, the awaiting state not being marked, the confirmation not being recorded, a rejection planning anyway, human modifications being discarded, an unrecognised resumption being treated as approved, and the MET-13 safety net confusing a wait with a hang",
-      "f10": "13/13 — events stored unredacted, a human pause emitted as run.failed, the outcome event not emitted, the human wait announced with the wrong gate's event, the per-node milestones not emitted, the engine stringifying a corrections resumption, project registration skipping repo validation, the project path not overriding the request's, SandboxError mapped to 500 instead of 422, the server listening on all interfaces, the resumption not reserving the right (two concurrent requests both winning), `confirm-requirements` accepting the approval gate, and `approve` accepting the requirements gate. The last three were added this phase; a `shutdown` mutation that had been counted earlier was retracted after proving it attacked a redundant line (the original `shutdown(wait=True)` already waits), and the underlying regression test was removed with it. RE-RUN DURING F11 (after AUD-11 retired `run.awaiting_approval`): 12/13 — the same run reported `la reanudacion no reserva el derecho` as NOT caught. That mutant removes the claim that makes `reclamar_reanudacion` atomic; the test that should catch it (`test_dos_confirmaciones_concurrentes_solo_reanudan_una_vez`) drives two threads through a barrier and asserts `sorted(codigos) == [200, 409]`, so it only observes the race when the worker thread has not yet finished the first resume. The verdict is therefore timing-dependent, and the guard is weaker than a 13/13 count implies. The mutant was retargeted in the same phase for AUD-11 (`run.awaiting_approval` no longer exists, so the old pattern could not apply)."
+      "f10": "13/13 — events stored unredacted, a human pause emitted as run.failed, the outcome event not emitted, the human wait announced with the wrong gate's event, the per-node milestones not emitted, the engine stringifying a corrections resumption, project registration skipping repo validation, the project path not overriding the request's, SandboxError mapped to 500 instead of 422, the server listening on all interfaces, the resumption not reserving the right (two concurrent requests both winning), `confirm-requirements` accepting the approval gate, and `approve` accepting the requirements gate. The last three were added this phase; a `shutdown` mutation that had been counted earlier was retracted after proving it attacked a redundant line (the original `shutdown(wait=True)` already waits), and the underlying regression test was removed with it. RE-RUN DURING F11 (after AUD-11 retired `run.awaiting_approval`): 12/13 — the same run reported `la reanudacion no reserva el derecho` as NOT caught. That mutant removes the claim that makes `reclamar_reanudacion` atomic; the test that should catch it (`test_dos_confirmaciones_concurrentes_solo_reanudan_una_vez`) drives two threads through a barrier and asserts `sorted(codigos) == [200, 409]`, so it only observes the race when the worker thread has not yet finished the first resume. The verdict is therefore timing-dependent, and the guard is weaker than a 13/13 count implies. The mutant was retargeted in the same phase for AUD-11 (`run.awaiting_approval` no longer exists, so the old pattern could not apply).",
+      "f12": "8/8 (this run: baseline green, every mutant caught, tree restored green) — promoting over an unauthorised repository, promoting a patch that changed after review (integrity), a path outside `allowed_paths`, a protected path, the sandbox not being torn down on finalize, a rejection marked as `completed`, requesting changes not spending a review cycle, and the human's comments not reaching the state. Every mutant is caught by tests/test_f12_promotion.py."
     }
   },
   "blockers_and_debt": [
@@ -658,10 +665,10 @@
     }
   ],
   "next_step_proposed": {
-    "phase": "F12 — HITL code promotion from the sandbox to the user's repository",
-    "why": "The system can now be driven from a browser and stops at both human gates, but approving still does not write anything to the user's repository: the approved patch stays in the worktree. The last mile is missing.",
-    "scope": "Apply the approved unified diff from the sandbox worktree to the user's registered repository, only on an explicit ACCEPT at the approval gate; route REQUEST_CHANGES back to the Coder with the human's comments; cancel on REJECT without touching the repository; and tear the worktree down when the run finalises.",
-    "prerequisite": "F11 is committed; tree clean.",
+    "phase": "F13 — local Speech-to-Text (FasterWhisperAdapter) or the experimental evaluation suite",
+    "why": "The functional chain is closed: the system can be driven from a browser, stops at both human gates, and an approved change now reaches the user's repository. What remains is voice input (RF-03 declares the contract; only the FakeAdapter exists) and the experimental evaluation the DoD asks for.",
+    "scope": "Wire a real local STT provider behind the existing `stt/base.py` contract (the `voice` extra already declares `faster-whisper`), keeping the invariant that raw audio never reaches the Supervisor; and/or build the experimental evaluation suite over the offline flow.",
+    "prerequisite": "F12 is committed; tree clean.",
     "awaiting": "explicit authorization from the Arquitecto — NOT to be started without it"
   }
 }

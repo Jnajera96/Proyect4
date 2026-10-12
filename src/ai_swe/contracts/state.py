@@ -286,6 +286,12 @@ class RunState(BaseModel):
     budget: Budget = Field(default_factory=Budget)
     final_report: FinalReport | None = None
 
+    # F12: comentarios que el humano dejo al **pedir cambios** en la puerta de
+    # aprobacion. Sin ellos, "solicitar cambios" no diria *que* corregir y el ciclo
+    # volveria al Coder a ciegas. Es una lista porque puede haber varias rondas, y
+    # asi cada comentario conserva su contexto en lugar de pisar al anterior.
+    human_feedback: list[str] = Field(default_factory=list, max_length=50)
+
     status: RunStatus = RunStatus.PLANNED
     next_step: str | None = Field(default=None, max_length=120)
 

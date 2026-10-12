@@ -108,7 +108,20 @@ class RunRequest(BaseModel):
 
 
 class ApproveRequest(BaseModel):
+    """Decision sobre la puerta de aprobacion (F12).
+
+    `comments` solo tiene sentido al **pedir cambios**: son las instrucciones que el
+    humano deja al Coder para la siguiente iteracion. En una aprobacion o un rechazo
+    se ignoran, pero no se prohiben: un cliente no deberia tener que ramificar el
+    cuerpo de la peticion segun la decision.
+    """
+
     decision: ApprovalDecision = ApprovalDecision.APPROVED
+    comments: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="Comentarios del humano al pedir cambios. Viajan al RunState.",
+    )
 
 
 class ConfirmRequirementsRequest(BaseModel):
@@ -142,6 +155,18 @@ def _valor_de_confirmacion(peticion: ConfirmRequirementsRequest) -> str | dict:
     if not correcciones:
         return peticion.decision.value
     return {"decision": peticion.decision.value, **correcciones}
+
+
+def _valor_de_aprobacion(peticion: ApproveRequest) -> str | dict:
+    """Traduce la peticion de aprobacion a lo que espera la puerta (F12).
+
+    Sin comentarios se manda la decision como texto, que es la forma simple. Con
+    comentarios se manda un objeto, porque es la unica forma de que viajen al
+    `RunState`. La puerta acepta las dos (ver `nodes._decision_de_aprobacion`).
+    """
+    if peticion.comments:
+        return {"decision": peticion.decision.value, "comments": peticion.comments}
+    return peticion.decision.value
 
 
 def _detalle_validacion(exc: ValidationError) -> list[dict]:
@@ -496,7 +521,7 @@ def crear_app(
         """
         motor.reclamar_reanudacion(run_id, puerta_esperada="approval_gate")
         try:
-            trabajador.submit_resume(run_id, peticion.decision)
+            trabajador.submit_resume(run_id, _valor_de_aprobacion(peticion))
         except Exception:
             motor.olvidar_reclamacion(run_id)
             raise

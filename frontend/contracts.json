@@ -52,7 +52,22 @@
           "type": "string"
         }
       },
+      "description": "Decision sobre la puerta de aprobacion (F12).\n\n`comments` solo tiene sentido al **pedir cambios**: son las instrucciones que el\nhumano deja al Coder para la siguiente iteracion. En una aprobacion o un rechazo\nse ignoran, pero no se prohiben: un cliente no deberia tener que ramificar el\ncuerpo de la peticion segun la decision.",
       "properties": {
+        "comments": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Comentarios del humano al pedir cambios. Viajan al RunState.",
+          "title": "Comments"
+        },
         "decision": {
           "$ref": "#/$defs/ApprovalDecision",
           "default": "approved"
@@ -1439,6 +1454,14 @@
             }
           ],
           "default": null
+        },
+        "human_feedback": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Human Feedback",
+          "type": "array"
         },
         "instruction": {
           "$ref": "#/$defs/Instruction"

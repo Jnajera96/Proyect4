@@ -320,18 +320,32 @@ def test_m2_completo_con_accept_directo(repo: Path) -> None:
     assert final.approvals[-1].decision.value == "approved"
 
 
-def test_el_repositorio_del_usuario_nunca_se_toca(repo: Path) -> None:
-    """La promocion ocurre en el worktree; el arbol del usuario queda limpio."""
+def test_el_repositorio_del_usuario_solo_se_toca_al_aprobar(repo: Path) -> None:
+    """F12: el arbol del usuario queda intacto **hasta** que el humano aprueba.
+
+    Hasta F11 esta prueba afirmaba que el repositorio **nunca** se tocaba, porque
+    aprobar no promovia nada. F12 cierra ese tramo: aprobar escribe el cambio. Lo
+    que sigue siendo cierto -y es lo que de verdad protege- es que **antes** de la
+    aprobacion el repositorio esta limpio: todo ocurre en el worktree aislado.
+    """
     _gateway(_veredicto("accept"))
     app = _app()
     estado = _estado(repo, run_id="run-m2-limpio")
     cfg = _arrancar_hasta_confirmar_requisitos(app, estado)
 
     app.invoke(Command(resume="approved"), cfg)
-    app.invoke(Command(resume="approved"), cfg)
-
+    pausado = _estado_de(app, cfg)
+    assert pausado.status is RunStatus.AWAITING_APPROVAL
+    # Nada se ha tocado todavia: el cambio vive en el worktree.
     assert _git(repo, "status", "--porcelain").strip() == ""
     assert (repo / "src" / "app.py").read_text(encoding="utf-8") == "def f():\n    return 1\n"
+
+    app.invoke(Command(resume="approved"), cfg)
+    final = _estado_de(app, cfg)
+
+    assert final.status is RunStatus.COMPLETED
+    # Tras aprobar, el cambio esta en el repositorio del usuario.
+    assert (repo / "src" / "app.py").read_text(encoding="utf-8") == CONTENIDO_NUEVO
 
 
 def test_un_rechazo_de_requisitos_no_planifica(repo: Path) -> None:
