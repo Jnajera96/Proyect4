@@ -136,19 +136,3 @@ class RunEvent(BaseModel):
         default_factory=dict,
         description="Carga estructurada. El frontend la consume directamente, sin parsear texto.",
     )
-
-
-class RunSummary(BaseModel):
-    """Vista ligera de una ejecucion, para listados y paneles."""
-
-    run_id: str
-    trace_id: str
-    status: RunStatus
-    intent: str | None = None
-    created_at: datetime
-    updated_at: datetime
-    error_count: int = Field(default=0, ge=0)
-    awaiting_approval: bool = Field(
-        default=False,
-        description="Atajo para que el panel sepa si debe mostrar la puerta de aprobacion.",
-    )

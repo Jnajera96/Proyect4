@@ -68,6 +68,11 @@ markers = [
     # suite normal; se saltan salvo que se pidan explicitamente. Una API externa
     # nunca debe ser dependencia del CI.
     "real_provider: integracion real con un proveedor; requiere AI_SWE_MODEL_API_KEY y AI_SWE_RUN_REAL_PROVIDER_TESTS=1",
+    # Transcripcion real (F13): exige el extra `voice` instalado y descarga un
+    # modelo de cientos de MB. Se salta salvo que se pida explicitamente, por el
+    # mismo motivo que `real_provider`: una descarga pesada no puede ser dependencia
+    # de la suite normal.
+    "real_stt: transcripcion real con faster-whisper; requiere el extra `voice` y AI_SWE_RUN_REAL_STT_TESTS=1",
 ]
 # No se rota ni se borra nada al terminar: cada borrado es una ocasion de que el
 # interceptor de este entorno interfiera. Los directorios se acumulan en el

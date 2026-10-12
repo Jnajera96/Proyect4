@@ -42,6 +42,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
+from starlette.concurrency import run_in_threadpool
 
 from ai_swe.config import load_settings
 from ai_swe.contracts import (
@@ -63,7 +64,7 @@ from ai_swe.models import BudgetExceededError
 from ai_swe.sandbox import SandboxError, validar_repositorio
 from ai_swe.security import install_redacting_filter
 from ai_swe.state import RunStore
-from ai_swe.stt.base import FakeAdapter, STTAdapter, Transcript
+from ai_swe.stt.base import STTAdapter, STTError, STTNotAvailable, Transcript, crear_adaptador_stt
 
 log = logging.getLogger(__name__)
 
@@ -241,6 +242,19 @@ def registrar_manejadores_de_error(app: FastAPI) -> None:
         # reintentar mas tarde con uno mayor. No es un fallo del servidor.
         return JSONResponse(status_code=429, content=_cuerpo(exc, "BUDGET_EXCEEDED"))
 
+    @app.exception_handler(STTNotAvailable)
+    async def _stt_no_disponible(_peticion: Request, exc: STTNotAvailable):
+        # 503 y no 500: la **capacidad** no esta instalada (falta el extra `voice`),
+        # no hay un defecto del servidor. El cliente puede seguir por texto, que es
+        # como el sistema funciona sin STT.
+        return JSONResponse(status_code=503, content=_cuerpo(exc, "STT_NOT_AVAILABLE"))
+
+    @app.exception_handler(STTError)
+    async def _stt(_peticion: Request, exc: STTError):
+        # 422: el audio no se pudo transcribir por algo de la peticion (vacio, sin
+        # voz reconocible) o del motor, no por un fallo del servidor.
+        return JSONResponse(status_code=422, content=_cuerpo(exc, "STT_ERROR"))
+
 
 def crear_app(
     store: RunStore | None = None,
@@ -254,7 +268,11 @@ def crear_app(
     # ejecuciones y sus numeros cambiaban sin que cambiara el codigo.
     ruta_estado = os.environ.get("AI_SWE_STATE_DB_PATH", "var/state.sqlite3")
     almacen = store or RunStore(ruta_estado)
-    adaptador_stt = stt or FakeAdapter()
+    # F13: el adaptador se elige por configuracion (`AI_SWE_STT_PROVIDER`). El
+    # defecto es el adaptador local real; `fake` queda para pruebas y para entornos
+    # sin la dependencia `voice`. Antes el defecto era `FakeAdapter`, que devolvia un
+    # texto fijo con independencia del audio: una transcripcion fabricada.
+    adaptador_stt = stt or crear_adaptador_stt()
     motor = RunEngine(almacen)
     trabajador = worker or RunWorker(motor)
     origenes = cors_origins if cors_origins is not None else []
@@ -364,12 +382,20 @@ def crear_app(
         audio: UploadFile = File(...),
         vocabulary: str | None = Form(default=None),
     ) -> Transcript:
-        """Convierte audio en texto. **No crea ninguna ejecucion** (`RF-02`)."""
+        """Convierte audio en texto. **No crea ninguna ejecucion** (`RF-02`).
+
+        La transcripcion corre en un **hilo aparte**. Es trabajo intensivo de CPU
+        -segundos por minuto de audio en el adaptador local-, y hacerlo dentro del
+        bucle de eventos bloquearia todas las demas peticiones mientras dura,
+        incluido el flujo SSE de una ejecucion en curso.
+        """
         datos = await audio.read()
         if not datos:
             raise HTTPException(status_code=422, detail="el audio esta vacio")
         vocabulario = [v for v in (vocabulary or "").split(",") if v.strip()]
-        return adaptador_stt.transcribe(datos, vocabulary=vocabulario or None)
+        return await run_in_threadpool(
+            adaptador_stt.transcribe, datos, vocabulary=vocabulario or None
+        )
 
     # ------------------------------------------------------------ ejecuciones
     @app.post("/runs", response_model=RunState, status_code=202)

@@ -62,7 +62,15 @@ DIARIO = RAIZ / "_mutation_journal.json"
 # modo que 600 daba 2,2x -y una mutacion puede casi duplicar la duracion (se midio
 # una de 552s en F7)-. 900s da 3,3x sobre la base medida. El limite tiene que
 # superar con margen la suite **mutada**, no la base.
-LIMITE_PYTEST = 900.0
+#
+# **Por que 1200 en F13.** El margen de 900 se agoto: con las pruebas de F12
+# (sandbox y `git apply` reales) la suite completa paso a ~750s, y el chequeo de
+# restauracion del arnes -que la vuelve a correr entera- supero los 900s. El
+# resultado no fue un falso "cazada" (un corte se informa como NO CONCLUYENTE, que
+# es correcto), pero **dejo sin verificar la restauracion**. 1200s da ~1,6x sobre la
+# suite completa actual. Regla: si la suite crece, este limite crece con ella; un
+# limite que la suite roza convierte la verificacion en ruido.
+LIMITE_PYTEST = 1200.0
 
 # Limite para las herramientas de verificacion externas (el navegador).
 LIMITE_COMANDO = 180.0
@@ -1169,6 +1177,46 @@ MUTACIONES: list[Mutation] = [
         '            "human_feedback": [*state.human_feedback, comentario] if comentario else state.human_feedback,',
         '            "human_feedback": state.human_feedback,',
         "test_f12_promotion.py",
+    ),
+    # ------------------------------------------------ F13: STT local
+    Mutation(
+        # Un audio vacio no puede llegar al motor: cargaria cientos de megabytes de
+        # modelo para no transcribir nada. El guardia tiene que estar **antes** de
+        # `_modelo_cargado`, y la prueba lo comprueba por el registro de
+        # construcciones, no solo por la excepcion.
+        "F13: el audio vacio llega al motor (se carga el modelo para nada)",
+        SRC / "stt" / "base.py",
+        "        if not audio:",
+        "        if False:  # mutado: no se rechaza el audio vacio",
+        "test_f13_stt.py",
+    ),
+    Mutation(
+        # Un audio sin voz no es un `Transcript` vacio valido. Sin el guardia,
+        # `text=""` revienta contra el contrato de Pydantic con un `ValidationError`
+        # en lugar de con el error tipado que el llamante sabe tratar.
+        "F13: una transcripcion vacia se devuelve en lugar de declararse",
+        SRC / "stt" / "base.py",
+        "        if not texto:",
+        "        if False:  # mutado: no se declara la transcripcion vacia",
+        "test_f13_stt.py",
+    ),
+    Mutation(
+        # La marca de baja confianza es lo unico que dispara el aviso al usuario.
+        # Apagarla hace que una transcripcion dudosa se presente como fiable.
+        "F13: la confianza baja no marca aviso",
+        SRC / "stt" / "base.py",
+        "            low_confidence=confianza < self._umbral,",
+        "            low_confidence=False,",
+        "test_f13_stt.py",
+    ),
+    Mutation(
+        # El vocabulario es una pista que sesga el decodificador hacia la jerga del
+        # proyecto. Si no llega, el modelo transcribe nombres propios como suene.
+        "F13: el vocabulario no se pasa como pista al motor",
+        SRC / "stt" / "base.py",
+        "                initial_prompt=pista,",
+        "                initial_prompt=None,",
+        "test_f13_stt.py",
     ),
 ]
 
