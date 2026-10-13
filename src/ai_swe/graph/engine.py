@@ -47,6 +47,7 @@ from ai_swe.contracts import (
     TranscriptMeta,
 )
 from ai_swe.graph.workflow import compilar
+from ai_swe.sandbox import limpiar_worktree
 from ai_swe.state import RunStore
 
 
@@ -69,6 +70,20 @@ def nuevo_run_id() -> str:
 
 def _ahora() -> datetime:
     return datetime.now(UTC)
+
+
+def _repositorio_de(estado: RunState) -> str | None:
+    """Repositorio efectivo de una ejecucion.
+
+    Misma precedencia que `nodes._alcance`: si `interpret` ya corrio, el alcance con
+    la ruta resuelta esta en la interpretacion; antes de eso, lo unico que hay son las
+    opciones de la peticion. Se replica aqui -en lugar de importar el ayudante del
+    grafo- para no acoplar el motor a los nodos, y porque es una precedencia de dos
+    lineas cuyo contrato es el mismo.
+    """
+    if estado.interpretation is not None:
+        return estado.interpretation.scope.repo_path
+    return estado.options.repo_path
 
 
 class RunEngine:
@@ -431,6 +446,17 @@ class RunEngine:
             {"status": RunStatus.NEEDS_HUMAN.value, "error_count": len(nuevo.errors)},
         )
         self._store.append_event(run_id, EventKind.RUN_DONE, {"status": RunStatus.NEEDS_HUMAN.value})
+        # **El worktree tambien se limpia por aqui.** `finalize` es el unico punto por
+        # el que pasan las rutas terminales del grafo, pero un fallo del trabajador
+        # **no llega a `finalize`**: sin esto, una excepcion sin capturar dejaba el
+        # worktree vivo en `var/workspaces` para siempre, y el repositorio del usuario
+        # acumulaba referencias fantasma. Es el mismo teardown, desde la otra puerta.
+        limpiar_worktree(
+            nuevo.artifacts.worktree_path,
+            repo_original=_repositorio_de(nuevo),
+            run_id=run_id,
+            base_commit=nuevo.artifacts.base_commit or "",
+        )
         return nuevo
 
     @staticmethod

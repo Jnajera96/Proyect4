@@ -1365,6 +1365,70 @@ MUTACIONES: list[Mutation] = [
         "        if False:",
         "test_f10_api.py",
     ),
+    # ---------------------------------------------------- PH3: Hardening local
+    Mutation(
+        "PH3: quitar cabeceras de seguridad",
+        SRC / "api" / "app.py",
+        '        for nombre, valor in CABECERAS_SEGURIDAD.items():\n            respuesta.headers.setdefault(nombre, valor)\n        return respuesta',
+        '        return respuesta',
+        "test_hardening.py",
+    ),
+    Mutation(
+        "PH3: quitar TrustedHostMiddleware",
+        SRC / "api" / "app.py",
+        '    app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(ajustes.trusted_hosts))',
+        "",
+        "test_hardening.py",
+    ),
+    Mutation(
+        "PH3: el rate limiter siempre activo rompe local",
+        SRC / "api" / "app.py",
+        '    if ajustes.rate_limit_enabled:',
+        '    if True:',
+        "test_hardening.py",
+    ),
+    Mutation(
+        "PH3: quitar tope de tamano de audio",
+        SRC / "api" / "app.py",
+        '        if total > limite:\n            raise HTTPException(\n                status_code=413,',
+        '        if False:\n            raise HTTPException(\n                status_code=413,',
+        "test_hardening.py",
+    ),
+    Mutation(
+        "PH3: quitar lista blanca de formato de audio",
+        SRC / "api" / "app.py",
+        '        if tipo not in FORMATOS_AUDIO:\n            raise HTTPException(\n                status_code=415,',
+        '        if False:\n            raise HTTPException(\n                status_code=415,',
+        "test_hardening.py",
+    ),
+    Mutation(
+        "PH3: quitar clamp de paginacion",
+        SRC / "api" / "app.py",
+        '    def listar_proyectos(\n        limit: int = Query(default=50, ge=1, le=ajustes.max_page_size),\n    ) -> list[Project]:',
+        '    def listar_proyectos(\n        limit: int = Query(default=50, ge=1),\n    ) -> list[Project]:',
+        "test_hardening.py",
+    ),
+    Mutation(
+        "PH3: quitar tope de conexiones SSE",
+        SRC / "api" / "app.py",
+        '        if app.state.sse_activas >= ajustes.max_sse_connections:\n            raise HTTPException(\n                status_code=503,',
+        '        if False:\n            raise HTTPException(\n                status_code=503,',
+        "test_hardening.py",
+    ),
+    Mutation(
+        "PH3: abortar no limpia el worktree",
+        SRC / "graph" / "engine.py",
+        '        limpiar_worktree(\n            nuevo.artifacts.worktree_path,\n            repo_original=_repositorio_de(nuevo),\n            run_id=run_id,\n            base_commit=nuevo.artifacts.base_commit or "",\n        )',
+        "",
+        "test_hardening.py",
+    ),
+    Mutation(
+        "PH3: el arranque no limpia el worktree de las huerfanas",
+        SRC / "api" / "app.py",
+        '            for run_id in huerfanas:\n                _limpiar_worktree_de_huerfana(motor, run_id)',
+        "",
+        "test_hardening.py",
+    ),
 ]
 
 

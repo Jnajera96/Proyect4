@@ -6,8 +6,18 @@
 services:
   api:
     build: .
+    # El puerto se publica **solo en el bucle local del host**. Sin la direccion
+    # explicita, Docker publica en todas las interfaces y la API -que no tiene
+    # autenticacion- queda al alcance de la red local. Es el mismo criterio que
+    # `python -m ai_swe` aplica fijando 127.0.0.1.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    environment:
+      # Dentro del contenedor hay que escuchar en todas las interfaces: un proceso
+      # atado a 127.0.0.1 dentro de un contenedor no es alcanzable desde fuera de el
+      # ni a traves del puerto publicado. Lo que mantiene esto local es el mapeo de
+      # arriba, no esta linea.
+      AI_SWE_HOST: 0.0.0.0
     env_file:
       - .env
     volumes:

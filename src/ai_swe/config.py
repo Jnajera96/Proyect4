@@ -132,6 +132,47 @@ class Settings(BaseSettings):
     # es distinto de cero: cero seria "no se permite gastar nada".
     max_cost_per_run: float | None = Field(default=None, ge=0)
 
+    # --- Limites del borde (hardening local) ---------------------------------
+    # Todo lo que entra por la API tiene un tope. Sin ellos, una peticion puede
+    # pedir un millon de filas o subir un fichero de gigabytes y el coste lo paga el
+    # proceso: es denegacion de servicio por la via mas tonta.
+    max_page_size: int = Field(
+        default=200,
+        ge=1,
+        le=10_000,
+        description="Tamano maximo de pagina en los listados. Pedir mas devuelve 422.",
+    )
+    max_audio_bytes: int = Field(
+        default=25 * 1024 * 1024,
+        ge=1024,
+        description="Tamano maximo del audio aceptado en /transcriptions. Superarlo es 413.",
+    )
+    max_sse_connections: int = Field(
+        default=16,
+        ge=1,
+        description=(
+            "Conexiones SSE simultaneas. Cada una mantiene un bucle sondeando el "
+            "almacen, asi que no son gratis; superarlo es 503."
+        ),
+    )
+    # Limite de peticiones por minuto y por cliente. **Apagado por defecto**: en
+    # bucle local mono-usuario no protege de nadie -quien llama es el dueno de la
+    # maquina- y encenderlo podria estorbar a una verificacion que dispara cientos
+    # de peticiones. Se implementa y se prueba, y se enciende **antes** de exponer
+    # el servicio, que es cuando tiene sentido.
+    rate_limit_enabled: bool = Field(
+        default=False,
+        description="Limite de peticiones por minuto. Apagado: encenderlo antes de exponer.",
+    )
+    rate_limit_per_minute: int = Field(default=120, ge=1)
+    # Hosts aceptados en la cabecera `Host`. Un valor que no este aqui es 400: es la
+    # defensa contra el envenenamiento de host. `testserver` esta porque es el que
+    # usa el cliente de pruebas de FastAPI.
+    trusted_hosts: list[str] = Field(
+        default_factory=lambda: ["127.0.0.1", "localhost", "testserver"],
+        description="Hosts aceptados en la cabecera Host. Cualquier otro es 400.",
+    )
+
     # --- Speech-to-Text ------------------------------------------------------
     stt_provider: str = Field(default="faster-whisper")
     stt_model: str = Field(default="large-v3")

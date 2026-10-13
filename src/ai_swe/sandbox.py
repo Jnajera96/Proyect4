@@ -344,6 +344,39 @@ def destruir(sandbox: Sandbox, *, force: bool = True) -> None:
         log.info("sandbox destruido: %s", sandbox.raiz)
 
 
+def limpiar_worktree(
+    ruta: str | Path | None,
+    *,
+    repo_original: str | Path | None,
+    run_id: str,
+    base_commit: str = "",
+) -> bool:
+    """Destruye el worktree que declara una ejecucion. `True` si habia uno.
+
+    **Por que esta funcion existe.** Hay **tres** caminos terminales que deben
+    limpiar el worktree, y no son el mismo: el cierre normal del grafo (`finalize`),
+    el **aborto** por un fallo del trabajador (`RunEngine.abortar`, que no pasa por
+    `finalize`) y la **recuperacion de ejecuciones huerfanas** al arrancar. Con la
+    construccion del `Sandbox` repetida en los tres sitios, el dia que uno se
+    olvidara quedaria un worktree vivo sin que nada lo dijera. Aqui hay una sola.
+
+    Devuelve `False` -sin intentar nada- si no hay ruta de worktree o si no hay
+    repositorio con el que operar: `git worktree remove` sin `cwd` valido correria en
+    el directorio equivocado, que es peor que no limpiar.
+    """
+    if not ruta or not repo_original:
+        return False
+    sandbox = Sandbox(
+        raiz=Path(ruta),
+        repo_original=Path(repo_original),
+        base_commit=base_commit,
+        run_id=run_id,
+        creado_por_nosotros=True,
+    )
+    destruir(sandbox)
+    return True
+
+
 def _quitar_worktree(repo: Path, raiz: Path) -> None:
     """Quita un worktree previo antes de recrear. Best-effort y registrado."""
     _git("worktree", "remove", "--force", str(raiz), cwd=repo, check=False)

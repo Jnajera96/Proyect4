@@ -51,7 +51,8 @@ from ai_swe.contracts import (
     TaskInterpretation,
     TestRun,
 )
-from ai_swe.sandbox import Sandbox, SandboxError, crear, destruir
+from ai_swe.sandbox import Sandbox, SandboxError, crear, limpiar_worktree
+from ai_swe.security import AVISO_NO_CONFIABLE, bloque_no_confiable
 from ai_swe.tools.patcher import aplicar
 from ai_swe.tools.policy import DecisionContext, decide
 from ai_swe.tools.promoter import PromotionError, promover, sha256_texto
@@ -856,7 +857,7 @@ Reglas obligatorias:
   - Respeta el criterio de termino de la subtarea: si no puedes cumplirlo, deja
     `files` vacio y explicalo en `rationale` en lugar de proponer un cambio falso.
   - No propongas mas archivos de los que permite el alcance declarado.
-"""
+""" + AVISO_NO_CONFIABLE
 
 
 def _contar_lineas(texto: str) -> int:
@@ -1075,7 +1076,10 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str]] |
         f"Subtarea a completar:\n"
         f"- descripcion: {subtarea.description if subtarea else 'no declarada'}\n"
         f"- criterio de termino: {subtarea.done_criteria if subtarea else 'no declarado'}\n\n"
-        f"Evidencia acumulada por el Researcher:\n{lineas_evidencia}\n\n"
+        # La evidencia viene de leer el repositorio: extractos de ficheros que no
+        # hemos escrito. Se marca como **dato**, no como orden (inyeccion indirecta).
+        f"Evidencia acumulada por el Researcher:\n"
+        f"{bloque_no_confiable('evidencia del repositorio (extractos de ficheros)', lineas_evidencia)}\n\n"
         f"Comentarios del usuario que pidio cambios (obligatorio atenderlos):\n"
         f"{lineas_humano}\n\n"
         f"Peticion original del usuario:\n{state.instruction.text}"
@@ -1482,7 +1486,7 @@ Reglas obligatorias:
   - `summary` resume el juicio en una o dos frases. No repitas la evidencia entera.
   - Si el cambio no toca lo que pedia la subtarea, dilo aunque las pruebas pasen:
     unas pruebas verdes sobre el cambio equivocado no son un exito.
-"""
+""" + AVISO_NO_CONFIABLE
 
 
 # El modelo del Reviewer se inyecta por atributo de modulo, con el mismo criterio
@@ -1569,8 +1573,12 @@ def _contexto_de_revision(state: RunState) -> str:
         f"- descripcion: {subtarea.description if subtarea else 'no declarada'}\n"
         f"- criterio de termino: {subtarea.done_criteria if subtarea else 'no declarado'}\n\n"
         f"Cambio propuesto (archivos: {archivos}):\n"
-        f"--- diff ---\n{diff}\n--- fin del diff ---\n\n"
-        f"Evidencia real de pruebas:\n{_resumen_de_pruebas(evidencia_vigente(state.evidence.test_runs))}"
+        # El diff es contenido derivado del repositorio y la salida de pruebas la
+        # produce **el repositorio del usuario al ejecutarse**. Las dos son material
+        # que no hemos escrito: se marcan como dato, no como instruccion.
+        f"{bloque_no_confiable('diff propuesto por el Coder', diff)}\n\n"
+        f"Evidencia real de pruebas:\n"
+        f"{bloque_no_confiable('salida de las pruebas del repositorio', _resumen_de_pruebas(evidencia_vigente(state.evidence.test_runs)))}"
     )
 
 
@@ -2256,19 +2264,17 @@ def _limpiar_sandbox(state: RunState) -> None:
     para no dejar referencias fantasma en el repositorio del usuario.
 
     No propaga errores: `finalize` cierra la ejecucion y un fallo al limpiar no debe
-    cambiar su desenlace. `destruir` ya registra lo que ocurra.
+    cambiar su desenlace. La construccion del `Sandbox` y el teardown viven en
+    `sandbox.limpiar_worktree`, compartidos con el aborto del trabajador y con la
+    recuperacion de ejecuciones huerfanas: son tres caminos terminales distintos y
+    tener la logica repetida es como se olvida uno.
     """
-    ruta = state.artifacts.worktree_path
-    if not ruta:
-        return
-    sandbox = Sandbox(
-        raiz=Path(ruta),
-        repo_original=Path(_alcance(state).repo_path),
-        base_commit=state.artifacts.base_commit or "",
+    limpiar_worktree(
+        state.artifacts.worktree_path,
+        repo_original=_alcance(state).repo_path,
         run_id=state.run_id,
-        creado_por_nosotros=True,
+        base_commit=state.artifacts.base_commit or "",
     )
-    destruir(sandbox)
 
 
 def finalize(state: RunState) -> dict:

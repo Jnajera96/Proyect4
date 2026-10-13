@@ -29,19 +29,31 @@ import asyncio
 import logging
 import re
 import sqlite3
+import time
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi import (
+    FastAPI,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
 from starlette.concurrency import run_in_threadpool
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.responses import Response
 
 from ai_swe.config import load_settings, repositorio_autorizado
 from ai_swe.contracts import (
@@ -60,7 +72,7 @@ from ai_swe.contracts import (
 from ai_swe.graph.engine import NothingToResume, RunEngine, RunNotFound
 from ai_swe.graph.worker import RunWorker
 from ai_swe.models import BudgetExceededError
-from ai_swe.sandbox import SandboxError, validar_repositorio
+from ai_swe.sandbox import SandboxError, limpiar_worktree, validar_repositorio
 from ai_swe.security import install_redacting_filter
 from ai_swe.state import RunStore
 from ai_swe.stt.base import STTAdapter, STTError, STTNotAvailable, Transcript, crear_adaptador_stt
@@ -68,6 +80,138 @@ from ai_swe.stt.base import STTAdapter, STTError, STTNotAvailable, Transcript, c
 log = logging.getLogger(__name__)
 
 TERMINALES = {RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.NEEDS_HUMAN, RunStatus.CANCELLED}
+
+#: Formatos de audio aceptados en `/transcriptions`. Es una **lista blanca**: lo que
+#: no este aqui se rechaza con 415.
+#:
+#: **Que garantiza y que no.** El tipo declarado por el cliente es un dato suyo, no
+#: una prueba: nada impide anunciar `audio/wav` y enviar otra cosa. Esto filtra lo
+#: evidente y, sobre todo, deja el error **cerca del cliente** -un 415 claro- en
+#: lugar de dentro del decodificador, donde se convierte en un fallo opaco. Quien
+#: valida el contenido de verdad es el motor de transcripcion, que lo decodifica.
+FORMATOS_AUDIO = frozenset(
+    {
+        "audio/wav",
+        "audio/x-wav",
+        "audio/wave",
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/mp4",
+        "audio/x-m4a",
+        "audio/m4a",
+        "audio/webm",
+        "audio/ogg",
+        "audio/flac",
+        "audio/x-flac",
+        "audio/aac",
+        "audio/opus",
+    }
+)
+
+#: Cabeceras de seguridad, aplicadas a **todas** las respuestas.
+#:
+#: `style-src` necesita `'unsafe-inline'`: el frontend usa atributos `style` de
+#: React (`style={{...}}`), que la CSP trata como estilo en linea; sin esa excepcion
+#: la interfaz pierde parte de su maquetacion. `script-src` **no** la lleva: el HTML
+#: construido no tiene un solo script en linea, solo el modulo externo de Vite.
+CABECERAS_SEGURIDAD = {
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; "
+        "base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    ),
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+}
+
+
+class LimitadorDePeticiones:
+    """Limite de peticiones por minuto y por cliente, en memoria.
+
+    **Ventana deslizante por marcas de tiempo**, no un contador que se reinicia al
+    cambiar el minuto: ese contador deja pasar el doble de peticiones a caballo del
+    cambio de minuto. Se guardan las marcas recientes de cada cliente y se descartan
+    las que salen de la ventana.
+
+    **Es por proceso y en memoria**: no sobrevive a un reinicio ni se coordina entre
+    varias instancias. Para el bucle local es suficiente y esta declarado; el dia
+    que haya varias instancias, el limite tiene que vivir fuera de ellas.
+    """
+
+    def __init__(self, por_minuto: int, ventana_s: float = 60.0) -> None:
+        self._por_minuto = por_minuto
+        self._ventana = ventana_s
+        self._marcas: dict[str, list[float]] = {}
+
+    def permitir(self, cliente: str, ahora: float) -> bool:
+        """`True` si la peticion cabe en la ventana. Registra la marca si cabe."""
+        vigentes = [t for t in self._marcas.get(cliente, ()) if ahora - t < self._ventana]
+        if len(vigentes) >= self._por_minuto:
+            self._marcas[cliente] = vigentes
+            return False
+        vigentes.append(ahora)
+        self._marcas[cliente] = vigentes
+        return True
+
+
+async def _leer_audio_limitado(audio: UploadFile, limite: int) -> bytes:
+    """Lee el audio por trozos y corta en cuanto supera `limite` (413).
+
+    **Por que no `await audio.read()`.** Ese lee el fichero **entero** en memoria
+    antes de que nadie pueda medirlo: subir 4 GB deja al proceso sin memoria y el
+    limite se comprueba cuando ya no sirve de nada. Leer a trozos permite abortar en
+    el momento exacto en que se pasa, con el fichero todavia a medio subir.
+    """
+    trozo_bytes = 1024 * 1024
+    trozos: list[bytes] = []
+    total = 0
+    while True:
+        trozo = await audio.read(trozo_bytes)
+        if not trozo:
+            break
+        total += len(trozo)
+        if total > limite:
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f"el audio supera el limite de {limite} bytes "
+                    f"(AI_SWE_MAX_AUDIO_BYTES)"
+                ),
+            )
+        trozos.append(trozo)
+    return b"".join(trozos)
+
+
+def _limpiar_worktree_de_huerfana(motor: RunEngine, run_id: str) -> None:
+    """Limpia el worktree de una ejecucion huerfana. **Nunca propaga.**
+
+    Es el tercer camino terminal y el unico que no pasa ni por el grafo ni por el
+    motor: una ejecucion huerfana no llegara nunca a `finalize`, asi que si no se
+    limpia aqui el worktree se queda para siempre en `var/workspaces` y el
+    repositorio del usuario acumula referencias fantasma.
+
+    Se lee el estado del **punto de control** porque la ruta del worktree vive ahi,
+    no en el indice. Si no se puede leer -no hay punto de control, o esta corrupto-
+    se registra y se sigue: romper el arranque del servicio por un worktree es peor
+    que dejar un worktree.
+    """
+    try:
+        estado = motor.get(run_id)
+    except Exception as exc:
+        log.warning("no se pudo leer el estado huerfano %s: %s", run_id, exc)
+        return
+    repo = (
+        estado.interpretation.scope.repo_path
+        if estado.interpretation is not None
+        else estado.options.repo_path
+    )
+    limpiar_worktree(
+        estado.artifacts.worktree_path,
+        repo_original=repo,
+        run_id=run_id,
+        base_commit=estado.artifacts.base_commit or "",
+    )
 
 
 def _configurar_nivel_de_log(nivel: str) -> None:
@@ -312,6 +456,11 @@ def crear_app(
         huerfanas = almacen.orphan_open_runs()
         if huerfanas:
             log.warning("ejecuciones huerfanas marcadas como escaladas: %s", huerfanas)
+            # Y se limpia su worktree. Una ejecucion huerfana no va a llegar nunca a
+            # `finalize` ni al aborto del motor: es el tercer camino terminal, y el
+            # unico que no pasa ni por el grafo ni por el motor.
+            for run_id in huerfanas:
+                _limpiar_worktree_de_huerfana(motor, run_id)
         try:
             yield
         finally:
@@ -342,9 +491,43 @@ def crear_app(
             allow_headers=["*"],
         )
 
+    # Hosts aceptados. Con lista explicita, un `Host` que no este en ella es **400**:
+    # es la defensa contra el envenenamiento de host, en el que un enlace con un
+    # nombre ajeno acaba dentro de una URL que genera el propio servidor. `localhost`
+    # y `testserver` estan porque son el bucle local y el cliente de pruebas.
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(ajustes.trusted_hosts))
+
+    if ajustes.rate_limit_enabled:
+        limitador = LimitadorDePeticiones(ajustes.rate_limit_per_minute)
+        app.state.rate_limiter = limitador
+
+        @app.middleware("http")
+        async def _limitar_peticiones(request: Request, call_next):
+            cliente = request.client.host if request.client else "desconocido"
+            if not limitador.permitir(cliente, time.monotonic()):
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "demasiadas peticiones; intentalo mas tarde"},
+                    headers={"Retry-After": "60"},
+                )
+            return await call_next(request)
+
+    # Cabeceras de seguridad. Se anade **la ultima** a proposito: en Starlette el
+    # ultimo middleware anadido es el mas externo, y eso hace que las cabeceras
+    # acompanen tambien a las respuestas de error de los middleware de dentro (un
+    # 400 de host o un 429 de limite), no solo a las respuestas correctas.
+    @app.middleware("http")
+    async def _cabeceras_de_seguridad(request: Request, call_next):
+        respuesta = await call_next(request)
+        for nombre, valor in CABECERAS_SEGURIDAD.items():
+            respuesta.headers.setdefault(nombre, valor)
+        return respuesta
+
     app.state.store = almacen
     app.state.engine = motor
     app.state.worker = trabajador
+    #: Conexiones SSE abiertas ahora mismo. Ver el tope en `eventos_run`.
+    app.state.sse_activas = 0
 
     registrar_manejadores_de_error(app)
 
@@ -393,7 +576,16 @@ def crear_app(
             ) from exc
 
     @app.get("/projects", response_model=list[Project])
-    def listar_proyectos(limit: int = 50) -> list[Project]:
+    def listar_proyectos(
+        limit: int = Query(default=50, ge=1, le=ajustes.max_page_size),
+    ) -> list[Project]:
+        """Lista proyectos. El tope de pagina lo impone el contrato de la peticion.
+
+        Antes, `limit` llegaba tal cual a SQL: `?limit=1000000000` era una peticion
+        valida y el coste lo pagaba el proceso. Acotarlo con `le` hace que el limite
+        sea parte del contrato -y aparezca en OpenAPI-, en lugar de una comprobacion
+        a mano que alguien puede olvidar.
+        """
         return almacen.listar_proyectos(limit)
 
     @app.get("/projects/{project_id}", response_model=Project)
@@ -415,8 +607,22 @@ def crear_app(
         -segundos por minuto de audio en el adaptador local-, y hacerlo dentro del
         bucle de eventos bloquearia todas las demas peticiones mientras dura,
         incluido el flujo SSE de una ejecucion en curso.
+
+        **El borde esta acotado.** El tipo se comprueba antes de leer un solo byte
+        (415 si no es un formato de la lista) y el tamano se corta **mientras se lee**
+        (413): `await audio.read()` a secas cargaba el fichero entero en memoria antes
+        de que nadie pudiera medirlo, asi que el limite habria llegado tarde.
         """
-        datos = await audio.read()
+        tipo = (audio.content_type or "").split(";")[0].strip().lower()
+        if tipo not in FORMATOS_AUDIO:
+            raise HTTPException(
+                status_code=415,
+                detail=(
+                    f"formato de audio no soportado: {tipo or '(sin tipo declarado)'}. "
+                    f"Formatos aceptados: {', '.join(sorted(FORMATOS_AUDIO))}"
+                ),
+            )
+        datos = await _leer_audio_limitado(audio, ajustes.max_audio_bytes)
         if not datos:
             raise HTTPException(status_code=422, detail="el audio esta vacio")
         vocabulario = [v for v in (vocabulary or "").split(",") if v.strip()]
@@ -476,7 +682,10 @@ def crear_app(
         return estado
 
     @app.get("/runs", response_model=list[RunSummary])
-    def listar_runs(limit: int = 50) -> list[RunSummary]:
+    def listar_runs(
+        limit: int = Query(default=50, ge=1, le=ajustes.max_page_size),
+    ) -> list[RunSummary]:
+        """Lista ejecuciones. Mismo tope de pagina que `/projects`."""
         return almacen.list_summaries(limit)
 
     @app.get("/runs/{run_id}", response_model=RunState)
@@ -499,6 +708,22 @@ def crear_app(
         """
         if almacen.summary(run_id) is None:
             raise HTTPException(status_code=404, detail=f"no existe la ejecucion {run_id}")
+
+        # Tope de conexiones. Cada flujo abierto mantiene un bucle sondeando el
+        # almacen cada 50 ms; no son gratis, y sin tope un cliente puede abrir
+        # cientos y dejar al proceso sin aire. El rechazo es **503 y no 429**: el
+        # recurso que falta es capacidad del servidor, no una cuota del cliente, y
+        # el mensaje dice que el flujo es reanudable para que reintentar sea barato.
+        if app.state.sse_activas >= ajustes.max_sse_connections:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "demasiadas conexiones de eventos abiertas; cierra alguna y "
+                    "reintenta. El flujo es reanudable: al reconectar con "
+                    "Last-Event-ID solo se reciben los eventos que faltan."
+                ),
+                headers={"Retry-After": "5"},
+            )
 
         desde = after
         if last_event_id and last_event_id.isdigit():
@@ -540,9 +765,30 @@ def crear_app(
                 await asyncio.sleep(0.05)
                 esperado += 0.05
 
+        async def flujo_contado() -> AsyncIterator[dict]:
+            """Cuenta la conexion **mientras dura**, no mientras se despacha.
+
+            El manejador devuelve la respuesta antes de que el flujo se consuma: si
+            se contara ahi, la reserva se liberaria al salir del manejador, cuando la
+            conexion sigue abierta. Se cuenta dentro del generador y se libera en su
+            `finally`, que corre cuando el cliente se desconecta o el flujo termina.
+
+            Consecuencia declarada: entre la comprobacion del tope y el arranque del
+            generador hay una rendija por la que dos peticiones simultaneas podrian
+            colarse. Se admite a proposito -preferimos admitir una conexion de mas
+            que dejar una reserva sin liberar, que con un tope de 16 acabaria
+            bloqueando el servicio entero.
+            """
+            app.state.sse_activas += 1
+            try:
+                async for elemento in flujo():
+                    yield elemento
+            finally:
+                app.state.sse_activas -= 1
+
         # `ping` mantiene viva la conexion a traves de proxies que cerrarian una
         # conexion inactiva. Sin el, una ejecucion larga se corta en silencio.
-        return EventSourceResponse(flujo(), ping=10)
+        return EventSourceResponse(flujo_contado(), ping=10)
 
     # ------------------------------------------------------- puertas humanas
     #
