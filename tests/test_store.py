@@ -65,7 +65,7 @@ def _estado_completo(run_id: str = "run-completo") -> RunState:
             confirmed_by_user=True,
         ),
         options=RunOptions(
-            repo_path="/repo/demo", allowed_paths=["src"], protected_paths=["src/db"], dry_run=True
+            repo_path="/repo/demo", allowed_paths=["src"], protected_paths=["src/db"]
         ),
         interpretation=TaskInterpretation(
             intent=Intent.MODIFY,
@@ -123,7 +123,6 @@ def _estado_completo(run_id: str = "run-completo") -> RunState:
                     stdout="3 passed",
                     stderr="",
                     duration_s=1.25,
-                    reproducible=True,
                 )
             ],
             findings=[

@@ -461,6 +461,120 @@ def test_dos_confirmaciones_concurrentes_solo_reanudan_una_vez(cliente, repo: Pa
     )
 
 
+# --------------------------------------- el cuerpo vacio no es una decision humana
+
+
+def test_un_cuerpo_vacio_no_es_una_decision_humana(cliente, repo: Path) -> None:
+    """`{}` no puede significar "adelante".
+
+    Aprobar la puerta de aprobacion **escribe en el repositorio del usuario**.
+    Mientras `decision` tuvo un valor por defecto afirmativo, un cuerpo mal formado
+    -un `{}`, un campo con el nombre mal escrito, un cliente que olvido el campo- se
+    convertia en una promocion silenciosa. La decision la toma una persona: el
+    sistema no puede suponerla. Se comprueba en las **dos** puertas, porque las dos
+    toman una decision humana.
+
+    Que la respuesta sea **422 y no 409** es la prueba de que la validacion ocurre
+    *antes* del manejador: la ejecucion espera en la puerta de requisitos, asi que
+    si el manejador de `/approve` llegara a ejecutarse reclamaria la reanudacion de
+    la puerta equivocada y devolveria 409.
+    """
+    creada = cliente.post(
+        "/runs", json={"instruction": "corrige f", "options": {"repo_path": str(repo)}}
+    ).json()
+    run_id = creada["run_id"]
+    _esperar_estado(cliente, run_id, "awaiting_human_requirements_confirmation")
+
+    for ruta in ("confirm-requirements", "approve"):
+        respuesta = cliente.post(f"/runs/{run_id}/{ruta}", json={})
+        assert respuesta.status_code == 422, (
+            f"{ruta} acepto un cuerpo vacio ({respuesta.status_code}): "
+            "un cliente mal formado decidiria por el humano"
+        )
+
+    # Y la ejecucion sigue exactamente donde estaba: no se confirmo ni se aprobo.
+    assert cliente.get(f"/runs/{run_id}").json()["status"] == (
+        "awaiting_human_requirements_confirmation"
+    )
+
+
+def test_una_decision_explicita_sigue_funcionando(cliente, repo: Path) -> None:
+    """El contrato cambia en lo que **falta**, no en lo que se manda bien."""
+    creada = cliente.post(
+        "/runs", json={"instruction": "corrige f", "options": {"repo_path": str(repo)}}
+    ).json()
+    run_id = creada["run_id"]
+    _esperar_estado(cliente, run_id, "awaiting_human_requirements_confirmation")
+
+    respuesta = cliente.post(
+        f"/runs/{run_id}/confirm-requirements", json={"decision": "approved"}
+    )
+
+    assert respuesta.status_code == 200
+
+
+# --------------------------- la lista blanca de repositorios se aplica en la API
+
+
+def test_un_repositorio_fuera_de_la_lista_blanca_es_403(
+    monkeypatch, tmp_path: Path, repo: Path
+) -> None:
+    """`AI_SWE_AUTHORIZED_REPOS` no es decorativo: la API lo hace cumplir.
+
+    El ajuste se documento como un limite y ningun codigo lo leia. Ahora se aplica
+    en **dos** puntos, y se comprueban los dos: el alta del proyecto y el arranque de
+    una ejecucion. El segundo importa porque una ejecucion tambien puede declarar
+    `repo_path` directamente, sin proyecto; si el control viviera solo en el alta,
+    lanzar contra un repositorio fuera de alcance seguiria funcionando y el limite se
+    creeria aplicado.
+
+    La aplicacion se monta **despues** de fijar la variable: la configuracion se lee
+    al construirla, no en cada peticion.
+    """
+    permitido = tmp_path / "permitido"
+    permitido.mkdir()
+    monkeypatch.setenv("AI_SWE_AUTHORIZED_REPOS", json.dumps([str(permitido)]))
+
+    store = RunStore(tmp_path / "estado.db")
+    app = crear_app(store=store)
+    try:
+        with TestClient(app) as cliente:
+            alta = cliente.post(
+                "/projects", json={"name": "fuera", "repo_path": str(repo)}
+            )
+            assert alta.status_code == 403, alta.text
+
+            directa = cliente.post(
+                "/runs",
+                json={"instruction": "corrige f", "options": {"repo_path": str(repo)}},
+            )
+            assert directa.status_code == 403, directa.text
+    finally:
+        store.close()
+
+
+def test_un_repositorio_dentro_de_la_lista_blanca_se_acepta(
+    monkeypatch, tmp_path: Path, repo: Path
+) -> None:
+    """Control positivo: sin el, un 403 permanente pasaria por confinamiento.
+
+    Se autoriza la **raiz** que contiene al repositorio y se comprueba que el alta
+    pasa. Una lista que rechaza todo no protege nada: solo rompe el sistema.
+    """
+    monkeypatch.setenv("AI_SWE_AUTHORIZED_REPOS", json.dumps([str(tmp_path)]))
+
+    store = RunStore(tmp_path / "estado.db")
+    app = crear_app(store=store)
+    try:
+        with TestClient(app) as cliente:
+            alta = cliente.post(
+                "/projects", json={"name": "dentro", "repo_path": str(repo)}
+            )
+            assert alta.status_code == 201, alta.text
+    finally:
+        store.close()
+
+
 # ==================================================================== SSE
 
 

@@ -130,7 +130,6 @@ export interface TestRun {
   stdout: string;
   stderr: string;
   argv: string[];
-  reproducible: boolean;
 }
 
 /** Un hallazgo del Reviewer o del Researcher. */

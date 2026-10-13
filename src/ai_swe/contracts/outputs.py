@@ -154,10 +154,13 @@ class TestRun(BaseModel):
     stdout: str = Field(default="", max_length=200_000)
     stderr: str = Field(default="", max_length=200_000)
     duration_s: float = Field(ge=0.0)
-    reproducible: bool = Field(
-        default=False,
-        description="El Reviewer re-ejecuta para confirmar que el resultado es reproducible.",
-    )
+    # `reproducible` se **retiro** aqui. Su descripcion prometia que "el Reviewer
+    # re-ejecuta para confirmar que el resultado es reproducible" y eso no ocurre:
+    # el Reviewer no vuelve a lanzar el target. El campo nunca llegaba a `True`
+    # -solo las pruebas lo ponian-, asi que la insignia que el frontend dibujaba a
+    # partir de el estaba permanentemente apagada: una senal fabricada. La
+    # reproducibilidad de verdad se consigue re-ejecutando, y eso es una funcion que
+    # no existe todavia; el campo se anade cuando exista la funcion, no antes.
     argv: list[str] = Field(
         default_factory=list,
         max_length=64,

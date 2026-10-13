@@ -16,33 +16,35 @@ solo donde escucha el bucle local.
 
 from __future__ import annotations
 
-import os
 import sys
+
+from pydantic import ValidationError
+
+from ai_swe.config import Settings
 
 #: Interfaz de red. **Solo bucle local.** Ver el docstring del modulo.
 HOST = "127.0.0.1"
 
-#: Puerto por defecto del bucle local.
-PUERTO_POR_DEFECTO = 8000
+#: Puerto por defecto del bucle local. Se **deriva** del contrato de configuracion
+#: en lugar de repetir el numero: dos literales iguales en dos ficheros divergen en
+#: cuanto alguien cambie uno.
+PUERTO_POR_DEFECTO = int(Settings.model_fields["port"].default)
 
 
 def puerto() -> int:
     """Puerto de escucha, de `AI_SWE_PORT` o el de por defecto.
 
-    Un valor invalido **no** se ignora en silencio: arrancar en el puerto por
-    defecto cuando alguien pidio otro deja al cliente llamando a donde no hay nada,
-    y el error aparece lejos de su causa.
+    La validacion la hace `Settings` -el puerto es configuracion tipada, no un
+    numero leido a mano-, y aqui solo se traduce el fallo a la forma que espera un
+    arranque por linea de comandos: un `SystemExit` con un mensaje claro. Un valor
+    invalido **no** se ignora en silencio: arrancar en el puerto por defecto cuando
+    alguien pidio otro deja al cliente llamando a donde no hay nada, y el error
+    aparece lejos de su causa.
     """
-    crudo = os.environ.get("AI_SWE_PORT")
-    if crudo is None or not crudo.strip():
-        return PUERTO_POR_DEFECTO
     try:
-        valor = int(crudo)
-    except ValueError as exc:
-        raise SystemExit(f"AI_SWE_PORT no es un numero: {crudo!r}") from exc
-    if not (1 <= valor <= 65535):
-        raise SystemExit(f"AI_SWE_PORT fuera de rango: {valor}")
-    return valor
+        return Settings().port
+    except ValidationError as exc:
+        raise SystemExit(f"AI_SWE_PORT invalido: {exc}") from exc
 
 
 def main() -> int:

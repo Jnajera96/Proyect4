@@ -32,6 +32,7 @@ from ai_swe.contracts.outputs import (
     TestRun,
 )
 from ai_swe.contracts.state import (
+    SCHEMA_VERSION,
     Artifacts,
     Budget,
     Evidence,
@@ -97,6 +98,7 @@ __all__ = [
     "RunState",
     "RunStatus",
     "RunSummary",
+    "SCHEMA_VERSION",
     "Scope",
     "Severity",
     "Subtask",

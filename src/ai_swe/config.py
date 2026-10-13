@@ -25,7 +25,19 @@ class Settings(BaseSettings):
         env_prefix="AI_SWE_",
         env_file_encoding="utf-8",
         extra="ignore",
+        # Una variable **presente pero vacia** se trata como ausente y se usa el
+        # valor por defecto. Sin esto, un `.env` copiado de `.env.example` -donde
+        # las lineas van sin valor- rompia el arranque en los campos tipados
+        # (`AI_SWE_MAX_COST_PER_RUN=` no es un `float`), que es justo lo contrario
+        # de lo que promete una plantilla. Con esto, `.env` funciona de forma
+        # consistente: dejar una linea vacia equivale a no declararla.
+        env_ignore_empty=True,
     )
+
+    # --- Servidor ------------------------------------------------------------
+    # El **puerto** es configurable; la **interfaz** no (ver `ai_swe.__main__`):
+    # cambiar el puerto no amplia quien puede llegar, escuchar en la red si.
+    port: int = Field(default=8000, ge=1, le=65535)
 
     # --- Proveedor de modelo -------------------------------------------------
     model_provider: str = Field(default="openai", description="Proveedor del Foundation Model.")
@@ -67,9 +79,21 @@ class Settings(BaseSettings):
         default=Path("var/workspaces"),
         description="Raiz donde se crean los worktrees de cada ejecucion.",
     )
+    # Lista blanca de repositorios. **Vacia = sin restriccion adicional**: es el
+    # modo local mono-usuario, donde el usuario registra a mano los proyectos que
+    # quiere tocar y esa accion ya es la autorizacion. **No vacia = se aplica**:
+    # solo se aceptan repositorios dentro de esas rutas (ver
+    # `repositorio_autorizado`), y registrar o lanzar contra otro devuelve 403.
+    #
+    # La distincion importa y estaba implicita: el campo se documentaba como un
+    # limite y ningun codigo lo leia. Un control declarado que no existe es peor
+    # que no tenerlo, porque se cree aplicado.
     authorized_repos: list[Path] = Field(
         default_factory=list,
-        description="Lista blanca de repositorios que el sistema puede tocar.",
+        description=(
+            "Lista blanca de repositorios. Vacia = sin restriccion adicional (modo local). "
+            "No vacia = solo se aceptan rutas dentro de esas."
+        ),
     )
     allowed_test_targets: list[str] = Field(
         default_factory=lambda: ["pytest.unit", "pytest.integration", "ruff.check"],
@@ -79,29 +103,67 @@ class Settings(BaseSettings):
         default_factory=list,
         description="Enumeracion cerrada de paquetes instalables. Vacia = ninguno.",
     )
+    # Salida de red desde el entorno de ejecucion. **Todavia NO se aplica.** El
+    # aislamiento real de proceso (contenedor desechable, `network none`) llega en
+    # su propia fase; hasta entonces este campo se conserva porque es la
+    # configuracion que ese aislamiento consumira, pero **no se declara como si ya
+    # bloqueara nada**: hoy, con el valor que sea, la ejecucion de pruebas hereda el
+    # entorno del proceso padre. Prometer un bloqueo que no existe es la misma clase
+    # de fallo que el resto de esta fase corrige.
     network_egress_enabled: bool = Field(
         default=False,
-        description="Salida de red desde el entorno de ejecucion. Desactivada por defecto.",
+        description=(
+            "Salida de red deseada para el entorno de ejecucion. **No aplicado aun**: "
+            "se conectara al aislamiento real de proceso (fase de aislamiento)."
+        ),
     )
 
     # --- Presupuesto ---------------------------------------------------------
+    # Estos valores son los que el `Budget` de cada ejecucion copia al crearse
+    # (ver `Settings.presupuesto`). Antes existian y no se leian: poner
+    # `AI_SWE_MAX_TOKENS_PER_RUN=1000` no cambiaba nada. Ahora el presupuesto
+    # efectivo sale de aqui.
     max_tokens_per_run: int = Field(default=200_000, ge=1)
     max_tool_calls_per_run: int = Field(default=60, ge=1)
+    max_model_calls_per_run: int = Field(default=120, ge=1)
     max_seconds_per_run: float = Field(default=900.0, gt=0)
     max_review_cycles: int = Field(default=2, ge=0, le=5)
+    # Coste maximo en la moneda del proveedor. `None` = sin limite declarado, que
+    # es distinto de cero: cero seria "no se permite gastar nada".
+    max_cost_per_run: float | None = Field(default=None, ge=0)
 
     # --- Speech-to-Text ------------------------------------------------------
     stt_provider: str = Field(default="faster-whisper")
     stt_model: str = Field(default="large-v3")
     stt_language: str = Field(default="es")
     stt_confidence_warn_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
-    tts_enabled: bool = Field(default=False, description="Salida por voz. Opcional por diseno.")
+    # Salida por voz. **NO IMPLEMENTADA.** No existe `TTSAdapter` ni un solo
+    # consumidor de este ajuste: se conserva porque `docs/01-arquitectura.md` la
+    # declara como **propuesta** (`[PROP]`), no como requisito (`RF-01`..`RF-03` no
+    # la incluyen). Se marca aqui y en `.env.example` para que no se lea como una
+    # capacidad presente: un flag que aparenta una funcion que no existe es
+    # exactamente la configuracion enganosa que esta fase corrige. Cuando exista el
+    # adaptador, la marca desaparece.
+    tts_enabled: bool = Field(
+        default=False,
+        description="Salida por voz. **NO IMPLEMENTADO**: ningun codigo lo consume (propuesta).",
+    )
 
     # --- Observabilidad ------------------------------------------------------
-    langfuse_enabled: bool = Field(default=False)
+    # **NO IMPLEMENTADA.** No hay integracion con Langfuse: `langfuse_enabled` y
+    # `langfuse_host` no los lee ningun codigo. Las **claves** si se usan -las
+    # registra el redactor en `registrar_secretos`, para que una clave no acabe en
+    # un log el dia que la integracion exista-, y ese registro es la unica parte
+    # viva de estos cuatro campos. Llega en la fase de observabilidad.
+    langfuse_enabled: bool = Field(
+        default=False, description="**NO IMPLEMENTADO**: no hay integracion con Langfuse."
+    )
     langfuse_public_key: SecretStr = Field(default=SecretStr(""))
     langfuse_secret_key: SecretStr = Field(default=SecretStr(""))
-    langfuse_host: str = Field(default="http://localhost:3000")
+    langfuse_host: str = Field(
+        default="http://localhost:3000",
+        description="**NO IMPLEMENTADO**: host previsto para Langfuse.",
+    )
     log_level: str = Field(default="INFO")
 
     @field_validator("log_level")
@@ -115,11 +177,40 @@ class Settings(BaseSettings):
 
     @property
     def tts_active(self) -> bool:
-        """El TTS solo se activa si esta habilitado y el STT esta configurado.
+        """Refleja `tts_enabled`. **El TTS no esta implementado** (ver el campo).
 
-        El informe textual siempre existe: el TTS nunca es la unica via de salida.
+        La descripcion anterior decia que "el TTS solo se activa si esta habilitado
+        y el STT esta configurado", y el cuerpo solo devolvia `tts_enabled`: la
+        documentacion prometia una comprobacion que no existia. Se corrige la
+        descripcion en lugar de la comprobacion, porque no hay nada que comprobar
+        mientras no exista el adaptador. Se conserva el acceso porque es el punto
+        por el que la futura implementacion consultara la configuracion.
         """
         return self.tts_enabled
+
+    def presupuesto(self):
+        """Presupuesto efectivo de una ejecucion, construido desde la configuracion.
+
+        **Por que aqui y no en el motor.** El presupuesto es la traduccion directa de
+        la configuracion al contrato del estado; ponerlo en un metodo de `Settings`
+        deja una sola definicion de esa traduccion y la hace comprobable sin arrancar
+        nada (ver `tests/test_config_budget.py`). Antes, `Budget` se construia con sus
+        propios valores por defecto y los seis ajustes `AI_SWE_MAX_*_PER_RUN` no se
+        leian en ningun sitio: existian, se documentaban y no hacian nada.
+
+        Se importa `ai_swe.contracts` de forma diferida para que `config` no dependa
+        de los contratos en tiempo de importacion.
+        """
+        from ai_swe.contracts import Budget
+
+        return Budget(
+            max_tokens=self.max_tokens_per_run,
+            max_tool_calls=self.max_tool_calls_per_run,
+            max_model_calls=self.max_model_calls_per_run,
+            max_seconds=self.max_seconds_per_run,
+            max_cost=self.max_cost_per_run,
+            max_review_cycles=self.max_review_cycles,
+        )
 
     def registrar_secretos(self) -> int:
         """Registra los secretos conocidos en el redactor central (`RNF-S3`).
@@ -152,6 +243,31 @@ def load_settings() -> Settings:
     settings = Settings()
     settings.registrar_secretos()
     return settings
+
+
+# ------------------------------------------------------------------- alcance
+
+def repositorio_autorizado(settings: Settings, ruta: Path | str) -> bool:
+    """Comprueba que `ruta` esta dentro del alcance declarado por `authorized_repos`.
+
+    **Semantica, explicita.** Con la lista vacia no hay restriccion adicional: es el
+    modo local mono-usuario, donde la autorizacion es que una persona registre a
+    mano el proyecto. Con la lista poblada, solo se aceptan rutas **dentro** de
+    alguna de las declaradas -la propia ruta o cualquier cosa colgando de ella-, y
+    todo lo demas se rechaza.
+
+    La comparacion es sobre rutas **resueltas**, no sobre el texto recibido: sin
+    resolver, `repo/../otro` o un enlace simbolico esquivarian la lista. Se resuelve
+    primero y se compara despues.
+    """
+    if not settings.authorized_repos:
+        return True
+    objetivo = Path(ruta).resolve()
+    for permitido in settings.authorized_repos:
+        base = Path(permitido).resolve()
+        if objetivo == base or base in objetivo.parents:
+            return True
+    return False
 
 
 # --------------------------------------------------------------- validacion de uso

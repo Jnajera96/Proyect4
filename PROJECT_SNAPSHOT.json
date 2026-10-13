@@ -1,8 +1,8 @@
 {
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-08",
-  "baseline_updated": "2026-10-06",
-  "phase": "M3 COMPLETE — F14 (experimental evaluation suite: SINGLE_AGENT vs MULTI_AGENT) implemented and verified. F13 (local Speech-to-Text), F12 (HITL code promotion), F11 (React dashboard) and F10 (REST + SSE) are complete; M2 is complete at 15/15. Next: final repository closure for the university delivery — awaiting explicit authorization.",
+  "baseline_updated": "2026-10-13",
+  "phase": "STABILIZATION — Phase 2 (contracts and effective configuration) implemented and verified. The functional chain is complete through F14 and M2 is complete at 15/15. Five settings that were documented and never read are now enforced (the repository allow-list returns 403 on both the project and the run path; the effective Budget is built from Settings), the affirmative approval default is gone (an empty body is 422 at both gates), `RunOptions.dry_run` and `TestRun.reproducible` are retired, `RunState.schema_version` is now checked instead of merely written, and `AI_SWE_NETWORK_EGRESS_ENABLED` is declared **not applied** instead of being implied. Next: Phase 3 (local hardening P0/P1/P2) — awaiting explicit authorization.",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -107,11 +107,11 @@
     "f14_metrics_from_execution_evidence": true,
     "f14_report_is_generated": true,
     "f14_review_cycle_converges_after_a_fixed_failure": true,
-    "tests_passing": 601,
-    "tests_skipped": "2/601 in the F14 run: (1) tests.test_model_gateway_real::test_llamada_real_controlada and (2) tests.test_f13_stt::test_transcripcion_real_opt_in are opt-in **by design** (the first needs AI_SWE_RUN_REAL_PROVIDER_TESTS=1 plus a provider key; the second needs the `voice` extra and AI_SWE_RUN_REAL_STT_TESTS=1, because it downloads a model), so they SKIP rather than passing falsely. The other skip recorded in earlier phases, test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace, is conditional: it skips only when Windows denies the symlink privilege (WinError 1314) and PASSED outright in this run. None is a code defect and none is a network/credential dependency of the offline suite.",
+    "tests_passing": 618,
+    "tests_skipped": "2/618 in the Phase 2 run: (1) tests.test_model_gateway_real::test_llamada_real_controlada and (2) tests.test_f13_stt::test_transcripcion_real_opt_in are opt-in **by design** (the first needs AI_SWE_RUN_REAL_PROVIDER_TESTS=1 plus a provider key; the second needs the `voice` extra and AI_SWE_RUN_REAL_STT_TESTS=1, because it downloads a model), so they SKIP rather than passing falsely. The third skip recorded in earlier phases, test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace, is conditional: it skips only when Windows denies the symlink privilege (WinError 1314) and PASSED outright in this run. None is a code defect and none is a network/credential dependency of the offline suite.",
     "tests_require_network": false,
     "tests_require_credentials": false,
-    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block; 12/13 (F10, re-run during F11 with the baseline green: 12 caught). The 13th, `the resumption not reserving the right (two concurrent requests both winning)`, did **not** fail under mutation in this run, having passed at F10 closure. Its regression test drives two threads through a barrier, so whether it observes the race is timing-dependent: the guard is weaker than the count suggests. Recorded rather than papered over; see the mutations block. F12, F13 and F14: see the mutations block.",
+    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block; 12/13 (F10, re-run during F11 with the baseline green: 12 caught). The 13th, `the resumption not reserving the right (two concurrent requests both winning)`, did **not** fail under mutation in this run, having passed at F10 closure. Its regression test drives two threads through a barrier, so whether it observes the race is timing-dependent: the guard is weaker than the count suggests. Recorded rather than papered over; see the mutations block. F12, F13, F14 and the stabilization phases: see the mutations block.",
     "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
     "m1_assumptions": "5/5",
     "frontend_browser_checks": "15/15",
@@ -119,7 +119,10 @@
     "f7_teardown_removes_ghost_worktrees": true,
     "f7_creation_leaves_no_branch_in_user_repo": true,
     "f7_mutation_timeout_is_not_counted_as_caught": true,
-    "f7_barrier_2_and_4_have_isolated_tests": true
+    "f7_barrier_2_and_4_have_isolated_tests": true,
+    "f2_settings_are_enforced": true,
+    "f2_approval_decision_is_required": true,
+    "f2_budget_comes_from_settings": true
   },
   "not_implemented": [
     "llm_wired_to_other_langgraph_nodes",
@@ -275,18 +278,23 @@
     "F14: the comparison is reproducible rather than impressive -the model is scripted per task, offline and deterministic, so the run measures the cost and benefit of the **orchestration**, not the quality of a model. Declared as a limitation inside the generated report",
     "F14: `docs/06-EVALUATION.md` is **generated** from `var/evaluation_results.json` and carries the generation stamp; editing it by hand is lost on the next run. The raw JSON is the source of truth"
   ],
-  "tests_passing": 601,
+  "tests_passing": 618,
   "snapshot_location": "repository root (consolidated 2026-10-08; the docs/auditoria-2026-10-06/ duplicate was removed to resolve AUD-01)",
   "component_status": [
     {
       "component": "Contracts (Pydantic v2: state, tasks, outputs, tools, api)",
       "status": "IMPLEMENTED_AND_VERIFIED",
-      "observations": "Single source of truth; cross-field invariants via model_validator. Covered by tests/test_contracts.py."
+      "observations": "Single source of truth; cross-field invariants via model_validator. Covered by tests/test_contracts.py. In the stabilization Phase 2 the fields that promised behaviour that did not exist were retired (`RunOptions.dry_run`, `TestRun.reproducible`) and `RunState.schema_version` stopped being a stamp nobody read: a state from another schema is now rejected."
     },
     {
       "component": "RunState / Budget / Evidence contracts",
       "status": "IMPLEMENTED_AND_VERIFIED",
-      "observations": "Typed shared state; new fields enter with defaults (project rule)."
+      "observations": "Typed shared state; new fields enter with defaults (project rule). The effective `Budget` of a run is built from `Settings.presupuesto()` (stabilization Phase 2): the `AI_SWE_MAX_*_PER_RUN` settings are no longer decorative."
+    },
+    {
+      "component": "Configuration (config.py, .env.example)",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "One typed source (`Settings`). In the stabilization Phase 2 the repository allow-list and the budget limits started being enforced, `AI_SWE_STATE_DB_PATH` stopped being read through a separate `os.environ.get`, and `.env.example` documents only settings the code reads. `AI_SWE_NETWORK_EGRESS_ENABLED`, TTS and Langfuse are declared **not applied**: no code reads them yet, and they are marked so rather than left looking functional."
     },
     {
       "component": "ModelGateway (models/gateway.py)",
@@ -531,9 +539,13 @@
     "vcs": "git",
     "branch": "main",
     "remote_configured": false,
-    "last_commit": "feat(f12): implement HITL code promotion from sandbox to user repository (HEAD when this snapshot was written; the hash is not recorded because this file is part of that commit)",
+    "last_commit": "fix: enforce configuration and contract invariants (HEAD when this snapshot was written; the hash is not recorded because this file is part of that commit)",
     "commit_history": [
-      "(this commit) feat(f12): implement HITL code promotion from sandbox to user repository",
+      "(this commit) fix: enforce configuration and contract invariants",
+      "5aa4cf7 chore: clean repository and consolidate documentation",
+      "9a477d8 audit: preserve final project audit baseline",
+      "065db45 feat(f14): implement experimental evaluation suite comparing single-agent vs multi-agent execution",
+      "a950c69 feat(f13): implement local FasterWhisperAdapter for offline STT",
       "57a2c29 feat(f11): implement React frontend dashboard with live SSE streaming and dual HITL gates",
       "019af70 feat(f10): implement FastAPI REST endpoints and SSE event streaming",
       "72613d9 feat(m2): implement requirements confirmation gate and achieve 100% M2 DoD",
@@ -551,12 +563,12 @@
       "11a13cb M1 VERIFIED BASELINE"
     ],
     "uncommitted_work": [],
-    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = 72613d9, F10 = 019af70, F11 = 57a2c29, F12 = e69b03a, F13 = a950c69, F14 = the current commit (see git log)."
+    "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = 72613d9, F10 = 019af70, F11 = 57a2c29, F12 = e69b03a, F13 = a950c69, F14 = 065db45, audit baseline = 9a477d8, Phase 1 = 5aa4cf7, Phase 2 = the current commit (see git log)."
   },
   "tests_executed": {
-    "command": "python -m pytest -q --junitxml=_f14_suite.xml (F14 tree, 2026-10-12)",
+    "command": "python -m pytest tests/ -q --junitxml=_f2_final.xml (Phase 2 tree, 2026-10-13)",
     "environment": "local, offline, no credentials, no network",
-    "tests": 601,
+    "tests": 618,
     "failures": 0,
     "errors": 0,
     "skipped": 2,
@@ -576,7 +588,8 @@
       "f10": "13/13 — events stored unredacted, a human pause emitted as run.failed, the outcome event not emitted, the human wait announced with the wrong gate's event, the per-node milestones not emitted, the engine stringifying a corrections resumption, project registration skipping repo validation, the project path not overriding the request's, SandboxError mapped to 500 instead of 422, the server listening on all interfaces, the resumption not reserving the right (two concurrent requests both winning), `confirm-requirements` accepting the approval gate, and `approve` accepting the requirements gate. The last three were added this phase; a `shutdown` mutation that had been counted earlier was retracted after proving it attacked a redundant line (the original `shutdown(wait=True)` already waits), and the underlying regression test was removed with it. RE-RUN DURING F11 (after AUD-11 retired `run.awaiting_approval`): 12/13 — the same run reported `la reanudacion no reserva el derecho` as NOT caught. That mutant removes the claim that makes `reclamar_reanudacion` atomic; the test that should catch it (`test_dos_confirmaciones_concurrentes_solo_reanudan_una_vez`) drives two threads through a barrier and asserts `sorted(codigos) == [200, 409]`, so it only observes the race when the worker thread has not yet finished the first resume. The verdict is therefore timing-dependent, and the guard is weaker than a 13/13 count implies. The mutant was retargeted in the same phase for AUD-11 (`run.awaiting_approval` no longer exists, so the old pattern could not apply).",
       "f12": "8/8 (this run: baseline green, every mutant caught, tree restored green) — promoting over an unauthorised repository, promoting a patch that changed after review (integrity), a path outside `allowed_paths`, a protected path, the sandbox not being torn down on finalize, a rejection marked as `completed`, requesting changes not spending a review cycle, and the human's comments not reaching the state. Every mutant is caught by tests/test_f12_promotion.py.",
       "f13": "4/4 (this run: baseline green, every mutant caught, tree restored green) — the empty-audio guard (without it the model is loaded to transcribe nothing), an empty transcription being returned instead of declared, the low-confidence warning being switched off, and the vocabulary not being passed as a hint to the engine. Every mutant is caught by tests/test_f13_stt.py. This run also **confirms the F13 housekeeping**: with LIMITE_PYTEST raised to 1200s the restore check reports `arbol restaurado y suite en verde`, where at 900s it had timed out and reported NO CONCLUYENTE.",
-      "f14": "5/5 (this run: baseline green, every mutant caught, tree restored green) — the success criterion ignoring the test evidence, the Reviewer judging the whole history instead of the current evidence (the AUD-14 defect this phase found), `evidencia_vigente` keeping the first run per target instead of the last, the success-rate aggregate dividing by zero with no runs, and the human interventions not being counted. Every mutant is caught by tests/test_f14_evaluation.py."
+      "f14": "5/5 (this run: baseline green, every mutant caught, tree restored green) — the success criterion ignoring the test evidence, the Reviewer judging the whole history instead of the current evidence (the AUD-14 defect this phase found), `evidencia_vigente` keeping the first run per target instead of the last, the success-rate aggregate dividing by zero with no runs, and the human interventions not being counted. Every mutant is caught by tests/test_f14_evaluation.py.",
+      "f2_stabilization": "6/6 (this run: baseline green, every mutant caught, tree restored green) — the configured budget not reaching the run, the repository allow-list not being applied (the function), approving without a human decision promoting again, the schema seal not being checked, and the allow-list not being applied at the API in either path (project registration and run creation). The last two exist because the API wiring had no test of its own: only the function was covered, which is not the same thing."
     }
   },
   "blockers_and_debt": [
@@ -685,13 +698,29 @@
       "status": "RESOLVED (2026-10-12, F14)",
       "detail": "`evidence.test_runs` is a history: every turn of the Coder<->Reviewer cycle appends its runs. But the Reviewer judged the **whole** list (`_guarda_pruebas` and `_veredicto_determinista`), so the first failing run stayed there forever and vetoed every later `ACCEPT`. The Coder could fix the failure and the system would still call it broken: after the cycle limit it escalated to `needs_human`. It made `MET-08` (corrections that end in `accept`) structurally unreachable, and it went unnoticed because the only existing cycle test kept the suite green in both turns -it exercised the model changing its mind, never a failure being fixed. Found by the F14 harness: two tasks (`EXP-02`, `EXP-09`) resolved in **neither** mode.",
       "how_to_close": "Added `nodes.evidencia_vigente`, which keeps the **latest** run per target -the evidence that describes the worktree that actually exists, since `apply_sandbox` recreates it every turn. `_guarda_pruebas`, `_veredicto_determinista` and the Reviewer's prompt context all use it now; the full history is still kept in `evidence.test_runs` for audit. The evaluation harness uses the same function, so the system's criterion and the metric's criterion cannot drift apart. Regression tests: `test_un_fallo_superado_no_veta_el_siguiente_accept` and `test_la_evidencia_vigente_es_la_ultima_por_target`; mutation `F14: el reviewer juzga el historico entero en lugar de la evidencia vigente`."
+    },
+    {
+      "id": "AUD-15",
+      "title": "The mutation harness rewrote the line endings of files it only read",
+      "status": "RESOLVED (2026-10-13, Phase 2)",
+      "detail": "`Path.read_text()` translates line endings to `\\n` and `Path.write_text()` translates them back to the platform separator. For a CRLF file the round trip is neutral; for an **LF** file it converts the whole file to CRLF. Because `.gitattributes` declares `* text=auto eol=lf`, Git normalises when comparing and **does not show it**: the tree looked clean while the harness modified bytes of files it should only inspect. It was found while preparing the first mutation over `config.py` (LF) and had already happened before: the CRLF files in the project are largely the ones the harness mutates most.",
+      "how_to_close": "`_leer_contenido` / `_escribir_contenido` preserve the original terminator and the recovery journal stores it. Verified empirically: byte-exact round trip on LF and CRLF, with and without a mutation.",
+      "risk": "LOW — the working tree was never semantically wrong and Git never reported it; the defect was in the verification instrument, not the product."
+    },
+    {
+      "id": "AUD-16",
+      "title": "Five settings were documented as limits and read by no code",
+      "status": "RESOLVED (2026-10-13, Phase 2)",
+      "detail": "`AI_SWE_AUTHORIZED_REPOS`, `AI_SWE_MAX_TOKENS_PER_RUN`, `AI_SWE_MAX_TOOL_CALLS_PER_RUN` and `AI_SWE_MAX_SECONDS_PER_RUN` were declared in `.env.example` as limits and no line of code read them: setting `AI_SWE_MAX_TOKENS_PER_RUN=1000` changed nothing. `AI_SWE_NETWORK_EGRESS_ENABLED` described a block that did not exist. A declared control that does not exist is worse than no control, because it is believed to be applied.",
+      "how_to_close": "The allow-list is enforced at both API entry points (403) and the effective `Budget` is built from `Settings.presupuesto()`. The network flag is declared **not applied** in the code and in `.env.example`; it will be connected to the real process isolation in its own phase.",
+      "risk": "MEDIUM before the fix (an operator could believe a run was bounded or a repository confined when it was not); LOW now."
     }
   ],
   "next_step_proposed": {
-    "phase": "Final repository closure for the university delivery",
-    "why": "All fourteen phases are implemented and verified. The functional chain is closed end to end -a browser drives the system, it stops at both human gates, an approved change reaches the user's repository, and voice input is transcribed locally without the audio leaving the machine- and the central academic question is now answered with reproducible evidence instead of opinion (docs/06-EVALUATION.md).",
-    "scope": "Close the repository for delivery: consolidate the documentation, produce the final report and the defence material, confirm the reproducibility baseline and tag the release. **No new functionality.**",
-    "prerequisite": "F14 is committed; tree clean.",
+    "phase": "Phase 3 — Local hardening P0/P1/P2",
+    "why": "The product is coherent and its configuration is effective, but it is still a local prototype with boundaries that have not been hardened: the Dockerfile binds 0.0.0.0 while the code pins 127.0.0.1, the audio upload has no size or type limit, pagination is unbounded, there are no security headers, and repository content reaches the model as if it were instructions.",
+    "scope": "Harden the local execution boundaries: network binding, audio upload limits and MIME validation, bounded pagination, SSE connection limits, security headers and TrustedHost, indirect prompt injection (treat repository content as untrusted data with explicit delimiters and adversarial tests), worktree cleanup on the error/abort/orphan paths, and a rate-limiting strategy that can be switched on before any future exposure.",
+    "prerequisite": "Phase 2 is committed; tree clean.",
     "awaiting": "explicit authorization from the Arquitecto — NOT to be started without it"
   }
 }

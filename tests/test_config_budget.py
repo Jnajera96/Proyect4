@@ -13,12 +13,15 @@ No hay ninguna credencial real en este fichero.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from ai_swe.config import (
     ConfiguracionInsuficiente,
     Settings,
     load_settings,
+    repositorio_autorizado,
     require_model_credentials,
 )
 from ai_swe.contracts import Budget
@@ -144,3 +147,160 @@ def test_budget_es_serializable_y_sobrevive_a_ida_y_vuelta() -> None:
     assert recuperado == original
     assert recuperado.used_cost == 1.25
     assert recuperado.used_model_calls == 3
+
+
+# -------------------------------------- configuracion efectiva: el Budget real
+
+
+def test_el_presupuesto_efectivo_sale_de_la_configuracion() -> None:
+    """Los ajustes `AI_SWE_MAX_*_PER_RUN` **construyen** el `Budget`, no lo decoran.
+
+    Antes existian y no se leian en ningun sitio: poner
+    `AI_SWE_MAX_TOKENS_PER_RUN=1000` no cambiaba nada, porque el `Budget` de cada
+    ejecucion se creaba con sus propios valores por defecto. Un control declarado
+    que no se aplica se cree aplicado, y eso es peor que no tenerlo.
+    """
+    ajustes = Settings(
+        max_tokens_per_run=1234,
+        max_tool_calls_per_run=7,
+        max_model_calls_per_run=9,
+        max_seconds_per_run=42.5,
+        max_review_cycles=3,
+        max_cost_per_run=2.5,
+    )
+
+    presupuesto = ajustes.presupuesto()
+
+    assert presupuesto.max_tokens == 1234
+    assert presupuesto.max_tool_calls == 7
+    assert presupuesto.max_model_calls == 9
+    assert presupuesto.max_seconds == 42.5
+    assert presupuesto.max_review_cycles == 3
+    assert presupuesto.max_cost == 2.5
+
+
+def test_los_valores_por_defecto_de_configuracion_y_de_contrato_coinciden() -> None:
+    """Es lo que hace equivalente `RunEngine(store)` y `RunEngine(store, settings=...)`.
+
+    El motor sin configuracion usa los valores por defecto del contrato; con
+    configuracion, los de `Settings`. Si divergieran, el mismo codigo se comportaria
+    distinto segun como se construya el motor, y las pruebas que lo construyen sin
+    configuracion dejarian de decir nada sobre el servidor.
+    """
+    assert Settings().presupuesto() == Budget()
+
+
+def test_sin_limite_de_coste_declarado_el_presupuesto_no_lo_inventa() -> None:
+    """`None` es "no se sabe", no cero: cero seria "no se permite gastar nada"."""
+    assert Settings().presupuesto().max_cost is None
+    assert Settings().presupuesto().remaining_cost is None
+
+
+def test_una_variable_de_entorno_vacia_usa_el_valor_por_defecto(monkeypatch) -> None:
+    """Copiar `.env.example` a `.env` no puede romper el arranque.
+
+    Sin `env_ignore_empty`, `AI_SWE_MAX_COST_PER_RUN=` -una linea sin valor en la
+    plantilla- no es un `float` y el arranque falla. Dejar una linea vacia tiene que
+    equivaler a no declararla.
+    """
+    monkeypatch.setenv("AI_SWE_MAX_COST_PER_RUN", "")
+    monkeypatch.setenv("AI_SWE_MAX_TOKENS_PER_RUN", "")
+
+    ajustes = Settings()
+
+    assert ajustes.max_cost_per_run is None
+    assert ajustes.max_tokens_per_run == 200_000
+
+
+# ----------------------------------------------- alcance de repositorios
+
+
+def test_sin_lista_de_repositorios_no_hay_restriccion_adicional() -> None:
+    """Vacio = modo local mono-usuario: la autorizacion es registrar el proyecto."""
+    assert repositorio_autorizado(Settings(authorized_repos=[]), "/cualquier/sitio")
+
+
+def test_con_lista_solo_se_acepta_lo_que_cuelga_de_ella(tmp_path: Path) -> None:
+    permitido = tmp_path / "permitido"
+    (permitido / "sub").mkdir(parents=True)
+    otro = tmp_path / "otro"
+    otro.mkdir()
+    # Un hermano cuyo nombre **empieza** igual: comparar texto en vez de rutas es
+    # como se cuelan estos fallos.
+    hermano = tmp_path / "permitido-otro"
+    hermano.mkdir()
+
+    ajustes = Settings(authorized_repos=[permitido])
+
+    assert repositorio_autorizado(ajustes, permitido)
+    assert repositorio_autorizado(ajustes, permitido / "sub")
+    assert not repositorio_autorizado(ajustes, otro)
+    assert not repositorio_autorizado(ajustes, hermano)
+
+
+def test_una_ruta_con_puntos_no_esquiva_la_lista(tmp_path: Path) -> None:
+    """Se comparan rutas **resueltas**: si no, `permitido/../otro` pasaria."""
+    permitido = tmp_path / "permitido"
+    permitido.mkdir()
+    (tmp_path / "otro").mkdir()
+
+    ajustes = Settings(authorized_repos=[permitido])
+
+    assert not repositorio_autorizado(ajustes, permitido / ".." / "otro")
+
+
+# ------------------------------------- config -> Run -> Budget efectivo (extremo)
+
+
+def test_el_motor_arranca_la_ejecucion_con_el_presupuesto_configurado(tmp_path: Path) -> None:
+    """El camino **entero**: configuracion -> ejecucion -> `RunState.budget`.
+
+    Comprobar `Settings.presupuesto()` en aislamiento no demuestra que el motor lo
+    use. Si `RunEngine` recibiera los ajustes y aun asi creara la ejecucion con el
+    `Budget` por defecto, la traduccion seria correcta y el resultado el mismo de
+    siempre: `AI_SWE_MAX_TOKENS_PER_RUN` seguiria sin hacer nada. Esta prueba ata las
+    dos puntas y es la que convierte "el campo se lee" en "el campo se aplica".
+    """
+    from ai_swe.graph.engine import RunEngine
+    from ai_swe.state import RunStore
+
+    store = RunStore(tmp_path / "estado.db")
+    try:
+        ajustes = Settings(
+            max_tokens_per_run=4242,
+            max_tool_calls_per_run=11,
+            max_seconds_per_run=99.0,
+            max_review_cycles=4,
+        )
+        motor = RunEngine(store, settings=ajustes)
+
+        estado = motor.crear_estado("explica el modulo de autenticacion")
+
+        assert estado.budget.max_tokens == 4242
+        assert estado.budget.max_tool_calls == 11
+        assert estado.budget.max_seconds == 99.0
+        assert estado.budget.max_review_cycles == 4
+    finally:
+        store.close()
+
+
+def test_el_motor_sin_configuracion_usa_el_presupuesto_del_contrato(tmp_path: Path) -> None:
+    """Sin `settings` el motor no inventa: usa el contrato, que **coincide** con `Settings`.
+
+    Es la otra rama de `RunEngine._presupuesto`. Se comprueba que no diverge, porque
+    de eso depende que `RunEngine(store)` -como lo construyen las pruebas- se comporte
+    igual que el motor del servidor: si los dos caminos dieran presupuestos distintos,
+    media suite dejaria de decir nada sobre el sistema que se despliega.
+    """
+    from ai_swe.graph.engine import RunEngine
+    from ai_swe.state import RunStore
+
+    store = RunStore(tmp_path / "estado.db")
+    try:
+        motor = RunEngine(store)
+
+        estado = motor.crear_estado("explica el modulo de autenticacion")
+
+        assert estado.budget == Budget()
+    finally:
+        store.close()

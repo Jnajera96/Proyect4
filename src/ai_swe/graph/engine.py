@@ -32,9 +32,11 @@ from datetime import UTC, datetime
 
 from langgraph.types import Command
 
+from ai_swe.config import Settings
 from ai_swe.contracts import (
     EVENTO_POR_NODO,
     ApprovalDecision,
+    Budget,
     EventKind,
     Instruction,
     InstructionSource,
@@ -72,8 +74,17 @@ def _ahora() -> datetime:
 class RunEngine:
     """Orquesta el grafo y mantiene el indice y el registro de eventos."""
 
-    def __init__(self, store: RunStore, *, constructor_grafo=None) -> None:
+    def __init__(
+        self, store: RunStore, *, constructor_grafo=None, settings: Settings | None = None
+    ) -> None:
         self._store = store
+        # F2: el presupuesto efectivo sale de la configuracion. Sin `settings` se
+        # usan los valores por defecto del contrato, que son **los mismos** que los
+        # de `Settings`; pasarlos explicitamente es lo que hace que
+        # `AI_SWE_MAX_TOKENS_PER_RUN` y compania dejen de ser decorativos. Se deja
+        # opcional para no obligar a cargar `.env` en las pruebas que construyen el
+        # motor directamente.
+        self._settings = settings
         # El grafo se compila **por hilo**, no una sola vez. El checkpointer lleva
         # una conexion SQLite, y compartir una conexion entre el hilo de la
         # peticion y los trabajadores producia fallos intermitentes en el `commit`.
@@ -195,7 +206,20 @@ class RunEngine:
                 confirmed_by_user=True,
             ),
             options=options or RunOptions(),
+            budget=self._presupuesto(),
         )
+
+    def _presupuesto(self) -> Budget:
+        """Presupuesto con el que nace la ejecucion.
+
+        Con configuracion cargada, la copia de `Settings`; sin ella, los valores por
+        defecto del contrato. En ambos casos el presupuesto queda **dentro del
+        estado persistido**, que es lo que hace que un reinicio a mitad de ejecucion
+        no devuelva los contadores a cero.
+        """
+        if self._settings is None:
+            return Budget()
+        return self._settings.presupuesto()
 
     def create(self, estado: RunState) -> RunState:
         """Persiste la ejecucion y la deja lista. **No la ejecuta.**

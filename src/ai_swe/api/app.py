@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import re
 import sqlite3
 import uuid
@@ -44,7 +43,7 @@ from pydantic import BaseModel, Field, ValidationError
 from sse_starlette.sse import EventSourceResponse
 from starlette.concurrency import run_in_threadpool
 
-from ai_swe.config import load_settings
+from ai_swe.config import load_settings, repositorio_autorizado
 from ai_swe.contracts import (
     ApprovalDecision,
     EventKind,
@@ -115,9 +114,17 @@ class ApproveRequest(BaseModel):
     humano deja al Coder para la siguiente iteracion. En una aprobacion o un rechazo
     se ignoran, pero no se prohiben: un cliente no deberia tener que ramificar el
     cuerpo de la peticion segun la decision.
+
+    **`decision` es obligatoria, y no por descuido.** Aprobar esta ruta **escribe en
+    el repositorio del usuario**: promueve el parche aprobado desde el worktree. Un
+    valor por defecto afirmativo convertia un cuerpo mal formado -un `{}`, un campo
+    con el nombre mal escrito, un cliente que olvido el campo- en una promocion
+    silenciosa. La decision la toma una persona: el sistema no puede suponerla.
     """
 
-    decision: ApprovalDecision = ApprovalDecision.APPROVED
+    decision: ApprovalDecision = Field(
+        description="Decision humana. Sin valor por defecto: un cuerpo vacio es un 422."
+    )
     comments: str | None = Field(
         default=None,
         max_length=2000,
@@ -131,9 +138,16 @@ class ConfirmRequirementsRequest(BaseModel):
     Ademas de confirmar o rechazar, permite **corregir** lo que el sistema
     entendio. Los campos de correccion son opcionales: sin ellos la peticion es una
     confirmacion limpia.
+
+    **`decision` es obligatoria** por la misma razon que en `ApproveRequest`: es una
+    decision humana y el sistema no puede suponerla. Un `{}` confirmaria la
+    interpretacion sin que nadie lo haya pedido, y esa confirmacion es la que
+    autoriza a planificar.
     """
 
-    decision: ApprovalDecision = ApprovalDecision.APPROVED
+    decision: ApprovalDecision = Field(
+        description="Decision humana. Sin valor por defecto: un cuerpo vacio es un 422."
+    )
     intent: Intent | None = None
     constraints: list[str] | None = None
     rationale: str | None = Field(default=None, max_length=2000)
@@ -262,18 +276,24 @@ def crear_app(
     worker: RunWorker | None = None,
     cors_origins: list[str] | None = None,
 ) -> FastAPI:
-    # La ruta del almacen se puede sobrescribir por entorno. Es lo que permite que
-    # una verificacion arranque con una base limpia y sea **reproducible**: sin
-    # esto, la comprobacion del navegador medía una base que crecia entre
-    # ejecuciones y sus numeros cambiaban sin que cambiara el codigo.
-    ruta_estado = os.environ.get("AI_SWE_STATE_DB_PATH", "var/state.sqlite3")
-    almacen = store or RunStore(ruta_estado)
+    # La configuracion se carga **una vez**, al construir la aplicacion. Los
+    # manejadores la necesitan -la ruta del almacen y el alcance de repositorios- y
+    # leerla dos veces, aqui y en el arranque, dejaba dos copias que podian
+    # discrepar. El ciclo de vida se queda con lo que si es de arranque: la
+    # redaccion de secretos y el nivel de log.
+    #
+    # La ruta del almacen sale de `Settings`, no de un `os.environ.get` aparte: asi
+    # `AI_SWE_STATE_DB_PATH` en el entorno **o** en `.env` funcionan igual, y hay una
+    # sola fuente tipada. Sigue permitiendo que una verificacion arranque con una
+    # base limpia y sea reproducible.
+    ajustes = load_settings()
+    almacen = store or RunStore(ajustes.state_db_path)
     # F13: el adaptador se elige por configuracion (`AI_SWE_STT_PROVIDER`). El
     # defecto es el adaptador local real; `fake` queda para pruebas y para entornos
     # sin la dependencia `voice`. Antes el defecto era `FakeAdapter`, que devolvia un
     # texto fijo con independencia del audio: una transcripcion fabricada.
     adaptador_stt = stt or crear_adaptador_stt()
-    motor = RunEngine(almacen)
+    motor = RunEngine(almacen, settings=ajustes)
     trabajador = worker or RunWorker(motor)
     origenes = cors_origins if cors_origins is not None else []
 
@@ -283,7 +303,6 @@ def crear_app(
         # arranque posterior falla y registra su error, ese error ya pasa por el
         # filtro. Hacerlo al final dejaria una ventana sin proteccion justo en el
         # momento en que la configuracion (con sus claves) esta en la mano.
-        ajustes = load_settings()
         install_redacting_filter()
         _configurar_nivel_de_log(ajustes.log_level)
 
@@ -352,6 +371,14 @@ def crear_app(
         en vez de llevar la ruta suelta en cada peticion.
         """
         ruta = validar_repositorio(peticion.repo_path)
+        if not repositorio_autorizado(ajustes, ruta):
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    f"el repositorio '{ruta}' queda fuera del alcance autorizado en "
+                    "AI_SWE_AUTHORIZED_REPOS"
+                ),
+            )
         proyecto = Project(
             project_id=_nuevo_project_id(peticion.name),
             name=peticion.name,
@@ -417,6 +444,19 @@ def crear_app(
             # seguridad que no debe poder quedar sin comprobar.
             opciones = RunOptions.model_validate(
                 {**opciones.model_dump(), "repo_path": proyecto.repo_path}
+            )
+
+        # El alcance se comprueba **aqui**, sobre la ruta efectiva, y no solo al dar
+        # de alta el proyecto. Una ejecucion tambien puede declarar `repo_path`
+        # directamente, sin proyecto; y un proyecto registrado antes de cambiar
+        # `AI_SWE_AUTHORIZED_REPOS` no deberia seguir siendo utilizable.
+        if opciones.repo_path and not repositorio_autorizado(ajustes, opciones.repo_path):
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    f"el repositorio '{opciones.repo_path}' queda fuera del alcance "
+                    "autorizado en AI_SWE_AUTHORIZED_REPOS"
+                ),
             )
 
         try:

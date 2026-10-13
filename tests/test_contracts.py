@@ -16,17 +16,21 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from ai_swe.contracts import (
+    SCHEMA_VERSION,
     AgentRole,
     Budget,
     Instruction,
     InstructionSource,
     Intent,
+    RunOptions,
     RunPlan,
     RunState,
     RunStatus,
     Scope,
     Subtask,
+    SubtaskStatus,
     TaskInterpretation,
+    TestRun,
     TranscriptMeta,
 )
 from ai_swe.contracts.validate import find_non_serializable
@@ -238,6 +242,73 @@ def test_el_presupuesto_detecta_agotamiento() -> None:
     assert Budget(max_tool_calls=10, used_tool_calls=10).exhausted
     assert Budget(max_seconds=10.0, elapsed_seconds=10.0).exhausted
     assert Budget(max_review_cycles=1, review_cycles_used=2).exhausted
+
+
+# ---------------------- 4. campos retirados, version del esquema y pendientes
+
+
+def test_los_campos_que_prometian_algo_inexistente_ya_no_estan() -> None:
+    """Un campo que se documenta y no se implementa se cree: peor que su ausencia.
+
+    `RunOptions.dry_run` declaraba "ejecuta el flujo sin tocar el repositorio" y
+    ningun codigo lo leia. `TestRun.reproducible` prometia que "el Reviewer
+    re-ejecuta para confirmar que el resultado es reproducible", y el Reviewer no
+    vuelve a lanzar el target: el valor nunca llegaba a `True` salvo en las pruebas,
+    de modo que la insignia que el frontend dibujaba a partir de el estaba
+    permanentemente apagada. Los dos se retiraron; esta prueba impide que vuelvan
+    por descuido.
+    """
+    assert "dry_run" not in RunOptions.model_fields
+    assert "reproducible" not in TestRun.model_fields
+
+
+def test_un_estado_de_otra_version_de_esquema_se_rechaza() -> None:
+    """`schema_version` se escribia en cada estado y no lo leia nadie. Ahora se comprueba.
+
+    Un sello de version que no se verifica no protege de nada: un estado escrito por
+    otra version se leeria igual y **en silencio**, que es la peor forma de leer mal
+    un dato. Comprobado, el fallo es inmediato y nombra las dos versiones.
+    """
+    with pytest.raises(ValidationError, match="esquema"):
+        RunState(
+            run_id="run-003",
+            trace_id="trace-003",
+            created_at=NOW,
+            updated_at=NOW,
+            instruction=_instruction(),
+            schema_version="0.0.1",
+        )
+
+
+def test_un_estado_sin_sello_de_version_se_acepta() -> None:
+    """La ausencia **no** es un fallo: es la regla de compatibilidad declarada.
+
+    Un estado serializado antes de que el campo existiera se deserializa con el
+    valor por defecto. Solo un valor distinto se rechaza, y eso es lo que permite
+    que un campo nuevo entre sin subir la version.
+    """
+    crudo = RunState(
+        run_id="run-004",
+        trace_id="trace-004",
+        created_at=NOW,
+        updated_at=NOW,
+        instruction=_instruction(),
+    ).model_dump()
+    crudo.pop("schema_version")
+
+    assert RunState.model_validate(crudo).schema_version == SCHEMA_VERSION
+
+
+def test_las_subtareas_conservan_su_estado_para_la_fase_de_cierre() -> None:
+    """`Subtask.status` y `attempts` se **conservan** a proposito, no por olvido.
+
+    Hoy nadie los actualiza: se quedan porque la fase de cierre de capacidades los
+    rellena -el frontend necesita saber por que subtarea va el plan- y retirarlos
+    ahora para volver a anadirlos despues seria trabajo para nada. Quedan aqui
+    declarados como **pendientes**, no como implementados.
+    """
+    assert Subtask.model_fields["status"].default is SubtaskStatus.PENDING
+    assert Subtask.model_fields["attempts"].default == 0
 
 
 # ------------------------------------------- contrato exportado para el frontend

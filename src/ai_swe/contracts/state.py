@@ -135,10 +135,12 @@ class RunOptions(BaseModel):
     protected_paths: list[str] = Field(
         default_factory=list, description="Rutas que exigen aprobacion explicita."
     )
-    dry_run: bool = Field(
-        default=False,
-        description="Ejecuta el flujo sin tocar el repositorio. Util para demostrar el grafo.",
-    )
+    # `dry_run` se **retiro** aqui. Declaraba "ejecuta el flujo sin tocar el
+    # repositorio" y ningun codigo lo leia: una promesa que nadie cumplia. Ademas
+    # era redundante con lo que ya existe: el repositorio del usuario no se toca
+    # hasta que una persona aprueba en la puerta de aprobacion, de modo que un
+    # "simulacro" se consigue rechazando alli, sin un segundo camino que mantener.
+    # Un campo que se documenta y no se implementa es peor que su ausencia: se cree.
 
 
 class Budget(BaseModel):
@@ -152,8 +154,9 @@ class Budget(BaseModel):
 
     **Compatibilidad.** Los campos nuevos entran con valor por defecto, de modo
     que un estado serializado antes de existir se deserializa sin error y sin
-    necesidad de tocar `ESQUEMA_VERSION`. Solo un cambio que *elimine* o *renombre*
-    un campo obligaria a subir la version.
+    necesidad de tocar `SCHEMA_VERSION`. Solo un cambio que *elimine* o *renombre*
+    un campo obligaria a subir la version -y entonces `RunState` rechazaria los
+    estados viejos, que es justo lo que debe hacer mientras no exista migracion-.
     """
 
     # --- Tokens ---------------------------------------------------------------
@@ -307,6 +310,30 @@ class RunState(BaseModel):
     # a hacer* (eso es `plan`). Separar ambas cosas evita que dos fuentes de
     # verdad se desincronicen.
     plan_index: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def _schema_version_soportada(self) -> RunState:
+        """El estado persistido declara con que esquema se escribio, y se comprueba.
+
+        **Por que se comprueba y no se ignora.** Este campo existia y no lo leia
+        nadie: se escribia en cada estado y ninguna linea decidia nada con el. Un
+        sello de version que no se comprueba no protege de nada, porque un estado
+        escrito por otra version se leeria igual y **en silencio**, que es la peor
+        forma de leer mal un dato. Comprobado, el fallo es inmediato y dice cual es
+        la version y cual la esperada.
+
+        La ausencia del campo **no** es un fallo: un estado serializado antes de que
+        el campo existiera se deserializa con el valor por defecto, que es la regla
+        de compatibilidad declarada en `Budget`. Solo un valor **distinto** se
+        rechaza.
+        """
+        if self.schema_version != SCHEMA_VERSION:
+            raise ValueError(
+                f"el estado declara el esquema '{self.schema_version}' y este build solo "
+                f"entiende '{SCHEMA_VERSION}': hace falta una migracion, no una lectura "
+                "optimista"
+            )
+        return self
 
     @model_validator(mode="after")
     def _timestamps_consistent(self) -> RunState:

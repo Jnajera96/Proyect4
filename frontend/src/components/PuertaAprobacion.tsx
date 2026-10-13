@@ -37,12 +37,6 @@ function EvidenciaTest({ test }: { test: TestRun }) {
         </span>
         <span className="mono">{test.target}</span>
         <span className="tenue">{test.duration_s.toFixed(2)}s</span>
-        {test.reproducible ? (
-          <span className="chip acento">
-            <span className="punto" />
-            reproducible
-          </span>
-        ) : null}
       </div>
       {test.argv?.length ? (
         <p className="comando">$ {test.argv.join(" ")}</p>

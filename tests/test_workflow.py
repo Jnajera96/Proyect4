@@ -126,7 +126,7 @@ def _estado_listo_para_promover(run_id: str = "run-promocion") -> RunState:
         ),
         evidence=Evidence(
             test_runs=[
-                TestRun(target="pytest.unit", exit_code=0, stdout="ok", duration_s=0.8, reproducible=True)
+                TestRun(target="pytest.unit", exit_code=0, stdout="ok", duration_s=0.8)
             ]
         ),
         budget=Budget(max_review_cycles=2),

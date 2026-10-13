@@ -52,7 +52,7 @@
           "type": "string"
         }
       },
-      "description": "Decision sobre la puerta de aprobacion (F12).\n\n`comments` solo tiene sentido al **pedir cambios**: son las instrucciones que el\nhumano deja al Coder para la siguiente iteracion. En una aprobacion o un rechazo\nse ignoran, pero no se prohiben: un cliente no deberia tener que ramificar el\ncuerpo de la peticion segun la decision.",
+      "description": "Decision sobre la puerta de aprobacion (F12).\n\n`comments` solo tiene sentido al **pedir cambios**: son las instrucciones que el\nhumano deja al Coder para la siguiente iteracion. En una aprobacion o un rechazo\nse ignoran, pero no se prohiben: un cliente no deberia tener que ramificar el\ncuerpo de la peticion segun la decision.\n\n**`decision` es obligatoria, y no por descuido.** Aprobar esta ruta **escribe en\nel repositorio del usuario**: promueve el parche aprobado desde el worktree. Un\nvalor por defecto afirmativo convertia un cuerpo mal formado -un `{}`, un campo\ncon el nombre mal escrito, un cliente que olvido el campo- en una promocion\nsilenciosa. La decision la toma una persona: el sistema no puede suponerla.",
       "properties": {
         "comments": {
           "anyOf": [
@@ -70,9 +70,12 @@
         },
         "decision": {
           "$ref": "#/$defs/ApprovalDecision",
-          "default": "approved"
+          "description": "Decision humana. Sin valor por defecto: un cuerpo vacio es un 422."
         }
       },
+      "required": [
+        "decision"
+      ],
       "title": "ApproveRequest",
       "type": "object"
     },
@@ -270,12 +273,6 @@
           "title": "Allowed Paths",
           "type": "array"
         },
-        "dry_run": {
-          "default": false,
-          "description": "Ejecuta el flujo sin tocar el repositorio. Util para demostrar el grafo.",
-          "title": "Dry Run",
-          "type": "boolean"
-        },
         "protected_paths": {
           "description": "Rutas que exigen aprobacion explicita.",
           "items": {
@@ -321,12 +318,6 @@
               },
               "title": "Allowed Paths",
               "type": "array"
-            },
-            "dry_run": {
-              "default": false,
-              "description": "Ejecuta el flujo sin tocar el repositorio. Util para demostrar el grafo.",
-              "title": "Dry Run",
-              "type": "boolean"
             },
             "protected_paths": {
               "description": "Rutas que exigen aprobacion explicita.",
@@ -561,7 +552,7 @@
           "type": "object"
         },
         "Budget": {
-          "description": "Presupuesto de la ejecucion. Agotarlo corta y escala, no continua (RNF-C1).\n\n**Por que estan los contadores aqui y no en el futuro `ModelGateway`.** El\npresupuesto es parte del estado persistido, no del cliente del modelo. Si el\nlimite viviera solo en quien llama, una reanudacion tras un corte arrancaria\ncon los contadores a cero y volveria a gastar lo ya gastado. Al vivir en el\nestado, el checkpoint los conserva y el limite sobrevive a un reinicio.\n\n**Compatibilidad.** Los campos nuevos entran con valor por defecto, de modo\nque un estado serializado antes de existir se deserializa sin error y sin\nnecesidad de tocar `ESQUEMA_VERSION`. Solo un cambio que *elimine* o *renombre*\nun campo obligaria a subir la version.",
+          "description": "Presupuesto de la ejecucion. Agotarlo corta y escala, no continua (RNF-C1).\n\n**Por que estan los contadores aqui y no en el futuro `ModelGateway`.** El\npresupuesto es parte del estado persistido, no del cliente del modelo. Si el\nlimite viviera solo en quien llama, una reanudacion tras un corte arrancaria\ncon los contadores a cero y volveria a gastar lo ya gastado. Al vivir en el\nestado, el checkpoint los conserva y el limite sobrevive a un reinicio.\n\n**Compatibilidad.** Los campos nuevos entran con valor por defecto, de modo\nque un estado serializado antes de existir se deserializa sin error y sin\nnecesidad de tocar `SCHEMA_VERSION`. Solo un cambio que *elimine* o *renombre*\nun campo obligaria a subir la version -y entonces `RunState` rechazaria los\nestados viejos, que es justo lo que debe hacer mientras no exista migracion-.",
           "properties": {
             "elapsed_seconds": {
               "default": 0.0,
@@ -1083,12 +1074,6 @@
               "title": "Allowed Paths",
               "type": "array"
             },
-            "dry_run": {
-              "default": false,
-              "description": "Ejecuta el flujo sin tocar el repositorio. Util para demostrar el grafo.",
-              "title": "Dry Run",
-              "type": "boolean"
-            },
             "protected_paths": {
               "description": "Rutas que exigen aprobacion explicita.",
               "items": {
@@ -1347,12 +1332,6 @@
             "exit_code": {
               "title": "Exit Code",
               "type": "integer"
-            },
-            "reproducible": {
-              "default": false,
-              "description": "El Reviewer re-ejecuta para confirmar que el resultado es reproducible.",
-              "title": "Reproducible",
-              "type": "boolean"
             },
             "stderr": {
               "default": "",

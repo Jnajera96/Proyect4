@@ -76,7 +76,33 @@ LIMITE_PYTEST = 1200.0
 LIMITE_COMANDO = 180.0
 
 
-def _leer_diario() -> dict[str, str]:
+def _leer_contenido(ruta: Path) -> tuple[str, str]:
+    """Lee `ruta` y devuelve `(contenido con \\n, terminador de linea original)`.
+
+    **Por que no basta `read_text()`.** `read_text` traduce los finales de linea a
+    `\\n` y `write_text` los traduce de vuelta al terminador del sistema. En un
+    fichero CRLF el viaje de ida y vuelta es neutro; en uno **LF** convierte el
+    fichero entero a CRLF. Como `.gitattributes` declara `eol=lf`, Git normaliza al
+    comparar y **no lo muestra**: el arnes modificaba bytes de ficheros que solo
+    debia leer, y el arbol seguia pareciendo limpio. La mutacion se aplica sobre
+    texto normalizado -para que los patrones con `\\n` casen en ambos casos- y se
+    restaura con el terminador que el fichero tenia.
+    """
+    with ruta.open("r", encoding="utf-8", newline="") as fichero:
+        crudo = fichero.read()
+    if "\r\n" in crudo:
+        return crudo.replace("\r\n", "\n"), "\r\n"
+    return crudo, "\n"
+
+
+def _escribir_contenido(ruta: Path, contenido: str, terminador: str) -> None:
+    """Escribe `contenido` (con `\\n`) usando el terminador original del fichero."""
+    texto = contenido if terminador == "\n" else contenido.replace("\n", terminador)
+    with ruta.open("w", encoding="utf-8", newline="") as fichero:
+        fichero.write(texto)
+
+
+def _leer_diario() -> dict[str, object]:
     if not DIARIO.exists():
         return {}
     try:
@@ -85,7 +111,7 @@ def _leer_diario() -> dict[str, str]:
         return {}
 
 
-def _escribir_diario(datos: dict[str, str]) -> None:
+def _escribir_diario(datos: dict[str, object]) -> None:
     DIARIO.write_text(json.dumps(datos, ensure_ascii=False), encoding="utf-8")
 
 
@@ -103,8 +129,15 @@ def _recuperar_pendientes() -> list[str]:
     """
     diario = _leer_diario()
     restaurados: list[str] = []
-    for ruta, contenido in diario.items():
-        Path(ruta).write_text(contenido, encoding="utf-8")
+    for ruta, guardado in diario.items():
+        # El diario guarda `[contenido, terminador]`. Un diario escrito por una
+        # version anterior solo tenia el contenido; se asume `\n`, que es la
+        # convencion del repositorio (`.gitattributes` declara `eol=lf`).
+        if isinstance(guardado, list) and len(guardado) == 2:
+            contenido, terminador = guardado
+        else:
+            contenido, terminador = guardado, "\n"
+        _escribir_contenido(Path(ruta), contenido, terminador)
         restaurados.append(str(Path(ruta).relative_to(RAIZ)))
     if restaurados:
         _escribir_diario({})
@@ -1267,6 +1300,71 @@ MUTACIONES: list[Mutation] = [
         "            pass  # mutado: no se cuenta la intervencion humana",
         "test_f14_evaluation.py",
     ),
+    # ------------------------------------------------------------------ F2
+    Mutation(
+        # El presupuesto efectivo sale de la configuracion. Si el motor recibiera los
+        # ajustes y aun asi creara la ejecucion con el `Budget` por defecto,
+        # `AI_SWE_MAX_TOKENS_PER_RUN` volveria a ser decorativo: existiria, se
+        # documentaria y no haria nada. Es la regresion exacta que cierra la fase.
+        "F2: el presupuesto configurado no llega a la ejecucion",
+        SRC / "graph" / "engine.py",
+        "        return self._settings.presupuesto()",
+        "        return Budget()",
+        "test_config_budget.py",
+    ),
+    Mutation(
+        # La lista blanca de repositorios. Si el confinamiento se saltara, cualquier
+        # ruta pasaria aunque `AI_SWE_AUTHORIZED_REPOS` declarara lo contrario: un
+        # control que se cree aplicado y no lo esta.
+        "F2: la lista blanca de repositorios no se aplica",
+        SRC / "config.py",
+        "        if objetivo == base or base in objetivo.parents:",
+        "        if True:",
+        "test_config_budget.py",
+    ),
+    Mutation(
+        # Aprobar la puerta **escribe en el repositorio del usuario**. Un valor por
+        # defecto afirmativo convierte un cliente mal formado -un `{}`- en una
+        # promocion silenciosa: la decision es humana y el sistema no puede suponerla.
+        "F2: aprobar sin decision humana vuelve a promover",
+        SRC / "api" / "app.py",
+        "    decision: ApprovalDecision = Field(\n"
+        '        description="Decision humana. Sin valor por defecto: un cuerpo vacio es un 422."\n'
+        "    )\n"
+        "    comments: str | None = Field(",
+        "    decision: ApprovalDecision = ApprovalDecision.APPROVED\n"
+        "    comments: str | None = Field(",
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # El sello de version del esquema. Sin comprobarlo, un estado escrito por otra
+        # version se leeria igual y **en silencio**, que es la peor forma de leer mal
+        # un dato.
+        "F2: el sello de esquema no se comprueba",
+        SRC / "contracts" / "state.py",
+        "        if self.schema_version != SCHEMA_VERSION:",
+        "        if False:",
+        "test_contracts.py",
+    ),
+    Mutation(
+        # El confinamiento tiene que aplicarse en la API, no solo existir como funcion.
+        # Si la comprobacion del alta desapareciera, registrar un proyecto fuera de
+        # alcance volveria a funcionar y el limite se creeria aplicado.
+        "F2: el alta de proyecto no comprueba la lista blanca",
+        SRC / "api" / "app.py",
+        "        if not repositorio_autorizado(ajustes, ruta):",
+        "        if False:",
+        "test_f10_api.py",
+    ),
+    Mutation(
+        # Y tambien al **lanzar** una ejecucion: una ejecucion puede declarar
+        # `repo_path` sin proyecto, asi que el control del alta no la cubre.
+        "F2: lanzar una ejecucion no comprueba la lista blanca",
+        SRC / "api" / "app.py",
+        "        if opciones.repo_path and not repositorio_autorizado(ajustes, opciones.repo_path):",
+        "        if False:",
+        "test_f10_api.py",
+    ),
 ]
 
 
@@ -1428,19 +1526,19 @@ def main() -> int:
     cazadas = 0
     no_concluyentes: list[str] = []
     for m in seleccion:
-        contenido = m.fichero.read_text(encoding="utf-8")
+        contenido, terminador = _leer_contenido(m.fichero)
         if contenido.count(m.original) != 1:
             print(f"  {m.nombre:48s} -> NO APLICABLE (el patron aparece "
                   f"{contenido.count(m.original)} veces)")
             continue
 
-        m.fichero.write_text(contenido.replace(m.original, m.mutado), encoding="utf-8")
-        _escribir_diario({str(m.fichero): contenido})
+        _escribir_contenido(m.fichero, contenido.replace(m.original, m.mutado), terminador)
+        _escribir_diario({str(m.fichero): [contenido, terminador]})
         inicio = time.perf_counter()
         try:
             resultado = _verde(m)
         finally:
-            m.fichero.write_text(contenido, encoding="utf-8")
+            _escribir_contenido(m.fichero, contenido, terminador)
             _escribir_diario({})
         segundos = time.perf_counter() - inicio
 
