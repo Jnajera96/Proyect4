@@ -1,19 +1,31 @@
 /**
  * Raiz de la aplicacion.
  *
- * Orquesta el ciclo completo: comprobar el servidor, registrar un proyecto,
- * lanzar una ejecucion, seguir su progreso en vivo, responder a las dos puertas
- * humanas y leer el informe final. El estado de la ejecucion se **relee del
- * servidor** cuando llega una senal relevante, en lugar de reconstruirse en el
- * cliente: el servidor es la fuente autoritativa de donde esta la ejecucion, y el
- * SSE es la senal de que algo ha cambiado.
+ * Orquesta el ciclo completo: comprobar el servidor, autenticarse si hace falta,
+ * registrar un proyecto, lanzar una ejecucion, seguir su progreso en vivo,
+ * responder a las dos puertas humanas y leer el informe final. El estado de la
+ * ejecucion se **relee del servidor** cuando llega una senal relevante, en lugar
+ * de reconstruirse en el cliente: el servidor es la fuente autoritativa de donde
+ * esta la ejecucion, y el SSE es la senal de que algo ha cambiado.
  *
  * La etiqueta de fase se lee de `/health`, nunca de un literal. Es lo que resuelve
  * AUD-13 de raiz: si la fase cambia en el backend, la interfaz la refleja sola.
+ *
+ * **El acceso se deduce de respuestas reales.** El servidor puede exigir
+ * credencial o no, y el cliente no lo sabe de antemano: lo averigua con la
+ * primera lectura de datos protegidos -401 = la exige, 200 = esta abierta-.
+ * `/health` no sirve para esto porque esta abierto en los dos modos a proposito.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, ErrorApi } from "./lib/api";
-import { borrarClave, claveGuardada, guardarClave, useClaveApi } from "./lib/auth";
+import { api, ErrorApi, mensajeVisible, rolDelRechazo } from "./lib/api";
+import {
+  borrarClave,
+  enmascarar,
+  guardarClave,
+  hayClave,
+  useClaveApi,
+  type EstadoSesion,
+} from "./lib/auth";
 import {
   ESTADOS_TERMINALES,
   ETIQUETA_ESTADO,
@@ -23,6 +35,7 @@ import {
   type RunSummary,
 } from "./lib/contracts";
 import { hitosDe, useEventosRun } from "./hooks/useEventosRun";
+import { PantallaAcceso } from "./components/PantallaAcceso";
 import { PuertaAprobacion } from "./components/PuertaAprobacion";
 import { PuertaRequisitos } from "./components/PuertaRequisitos";
 import { Timeline } from "./components/Timeline";
@@ -36,6 +49,9 @@ function tonoDeEstado(estado: string): "" | "ok" | "aviso" | "error" | "acento" 
   if (estado === "running") return "acento";
   return "";
 }
+
+/** Que respondio el servidor a las peticiones protegidas. */
+type ResultadoCarga = "ok" | "401" | "fallo";
 
 export function App() {
   const [salud, setSalud] = useState<Health | null>(null);
@@ -55,11 +71,16 @@ export function App() {
   const [lanzando, setLanzando] = useState(false);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
 
-  // Clave de API. Se lee del almacen con el hook para que la interfaz reaccione
-  // a guardarla u olvidarla; el borrador es solo el campo de texto.
+  // ---------------------------------------------------------------- acceso
+  // `useClaveApi` suscribe este componente a la credencial: cambiarla o
+  // olvidarla repinta. El flujo SSE hace lo mismo por su cuenta.
   const claveApi = useClaveApi();
-  const [borradorClave, setBorradorClave] = useState("");
-  const [mensajeClave, setMensajeClave] = useState<string | null>(null);
+  const [sesion, setSesion] = useState<EstadoSesion>("comprobando");
+  const [mensajeAcceso, setMensajeAcceso] = useState<string | null>(null);
+  const [cambiandoClave, setCambiandoClave] = useState(false);
+  // El rol solo se conoce si el backend lo dijo al rechazar una accion; ver
+  // `rolDelRechazo`. `null` = no se sabe, y entonces no se oculta nada.
+  const [rol, setRol] = useState<string | null>(null);
 
   const { eventos, conexion } = useEventosRun(runId);
 
@@ -80,8 +101,9 @@ export function App() {
       // conjunto canonico de F10 y no los nombres heredados.
       tipos: eventos.map((e) => e.kind),
       hitos: hitosDe(eventos).map((h) => h.kind),
+      sesion,
     };
-  }, [runId, estado, eventos, conexion]);
+  }, [runId, estado, eventos, conexion, sesion]);
 
 
   // Se releen el estado y la lista cuando cambia el numero de eventos: cada
@@ -89,18 +111,48 @@ export function App() {
   // recuento no cambia.
   const nEventos = eventos.length;
   const ultimoRef = useRef(-1);
-  const refrescar = useCallback(async (id: string) => {
-    try {
-      setEstado(await api.obtenerRun(id));
-    } catch {
-      /* el estado puede no estar aun; se reintenta con el proximo evento */
-    }
-    try {
-      setRuns(await api.listarRuns());
-    } catch {
-      /* idem */
+
+  /**
+   * Anota un fallo de acceso en el sitio que le corresponde.
+   *
+   * **401: la sesion se cae.** La credencial que valia dejo de valer -revocada,
+   * cambiada en el servidor- o nunca valio. Se olvida y se vuelve a pedir; la
+   * vista de la ejecucion se cierra porque sin credencial no se puede releer.
+   *
+   * **403: falta permiso.** La sesion sigue siendo valida; lo que no alcanza es
+   * el rol. Se aprende cual es -el backend lo dice al rechazar- para dejar de
+   * ofrecer acciones que van a ser rechazadas. Quien llama pone el mensaje.
+   */
+  const anotarFallo = useCallback((causa: unknown): void => {
+    if (!(causa instanceof ErrorApi)) return;
+    if (causa.status === 401) {
+      borrarClave();
+      setRol(null);
+      setRunId(null);
+      setEstado(null);
+      setSesion("sesion-caida");
+      setMensajeAcceso("Tu credencial dejó de ser válida. Introdúcela de nuevo.");
+    } else if (causa.status === 403) {
+      const detectado = rolDelRechazo(causa);
+      if (detectado) setRol(detectado);
     }
   }, []);
+
+  const refrescar = useCallback(
+    async (id: string) => {
+      try {
+        setEstado(await api.obtenerRun(id));
+      } catch (causa) {
+        anotarFallo(causa);
+      }
+      try {
+        setRuns(await api.listarRuns());
+      } catch (causa) {
+        anotarFallo(causa);
+      }
+    },
+    [anotarFallo],
+  );
 
   useEffect(() => {
     if (!runId || nEventos === ultimoRef.current) return;
@@ -133,7 +185,12 @@ export function App() {
     return () => window.clearInterval(temporizador);
   }, [runId, estado, refrescar]);
 
-  const cargarInicial = useCallback(async () => {
+  /**
+   * Lee lo que el servidor tiene. `/health` esta abierto en los dos modos, asi
+   * que **no** distingue si hace falta credencial: eso lo dicen las peticiones
+   * protegidas, y por eso su resultado es el que devuelve esta funcion.
+   */
+  const cargarInicial = useCallback(async (): Promise<ResultadoCarga> => {
     try {
       setSalud(await api.health());
       setSaludError(false);
@@ -141,22 +198,85 @@ export function App() {
       setSaludError(true);
     }
     try {
-      setProyectos(await api.listarProyectos());
-    } catch {
-      /* sin proyectos se puede ejecutar contra la ruta por defecto */
-    }
-    try {
-      setRuns(await api.listarRuns());
-    } catch {
-      /* idem */
+      const proyectosLeidos = await api.listarProyectos();
+      const runsLeidos = await api.listarRuns();
+      setProyectos(proyectosLeidos);
+      setRuns(runsLeidos);
+      return "ok";
+    } catch (causa) {
+      if (causa instanceof ErrorApi && causa.status === 401) return "401";
+      // Un fallo que no es de credencial no convierte esto en una pantalla de
+      // acceso: la sesion puede estar bien y el servidor tener otro problema.
+      return "fallo";
     }
   }, []);
 
+  // **El modo del servidor se deduce, no se adivina.** Primera lectura de datos
+  // protegidos: 401 = exige credencial; 200 = esta abierta.
   useEffect(() => {
-    void cargarInicial();
+    void (async () => {
+      const resultado = await cargarInicial();
+      if (resultado === "401") {
+        const habia = hayClave();
+        setSesion(habia ? "clave-invalida" : "sin-credencial");
+        setMensajeAcceso(habia ? "Clave de API invalida." : null);
+      } else if (resultado === "ok") {
+        setSesion(hayClave() ? "autenticado" : "sin-autenticacion");
+      } else {
+        setSesion("sin-servidor");
+      }
+    })();
   }, [cargarInicial]);
 
   const hitos = useMemo(() => hitosDe(eventos), [eventos]);
+
+  /**
+   * Comprueba una credencial introducida contra el servidor.
+   *
+   * La credencial se guarda **antes** de comprobarla, porque es la unica forma de
+   * que la peticion de comprobacion la lleve; si el servidor la rechaza se olvida
+   * acto seguido. No se afirma que una credencial sea invalida por un fallo de
+   * red: eso es un fallo, no un veredicto.
+   */
+  async function entrarConClave(clave: string) {
+    setMensajeAcceso(null);
+    setSesion("validando");
+    guardarClave(clave);
+    const resultado = await cargarInicial();
+    if (resultado === "401") {
+      borrarClave();
+      setSesion("clave-invalida");
+      setMensajeAcceso("Clave de API invalida.");
+      return;
+    }
+    if (resultado === "fallo") {
+      borrarClave();
+      setSesion("sin-credencial");
+      setMensajeAcceso("No se pudo comprobar la credencial. Inténtalo de nuevo.");
+      return;
+    }
+    // Credencial nueva: el rol aprendido con la anterior ya no dice nada.
+    setRol(null);
+    setCambiandoClave(false);
+    setSesion("autenticado");
+  }
+
+  /**
+   * Cierra la sesion del frontend. No hay peticion de por medio porque no hay
+   * nada que pedirle al servidor: una credencial es una clave, no una sesion con
+   * estado. Olvidarla aqui **es** cerrar la sesion.
+   */
+  function cerrarSesion() {
+    borrarClave();
+    setRol(null);
+    setCambiandoClave(false);
+    setMensajeAcceso(null);
+    setProyectos([]);
+    setRuns([]);
+    setRunId(null);
+    setEstado(null);
+    setSesion("sin-credencial");
+  }
 
   async function registrarProyecto() {
     setErrorAccion(null);
@@ -166,8 +286,13 @@ export function App() {
       setProjectId(p.project_id);
       setNombreProyecto("");
       setRutaProyecto("");
-    } catch (e) {
-      setErrorAccion(e instanceof ErrorApi ? e.message : String(e));
+    } catch (causa) {
+      // `habiaCredencial` se lee **antes** de anotar el fallo: anotar un 401
+      // olvida la credencial, y despues ya no se sabria si el mensaje correcto es
+      // "no mandaste nada" o "esa no vale".
+      const habiaCredencial = hayClave();
+      anotarFallo(causa);
+      setErrorAccion(mensajeVisible(causa, habiaCredencial));
     }
   }
 
@@ -181,8 +306,10 @@ export function App() {
       const creado = await api.crearRun(texto, projectId || undefined);
       setRunId(creado.run_id);
       setEstado(creado);
-    } catch (e) {
-      setErrorAccion(e instanceof ErrorApi ? e.message : String(e));
+    } catch (causa) {
+      const habiaCredencial = hayClave();
+      anotarFallo(causa);
+      setErrorAccion(mensajeVisible(causa, habiaCredencial));
     } finally {
       setLanzando(false);
     }
@@ -200,15 +327,24 @@ export function App() {
   const conectado = conexion === "conectado";
   const terminado = estado ? ESTADOS_TERMINALES.has(estado.status) : false;
 
-  return (
-    <main className="app">
-      <header className="cabecera">
-        <div>
-          <h1 className="titulo">AI Software Engineering System</h1>
-          <p className="subtitulo" style={{ margin: "0.15rem 0 0" }}>
-            Proyecto 4 · Equipo 4
-          </p>
-        </div>
+  // El rol, cuando se conoce, ordena la jerarquia que el backend aplica de
+  // verdad: `reader` < `operator` < `admin`. Se usa **solo** para no ofrecer lo
+  // que va a ser rechazado; la autorizacion la sigue haciendo el servidor, y
+  // ocultar un boton no la sustituye.
+  const puedeOperar = rol === null || rol !== "reader";
+  const puedeAdministrar = rol === null || rol === "admin";
+
+  // El chip de salud tiene que seguir siendo el **primero** de la cabecera: es el
+  // que el verificador lee para comprobar que la fase sale de `/health`.
+  const cabecera = (
+    <header className="cabecera">
+      <div>
+        <h1 className="titulo">AI Software Engineering System</h1>
+        <p className="subtitulo" style={{ margin: "0.15rem 0 0" }}>
+          Proyecto 4 · Equipo 4
+        </p>
+      </div>
+      <div className="fila">
         {saludError ? (
           <Chip tono="error">servidor inaccesible</Chip>
         ) : salud ? (
@@ -218,143 +354,200 @@ export function App() {
         ) : (
           <Chip pulsa>comprobando…</Chip>
         )}
-      </header>
+        {sesion === "autenticado" ? <Chip tono="ok">sesión autenticada</Chip> : null}
+        {sesion === "sin-credencial" ||
+        sesion === "clave-invalida" ||
+        sesion === "sesion-caida" ? (
+          <Chip tono="aviso">sin credencial</Chip>
+        ) : null}
+      </div>
+    </header>
+  );
+
+  // **Mientras no se sabe, no se ofrece nada.** Hasta que la primera lectura
+  // protegida responde no se sabe si el servidor exige credencial, y pintar la
+  // aplicacion entera en ese hueco ofrece botones que van a fallar con 401: quien
+  // los pulse antes de tiempo recibe un error que no entiende. Se probo de
+  // verdad: la verificacion del navegador pulsaba "Ejecutar" en ese hueco.
+  if (sesion === "comprobando") {
+    return (
+      <main className="app">
+        {cabecera}
+        <Panel>
+          <p className="tenue">Comprobando el estado del servidor…</p>
+        </Panel>
+      </main>
+    );
+  }
+
+  // La pantalla de acceso **sustituye** al contenido: sin credencial no hay nada
+  // que enseñar que no sea un panel vacio. La cabecera se queda -el chip de salud
+  // demuestra que el servidor responde-.
+  if (
+    sesion === "sin-credencial" ||
+    sesion === "clave-invalida" ||
+    sesion === "sesion-caida" ||
+    sesion === "validando" ||
+    cambiandoClave
+  ) {
+    return (
+      <main className="app">
+        {cabecera}
+        <PantallaAcceso
+          validando={sesion === "validando"}
+          mensaje={mensajeAcceso}
+          onEntrar={(clave) => void entrarConClave(clave)}
+          onCancelar={
+            cambiandoClave && sesion === "autenticado"
+              ? () => setCambiandoClave(false)
+              : undefined
+          }
+        />
+      </main>
+    );
+  }
+
+  return (
+    <main className="app">
+      {cabecera}
 
       {/* -------------------------------------------------------- Acceso */}
-      <div className="seccion-titulo">Acceso</div>
-      <Panel nota="La clave solo hace falta si el servidor tiene la autenticación activada (AI_SWE_API_KEYS con al menos una clave). Se guarda en este navegador y se envía con cada petición; con la autenticación desactivada el servidor la ignora.">
-        <label htmlFor="api-key">Clave de API</label>
-        <Fila sep>
-          <input
-            id="api-key"
-            type="password"
-            value={borradorClave}
-            onChange={(e) => setBorradorClave(e.target.value)}
-            placeholder="pegar aquí la clave"
-            autoComplete="off"
-            style={{ flex: 1 }}
-          />
-          <button
-            id="btn-guardar-clave"
-            className="primario"
-            disabled={!borradorClave.trim()}
-            onClick={() => {
-              guardarClave(borradorClave.trim());
-              setBorradorClave("");
-              setMensajeClave("clave guardada");
-            }}
-          >
-            Guardar
-          </button>
-          {claveGuardada() ? (
-            <button
-              onClick={() => {
-                borrarClave();
-                setMensajeClave("clave borrada");
-              }}
-            >
-              Olvidar
-            </button>
-          ) : null}
-        </Fila>
-        <p className="tenue">
-          {claveApi
-            ? "hay una clave guardada; se envía con cada petición, incluido el flujo de eventos."
-            : "no hay ninguna clave guardada en este navegador."}
-          {mensajeClave ? ` · ${mensajeClave}` : ""}
-        </p>
-      </Panel>
+      {sesion === "autenticado" ? (
+        <>
+          <div className="seccion-titulo">Acceso</div>
+          <Panel nota="La credencial vive en memoria, solo en esta pestaña: no se guarda en el navegador y al recargar la página se pide otra vez.">
+            <Fila>
+              <span className="mono" title="Credencial enmascarada">
+                {enmascarar(claveApi)}
+              </span>
+              <button id="btn-cambiar-clave" onClick={() => setCambiandoClave(true)}>
+                Cambiar
+              </button>
+              <button id="btn-cerrar-sesion" onClick={cerrarSesion}>
+                Cerrar sesión
+              </button>
+            </Fila>
+            <p className="tenue">
+              Autenticación: activada
+              {rol ? ` · Rol: ${rol}` : ""}
+              {` · SSE: ${conectado ? "conectado" : conexion === "error" ? "sin conexión" : "inactivo"}`}
+            </p>
+          </Panel>
+        </>
+      ) : null}
 
       {/* -------------------------------------------------------- Entrada */}
-      <div className="seccion-titulo">Nueva ejecución</div>
-      <Panel
-        nota="La ejecución corre en el servidor. El progreso llega por eventos: esta página no espera a que termine."
-      >
-        <label htmlFor="instruccion">Instrucción</label>
-        <textarea
-          id="instruccion"
-          value={instruccion}
-          onChange={(e) => setInstruccion(e.target.value)}
-          placeholder="Analiza este proyecto, identifica los errores principales y corrige el código."
-        />
+      {puedeOperar ? (
+        <>
+          <div className="seccion-titulo">Nueva ejecución</div>
+          <Panel
+            nota="La ejecución corre en el servidor. El progreso llega por eventos: esta página no espera a que termine."
+          >
+            <label htmlFor="instruccion">Instrucción</label>
+            <textarea
+              id="instruccion"
+              value={instruccion}
+              onChange={(e) => setInstruccion(e.target.value)}
+              placeholder="Analiza este proyecto, identifica los errores principales y corrige el código."
+            />
 
-        <div className="rejilla">
-          <div>
-            <label htmlFor="proyecto">Proyecto</label>
-            <select
-              id="proyecto"
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              style={{
-                width: "100%",
-                font: "inherit",
-                padding: "0.55rem 0.75rem",
-                borderRadius: "var(--radio-sm)",
-                border: "1px solid var(--borde)",
-                background: "var(--superficie-2)",
-                color: "var(--texto)",
-              }}
-            >
-              <option value="">(sin proyecto · ruta por defecto)</option>
-              {proyectos.map((p) => (
-                <option key={p.project_id} value={p.project_id}>
-                  {p.name} — {p.repo_path}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <Fila sep>
-          <button id="btn-crear" className="primario" disabled={lanzando} onClick={() => void lanzar()}>
-            {lanzando ? "Lanzando…" : "Ejecutar"}
-          </button>
-          <span className="tenue">La ejecución devuelve el identificador al instante</span>
-        </Fila>
-
-        <details style={{ marginTop: "0.85rem" }}>
-          <summary className="sutil" style={{ cursor: "pointer" }}>
-            Registrar un proyecto
-          </summary>
-          <div className="stack" style={{ marginTop: "0.75rem" }}>
-            <div>
-              <label htmlFor="p-nombre">Nombre</label>
-              <input
-                id="p-nombre"
-                type="text"
-                value={nombreProyecto}
-                onChange={(e) => setNombreProyecto(e.target.value)}
-                placeholder="mi-repositorio"
-              />
+            <div className="rejilla">
+              <div>
+                <label htmlFor="proyecto">Proyecto</label>
+                <select
+                  id="proyecto"
+                  value={projectId}
+                  onChange={(e) => setProjectId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    font: "inherit",
+                    padding: "0.55rem 0.75rem",
+                    borderRadius: "var(--radio-sm)",
+                    border: "1px solid var(--borde)",
+                    background: "var(--superficie-2)",
+                    color: "var(--texto)",
+                  }}
+                >
+                  <option value="">(sin proyecto · ruta por defecto)</option>
+                  {proyectos.map((p) => (
+                    <option key={p.project_id} value={p.project_id}>
+                      {p.name} — {p.repo_path}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div>
-              <label htmlFor="p-ruta">Ruta del repositorio</label>
-              <input
-                id="p-ruta"
-                type="text"
-                value={rutaProyecto}
-                onChange={(e) => setRutaProyecto(e.target.value)}
-                placeholder="C:\\ruta\\al\\repositorio"
-              />
-            </div>
-            <Fila>
+
+            <Fila sep>
               <button
-                disabled={!nombreProyecto.trim() || !rutaProyecto.trim()}
-                onClick={() => void registrarProyecto()}
+                id="btn-crear"
+                className="primario"
+                disabled={lanzando}
+                onClick={() => void lanzar()}
               >
-                Registrar
+                {lanzando ? "Lanzando…" : "Ejecutar"}
               </button>
-              <span className="tenue">La ruta se valida al registrar, no al ejecutar</span>
+              <span className="tenue">La ejecución devuelve el identificador al instante</span>
             </Fila>
-          </div>
-        </details>
 
-        {errorAccion ? (
-          <p className="aviso" role="alert">
-            {errorAccion}
-          </p>
-        ) : null}
-      </Panel>
+            {puedeAdministrar ? (
+              <details style={{ marginTop: "0.85rem" }}>
+                <summary className="sutil" style={{ cursor: "pointer" }}>
+                  Registrar un proyecto
+                </summary>
+                <div className="stack" style={{ marginTop: "0.75rem" }}>
+                  <div>
+                    <label htmlFor="p-nombre">Nombre</label>
+                    <input
+                      id="p-nombre"
+                      type="text"
+                      value={nombreProyecto}
+                      onChange={(e) => setNombreProyecto(e.target.value)}
+                      placeholder="mi-repositorio"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="p-ruta">Ruta del repositorio</label>
+                    <input
+                      id="p-ruta"
+                      type="text"
+                      value={rutaProyecto}
+                      onChange={(e) => setRutaProyecto(e.target.value)}
+                      placeholder="C:\\ruta\\al\\repositorio"
+                    />
+                  </div>
+                  <Fila>
+                    <button
+                      disabled={!nombreProyecto.trim() || !rutaProyecto.trim()}
+                      onClick={() => void registrarProyecto()}
+                    >
+                      Registrar
+                    </button>
+                    <span className="tenue">La ruta se valida al registrar, no al ejecutar</span>
+                  </Fila>
+                </div>
+              </details>
+            ) : null}
+
+            {errorAccion ? (
+              <p className="aviso" role="alert">
+                {errorAccion}
+              </p>
+            ) : null}
+          </Panel>
+        </>
+      ) : (
+        <>
+          <div className="seccion-titulo">Nueva ejecución</div>
+          <Panel>
+            <p className="tenue">
+              Tu credencial es de solo lectura: no puede lanzar ejecuciones ni
+              responder a las puertas humanas. Lo que sí puedes hacer es consultar
+              las ejecuciones y su progreso.
+            </p>
+          </Panel>
+        </>
+      )}
 
       {/* --------------------------------------------------- Ejecución viva */}
       {runId ? (
@@ -414,10 +607,10 @@ export function App() {
           </div>
 
           {/* -------------------------------------------------- Puertas */}
-          {puerta === "requisitos" && estado ? (
+          {puedeOperar && puerta === "requisitos" && estado ? (
             <PuertaRequisitos estado={estado} alDecidir={() => void refrescar(runId)} />
           ) : null}
-          {puerta === "aprobacion" && estado ? (
+          {puedeOperar && puerta === "aprobacion" && estado ? (
             <PuertaAprobacion estado={estado} alDecidir={() => void refrescar(runId)} />
           ) : null}
 

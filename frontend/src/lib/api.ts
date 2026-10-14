@@ -50,6 +50,51 @@ function mensajeDeError(cuerpo: unknown, status: number): string {
   return `la petición falló con HTTP ${status}`;
 }
 
+/**
+ * Mensaje de interfaz para un fallo de acceso.
+ *
+ * Los 401 y 403 **no** muestran el detalle del backend. Ese detalle viene en el
+ * idioma del servidor, habla de cabeceras y -en el 403- nombra el rol que la
+ * credencial tiene: nada de eso ayuda a quien esta delante y parte de eso es
+ * informacion de mas. Los demas fallos si conservan su mensaje, porque un 422 de
+ * validacion existe precisamente para decir que campo esta mal.
+ *
+ * Cual de los dos 401 es se decide por un hecho del **cliente**, no del servidor:
+ * si se presento una credencial y la rechazo, es que no vale; si no se presento
+ * ninguna, es que hace falta una. Nunca se repite lo que se envio.
+ */
+export function mensajeVisible(causa: unknown, habiaCredencial: boolean): string {
+  if (causa instanceof ErrorApi) {
+    if (causa.status === 401) {
+      return habiaCredencial ? "Clave de API invalida." : "Se requiere autenticacion.";
+    }
+    if (causa.status === 403) return "No tienes permiso para realizar esta accion.";
+  }
+  return causa instanceof Error ? causa.message : String(causa);
+}
+
+/**
+ * Rol que el backend atribuye a la credencial, si lo dice al rechazar.
+ *
+ * **De donde sale, y por que es best-effort.** La API no expone el rol en ningun
+ * endpoint: no hay un `/me` ni nada equivalente, y la unica respuesta que lo
+ * nombra es el 403, cuyo detalle dice que rol pide la accion y cual tiene la
+ * credencial. Se lee de ahi -es informacion real sobre la propia credencial, no
+ * un invento- y se usa solo para dejar de ofrecer acciones que van a ser
+ * rechazadas. Mientras no haya un rechazo no se conoce el rol, y entonces la
+ * interfaz no oculta nada: la autorizacion la hace el backend de todas formas.
+ *
+ * Si el backend cambia la redaccion esto devuelve `null` y la interfaz vuelve a
+ * no conocer el rol: se pierde la comodidad, no la seguridad. Lo limpio seria un
+ * endpoint de solo lectura que declare la identidad; es una decision del backend
+ * y no se toma desde el rediseno del frontend.
+ */
+export function rolDelRechazo(causa: unknown): string | null {
+  if (!(causa instanceof ErrorApi) || causa.status !== 403) return null;
+  const coincidencia = /tiene '([a-z]+)'/.exec(causa.message);
+  return coincidencia ? coincidencia[1] : null;
+}
+
 async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
   // La clave se lee **en cada peticion**, no al cargar el modulo: guardarla
   // mientras la pagina esta abierta debe aplicarse a las siguientes llamadas sin
@@ -58,7 +103,6 @@ async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
   const conClave: RequestInit = clave
     ? { ...init, headers: { ...init?.headers, "X-API-Key": clave } }
     : (init ?? {});
-
   let respuesta: Response;
   try {
     respuesta = await fetch(ruta, conClave);

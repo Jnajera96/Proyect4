@@ -189,7 +189,8 @@ label {
 }
 
 textarea,
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
   width: 100%;
   font: inherit;
   color: var(--texto);
@@ -207,7 +208,8 @@ textarea {
 }
 
 textarea:focus,
-input[type="text"]:focus {
+input[type="text"]:focus,
+input[type="password"]:focus {
   outline: none;
   border-color: var(--acento);
   box-shadow: 0 0 0 3px var(--acento-suave);
@@ -696,4 +698,59 @@ pre.salida {
 
 .stack > * + * {
   margin-top: 0.75rem;
+}
+
+/* -------------------------------------------------------- Pantalla de acceso */
+
+/*
+ * La puerta de entrada cuando el servidor exige credencial. Centrada y con aire:
+ * es lo unico que hay que hacer en ese momento, asi que no compite con nada.
+ * Ocupa el alto disponible para que el contenido no parezca desplazado cuando la
+ * tarjeta es lo unico que se ve.
+ */
+.acceso {
+  min-height: 58vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 0 3rem;
+}
+
+.acceso-tarjeta {
+  width: 100%;
+  max-width: 25rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 2.25rem 2rem 1.75rem;
+  text-align: center;
+}
+
+.acceso-titulo {
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.3rem;
+}
+
+.acceso-lema {
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  margin: 0 0 1.75rem;
+}
+
+.acceso form {
+  text-align: left;
+}
+
+.acceso-pie {
+  color: var(--texto-tenue);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin: 1.25rem 0 0;
+}
+
+.acceso .aviso {
+  text-align: left;
+  margin-top: 1rem;
 }

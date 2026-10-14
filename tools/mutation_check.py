@@ -385,6 +385,35 @@ MUTACIONES: list[Mutation] = [
         '    const consulta = "";',
         comando=(sys.executable, "tools/verify_frontend.py", "--auth"),
     ),
+    # Las dos de abajo vigilan las reglas de la credencial, que son la decision
+    # de esta entrega: vive en memoria y no se pinta. Se comprueban con el
+    # navegador en modo `--auth`, que es donde la credencial existe.
+    Mutation(
+        # La credencial vuelve a persistirse en el navegador. La sonda lo ve en
+        # `ALMACEN_CLAVE`: busca el nombre exacto que usaba la version anterior y
+        # el valor en `localStorage` y `sessionStorage`.
+        "el frontend persiste la credencial en el navegador",
+        RAIZ / "frontend" / "src" / "lib" / "auth.ts",
+        "  claveEnMemoria = limpia;\n  avisar();",
+        '  claveEnMemoria = limpia;\n  window.localStorage.setItem("ai_swe.api_key", limpia);\n  avisar();',
+        comando=(sys.executable, "tools/verify_frontend.py", "--auth"),
+    ),
+    Mutation(
+        # La mascara deja de enmascarar: al relleno le sigue la credencial
+        # entera en lugar de su cola. La sonda lo ve en `CLAVE_EN_DOM`, que busca
+        # la clave literal en el documento servido.
+        #
+        # Se muta la **mascara** y no el sitio donde se pinta a proposito: la
+        # version que cambiaba `{enmascarar(claveApi)}` por `{claveApi}` dejaba
+        # el import sin usar y la cazaba el typechecker en diez segundos, sin
+        # llegar al navegador. Cazada, si, pero sin probar que la comprobacion
+        # del DOM sirve.
+        "el frontend pinta la credencial entera",
+        RAIZ / "frontend" / "src" / "lib" / "auth.ts",
+        '  return "\\u2022".repeat(clave.length - visibles) + clave.slice(-visibles);',
+        '  return "\\u2022".repeat(clave.length - visibles) + clave;',
+        comando=(sys.executable, "tools/verify_frontend.py", "--auth"),
+    ),
     # ---------------------------------------------------- F2: Model Gateway
     # Cada una comprueba una propiedad que el sistema afirma tener. No se anade
     # ninguna que no haga caer a una prueba concreta.

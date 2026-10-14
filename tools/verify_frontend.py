@@ -32,12 +32,16 @@ Uso:
     python tools/verify_frontend.py            # servidor sin autenticacion
     python tools/verify_frontend.py --auth     # servidor con AI_SWE_API_KEYS
 
-El modo `--auth` arranca el backend **con** claves declaradas y guarda una en el
-`localStorage` del navegador antes de que la aplicacion arranque, de modo que el
-flujo completo -fetch, SSE y puertas humanas- corre autenticado. Ahi se comprueba
-ademas que el servidor exige la clave de verdad: una peticion sin ella es 401 y
-con ella 200. Es la unica forma de probar la ruta del `?api_key=` del flujo SSE,
-que ningun `fetch` del cliente puede ejercitar.
+El modo `--auth` arranca el backend **con** claves declaradas y deja que la sonda
+recorra el flujo completo autenticado. La credencial **no se inyecta en ningun
+almacen del navegador**: la sonda rellena la pantalla de acceso de la aplicacion
+-la teclea y pulsa Continuar, como lo haria una persona- porque la credencial vive
+en memoria y comprobar que no se persiste es parte de lo que hay que verificar.
+Ahi se comprueba ademas que el servidor exige la credencial de verdad -una peticion
+sin ella es 401 y con ella 200-, que la credencial no acaba ni en el almacen del
+navegador ni en el DOM ni en la consola, y que el flujo SSE viaja autenticado. Es
+la unica forma de probar la ruta del `?api_key=` del flujo SSE, que ningun `fetch`
+del cliente puede ejercitar.
 """
 
 from __future__ import annotations
@@ -87,21 +91,94 @@ def encontrar_navegador() -> Path | None:
 # "Ejecutar" (`#btn-crear`), lo pulsa, y despues de unos segundos lee el estado real
 # de la aplicacion desde `window.__AISWE__` y del DOM.
 SONDA_JS = r"""
-var pasos = [], errores = [];
-window.addEventListener('error', function (e) { errores.push('ERROR: ' + e.message); }, true);
+var pasos = [], errores = [], consola = [];
+
+// Modo de la verificacion. El modo `--auth` inyecta un preambulo que pone estos
+// dos valores antes de que arranque el sondeo; sin el, el servidor no exige
+// credencial y no hay nada que teclear.
+var MODO_AUTH = false;
+var CLAVE_PRUEBA = '';
+
+// Nada de lo que la sonda escriba en su informe puede contener la credencial. Se
+// redacta al vuelo: si la aplicacion la imprimiera en la consola -que es uno de
+// los fallos que se vigilan-, el informe no la repetiria.
+function redactar(t) {
+  var texto = String(t);
+  return CLAVE_PRUEBA ? texto.split(CLAVE_PRUEBA).join('[REDACTED]') : texto;
+}
+function contieneClave(t) {
+  return CLAVE_PRUEBA ? String(t).indexOf(CLAVE_PRUEBA) >= 0 : false;
+}
+
+window.addEventListener('error', function (e) { errores.push(redactar('ERROR: ' + e.message)); }, true);
 window.addEventListener('unhandledrejection', function (e) {
-  errores.push('PROMESA: ' + ((e.reason && e.reason.message) || e.reason));
+  errores.push(redactar('PROMESA: ' + ((e.reason && e.reason.message) || e.reason)));
 });
 document.addEventListener('securitypolicyviolation', function (e) {
-  errores.push('CSP: ' + e.violatedDirective);
+  errores.push(redactar('CSP: ' + e.violatedDirective));
 });
 (function () {
-  var oe = console.error, ow = console.warn;
-  console.error = function () { errores.push('CONSOLE_ERROR: ' + [].join.call(arguments, ' ')); oe.apply(console, arguments); };
-  console.warn = function () { errores.push('CONSOLE_WARN: ' + [].join.call(arguments, ' ')); ow.apply(console, arguments); };
+  var oe = console.error, ow = console.warn, ol = console.log;
+  console.error = function () { var t = [].join.call(arguments, ' '); consola.push(t); errores.push('CONSOLE_ERROR: ' + redactar(t)); oe.apply(console, arguments); };
+  console.warn = function () { var t = [].join.call(arguments, ' '); consola.push(t); errores.push('CONSOLE_WARN: ' + redactar(t)); ow.apply(console, arguments); };
+  console.log = function () { consola.push([].join.call(arguments, ' ')); ol.apply(console, arguments); };
 })();
 function anota(k, v) { pasos.push(k + '=' + v); }
 function texto(id) { var e = document.getElementById(id); return e ? e.textContent : '(no existe)'; }
+
+// ------------------------------------------- pantalla de acceso (modo --auth)
+// La credencial llega al frontend **por la pantalla de acceso**: se teclea y se
+// envia como lo haria una persona. No se inyecta en ningun almacen del navegador
+// -la credencial vive en memoria-, que es justo lo que hay que verificar.
+var pantallaAccesoVista = false;
+var claveEscrita = false;
+var claveEnviada = false;
+
+function escribirCredencial(campo) {
+  // Un campo controlado por React no cambia con `campo.value = x`: hay que usar
+  // el setter nativo y disparar `input`, que es lo que React escucha. Teclear de
+  // verdad, en una palabra.
+  var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  setter.call(campo, CLAVE_PRUEBA);
+  campo.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function autenticarse() {
+  var campo = document.querySelector('#api-key');
+  if (campo) pantallaAccesoVista = true;
+  if (!MODO_AUTH || !campo || claveEnviada) return;
+  if (!claveEscrita) {
+    // Se escribe en un tic y se envia en el siguiente: el boton se habilita al
+    // repintar React, y pulsarlo antes seria pulsar un boton deshabilitado.
+    escribirCredencial(campo);
+    claveEscrita = true;
+    return;
+  }
+  var boton = document.querySelector('#btn-continuar');
+  if (boton && !boton.disabled) {
+    boton.click();
+    claveEnviada = true;
+  }
+}
+
+function hayCredencialEnAlmacen() {
+  try {
+    // El nombre concreto que usaba la version anterior: si vuelve a aparecer, la
+    // credencial se esta persistiendo otra vez.
+    if (window.localStorage.getItem('ai_swe.api_key') !== null) return true;
+    if (window.sessionStorage.getItem('ai_swe.api_key') !== null) return true;
+    var almacenes = [window.localStorage, window.sessionStorage];
+    for (var i = 0; i < almacenes.length; i++) {
+      var a = almacenes[i];
+      for (var j = 0; j < a.length; j++) {
+        if (contieneClave(a.getItem(a.key(j)))) return true;
+      }
+    }
+  } catch (e) {
+    return false;
+  }
+  return false;
+}
 
 // La sonda se instala cuando React ya ha montado: espera a que `#btn-crear`
 // aparezca. Un `setInterval` acotado evita colgarse si el montaje falla.
@@ -109,16 +186,18 @@ var intentos = 0;
 var esperar = setInterval(function () {
   intentos++;
   var boton = document.querySelector('#btn-crear');
-  if (!boton) {
-    if (intentos > 100) {   // 10 s
-      clearInterval(esperar);
-      errores.push('PROBE: la aplicacion no monto (#btn-crear no aparecio)');
-      volcar();
-    }
+  if (boton) {
+    clearInterval(esperar);
+    arrancar(boton);
     return;
   }
-  clearInterval(esperar);
-  arrancar(boton);
+  // Sin credencial no hay aplicacion que pulsar: primero la pantalla de acceso.
+  autenticarse();
+  if (intentos > 150) {   // 15 s: el viaje de ida y vuelta de la credencial suma
+    clearInterval(esperar);
+    errores.push('PROBE: la aplicacion no monto (#btn-crear no aparecio)');
+    volcar();
+  }
 }, 100);
 
 var pasos_async = [];
@@ -202,6 +281,17 @@ function medir() {
     pasos_async.push('EVENTOS=' + (st.eventos || 0));
     pasos_async.push('TIPOS=' + ((st.tipos || []).join(',')));
     pasos_async.push('HITOS=' + ((st.hitos || []).join(',')));
+    // Estado de acceso. `AUTH_PANTALLA` dice si la aplicacion pidio credencial
+    // -tiene que pedirla con el servidor autenticado y no pedirla sin el- y las
+    // tres siguientes son las que vigilan que la credencial no se persista, no se
+    // pinte y no se registre.
+    pasos_async.push('SESION=' + (st.sesion || '(ninguno)'));
+    pasos_async.push('AUTH_PANTALLA=' + (pantallaAccesoVista ? 'true' : 'false'));
+    pasos_async.push('CLAVE_ENVIADA=' + (claveEnviada ? 'true' : 'false'));
+    pasos_async.push('ALMACEN_CLAVE=' + (hayCredencialEnAlmacen() ? 'true' : 'false'));
+    pasos_async.push('CLAVE_EN_DOM=' +
+      (contieneClave(document.documentElement.outerHTML) ? 'true' : 'false'));
+    pasos_async.push('CLAVE_EN_CONSOLA=' + (contieneClave(consola.join(' ')) ? 'true' : 'false'));
     pasos_async.push('ESTADOS_VISTOS=' + estadosVistos.join('>'));
     pasos_async.push('PUERTAS_VISTAS=' + puertasVistas.join(','));
     pasos_async.push('PULSO_CONFIRMAR=' + (pulsadoConfirmar ? 'true' : 'false'));
@@ -234,25 +324,25 @@ function medir() {
 
 # Preambulo del modo `--auth`. Se inyecta en la sonda justo despues del helper
 # `anota` (para poder usarlo) y antes de que el modulo de la aplicacion se
-# ejecute: los scripts clasicos corren antes que los modulos, asi que la clave
-# esta en el almacen cuando React monta y hace sus primeras peticiones.
+# ejecute.
 #
-# La aplicacion lee la clave **en cada peticion**, no al cargar: con esto el
-# flujo completo -fetch, SSE y puertas- corre autenticado sin tocar la interfaz.
+# **No inyecta la credencial en ningun sitio.** Pone la sonda en modo autenticado
+# y le da la clave de fantasia; la credencial llega a la aplicacion porque la
+# sonda rellena su pantalla de acceso y pulsa Continuar. Con la credencial en
+# memoria -que es como funciona-, inyectarla en un almacen no probaria el camino
+# real y ademas taparia el fallo que hay que vigilar: que alguien la persista.
+#
 # Las dos peticiones propias de la sonda son la prueba de que el servidor la
 # exige: sin cabecera 401, con la cabecera 200.
 PREAMBULO_AUTH = r"""
-try {
-  window.localStorage.setItem('ai_swe.api_key', '__CLAVE__');
-} catch (e) {
-  errores.push('AUTH_PROBE: no se pudo guardar la clave: ' + e.message);
-}
+MODO_AUTH = true;
+CLAVE_PRUEBA = '__CLAVE__';
 fetch('/runs')
   .then(function (r) { anota('SIN_CLAVE', r.status); })
-  .catch(function (e) { errores.push('AUTH_PROBE: ' + e.message); });
+  .catch(function (e) { errores.push(redactar('AUTH_PROBE: ' + e.message)); });
 fetch('/runs', { headers: { 'X-API-Key': '__CLAVE__' } })
   .then(function (r) { anota('CON_CLAVE', r.status); })
-  .catch(function (e) { errores.push('AUTH_PROBE: ' + e.message); });
+  .catch(function (e) { errores.push(redactar('AUTH_PROBE: ' + e.message)); });
 """
 
 #: Marca de insercion del preambulo: el final del helper `anota`/`texto`.
@@ -587,15 +677,57 @@ def main() -> int:
               f"FILAS_TABLA={campos.get('FILAS_TABLA')}")
 
     if modo_auth:
-        # La clave se guarda antes del arranque y el flujo completo corre con
-        # ella: que los eventos lleguen por SSE prueba ademas la ruta de
-        # `?api_key=` del `EventSource`, que ningun `fetch` del cliente ejerce.
-        comprobar("el servidor rechaza la peticion sin clave (401)",
+        # La credencial llega al frontend **por su pantalla de acceso**: la sonda
+        # la teclea y pulsa Continuar, como una persona. Que los eventos lleguen
+        # por SSE prueba ademas la ruta de `?api_key=` del `EventSource`, que
+        # ningun `fetch` del cliente puede ejercitar.
+        comprobar(
+            "la pantalla de acceso aparecio",
+            campos.get("AUTH_PANTALLA") == "true",
+            f"AUTH_PANTALLA={campos.get('AUTH_PANTALLA')}",
+        )
+        comprobar(
+            "la credencial tecleada se envio desde la interfaz",
+            campos.get("CLAVE_ENVIADA") == "true",
+            f"CLAVE_ENVIADA={campos.get('CLAVE_ENVIADA')}",
+        )
+        comprobar(
+            "la sesion quedo autenticada",
+            campos.get("SESION") == "autenticado",
+            f"SESION={campos.get('SESION')}",
+        )
+        comprobar("el servidor rechaza la peticion sin credencial (401)",
                   campos.get("SIN_CLAVE") == "401",
                   f"SIN_CLAVE={campos.get('SIN_CLAVE')}")
-        comprobar("la clave guardada autentica (200)",
+        comprobar("la credencial valida autentica (200)",
                   campos.get("CON_CLAVE") == "200",
                   f"CON_CLAVE={campos.get('CON_CLAVE')}")
+        # Las tres que vigilan el manejo de la credencial. La primera es la
+        # decision de esta entrega -vive en memoria-, y las otras dos son las
+        # reglas de siempre: no se pinta y no se registra.
+        comprobar(
+            "la credencial no se guarda en el navegador",
+            campos.get("ALMACEN_CLAVE") == "false",
+            f"ALMACEN_CLAVE={campos.get('ALMACEN_CLAVE')}",
+        )
+        comprobar(
+            "la credencial no aparece en el DOM",
+            campos.get("CLAVE_EN_DOM") == "false",
+            f"CLAVE_EN_DOM={campos.get('CLAVE_EN_DOM')}",
+        )
+        comprobar(
+            "la credencial no se escribe en la consola",
+            campos.get("CLAVE_EN_CONSOLA") == "false",
+            f"CLAVE_EN_CONSOLA={campos.get('CLAVE_EN_CONSOLA')}",
+        )
+    else:
+        # Con el servidor sin autenticacion no hay nada que pedir: la interfaz no
+        # puede bloquearse pidiendo una credencial que nadie va a comprobar.
+        comprobar(
+            "la interfaz no pide credencial si el servidor no la exige",
+            campos.get("AUTH_PANTALLA") == "false",
+            f"AUTH_PANTALLA={campos.get('AUTH_PANTALLA')}",
+        )
 
     if fallos:
         print(f"\nRESULTADO: {len(fallos)} comprobacion(es) fallidas -> {fallos}")

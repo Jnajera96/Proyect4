@@ -49,9 +49,11 @@ convierte en real. Esta fase anade la capa que faltaba:
   - `tests/test_config_budget.py` — prueba de que la plantilla de entorno
     completa carga sin error.
   - `frontend/src/lib/auth.ts`, `frontend/src/lib/api.ts`,
-    `frontend/src/hooks/useEventosRun.ts`, `frontend/src/App.tsx` — la clave se
-    guarda en `localStorage`, viaja en cada `fetch` (cabecera) y en la query del
-    `EventSource`, y la interfaz tiene una seccion para guardarla u olvidarla.
+    `frontend/src/hooks/useEventosRun.ts`, `frontend/src/App.tsx`,
+    `frontend/src/components/PantallaAcceso.tsx` — la credencial viaja en cada
+    `fetch` (cabecera) y en la query del `EventSource`, **vive en memoria** y la
+    interfaz tiene una pantalla de acceso, un estado de sesion y las reglas de
+    manejo de la credencial (ver 3.8).
 
 **Hechos al verificar (no al implementar):**
 
@@ -142,6 +144,61 @@ es `sin-autenticar`, que es la verdad de ese modo.
 **Limitacion declarada:** hoy escribe en el flujo de log. Antes de una exposicion
 real hace falta un sumidero persistente (fichero rotado o el almacen), porque un
 log que nadie retiene no es un registro de auditoria.
+
+### 3.8 La credencial vive en memoria, y el acceso es una pantalla
+
+**En memoria, no en el navegador.** La credencial es una variable del modulo del
+frontend: dura lo que dura la pestana. No se escribe en `localStorage`,
+`sessionStorage`, IndexedDB ni en una cookie propia, y la clave que se incrustaba
+al construir (`VITE_AI_SWE_API_KEY`) **se retiro**: un secreto dentro del bundle
+esta publicado, porque el JS se sirve a cualquiera que abra la pagina. El precio
+-declarado en la propia interfaz- es que recargar pide la credencial otra vez; a
+cambio, cerrar la pestana la olvida de verdad y ningun script del origen puede
+leerla de un almacen. La version anterior si usaba `localStorage`, con una
+decision escrita; esta entrega la cambia y la decision queda aqui.
+
+**Los seis estados del acceso, y ninguno inventado.** `comprobando` (aun no se
+sabe), `sin-autenticacion` (el servidor no la exige), `sin-credencial`
+(`UNAUTHENTICATED`), `validando` (`AUTHENTICATING`), `autenticado`
+(`AUTHENTICATED`), `clave-invalida` (`INVALID_CREDENTIALS`) y `sesion-caida`
+(`SESSION/KEY_ERROR`, la credencial que valia dejo de valer). `UNAUTHORIZED` no
+es un estado de sesion: un 403 no invalida la sesion, solo una accion, asi que se
+lleva aparte. No hay OAuth, ni usuarios, ni contrasenas, ni registro, ni
+recuperacion de cuenta porque el mecanismo real es una clave de API.
+
+**El modo del servidor se deduce, no se adivina.** La primera lectura de datos
+protegidos decide: 401 = exige credencial, 200 = esta abierta. `/health` no sirve
+para esto porque esta abierto en los dos modos a proposito. Mientras no se sabe
+-`comprobando`- la interfaz **no ofrece nada**: se probo de verdad que pintar la
+aplicacion en ese hueco hace que el primer clic caiga en un boton que va a
+responder 401.
+
+**Mientras no hay credencial, la pantalla la sustituye al contenido.** Sin
+credencial no hay nada que ensenar que no sea un panel vacio. La cabecera se
+queda, porque el chip de salud demuestra que el servidor responde.
+
+**La credencial no se ensena.** El campo es de tipo `password` y no hay boton para
+revelarla. Una vez aceptada, la interfaz muestra su **mascara** -los dos ultimos
+caracteres, el resto tapado-, que sirve para confirmar que es la de uno y no para
+reconstruirla; la longitud no anade nada que el registro de auditoria del servidor
+no publique ya (`clav...len26`). La credencial no aparece en el DOM, ni en la
+consola, ni en un mensaje de error: hay una comprobacion de navegador para cada
+una de esas tres cosas, y la sonda redacta la clave de su propio informe.
+
+**Los mensajes de acceso no repiten al servidor.** Un 401 dice "Clave de API
+invalida." si se presento una credencial y "Se requiere autenticacion." si no se
+presento ninguna -la distincion sale de un hecho del cliente, no del texto del
+backend-; un 403 dice "No tienes permiso para realizar esta accion.". No se
+ensenan cabeceras, ni trazas, ni detalles internos. Los fallos que no son de
+acceso conservan su mensaje, porque un 422 existe para decir que campo esta mal.
+
+**El rol se aprende, no se supone.** La API no expone el rol de la credencial en
+ningun endpoint. La unica respuesta que lo nombra es el 403, y de ahi se lee
+cuando ocurre, para dejar de ofrecer lo que va a ser rechazado. Mientras no se
+conozca no se oculta nada -y no se inventa un rol-, porque **la autorizacion la
+hace el backend**: ocultar un boton no sustituye a comprobarla. Lo limpio seria un
+endpoint de solo lectura que declare la identidad; es una decision del backend y
+no se toma desde aqui.
 
 ## 4. MATRIZ DE ROLES
 
@@ -252,6 +309,8 @@ verde y arbol restaurado en verde:
 | `el frontend pierde la suscripcion a los eventos` | se suscribe a un flujo que no existe | navegador (`EVENTOS=0`) |
 | `el frontend deja de mostrar el run_id` | la interfaz no expone la ejecucion | navegador (`RUN_ID`) |
 | `el frontend deja de pintar los eventos` | el conjunto de hitos queda vacio | navegador (`HITOS_ALCANZADOS=0`) |
+| `el frontend persiste la credencial en el navegador` | la credencial vuelve a `localStorage` | navegador (`ALMACEN_CLAVE`) |
+| `el frontend pinta la credencial entera` | la mascara deja de enmascarar | navegador (`CLAVE_EN_DOM`) |
 
 **La prueba nueva tambien se muto.** La pareja del tiempo constante necesitaba
 un test que no existia (ver 3.4). La primera version del espia ponia la clave
@@ -327,9 +386,17 @@ La cuenta cuadra: 644 al cerrar la Fase 3 + 33 de `tests/test_auth.py` + 1 de
 implementacion y una -el espia de la comparacion- se anadio al verificar,
 porque sin ella dos mutaciones reales no se veian.
 
-Frontend, en navegador real (`tools/verify_frontend.py`): 16 comprobaciones en
-modo sin autenticacion y 18 en modo autenticado, todas en verde, con la
+Frontend, en navegador real (`tools/verify_frontend.py`): 17 comprobaciones en
+modo sin autenticacion y 25 en modo autenticado, todas en verde, con la
 aplicacion **reconstruida desde el fuente** en cada corrida.
+
+En el modo `--auth` la credencial **no se inyecta en ningun almacen del
+navegador**: la sonda rellena la pantalla de acceso de la aplicacion -la teclea y
+pulsa Continuar, como una persona- y a partir de ahi comprueba que el servidor la
+exige de verdad (401 sin ella, 200 con ella), que la sesion queda autenticada, y
+que la credencial no acaba en el almacen del navegador, ni en el DOM, ni en la
+consola. Es una verificacion mas fuerte que la anterior, que daba la clave por
+puesta inyectandola en `localStorage`.
 
 ## 8. LIMITACIONES
 
@@ -345,6 +412,7 @@ aplicacion **reconstruida desde el fuente** en cada corrida.
   - **La auditoria escribe en el flujo de log**, sin sumidero persistente.
   - **Una clave por query en la URL** sigue siendo la concesion del flujo SSE;
     su sustitucion por un vale de un solo uso esta declarada, no implementada.
+    **TD-02 — Replace SSE query key with one-use ticket.**
   - **La CSP del frontend no se ha revisado** en esta fase: el alcance original
     lo pediamos y quedo fuera. Es trabajo de la fase de exposicion.
 
@@ -359,8 +427,11 @@ precedencia respecto a la cabecera esta declarada y cubierta.
 Verificacion:
 
   - Suite completa: **678 pruebas, 0 fallos, 0 errores, 2 skips** (XML).
-  - Mutaciones de la fase: **16/16** con el filtro `PH4`; **5/5** con el filtro
-    `frontend` (19 distintas en total; las dos de la clave corren en los dos).
+  - Mutaciones de la fase: **16/16** con el filtro `PH4`; **7/7** con el filtro
+    `frontend` (el conjunto del frontend crecio con el rediseno: las cinco
+    anteriores mas las dos que vigilan que la credencial no se persista ni se
+    pinte).
+  - Navegador real: **17/17** sin autenticacion y **25/25** con ella.
   - Dos mutaciones candidatas se retiraron **con evidencia**, no con suposicion:
     la rama defensiva de rol del SSE (verde con y sin la mutacion: la
     enumeracion cerrada la hace inalcanzable) y la de los contratos del frontend
@@ -368,11 +439,16 @@ Verificacion:
   - La verificacion encontro, ademas de los tres hallazgos de implementacion,
     tres defectos del propio proceso: cuatro mutaciones muertas desde F11, una
     comprobacion del navegador casi vacia y un punto ciego fabricado por servir
-    `dist` sin reconstruir. Los tres estan corregidos y documentados.
+    `dist` sin reconstruir. Los tres estan corregidos y documentados. El
+    rediseno del acceso anadio un cuarto, encontrado por la propia verificacion:
+    la interfaz ofrecia sus botones mientras aun no sabia si el servidor exigia
+    credencial, asi que el primer clic caia en un boton que respondia 401 (ver
+    3.8).
 
 Lo que **no** se hizo, y es condicion para exponer el servicio de verdad:
 terminacion TLS, claves en un gestor de secretos, rate limiter encendido,
-sumidero persistente para la auditoria, vale de un solo uso para la clave por
-query del SSE y revision de la CSP del frontend. Estan en la seccion 8 y en
-TD-02 del snapshot. Con esos seis puntos abiertos, el servicio sigue siendo de
+sumidero persistente para la auditoria, revision de la CSP del frontend y el vale
+de un solo uso que sustituya la clave en la query del SSE. Estan en la seccion 8
+y en el snapshot: **TD-02** para el vale del SSE -es codigo- y **TD-03** para la
+operacion de exposicion. Con esos puntos abiertos, el servicio sigue siendo de
 exposicion local.

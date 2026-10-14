@@ -24,8 +24,16 @@
  * **La clave de API viaja en la query.** `EventSource` no puede enviar
  * cabeceras; el backend admite `?api_key=` **solo en este flujo** por eso. Es
  * una excepcion con precio -la clave acaba en registros de acceso y proxies-,
- * asi que se usa unicamente aqui. Cambiar la clave guardada reconecta el flujo
- * con la nueva, que es lo contrario de dejarlo silenciosamente sin autorizar.
+ * asi que se usa unicamente aqui. Cambiar la credencial en memoria reconecta el
+ * flujo con la nueva, que es lo contrario de dejarlo silenciosamente sin
+ * autorizar. La URL con la credencial no se muestra en ningun sitio de la
+ * interfaz.
+ *
+ * **Deuda declarada: TD-02 — Replace SSE query key with one-use ticket.** Lo que
+ * cierra el precio de esta excepcion es sustituir la clave por un vale de un solo
+ * uso emitido por un endpoint autenticado, y eso es un cambio de backend: **no se
+ * toca aqui**. Mientras siga abierta, el mecanismo de este fichero se conserva
+ * exactamente como esta.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
