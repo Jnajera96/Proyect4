@@ -331,6 +331,23 @@ Frontend, en navegador real (`tools/verify_frontend.py`): 16 comprobaciones en
 modo sin autenticacion y 18 en modo autenticado, todas en verde, con la
 aplicacion **reconstruida desde el fuente** en cada corrida.
 
+## 8. LIMITACIONES
+
+  - **TLS no esta terminado en ningun sitio**: el servicio habla HTTP. La
+    terminacion TLS es de quien expone (proxy inverso o balanceador), y hay que
+    declararlo antes de abrir.
+  - **Los secretos siguen en variables de entorno**, no en un vault. Para el
+    bucle local es la forma practica; para una exposicion real hace falta un
+    gestor.
+  - **El rate limiter sigue apagado por defecto** (Fase 3). Encenderlo es parte
+    de la operacion de exposicion, junto con `AI_SWE_TRUSTED_HOSTS` con los
+    dominios reales.
+  - **La auditoria escribe en el flujo de log**, sin sumidero persistente.
+  - **Una clave por query en la URL** sigue siendo la concesion del flujo SSE;
+    su sustitucion por un vale de un solo uso esta declarada, no implementada.
+  - **La CSP del frontend no se ha revisado** en esta fase: el alcance original
+    lo pediamos y quedo fuera. Es trabajo de la fase de exposicion.
+
 ## 9. VEREDICTO
 
 **La Fase 4 queda cerrada.** La autenticacion por clave de API (opt-in,
@@ -359,20 +376,3 @@ sumidero persistente para la auditoria, vale de un solo uso para la clave por
 query del SSE y revision de la CSP del frontend. Estan en la seccion 8 y en
 TD-02 del snapshot. Con esos seis puntos abiertos, el servicio sigue siendo de
 exposicion local.
-
-## 8. LIMITACIONES
-
-  - **TLS no esta terminado en ningun sitio**: el servicio habla HTTP. La
-    terminacion TLS es de quien expone (proxy inverso o balanceador), y hay que
-    declararlo antes de abrir.
-  - **Los secretos siguen en variables de entorno**, no en un vault. Para el
-    bucle local es la forma practica; para una exposicion real hace falta un
-    gestor.
-  - **El rate limiter sigue apagado por defecto** (Fase 3). Encenderlo es parte
-    de la operacion de exposicion, junto con `AI_SWE_TRUSTED_HOSTS` con los
-    dominios reales.
-  - **La auditoria escribe en el flujo de log**, sin sumidero persistente.
-  - **Una clave por query en la URL** sigue siendo la concesion del flujo SSE;
-    su sustitucion por un vale de un solo uso esta declarada, no implementada.
-  - **La CSP del frontend no se ha revisado** en esta fase: el alcance original
-    lo pediamos y quedo fuera. Es trabajo de la fase de exposicion.
