@@ -12,6 +12,15 @@ pagina. La sonda pulsa "Ejecutar", espera a que lleguen los eventos y lee el est
 **real** que la aplicacion expone en `window.__AISWE__`, en lugar de reimplementar
 la logica del cliente y comprobarse a si misma.
 
+**Y desde Fase 4, `dist` se reconstruye antes de servir.** servia `dist` tal como
+estuviera en el disco, asi que verificaba lo ultimo que alguien compilo: un cambio
+en `src/` sin compilar pasaba desapercibido y la herramienta daba verde sobre un
+arbol que ya no era el que se sirve -medir con la construccion anterior al cambio-.
+Lo hace ademas indispensable el verificador de mutaciones: sus mutaciones del
+frontend atacan `src/`, y sin reconstruccion el navegador seguiria viendo el bundle
+viejo, asi que todas saldrian "NO CAZADA" sin que nada hubiera fallado. Un punto
+ciego fabricado por el instrumento, no por el codigo.
+
 Que cubre que una prueba de DOM no cubriria:
   - Si la aplicacion **monto** de verdad (React sin errores de consola).
   - Si el flujo SSE entrega eventos al navegador y la linea de tiempo se puebla.
@@ -20,7 +29,15 @@ Que cubre que una prueba de DOM no cubriria:
   - Si los errores de consola existen (en un shim no existen).
 
 Uso:
-    python tools/verify_frontend.py
+    python tools/verify_frontend.py            # servidor sin autenticacion
+    python tools/verify_frontend.py --auth     # servidor con AI_SWE_API_KEYS
+
+El modo `--auth` arranca el backend **con** claves declaradas y guarda una en el
+`localStorage` del navegador antes de que la aplicacion arranque, de modo que el
+flujo completo -fetch, SSE y puertas humanas- corre autenticado. Ahi se comprueba
+ademas que el servidor exige la clave de verdad: una peticion sin ella es 401 y
+con ella 200. Es la unica forma de probar la ruta del `?api_key=` del flujo SSE,
+que ningun `fetch` del cliente puede ejercitar.
 """
 
 from __future__ import annotations
@@ -191,6 +208,14 @@ function medir() {
     pasos_async.push('PULSO_APROBAR=' + (pulsadoAprobar ? 'true' : 'false'));
     pasos_async.push('SALIO_DE_REQUISITOS=' + (salioDeRequisitos ? 'true' : 'false'));
     pasos_async.push('FILAS_TIMELINE=' + document.querySelectorAll('.timeline li').length);
+    // Las filas pendientes se pintan **siempre** (la linea de tiempo muestra los
+    // cuatro hitos canonicos, alcanzados o no), asi que contar filas no prueba
+    // nada del progreso. Lo que prueba que los eventos llegaron y se pintaron
+    // es contar los hitos **alcanzados**: los alcanzados llevan la marca
+    // `#{seq} - hora`, los pendientes llevan la clase `tenue`. Contar solo
+    // `<li>` habria dado verde con la linea de tiempo inventada.
+    pasos_async.push('HITOS_ALCANZADOS=' +
+      document.querySelectorAll('.timeline li .cuando:not(.tenue)').length);
     pasos_async.push('FILAS_TABLA=' + document.querySelectorAll('tbody tr').length);
     var chip = document.querySelector('header .chip');
     pasos_async.push('CHIP_SALUD=' + (chip ? chip.textContent : '(sin chip)'));
@@ -205,6 +230,37 @@ function medir() {
   volcar();
 }
 """
+
+
+# Preambulo del modo `--auth`. Se inyecta en la sonda justo despues del helper
+# `anota` (para poder usarlo) y antes de que el modulo de la aplicacion se
+# ejecute: los scripts clasicos corren antes que los modulos, asi que la clave
+# esta en el almacen cuando React monta y hace sus primeras peticiones.
+#
+# La aplicacion lee la clave **en cada peticion**, no al cargar: con esto el
+# flujo completo -fetch, SSE y puertas- corre autenticado sin tocar la interfaz.
+# Las dos peticiones propias de la sonda son la prueba de que el servidor la
+# exige: sin cabecera 401, con la cabecera 200.
+PREAMBULO_AUTH = r"""
+try {
+  window.localStorage.setItem('ai_swe.api_key', '__CLAVE__');
+} catch (e) {
+  errores.push('AUTH_PROBE: no se pudo guardar la clave: ' + e.message);
+}
+fetch('/runs')
+  .then(function (r) { anota('SIN_CLAVE', r.status); })
+  .catch(function (e) { errores.push('AUTH_PROBE: ' + e.message); });
+fetch('/runs', { headers: { 'X-API-Key': '__CLAVE__' } })
+  .then(function (r) { anota('CON_CLAVE', r.status); })
+  .catch(function (e) { errores.push('AUTH_PROBE: ' + e.message); });
+"""
+
+#: Marca de insercion del preambulo: el final del helper `anota`/`texto`.
+_MARCA_PREAMBULO = "function texto(id) { var e = document.getElementById(id); return e ? e.textContent : '(no existe)'; }\n"
+
+#: Clave de fantasia del modo `--auth`. Larga a proposito: por debajo de seis
+#: caracteres el redactor del backend no la registraria.
+CLAVE_VERIFICACION = "clave-verificacion-operator-0001"
 
 
 def puerto_libre() -> int:
@@ -225,7 +281,7 @@ def esperar_servidor(url: str, limite: float = 40.0) -> bool:
     return False
 
 
-def preparar_pagina() -> None:
+def preparar_pagina(preambulo: str = "") -> None:
     """Escribe la copia instrumentada de la pagina construida y la sonda.
 
     **No se borra nada.** El entorno bloquea los borrados tras 50 por turno, y
@@ -235,13 +291,20 @@ def preparar_pagina() -> None:
 
     Los dos ficheros se sobrescriben en cada ejecucion, asi que no hay contenido
     obsoleto. Se escriben en `dist/`, que esta ignorado por git.
+
+    `preambulo` se inyecta al principio de la sonda, antes de que el modulo de
+    la aplicacion se ejecute. En el modo `--auth` guarda la clave en el
+    `localStorage`; en el modo normal va vacio.
     """
     if not DIST.is_dir():
         raise SystemExit(
             "FALLO: no existe la construccion del frontend en frontend/dist.\n"
             "       Ejecuta:  cd frontend && npm install && npm run build"
         )
-    if SONDA.exists() and SONDA.read_text(encoding="utf-8") != SONDA_JS:
+    sonda = SONDA_JS.replace(_MARCA_PREAMBULO, _MARCA_PREAMBULO + preambulo, 1)
+    if preambulo and sonda == SONDA_JS:
+        raise SystemExit("FALLO: no se pudo inyectar el preambulo en la sonda")
+    if SONDA.exists() and SONDA.read_text(encoding="utf-8") != sonda:
         print("AVISO: habia una sonda de una ejecucion anterior interrumpida; se sobrescribe")
 
     html = (DIST / "index.html").read_text(encoding="utf-8")
@@ -254,7 +317,7 @@ def preparar_pagina() -> None:
         1,
     )
     PAGINA.write_text(html, encoding="utf-8")
-    SONDA.write_text(SONDA_JS, encoding="utf-8")
+    SONDA.write_text(sonda, encoding="utf-8")
 
 
 def _matar_arbol(pid: int) -> None:
@@ -297,17 +360,58 @@ def _lanzar_navegador(orden: list[str], limite: float) -> tuple[str, bool]:
         return salida or "", False
 
 
+def _reconstruir() -> None:
+    """Reconstruye `frontend/dist` desde el fuente antes de verificar.
+
+    **Por que.** Ver la cabecera del modulo: sin esto la herramienta mide la
+    construccion anterior al cambio. La reconstruccion es lo unico que hace
+    que "verde" signifique "el arbol actual funciona".
+
+    Un fallo de compilacion es un fallo de la verificacion, no una excusa: con
+    una mutacion aplicada -typecheck roto- el `npm run build` sale con codigo
+    distinto de cero y hay que pararse y decirlo, no seguir con el `dist`
+    anterior como si nada.
+    """
+    npm = shutil.which("npm") or "npm"
+    orden = (
+        ["cmd", "/c", npm, "run", "build"]
+        if sys.platform == "win32"
+        else [npm, "run", "build"]
+    )
+    try:
+        resultado = subprocess.run(
+            orden, cwd=FRONTEND, capture_output=True, text=True, timeout=300
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise SystemExit(f"FALLO: no se pudo reconstruir el frontend: {exc}") from exc
+    if resultado.returncode != 0:
+        # El typecheck roto **es** la mutacion cazada: con la mutacion aplicada
+        # el codigo no compila y la propiedad no puede sostenerse. Se emite el
+        # marcador de veredicto para que el arnes lo cuente como cazada -un
+        # fallo de compilacion es un veredicto, no una caida del verificador-.
+        # Un `npm` ausente o un corte de tiempo NO llevan marcador: ahi si que
+        # no se ha comprobado nada, y eso debe seguir siendo NO CONCLUYENTE.
+        raise SystemExit(
+            "RESULTADO: FALLO DE CONSTRUCCION - el frontend no compila (con una "
+            "mutacion del verificador aplicada, el typecheck la caza):\n"
+            + (resultado.stdout + resultado.stderr)[-2000:]
+        )
+
 def main() -> int:
+    modo_auth = "--auth" in sys.argv
     navegador = encontrar_navegador()
     if navegador is None:
         print("VERIFICACION OMITIDA: no se encontro Chromium en las rutas de Playwright")
         return 0
     print(f"navegador: {navegador}")
 
+    # La reconstruccion es la puerta: si `src/` no compila, la verificacion no
+    # puede continuar -y con una mutacion del verificador aplicada, que no
+    # compile ES el resultado-. Sustituye a la vieja comprobacion de que
+    # `dist/` existiera, que media restos de compilaciones ajenas.
+    _reconstruir()
     if not DIST.is_dir():
-        print(
-            "FALLO: no existe frontend/dist. Ejecuta: cd frontend && npm install && npm run build"
-        )
+        print("FALLO: la reconstruccion no dejo frontend/dist")
         return 1
 
     # Restos de una ejecucion anterior: NO se borran, se sobrescriben. Borrar
@@ -319,6 +423,13 @@ def main() -> int:
     # informe cambiaban sin que cambiara el codigo.
     estado = Path(tempfile.mkdtemp(prefix="aiswe-estado-")) / "estado.sqlite3"
     entorno = {**os.environ, "PYTHONPATH": "src", "AI_SWE_STATE_DB_PATH": str(estado)}
+    if modo_auth:
+        # Una sola clave, de `operator`: el flujo de la interfaz crea ejecuciones
+        # y responde las dos puertas, que es lo que `operator` puede hacer.
+        entorno["AI_SWE_API_KEYS"] = json.dumps({CLAVE_VERIFICACION: "operator"})
+        print("modo: autenticacion ACTIVADA (una clave de operator)")
+    else:
+        print("modo: autenticacion desactivada")
     servidor = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "ai_swe.api.app:crear_app", "--factory",
          "--host", "127.0.0.1", "--port", str(puerto), "--log-level", "warning"],
@@ -331,7 +442,7 @@ def main() -> int:
             print("FALLO: el servidor no arranco")
             return 1
 
-        preparar_pagina()
+        preparar_pagina(PREAMBULO_AUTH.replace("__CLAVE__", CLAVE_VERIFICACION) if modo_auth else "")
         orden = [
             str(navegador),
             "--headless", "--disable-gpu", "--no-sandbox", "--dump-dom",
@@ -459,6 +570,15 @@ def main() -> int:
     comprobar("la linea de tiempo se pinto",
               int(campos.get("FILAS_TIMELINE", "0") or 0) >= 1,
               f"FILAS_TIMELINE={campos.get('FILAS_TIMELINE')}")
+    # Y los hitos llegaron **marcados como alcanzados**, no solo como filas
+    # pendientes: la linea de tiempo pinta los cuatro hitos canonicos siempre,
+    # asi que sin esta comprobacion una interfaz que nunca recibiera un evento
+    # habria pasado la anterior.
+    comprobar(
+        "los hitos recibidos se pintan como alcanzados",
+        int(campos.get("HITOS_ALCANZADOS", "0") or 0) >= 1,
+        f"HITOS_ALCANZADOS={campos.get('HITOS_ALCANZADOS')}",
+    )
     comprobar("la pagina no desborda horizontalmente",
               campos.get("SIN_SCROLL_HORIZONTAL") == "true")
     # La base arranca limpia, asi que debe haber exactamente una ejecucion: la que
@@ -466,10 +586,22 @@ def main() -> int:
     comprobar("el almacen arranco aislado y limpio", campos.get("FILAS_TABLA") == "1",
               f"FILAS_TABLA={campos.get('FILAS_TABLA')}")
 
+    if modo_auth:
+        # La clave se guarda antes del arranque y el flujo completo corre con
+        # ella: que los eventos lleguen por SSE prueba ademas la ruta de
+        # `?api_key=` del `EventSource`, que ningun `fetch` del cliente ejerce.
+        comprobar("el servidor rechaza la peticion sin clave (401)",
+                  campos.get("SIN_CLAVE") == "401",
+                  f"SIN_CLAVE={campos.get('SIN_CLAVE')}")
+        comprobar("la clave guardada autentica (200)",
+                  campos.get("CON_CLAVE") == "200",
+                  f"CON_CLAVE={campos.get('CON_CLAVE')}")
+
     if fallos:
         print(f"\nRESULTADO: {len(fallos)} comprobacion(es) fallidas -> {fallos}")
         return 1
-    print("\nRESULTADO: la interfaz funciona en un motor real.")
+    etiqueta = " (modo autenticado)" if modo_auth else ""
+    print(f"\nRESULTADO: la interfaz funciona en un motor real{etiqueta}.")
     return 0
 
 

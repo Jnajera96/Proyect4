@@ -2,7 +2,7 @@
   "project": "AI Software Engineering System",
   "audit_date": "2026-10-08",
   "baseline_updated": "2026-10-13",
-  "phase": "STABILIZATION — Phase 3 (local hardening P0/P1/P2) implemented and verified. The functional chain is complete through F14 and M2 is complete at 15/15. Phase 2 made configuration effective; Phase 3 closed eight boundary gaps: local-only container binding, security headers, TrustedHost, opt-in rate limiting, audio size/MIME limits, bounded pagination, SSE connection cap, and indirect prompt injection defense with adversarial tests. Worktree cleanup now covers all three terminal paths (finalize, abort, orphan recovery). Next: Phase 4 (public exposure preparation) — awaiting explicit authorization.",
+  "phase": "STABILIZATION — Phase 4 (public exposure preparation: API key authentication and role authorization) implemented and verified. The functional chain is complete through F14 and M2 is complete at 15/15. Phase 2 made configuration effective; Phase 3 closed eight boundary gaps: local-only container binding, security headers, TrustedHost, opt-in rate limiting, audio size/MIME limits, bounded pagination, SSE connection cap, and indirect prompt injection defense with adversarial tests. Worktree cleanup now covers all three terminal paths (finalize, abort, orphan recovery). Phase 4 adds OPT-IN API key authentication (disabled by default: an empty key map behaves exactly as before; /health always open so infrastructure health checks can reach it), a closed role hierarchy reader < operator < admin enforced through a single endpoint matrix, audit logging of every state-changing action with the clave_id and never the key, API keys registered in the central redactor, and the SSE ?api_key= exception repaired — it was dead code (hallazgo 1 of the phase: the route dependency resolved before the handler and rejected the query key before it could be read). The frontend sends the key in every fetch and in the EventSource query, verified in a real browser in both modes. Remaining before a real exposure: TLS termination, secrets in a vault, rate limiting switched on, CSP review and a persistent audit sink — all declared limitations in docs/BASELINE-PUBLIC-EXPOSURE.md, none of them implemented.",
   "verified": {
     "fastapi": true,
     "langgraph": true,
@@ -31,6 +31,19 @@
     "f3_sse_connection_cap": true,
     "f3_indirect_prompt_injection_defense": true,
     "f3_worktree_cleanup_all_terminal_paths": true,
+    "ph4_api_key_auth_opt_in": true,
+    "ph4_auth_off_by_default_is_the_observable_default": true,
+    "ph4_role_hierarchy_closed_reader_operator_admin": true,
+    "ph4_single_endpoint_role_matrix": true,
+    "ph4_header_only_credentials_never_cookie": true,
+    "ph4_constant_time_comparison": true,
+    "ph4_absent_and_invalid_give_the_same_401": true,
+    "ph4_health_open_with_auth_on": true,
+    "ph4_sse_query_key_exception_reachable_and_bounded": true,
+    "ph4_audit_actions_with_clave_id_never_the_key": true,
+    "ph4_api_keys_registered_in_redactor": true,
+    "ph4_frontend_sends_key_in_fetch_and_sse": true,
+    "ph4_frontend_build_rebuilt_before_browser_verify": true,
     "lockfile": true,
     "python_version_pinned": true,
     "model_gateway": true,
@@ -122,14 +135,14 @@
     "f14_metrics_from_execution_evidence": true,
     "f14_report_is_generated": true,
     "f14_review_cycle_converges_after_a_fixed_failure": true,
-    "tests_passing": 618,
-    "tests_skipped": "2/618 in the Phase 2 run: (1) tests.test_model_gateway_real::test_llamada_real_controlada and (2) tests.test_f13_stt::test_transcripcion_real_opt_in are opt-in **by design** (the first needs AI_SWE_RUN_REAL_PROVIDER_TESTS=1 plus a provider key; the second needs the `voice` extra and AI_SWE_RUN_REAL_STT_TESTS=1, because it downloads a model), so they SKIP rather than passing falsely. The third skip recorded in earlier phases, test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace, is conditional: it skips only when Windows denies the symlink privilege (WinError 1314) and PASSED outright in this run. None is a code defect and none is a network/credential dependency of the offline suite.",
+    "tests_passing": 678,
+    "tests_skipped": "2/678 in the Phase 4 run: (1) tests.test_model_gateway_real::test_llamada_real_controlada and (2) tests.test_f13_stt::test_transcripcion_real_opt_in are opt-in **by design** (the first needs AI_SWE_RUN_REAL_PROVIDER_TESTS=1 plus a provider key; the second needs the `voice` extra and AI_SWE_RUN_REAL_STT_TESTS=1, because it downloads a model), so they SKIP rather than passing falsely. The count breaks down as 644 at Phase 3 + 33 in tests/test_auth.py + 1 in tests/test_config_budget.py.",
     "tests_require_network": false,
     "tests_require_credentials": false,
-    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block; 12/13 (F10, re-run during F11 with the baseline green: 12 caught). The 13th, `the resumption not reserving the right (two concurrent requests both winning)`, did **not** fail under mutation in this run, having passed at F10 closure. Its regression test drives two threads through a barrier, so whether it observes the race is timing-dependent: the guard is weaker than the count suggests. Recorded rather than papered over; see the mutations block. F12, F13, F14 and the stabilization phases: see the mutations block.",
+    "mutations_caught": "35/35 (F1-F2, verified then) + 8/8 (redaction); 8/8 (F3); 8/8 (F4); 6/6 (F5); 14/14 (F6); 12/12 (F7); 9/9 (F8); F9 see mutations block; 12/13 (F10, re-run during F11 with the baseline green: 12 caught). The 13th, `the resumption not reserving the right (two concurrent requests both winning)`, did **not** fail under mutation in this run, having passed at F10 closure. Its regression test drives two threads through a barrier, so whether it observes the race is timing-dependent: the guard is weaker than the count suggests. Recorded rather than papered over; see the mutations block. F12, F13, F14 and the stabilization phases: see the mutations block. Phase 4: 16/16 with the `PH4` filter (14 backend over tests/test_auth.py + 2 frontend over the real browser in `--auth` mode) and 5/5 with the `frontend` filter (the three repaired structural mutations plus the two key ones, which run in both filters; 19 distinct mutations). Two candidates were retired with evidence rather than counted: the defensive SSE role branch (unreachable with the closed role enumeration - green with and without the mutation, demonstrated on the real tree) and the frontend contracts mutation (the React client imports contracts.json at build time; the property lives in tests/test_contracts.py).",
     "repro_build_from_lock": "211/211 in a fresh env outside the workspace (verified at F1)",
     "m1_assumptions": "5/5",
-    "frontend_browser_checks": "15/15",
+    "frontend_browser_checks": "16/16 without auth + 18/18 with auth (tools/verify_frontend.py, rebuilt from source on every run; the mode --auth is what exercises the ?api_key= path of the EventSource, which no fetch of the client can reach)",
     "f7_fourth_barrier_has_its_own_isolated_test": true,
     "f7_teardown_removes_ghost_worktrees": true,
     "f7_creation_leaves_no_branch_in_user_repo": true,
@@ -144,7 +157,10 @@
     "mcp",
     "knowledge_graph",
     "full_observability",
-    "authentication",
+    "tls_termination",
+    "secrets_in_a_vault",
+    "rate_limiting_by_user",
+    "persistent_audit_sink",
     "agent_prompts_beyond_interpret_plan_and_coder",
     "plan_dependencies_respected_before_execution"
   ],
@@ -165,6 +181,14 @@
       "how_to_close": "Definir AI_SWE_MODEL_API_KEY, AI_SWE_MODEL_NAME y AI_SWE_MODEL_PROVIDER en .env y ejecutar: AI_SWE_RUN_REAL_PROVIDER_TESTS=1 python -m pytest tests/test_model_gateway_real.py -m real_provider",
       "decision": "APLAZADA por decision del Arquitecto (2026-10-07): se sigue trabajando con FakeModelAdapter y el fallback determinista para mantener la suite rapida y offline.",
       "risk_if_unclosed": "Un fallo de integracion real (forma de la respuesta, cabeceras, formato de usage del proveedor) no se detectaria hasta el primer uso con un proveedor de verdad."
+    },
+    {
+      "id": "TD-02",
+      "title": "Fase 4: lo que queda para una exposicion real",
+      "status": "OPEN — declarado, no implementado",
+      "detail": "La autenticacion y la autorizacion existen y estan verificadas, pero exponer el servicio publicamente requiere ademas: (1) terminacion TLS en un proxy inverso -el servicio habla HTTP-; (2) las claves en un gestor de secretos, no en variables de entorno; (3) el rate limiter encendido, con AI_SWE_TRUSTED_HOSTS con los dominios reales; (4) un sumidero persistente para el log de auditoria (hoy escribe en el flujo de log); (5) sustituir la clave por query del flujo SSE por un vale de un solo uso emitido por un endpoint autenticado; (6) revision de la CSP del frontend.",
+      "how_to_close": "Operacion de exposicion, no codigo de la aplicacion: proxy TLS + gestor de secretos + limiter activo + retencion del log de auditoria. Los puntos (5) y (6) si son codigo y tienen su propia fase.",
+      "risk_if_unclosed": "Con la autenticacion implementada pero estos seis puntos abiertos, el servicio no debe exponerse: una clave en variable de entorno o en la URL del SSE filtra el secreto por canales que la autenticacion no controla."
     }
   ],
   "f3_caveats": [
@@ -408,8 +432,8 @@
     },
     {
       "component": "API authentication",
-      "status": "NOT_IMPLEMENTED",
-      "observations": "Open finding from the external audit. Localhost-only exposure is the current rule."
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "observations": "Phase 4 (AUD-06): API key authentication via AI_SWE_API_KEYS, OPT-IN — with no keys declared the API behaves exactly as before and /health stays open so infrastructure health checks are not turned into failures. Credential in a header (X-API-Key or Authorization: Bearer), never a cookie; two different headers at once are 401 rather than one silently winning. Constant-time comparison (hmac.compare_digest) over every declared key. Role travels with the key (reader < operator < admin) and a single matrix in api/app.py applies it to the eleven endpoints: POST /projects admin; /transcriptions, /runs, confirm-requirements, approve, cancel operator; GETs reader; SSE reader plus the ?api_key= exception, which lives in the handler because a route dependency resolves first and had made the exception dead code. State-changing actions are audited in the dedicated ai_swe.audit logger with the clave_id, never the key, and the keys themselves are registered in the central redactor. tests/test_auth.py (33). Verified by mutation (see the mutations block) and the frontend in a real browser in both modes."
     },
     {
       "component": "POST /runs/{id}/cancel",
@@ -581,14 +605,14 @@
     "uncommitted_note": "Tree clean. F7 = e54d6cc, F8 = 4c46193, F9 = 2e52658, M2 = 72613d9, F10 = 019af70, F11 = 57a2c29, F12 = e69b03a, F13 = a950c69, F14 = 065db45, audit baseline = 9a477d8, Phase 1 = 5aa4cf7, Phase 2 = the current commit (see git log)."
   },
   "tests_executed": {
-    "command": "python -m pytest tests/ -q --junitxml=_f2_final.xml (Phase 2 tree, 2026-10-13)",
+    "command": "python -m pytest -q --junitxml=_fase4_final.xml (Phase 4 tree, 2026-10-14)",
     "environment": "local, offline, no credentials, no network",
-    "tests": 618,
+    "tests": 678,
     "failures": 0,
     "errors": 0,
     "skipped": 2,
-    "skip_reason": "Two by-design skips: the real-provider integration test (opt-in, needs AI_SWE_MODEL_API_KEY) and the real-STT test (opt-in, needs the `voice` extra and downloads a model), so both SKIP rather than passing falsely. The Windows symlink test (test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace) is conditional and passed outright in this run.",
-    "verdict": "GREEN",
+    "skip_reason": "Two by-design skips: the real-provider integration test (opt-in, needs AI_SWE_MODEL_API_KEY) and the real-STT test (opt-in, needs the `voice` extra and downloads a model), so both SKIP rather than passing falsely. The Windows symlink test (test_f7_sandbox::test_la_plataforma_no_permite_construir_el_vector_de_enlace) is conditional and passes outright on this machine.",
+    "verdict": "GREEN (from the JUnit XML; the exit code is 1 because the environment's delete interceptor kills the temp cleanup after the report is written -the known trap, the reason for the XML-verdict rule-)",
     "mutations": {
       "f1_f2": "35/35 (verified at the time)",
       "redaction": "8/8",
@@ -604,7 +628,10 @@
       "f12": "8/8 (this run: baseline green, every mutant caught, tree restored green) — promoting over an unauthorised repository, promoting a patch that changed after review (integrity), a path outside `allowed_paths`, a protected path, the sandbox not being torn down on finalize, a rejection marked as `completed`, requesting changes not spending a review cycle, and the human's comments not reaching the state. Every mutant is caught by tests/test_f12_promotion.py.",
       "f13": "4/4 (this run: baseline green, every mutant caught, tree restored green) — the empty-audio guard (without it the model is loaded to transcribe nothing), an empty transcription being returned instead of declared, the low-confidence warning being switched off, and the vocabulary not being passed as a hint to the engine. Every mutant is caught by tests/test_f13_stt.py. This run also **confirms the F13 housekeeping**: with LIMITE_PYTEST raised to 1200s the restore check reports `arbol restaurado y suite en verde`, where at 900s it had timed out and reported NO CONCLUYENTE.",
       "f14": "5/5 (this run: baseline green, every mutant caught, tree restored green) — the success criterion ignoring the test evidence, the Reviewer judging the whole history instead of the current evidence (the AUD-14 defect this phase found), `evidencia_vigente` keeping the first run per target instead of the last, the success-rate aggregate dividing by zero with no runs, and the human interventions not being counted. Every mutant is caught by tests/test_f14_evaluation.py.",
-      "f2_stabilization": "6/6 (this run: baseline green, every mutant caught, tree restored green) — the configured budget not reaching the run, the repository allow-list not being applied (the function), approving without a human decision promoting again, the schema seal not being checked, and the allow-list not being applied at the API in either path (project registration and run creation). The last two exist because the API wiring had no test of its own: only the function was covered, which is not the same thing."
+      "f2_stabilization": "6/6 (this run: baseline green, every mutant caught, tree restored green) — the configured budget not reaching the run, the repository allow-list not being applied (the function), approving without a human decision promoting again, the schema seal not being checked, and the allow-list not being applied at the API in either path (project registration and run creation). The last two exist because the API wiring had no test of its own: only the function was covered, which is not the same thing.",
+      "ph4": "16/16 with the `PH4` filter (this run: baseline green, every mutant caught, tree restored green) — the role check removed from POST /projects and from approve, the role comparison disabled, the hierarchy inverted, authentication switched on always, the 401 distinguishing absent from invalid, /health requiring a key, two different headers accepted, `==` instead of compare_digest, the search exiting at the first match, the audit recording the whole key, the API keys not registered in the redactor, the SSE losing the query key, and the query overriding the header. Plus two frontend mutants over the real browser in `--auth` mode: the interface not sending the key in fetches and the EventSource travelling without it.",
+      "frontend_repaired": "5/5 with the `frontend` filter — the subscription lost (subscribing to a stream that does not exist), the run_id no longer exposed by the SPA, the canonical milestone set emptied, and the two key mutants above. First run of the repaired set: 3/5 with 2 NO CONCLUYENTE, and investigating it found three more defects: the two original mutants were caught by the **typechecker** in ten seconds (a legitimate verdict the harness mislabelled because verify_frontend.py exited via SystemExit without the RESULTADO: marker -now emitted on build failure, and deliberately NOT emitted when npm is missing or a timeout cuts the run, where nothing has been checked); the timeline check was near-vacuous (it counted rows, and the timeline always renders all four canonical milestones, reached or pending - HITOS_ALCANZADOS was added); and verify_frontend.py served `dist` without rebuilding it, which would have made every src-level mutant invisible to the browser (a blind spot fabricated by the instrument).",
+      "ph4_retired_with_evidence": "2 candidates retired after proving them against the real tree: the defensive `if not identidad.puede(Rol.READER)` branch of the SSE handler (the closed role enumeration makes it unreachable; the suite is green with and without it, 33/33) and the frontend 'stops loading the contracts' mutant (the React client imports contracts.json at build time, so there is no runtime load to break; the property is protected by tests/test_contracts.py)."
     }
   },
   "blockers_and_debt": [
@@ -654,9 +681,9 @@
     {
       "id": "AUD-06",
       "title": "No authentication on the API",
-      "status": "OPEN",
-      "detail": "Open finding from the external audit; mitigated only by localhost-only exposure.",
-      "how_to_close": "Auth before any exposure beyond localhost (project rule)."
+      "status": "RESOLVED (2026-10-14, Phase 4) — authentication and authorization implemented, opt-in and verified; TLS, vault and per-user rate limiting remain OPEN",
+      "detail": "Open finding from the external audit; mitigated only by localhost-only exposure. Phase 4 implemented API key authentication (AI_SWE_API_KEYS, disabled by default) and role authorization (reader < operator < admin) with a single endpoint matrix, plus audit logging of state-changing actions. What is NOT closed by this: TLS termination (the service still speaks HTTP), secrets in a vault (keys still travel via environment variables), rate limiting by user (the Phase 3 limiter stays off by default), a persistent audit sink (the audit logger writes to the log stream), and the SSE one-use token that should replace ?api_key=. See TD-02 and section 8 of docs/BASELINE-PUBLIC-EXPOSURE.md.",
+      "how_to_close": "Authentication itself: done. The rest is the exposure operation: terminate TLS at a reverse proxy, move keys to a secret manager, switch on the rate limiter with real AI_SWE_TRUSTED_HOSTS, retain the audit log, and review the frontend CSP."
     },
     {
       "id": "AUD-07",
@@ -756,10 +783,10 @@
     }
   ],
   "next_step_proposed": {
-    "phase": "Phase 4 — Public exposure preparation",
-    "why": "The local boundaries are now hardened, but the system still lacks authentication, authorization, TLS termination, and audit logging. Before any public exposure, these controls must be in place.",
-    "scope": "Authentication (API keys or OAuth), authorization (role-based access to runs and projects), TLS termination, secrets in a vault (never in .env), rate limiting by IP and by user, audit logging of all administrative actions, and a security review of the frontend CSP policy.",
-    "prerequisite": "Phase 3 is committed; tree clean; 644 tests green.",
+    "phase": "Phase 5 — the exposure operation (no new features)",
+    "why": "Phase 4 implemented and verified authentication and authorization, but the system still speaks HTTP, keeps its secrets in environment variables, ships with the rate limiter off, writes its audit log to a stream nobody retains, asks the SSE stream to carry the key in the URL, and has not had its CSP reviewed. None of that is code the application can fix on its own; all of it is the operation of exposing it.",
+    "scope": "Terminate TLS at a reverse proxy; move the API keys to a secret manager; switch on the Phase 3 rate limiter with the real AI_SWE_TRUSTED_HOSTS; retain the audit log (rotated file or the store); replace the SSE query key with a one-use ticket issued by an authenticated endpoint; review the frontend CSP. Six items, declared in TD-02 and section 8 of docs/BASELINE-PUBLIC-EXPOSURE.md.",
+    "prerequisite": "Phase 4 committed; tree clean; 678 tests green; 16/16 + 5/5 mutations caught.",
     "awaiting": "explicit authorization from the Arquitecto — NOT to be started without it"
   }
 }

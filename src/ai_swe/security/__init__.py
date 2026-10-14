@@ -6,17 +6,28 @@ modulo a modulo, alguna se olvidaria:
   - la **redaccion centralizada de secretos** (`RNF-S3`), aplicable a logs, errores,
     eventos y trazas;
   - el **tratamiento del contenido no confiable** que llega al contexto del modelo
-    (extractos del repositorio, salida de sus pruebas).
+    (extractos del repositorio, salida de sus pruebas);
+  - la **autenticacion y autorizacion por clave de API**, con comparacion en tiempo
+    constante y roles cerrados.
 
 La API publica es deliberadamente pequena:
 
     from ai_swe.security import redact, redact_deep, sanitize, register_secret
     from ai_swe.security import install_redacting_filter
     from ai_swe.security import AVISO_NO_CONFIABLE, bloque_no_confiable
+    from ai_swe.security import Credenciales, Identidad, Rol
 """
 
 from __future__ import annotations
 
+from ai_swe.security.auth import (
+    ROLES_VALIDOS,
+    Credenciales,
+    Identidad,
+    Rol,
+    credencial_de_peticion,
+    credenciales_de,
+)
 from ai_swe.security.logging import RedactingFilter, install_redacting_filter
 from ai_swe.security.redaction import (
     CLAVES_QUE_REDACTAN_VALOR,
@@ -41,9 +52,15 @@ __all__ = [
     "MARCA_FIN",
     "MARCA_INICIO",
     "REDACTADO",
+    "ROLES_VALIDOS",
+    "Credenciales",
+    "Identidad",
     "RedactingFilter",
+    "Rol",
     "bloque_no_confiable",
     "clear_registered_secrets",
+    "credencial_de_peticion",
+    "credenciales_de",
     "install_redacting_filter",
     "redact",
     "redact_deep",

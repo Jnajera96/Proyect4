@@ -16,6 +16,7 @@ import type {
   RunState,
   RunSummary,
 } from "./contracts";
+import { claveActiva } from "./auth";
 
 /** Error de la API con la clase de dominio, si la trae. */
 export class ErrorApi extends Error {
@@ -50,9 +51,17 @@ function mensajeDeError(cuerpo: unknown, status: number): string {
 }
 
 async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
+  // La clave se lee **en cada peticion**, no al cargar el modulo: guardarla
+  // mientras la pagina esta abierta debe aplicarse a las siguientes llamadas sin
+  // recargar. Con la autenticacion desactivada el servidor ignora la cabecera.
+  const clave = claveActiva();
+  const conClave: RequestInit = clave
+    ? { ...init, headers: { ...init?.headers, "X-API-Key": clave } }
+    : (init ?? {});
+
   let respuesta: Response;
   try {
-    respuesta = await fetch(ruta, init);
+    respuesta = await fetch(ruta, conClave);
   } catch (causa) {
     // Fallo de red: no hay respuesta. Se distingue de un 4xx para que la interfaz
     // pueda decir "servidor inaccesible" en lugar de "peticion rechazada".

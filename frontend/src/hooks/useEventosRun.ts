@@ -20,6 +20,12 @@
  * recarga o un corte de red no pierde progreso: el servidor reanuda desde el
  * ultimo `seq` visto. El `EventSource` lo gestiona el navegador; aqui solo se
  * refleja el estado de la conexion para que la interfaz lo muestre.
+ *
+ * **La clave de API viaja en la query.** `EventSource` no puede enviar
+ * cabeceras; el backend admite `?api_key=` **solo en este flujo** por eso. Es
+ * una excepcion con precio -la clave acaba en registros de acceso y proxies-,
+ * asi que se usa unicamente aqui. Cambiar la clave guardada reconecta el flujo
+ * con la nueva, que es lo contrario de dejarlo silenciosamente sin autorizar.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -28,6 +34,7 @@ import {
   type EventKind,
   type RunEvent,
 } from "../lib/contracts";
+import { useClaveApi } from "../lib/auth";
 
 export type EstadoConexion = "inactivo" | "conectando" | "conectado" | "cerrado" | "error";
 
@@ -42,13 +49,14 @@ interface ResultadoSse {
  * Escucha el flujo de una ejecucion.
  *
  * Devuelve los eventos recibidos **en orden**, sin deduplicar por `seq` en la
- * interfaz: el backend garantiza orden y unicidad, y deduplicar aqui escondería
+ * interfaz: el backend garantiza orden y unicidad, y deduplicar aqui esconderia
  * un error del servidor en lugar de dejarlo visible.
  */
 export function useEventosRun(runId: string | null): ResultadoSse {
   const [eventos, setEventos] = useState<RunEvent[]>([]);
   const [conexion, setConexion] = useState<EstadoConexion>("inactivo");
   const fuenteRef = useRef<EventSource | null>(null);
+  const clave = useClaveApi();
 
   const cerrar = useCallback(() => {
     if (fuenteRef.current) {
@@ -70,7 +78,10 @@ export function useEventosRun(runId: string | null): ResultadoSse {
     setEventos([]);
     setConexion("conectando");
 
-    const fuente = new EventSource(`/runs/${encodeURIComponent(runId)}/events`);
+    // Sin clave, la URL va limpia: con la autenticacion desactivada el servidor
+    // no necesita nada mas, y anadir un parametro vacio seria ruido.
+    const consulta = clave ? `?api_key=${encodeURIComponent(clave)}` : "";
+    const fuente = new EventSource(`/runs/${encodeURIComponent(runId)}/events${consulta}`);
     fuenteRef.current = fuente;
 
     fuente.onopen = () => setConexion("conectado");
@@ -103,7 +114,7 @@ export function useEventosRun(runId: string | null): ResultadoSse {
 
     fuente.onerror = () => {
       // `EventSource` marca `readyState === CLOSED` cuando no va a reintentar
-      // (p. ej. un 404). Si sigue abierto, el navegador reintentara solo y no es
+      // (p.ej. un 404). Si sigue abierto, el navegador reintentara solo y no es
       // un error para la interfaz: se mantiene "conectando".
       if (fuente.readyState === EventSource.CLOSED) {
         setConexion("error");
@@ -114,7 +125,10 @@ export function useEventosRun(runId: string | null): ResultadoSse {
       fuente.close();
       fuenteRef.current = null;
     };
-  }, [runId]);
+    // `clave` en las dependencias: guardarla u olvidarla debe reabrir el flujo
+    // con la credencial nueva. Sin eso, el flujo seguiria con la clave vieja
+    // hasta recargar la pagina.
+  }, [runId, clave]);
 
   return { eventos, conexion, cerrar };
 }

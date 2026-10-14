@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ErrorApi } from "./lib/api";
+import { borrarClave, claveGuardada, guardarClave, useClaveApi } from "./lib/auth";
 import {
   ESTADOS_TERMINALES,
   ETIQUETA_ESTADO,
@@ -53,6 +54,12 @@ export function App() {
   const [estado, setEstado] = useState<RunState | null>(null);
   const [lanzando, setLanzando] = useState(false);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
+
+  // Clave de API. Se lee del almacen con el hook para que la interfaz reaccione
+  // a guardarla u olvidarla; el borrador es solo el campo de texto.
+  const claveApi = useClaveApi();
+  const [borradorClave, setBorradorClave] = useState("");
+  const [mensajeClave, setMensajeClave] = useState<string | null>(null);
 
   const { eventos, conexion } = useEventosRun(runId);
 
@@ -212,6 +219,51 @@ export function App() {
           <Chip pulsa>comprobando…</Chip>
         )}
       </header>
+
+      {/* -------------------------------------------------------- Acceso */}
+      <div className="seccion-titulo">Acceso</div>
+      <Panel nota="La clave solo hace falta si el servidor tiene la autenticación activada (AI_SWE_API_KEYS con al menos una clave). Se guarda en este navegador y se envía con cada petición; con la autenticación desactivada el servidor la ignora.">
+        <label htmlFor="api-key">Clave de API</label>
+        <Fila sep>
+          <input
+            id="api-key"
+            type="password"
+            value={borradorClave}
+            onChange={(e) => setBorradorClave(e.target.value)}
+            placeholder="pegar aquí la clave"
+            autoComplete="off"
+            style={{ flex: 1 }}
+          />
+          <button
+            id="btn-guardar-clave"
+            className="primario"
+            disabled={!borradorClave.trim()}
+            onClick={() => {
+              guardarClave(borradorClave.trim());
+              setBorradorClave("");
+              setMensajeClave("clave guardada");
+            }}
+          >
+            Guardar
+          </button>
+          {claveGuardada() ? (
+            <button
+              onClick={() => {
+                borrarClave();
+                setMensajeClave("clave borrada");
+              }}
+            >
+              Olvidar
+            </button>
+          ) : null}
+        </Fila>
+        <p className="tenue">
+          {claveApi
+            ? "hay una clave guardada; se envía con cada petición, incluido el flujo de eventos."
+            : "no hay ninguna clave guardada en este navegador."}
+          {mensajeClave ? ` · ${mensajeClave}` : ""}
+        </p>
+      </Panel>
 
       {/* -------------------------------------------------------- Entrada */}
       <div className="seccion-titulo">Nueva ejecución</div>

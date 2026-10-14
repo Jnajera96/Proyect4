@@ -26,6 +26,7 @@ Decisiones que se mantienen y conviene declarar:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 import sqlite3
@@ -37,6 +38,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import (
+    Depends,
     FastAPI,
     File,
     Form,
@@ -73,7 +75,15 @@ from ai_swe.graph.engine import NothingToResume, RunEngine, RunNotFound
 from ai_swe.graph.worker import RunWorker
 from ai_swe.models import BudgetExceededError
 from ai_swe.sandbox import SandboxError, limpiar_worktree, validar_repositorio
-from ai_swe.security import install_redacting_filter
+from ai_swe.security import (
+    Credenciales,
+    Identidad,
+    Rol,
+    credencial_de_peticion,
+    credenciales_de,
+    install_redacting_filter,
+    redact_deep,
+)
 from ai_swe.state import RunStore
 from ai_swe.stt.base import STTAdapter, STTError, STTNotAvailable, Transcript, crear_adaptador_stt
 
@@ -529,6 +539,116 @@ def crear_app(
     #: Conexiones SSE abiertas ahora mismo. Ver el tope en `eventos_run`.
     app.state.sse_activas = 0
 
+    # ------------------------------------------------------- autenticacion
+    # Las credenciales se construyen **una vez** con los ajustes validados: leerlas
+    # por peticion revalidaria el mapa de claves en cada llamada. `None` como
+    # identidad significa "autenticacion desactivada", y entonces las dependencias
+    # de rol dejan pasar sin comprobar nada -que es el comportamiento de siempre.
+    credenciales = credenciales_de(ajustes)
+    app.state.credenciales = credenciales
+    log.info(
+        "autenticacion %s (%d claves)",
+        "activada" if credenciales.activa else "desactivada",
+        credenciales.numero_de_claves,
+    )
+
+    def _identidad_de_cabecera(
+        x_api_key: str | None, authorization: str | None
+    ) -> Identidad | None:
+        """Identidad a partir de las dos cabeceras admitidas.
+
+        `None` sin excepcion significa "autenticacion desactivada". Con la
+        autenticacion activa, una clave ausente o invalida es **401** aqui, antes de
+        llegar al manejador. El mensaje no dice cual era la clave ni cual falta:
+        distinguir "no mandaste nada" de "esa no existe" permitiria enumerar que
+        claves son validas.
+        """
+        if not credenciales.activa:
+            return None
+        identidad = credencial_de_peticion(credenciales, x_api_key, authorization)
+        if identidad is None:
+            raise HTTPException(
+                status_code=401,
+                detail=(
+                    "se requiere una clave de API valida. Se acepta en la cabecera "
+                    "X-API-Key o como Authorization: Bearer."
+                ),
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return identidad
+
+    def _identidad(
+        x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+        authorization: str | None = Header(default=None),
+    ) -> Identidad | None:
+        """Dependencia de identidad para los manejadores normales."""
+        return _identidad_de_cabecera(x_api_key, authorization)
+
+    def _exige(minimo: Rol):
+        """Dependencia que exige un rol minimo. Sin autenticacion, no exige nada."""
+
+        def dependencia(identidad: Identidad | None = Depends(_identidad)) -> Identidad | None:
+            if identidad is None:
+                return None
+            if not identidad.puede(minimo):
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        f"esta accion requiere el rol '{minimo.value}'; la clave "
+                        f"usada tiene '{identidad.rol.value}'"
+                    ),
+                )
+            return identidad
+
+        return dependencia
+
+    #: Roles por endpoint. Se declaran **aqui**, en un solo sitio, para que la
+    #: matriz de permisos sea legible de un vistazo en lugar de repartida entre
+    #: diez manejadores.
+    #
+    #   reader    consultas: nada que escriba ni apruebe.
+    #   operator  ciclo de vida de ejecuciones, incluido aprobar (lo mas sensible)
+    #             y transcribir.
+    #   admin     registrar proyectos: fija el `repo_path` contra el que se
+    #             ejecutara, y con alcance amplio eso es elegir sobre que
+    #             repositorio se escribe.
+    #
+    # `/health` queda fuera a proposito: un health check de infraestructura tiene
+    # que poder llegar sin credenciales, o el balanceador marca el servicio caido.
+    LEER = Depends(_exige(Rol.READER))
+    OPERAR = Depends(_exige(Rol.OPERATOR))
+    ADMINISTRAR = Depends(_exige(Rol.ADMIN))
+
+    # ---------------------------------------------------------- auditoria
+    # Registro de quien hizo que, en las acciones que cambian estado o conceden
+    # permisos. Va a un logger **dedicado** (`ai_swe.audit`), no al general: la
+    # auditoria se consume de otra forma -se retiene, se busca, se compara- y
+    # mezclarla con el log de aplicacion la haria inutilizable.
+    #
+    # Lo que se registra es el `clave_id` de la identidad (cuatro caracteres y
+    # longitud), nunca la clave: basta para saber que clave actuo. Como las claves
+    # se registran en el redactor central, si alguna acabara aqui saldria
+    # `[REDACTED]` igualmente.
+    #
+    # **Limitacion declarada:** esto escribe en el flujo de log. Antes de una
+    # exposicion real hace falta un sumidero persistente (fichero rotado, o el
+    # almacen), porque un log que nadie retiene no es un registro de auditoria. Se
+    # deja dicho y no se finge lo contrario.
+    auditoria = logging.getLogger("ai_swe.audit")
+
+    def _auditar(accion: str, identidad: Identidad | None, detalle: dict) -> None:
+        actor = (
+            f"{identidad.rol.value}:{identidad.clave_id}"
+            if identidad is not None
+            else "sin-autenticar"
+        )
+        auditoria.info(
+            "accion=%s actor=%s %s",
+            accion,
+            actor,
+            json.dumps(redact_deep(detalle), ensure_ascii=False),
+        )
+
     registrar_manejadores_de_error(app)
 
     # ------------------------------------------------------------------ salud
@@ -543,8 +663,10 @@ def crear_app(
         }
 
     # ------------------------------------------------------------- proyectos
-    @app.post("/projects", response_model=Project, status_code=201)
-    def crear_proyecto(peticion: ProjectRequest) -> Project:
+    @app.post("/projects", response_model=Project, status_code=201, dependencies=[ADMINISTRAR])
+    def crear_proyecto(
+        peticion: ProjectRequest, identidad: Identidad | None = Depends(_identidad)
+    ) -> Project:
         """Registra un repositorio para poder ejecutar contra el.
 
         La ruta se **valida aqui**, en el alta, y no al lanzar una ejecucion: un
@@ -552,7 +674,12 @@ def crear_app(
         alguien lo declara, con un 422 que dice que pasa, en lugar de dentro de una
         ejecucion ya en marcha. Es la razon de que el proyecto exista como concepto
         en vez de llevar la ruta suelta en cada peticion.
+
+        Es la unica accion de `admin`: fija el `repo_path` contra el que se
+        ejecutara, y con el alcance amplio eso es elegir sobre que repositorio se
+        escribe.
         """
+        _auditar("proyecto.registrado", identidad, {"repo_path": peticion.repo_path})
         ruta = validar_repositorio(peticion.repo_path)
         if not repositorio_autorizado(ajustes, ruta):
             raise HTTPException(
@@ -575,7 +702,7 @@ def crear_app(
                 status_code=409, detail=f"ya existe un proyecto con id {proyecto.project_id}"
             ) from exc
 
-    @app.get("/projects", response_model=list[Project])
+    @app.get("/projects", response_model=list[Project], dependencies=[LEER])
     def listar_proyectos(
         limit: int = Query(default=50, ge=1, le=ajustes.max_page_size),
     ) -> list[Project]:
@@ -588,7 +715,7 @@ def crear_app(
         """
         return almacen.listar_proyectos(limit)
 
-    @app.get("/projects/{project_id}", response_model=Project)
+    @app.get("/projects/{project_id}", response_model=Project, dependencies=[LEER])
     def obtener_proyecto(project_id: str) -> Project:
         proyecto = almacen.proyecto(project_id)
         if proyecto is None:
@@ -596,7 +723,7 @@ def crear_app(
         return proyecto
 
     # ----------------------------------------------------------- transcripcion
-    @app.post("/transcriptions", response_model=Transcript)
+    @app.post("/transcriptions", response_model=Transcript, dependencies=[OPERAR])
     async def transcribir(
         audio: UploadFile = File(...),
         vocabulary: str | None = Form(default=None),
@@ -631,8 +758,10 @@ def crear_app(
         )
 
     # ------------------------------------------------------------ ejecuciones
-    @app.post("/runs", response_model=RunState, status_code=202)
-    def crear_run(peticion: RunRequest) -> RunState:
+    @app.post("/runs", response_model=RunState, status_code=202, dependencies=[OPERAR])
+    def crear_run(
+        peticion: RunRequest, identidad: Identidad | None = Depends(_identidad)
+    ) -> RunState:
         """Crea la ejecucion y la encola. **No espera a que termine.**
 
         Responde 202 con el `run_id` para que el cliente pueda suscribirse al
@@ -679,16 +808,21 @@ def crear_app(
 
         motor.create(estado)
         trabajador.submit(estado.run_id)
+        _auditar(
+            "ejecucion.creada",
+            identidad,
+            {"run_id": estado.run_id, "repo_path": str(opciones.repo_path or "")},
+        )
         return estado
 
-    @app.get("/runs", response_model=list[RunSummary])
+    @app.get("/runs", response_model=list[RunSummary], dependencies=[LEER])
     def listar_runs(
         limit: int = Query(default=50, ge=1, le=ajustes.max_page_size),
     ) -> list[RunSummary]:
         """Lista ejecuciones. Mismo tope de pagina que `/projects`."""
         return almacen.list_summaries(limit)
 
-    @app.get("/runs/{run_id}", response_model=RunState)
+    @app.get("/runs/{run_id}", response_model=RunState, dependencies=[LEER])
     def obtener_run(run_id: str) -> RunState:
         # `RunNotFound` la mapea el manejador central a un 404 estructurado.
         return motor.get(run_id)
@@ -699,13 +833,69 @@ def crear_app(
         after: int = 0,
         last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
         timeout_s: float = 300.0,
+        api_key: str | None = Query(default=None, alias="api_key"),
+        x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+        authorization: str | None = Header(default=None),
     ) -> EventSourceResponse:
         """Progreso en vivo. Emite y cierra cuando la ejecucion llega a un terminal.
 
         Reanudable: si el navegador se reconecta, manda `Last-Event-ID` y solo
         recibe los eventos que se perdio. Es la razon de que el registro sea
         persistente y no una cola en memoria.
+
+        **La clave por query, y por que es una excepcion.** `EventSource`, la API
+        que usa el dashboard para suscribirse, **no puede enviar cabeceras**: solo
+        cookies. Un endpoint de solo cabeceras dejaria el streaming fuera del
+        dashboard, que es su unico consumidor real. Se acepta entonces la clave en
+        `?api_key=`, **solo en este endpoint y solo como alternativa a la
+        cabecera**.
+
+        La comprobacion vive **en el manejador**, no en una dependencia de ruta, y
+        es a proposito: la dependencia de rol solo lee cabeceras y se resuelve
+        antes que el manejador, asi que con ella puesta la clave por query daba
+        siempre 401 -la excepcion era codigo muerto, y asi lo detecto la prueba de
+        `tests/test_auth.py`-. La precedencia es: si viene **cualquier** cabecera,
+        manda ella -una invalida es 401, no se cae a la query-; si no viene
+        ninguna, se admite la query. Sin ninguna de las dos cosas, 401.
+
+        La concesion tiene un precio y se dice: una clave en la URL acaba en los
+        registros de acceso, en el historial y en cualquier proxy del medio. Por eso
+        esta pensado para una clave de **lectura** (`reader`), y por eso antes de
+        una exposicion real hay que sustituirlo por un vale de un solo uso emitido
+        por un endpoint autenticado -o por sesion con cookie-. No es la forma
+        definitiva, es la que funciona hoy sin romper el dashboard.
         """
+        # Autenticacion del flujo. Ver el por que del sitio en el docstring: la
+        # dependencia de ruta habria rechazado la clave por query antes de llegar.
+        if credenciales.activa:
+            identidad = None
+            if x_api_key or authorization:
+                identidad = credencial_de_peticion(credenciales, x_api_key, authorization)
+            elif api_key:
+                identidad = credenciales.identificar(api_key.strip())
+            if identidad is None:
+                raise HTTPException(
+                    status_code=401,
+                    detail=(
+                        "se requiere una clave de API valida. Se acepta en la "
+                        "cabecera X-API-Key o como Authorization: Bearer; en este "
+                        "flujo tambien en el parametro api_key."
+                    ),
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            # El minimo del flujo es `reader`. Con la enumeracion de roles cerrada
+            # ninguna clave declarada queda por debajo, asi que esta rama es
+            # defensiva: si apareciera un rol inferior, el flujo no se abriria por
+            # accidente.
+            if not identidad.puede(Rol.READER):
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        f"esta accion requiere el rol 'reader'; la clave usada "
+                        f"tiene '{identidad.rol.value}'"
+                    ),
+                )
+
         if almacen.summary(run_id) is None:
             raise HTTPException(status_code=404, detail=f"no existe la ejecucion {run_id}")
 
@@ -798,9 +988,15 @@ def crear_app(
     # unica obligaria al cliente a saber cual esta pendiente para elegir el cuerpo,
     # que es justo lo que el estado ya le dice.
 
-    @app.post("/runs/{run_id}/confirm-requirements", response_model=RunState)
+    @app.post(
+        "/runs/{run_id}/confirm-requirements",
+        response_model=RunState,
+        dependencies=[OPERAR],
+    )
     def confirmar_requisitos(
-        run_id: str, peticion: ConfirmRequirementsRequest
+        run_id: str,
+        peticion: ConfirmRequirementsRequest,
+        identidad: Identidad | None = Depends(_identidad),
     ) -> RunState:
         """Reanuda la puerta `confirm_requirements_gate` (M2, item 3 del DoD).
 
@@ -812,7 +1008,17 @@ def crear_app(
         operacion** (`reclamar_reanudacion`), no dos. Comprobar aqui y encolar
         despues dejaba una ventana en la que dos peticiones concurrentes -dos
         pestanas, un doble clic, un reintento- pasaban ambas y devolvian 200.
+
+        `operator` y no `reader`: lo que se confirma aqui es la **interpretacion**
+        del trabajo, y con ella el alcance sobre el que se va a escribir. Una
+        correccion maliciosa de los requisitos desvia la ejecucion hacia otro
+        objetivo, asi que no es una consulta.
         """
+        _auditar(
+            "requisitos.confirmados",
+            identidad,
+            {"run_id": run_id, "decision": peticion.decision.value},
+        )
         motor.reclamar_reanudacion(
             run_id, puerta_esperada="confirm_requirements_gate"
         )
@@ -823,14 +1029,34 @@ def crear_app(
             raise
         return motor.get(run_id)
 
-    @app.post("/runs/{run_id}/approve", response_model=RunState)
-    def aprobar_run(run_id: str, peticion: ApproveRequest) -> RunState:
+    @app.post(
+        "/runs/{run_id}/approve", response_model=RunState, dependencies=[OPERAR]
+    )
+    def aprobar_run(
+        run_id: str,
+        peticion: ApproveRequest,
+        identidad: Identidad | None = Depends(_identidad),
+    ) -> RunState:
         """Aprueba o rechaza el cambio pendiente y reanuda la puerta `approval_gate`.
 
         La reanudacion vuelve al trabajador: el cliente recibe el estado en cuanto el
         grafo arranca de nuevo, no cuando termina. Misma reserva atomica que la puerta
         de requisitos.
+
+        **La accion mas sensible de la API.** Aprobar promueve el parche al
+        repositorio del usuario: es el unico punto en el que el sistema escribe
+        codigo en un sitio que no es su worktree. Por eso `operator` como minimo, y
+        por eso se audita con el `run_id`, el veredicto y los archivos que toca.
         """
+        _auditar(
+            "ejecucion.aprobada",
+            identidad,
+            {
+                "run_id": run_id,
+                "decision": peticion.decision.value,
+                "comentarios": peticion.comments or "",
+            },
+        )
         motor.reclamar_reanudacion(run_id, puerta_esperada="approval_gate")
         try:
             trabajador.submit_resume(run_id, _valor_de_aprobacion(peticion))
@@ -839,7 +1065,7 @@ def crear_app(
             raise
         return motor.get(run_id)
 
-    @app.post("/runs/{run_id}/cancel", status_code=501)
+    @app.post("/runs/{run_id}/cancel", status_code=501, dependencies=[OPERAR])
     def cancelar_run(run_id: str) -> dict:
         """Cancelacion de una ejecucion en curso. Requiere senalizar al trabajador."""
         if almacen.summary(run_id) is None:

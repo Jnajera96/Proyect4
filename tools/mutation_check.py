@@ -300,33 +300,90 @@ MUTACIONES: list[Mutation] = [
     ),
     # ------------------------------------------------------------- frontend
     # Se verifican en un motor de render real, no con un shim de DOM.
+    #
+    # **Por que atacan `src/` y no `index.html`.** Estas mutaciones apuntaban
+    # al `index.html` de la version previa a React, que era la aplicacion
+    # entera en un fichero. Cuando F11 la reescribio como Vite + React, el
+    # `index.html` quedo con catorce lineas de andamio y los patrones dejaron
+    # de existir: las cuatro mutaciones llevaban desde entonces saliendo "NO
+    # APLICABLE", que es peor que no tenerlas -parece que verifican algo-. Se
+    # reescriben contra las fuentes actuales, y para que el navegador las vea
+    # `tools/verify_frontend.py` **reconstruye `dist` antes de servir**: sin
+    # eso el navegador seguiria viendo el bundle anterior y el punto ciego
+    # seria del instrumento, no del codigo.
+    #
+    # Modos: lo estructural (suscripcion, run_id, linea de tiempo) se ve sin
+    # autenticacion; las dos mutaciones de la clave necesitan `--auth`, que
+    # arranca el backend con claves y es el unico modo donde enviarla de mas o
+    # de menos cambia algo.
     Mutation(
+        # El flujo se suscribe a una ejecucion que no existe: el servidor
+        # responde 404 y no llega ningun evento. Equivale al `fuente = null` de
+        # la version previa a React. La primera version de esta mutacion ponia
+        # `if (true)` en el guardia y la cazaba el **typechecker** -sin el
+        # guardia, `runId` ya no se estrecha a `string` y `encodeURIComponent`
+        # no compila-: era cazada, si, pero por el compilador y en diez
+        # segundos, asi que no se sabria si la comprobacion del navegador
+        # funciona. Esta version si llega al navegador.
         "el frontend pierde la suscripcion a los eventos",
-        RAIZ / "frontend" / "index.html",
-        "fuente = new EventSource(`/runs/${runId}/events`);",
-        "fuente = null;",
+        RAIZ / "frontend" / "src" / "hooks" / "useEventosRun.ts",
+        "    const fuente = new EventSource(`/runs/${encodeURIComponent(runId)}/events${consulta}`);",
+        "    const fuente = new EventSource(`/runs/inexistente/events${consulta}`);",
         comando=(sys.executable, "tools/verify_frontend.py"),
     ),
     Mutation(
-        "el frontend deja de cargar los contratos",
-        RAIZ / "frontend" / "index.html",
-        'const r = await fetch("contracts.json");\n  contratos = await r.json();',
-        "contratos = { schemas: { EventKind: { enum: [] } } };",
-        comando=(sys.executable, "tools/verify_frontend.py"),
-    ),
-    Mutation(
+        # La aplicacion sigue teniendo el run_id, pero deja de **exponerlo**:
+        # el verificador lee el estado real de `window.__AISWE__`, que es la
+        # superficie observable de una SPA. En la version previa a React se
+        # mutaba el texto del DOM; el equivalente aqui es el puente.
         "el frontend deja de mostrar el run_id",
-        RAIZ / "frontend" / "index.html",
-        '$("run-id").textContent = cuerpo.run_id;',
-        '$("run-id").textContent = "";',
+        RAIZ / "frontend" / "src" / "App.tsx",
+        "      runId,\n      status: estado?.status ?? null,",
+        "      runId: null,\n      status: estado?.status ?? null,",
         comando=(sys.executable, "tools/verify_frontend.py"),
     ),
     Mutation(
+        # El conjunto de hitos canonicos queda vacio: los eventos siguen
+        # llegando -el flujo funciona- pero la linea de tiempo no pinta nada.
+        # En la version previa se omitia la llamada a `anadirEvento`. La
+        # primera version mutaba el `return` a `return []` directo y la cazaba
+        # el typechecker por `noUnusedLocals` (el parametro y el conjunto
+        # quedaban sin usar) antes de llegar al navegador; esta version si
+        # compila y la tiene que ver el navegador.
         "el frontend deja de pintar los eventos",
-        RAIZ / "frontend" / "index.html",
-        "  anadirEvento(ev.kind, detalle, ev.seq);",
-        "  /* anadirEvento omitido */",
+        RAIZ / "frontend" / "src" / "hooks" / "useEventosRun.ts",
+        "  const CANONICOS = new Set<string>([\n    \"requirements.completed\",\n    \"plan.completed\",\n    \"coder.completed\",\n    \"tests.completed\",\n  ]);",
+        "  const CANONICOS = new Set<string>([]);",
         comando=(sys.executable, "tools/verify_frontend.py"),
+    ),
+    # **La que se retira y por que.** "el frontend deja de cargar los
+    # contratos" rompia la lectura por red de `contracts.json`, que en la
+    # version previa alimentaba la lista de eventos del cliente. El cliente
+    # actual importa el JSON **en compilacion** -los tipos se derivan de ahi,
+    # no se escriben a mano-, asi que no hay ninguna carga en tiempo de
+    # ejecucion que romper: la mutacion pasaria en verde con y sin ella, y
+    # una mutacion asi infla el recuento sin comprar seguridad. La propiedad
+    # que quedaba -que `contracts.json` corresponde al backend- la protege
+    # `tests/test_contracts.py`, que lo compara con los modelos.
+    Mutation(
+        # La clave se lee del almacen pero no se manda: con el backend
+        # autenticado toda peticion de la interfaz es 401 y el flujo no
+        # arranca. Solo se ve en modo `--auth`.
+        "PH4: el frontend deja de mandar la clave en las peticiones",
+        RAIZ / "frontend" / "src" / "lib" / "api.ts",
+        '    ? { ...init, headers: { ...init?.headers, "X-API-Key": clave } }',
+        "    ? { ...init, headers: { ...init?.headers } }",
+        comando=(sys.executable, "tools/verify_frontend.py", "--auth"),
+    ),
+    Mutation(
+        # El `fetch` sigue autenticado, pero el `EventSource` viaja sin la
+        # clave: el flujo responde 401 y no llega ningun evento. Es la unica
+        # mutacion que vigila la excepcion `?api_key=` del lado del cliente.
+        "PH4: el flujo SSE del frontend viaja sin la clave",
+        RAIZ / "frontend" / "src" / "hooks" / "useEventosRun.ts",
+        "    const consulta = clave ? `?api_key=${encodeURIComponent(clave)}` : \"\";",
+        '    const consulta = "";',
+        comando=(sys.executable, "tools/verify_frontend.py", "--auth"),
     ),
     # ---------------------------------------------------- F2: Model Gateway
     # Cada una comprueba una propiedad que el sistema afirma tener. No se anade
@@ -1428,6 +1485,148 @@ MUTACIONES: list[Mutation] = [
         '            for run_id in huerfanas:\n                _limpiar_worktree_de_huerfana(motor, run_id)',
         "",
         "test_hardening.py",
+    ),
+    # -------------------------------------- PH4: autenticacion y autorizacion
+    # Todas se comprueban con `tests/test_auth.py`, la suite que protege la
+    # fase. Se apunta a ese fichero y no a la suite completa porque cada
+    # mutacion es de una fase concreta: la suite entera solo anadiria minutos
+    # sin anadir informacion sobre *que* protege cada una.
+    #
+    # **La que no esta y por que.** La rama `if not identidad.puede(Rol.READER)`
+    # del flujo SSE es defensiva: la enumeracion de roles es cerrada y los tres
+    # roles validos quedan todos en `reader` o por encima, asi que la rama no
+    # puede ejecutarse. Se probo la mutacion contra el sistema real (queda en
+    # el acta de la fase) y paso en verde con y sin ella: una mutacion sobre
+    # codigo inalcanzable no verifica nada, se retira.
+    Mutation(
+        # Registrar un proyecto es `admin`: fija el `repo_path` contra el que
+        # se ejecutara. Sin la dependencia, un `reader` registra proyectos.
+        "PH4: /projects deja de exigir admin",
+        SRC / "api" / "app.py",
+        '    @app.post("/projects", response_model=Project, status_code=201, dependencies=[ADMINISTRAR])',
+        '    @app.post("/projects", response_model=Project, status_code=201)',
+        "test_auth.py",
+    ),
+    Mutation(
+        # Aprobar promueve el parche al repositorio del usuario: es la accion
+        # mas sensible del sistema. Lo caza la matriz de roles.
+        "PH4: /approve deja de exigir operator",
+        SRC / "api" / "app.py",
+        '        "/runs/{run_id}/approve", response_model=RunState, dependencies=[OPERAR]',
+        '        "/runs/{run_id}/approve", response_model=RunState',
+        "test_auth.py",
+    ),
+    Mutation(
+        # La comprobacion de rol existe pero no compara: pasan todos los
+        # niveles. Matriz de roles.
+        "PH4: la comprobacion de rol deja de distinguir niveles",
+        SRC / "api" / "app.py",
+        "            if not identidad.puede(minimo):",
+        "            if False:",
+        "test_auth.py",
+    ),
+    Mutation(
+        # La jerarquia invertida: `reader` haria lo de `admin` y `admin` no
+        # podria ni leer. Lo caza la prueba de jerarquia, que es unitaria.
+        "PH4: la jerarquia de roles se invierte",
+        SRC / "security" / "auth.py",
+        "        return self.nivel >= minimo.nivel",
+        "        return self.nivel <= minimo.nivel",
+        "test_auth.py",
+    ),
+    Mutation(
+        # La autenticacion se enciende siempre. Rompe el estado por defecto:
+        # con el mapa de claves vacio, ni el desarrollo local arrancaria.
+        "PH4: la autenticacion se enciende siempre",
+        SRC / "api" / "app.py",
+        "        if not credenciales.activa:\n            return None\n        identidad = credencial_de_peticion(credenciales, x_api_key, authorization)",
+        "        if False:\n            return None\n        identidad = credencial_de_peticion(credenciales, x_api_key, authorization)",
+        "test_auth.py",
+    ),
+    Mutation(
+        # El 401 dice cosas distintas segun falte la clave o no valga: un
+        # atacante podria distinguir "esta clave existe" leyendo el mensaje.
+        "PH4: el 401 distingue clave ausente de invalida",
+        SRC / "api" / "app.py",
+        '                detail=(\n                    "se requiere una clave de API valida. Se acepta en la cabecera "\n                    "X-API-Key o como Authorization: Bearer."\n                ),',
+        '                detail=(\n                    "falta la clave en la cabecera"\n                    if not (x_api_key or authorization)\n                    else "la clave no es valida. Se acepta en la cabecera "\n                    "X-API-Key o como Authorization: Bearer."\n                ),',
+        "test_auth.py",
+    ),
+    Mutation(
+        # `/health` pasa a exigir credenciales: un balanceador que recibe 401
+        # marca el servicio caido y lo quita de rotacion.
+        "PH4: /health pasa a exigir clave",
+        SRC / "api" / "app.py",
+        '    @app.get("/health")\n    def salud() -> dict:',
+        '    @app.get("/health", dependencies=[LEER])\n    def salud() -> dict:',
+        "test_auth.py",
+    ),
+    Mutation(
+        # Dos cabeceras distintas: se acepta una en silencio. El comportamiento
+        # pasaria a depender de un detalle que el cliente no ve.
+        "PH4: dos cabeceras distintas se aceptan",
+        SRC / "security" / "auth.py",
+        "    if x_api_key and authorization:\n        return None",
+        "    if False:\n        return None",
+        "test_auth.py",
+    ),
+    Mutation(
+        # `==` en lugar de `compare_digest`: el tiempo de respuesta filtraria
+        # el prefijo de la clave, un byte por peticion. Es invisible en el
+        # resultado -mismo 401, misma identidad-, y por eso hace falta el espia
+        # de `test_la_comparacion_de_claves_usa_tiempo_constante`.
+        "PH4: la comparacion de claves pasa a ser directa",
+        SRC / "security" / "auth.py",
+        "            if hmac.compare_digest(candidata, clave):",
+        "            if candidata == clave:",
+        "test_auth.py",
+    ),
+    Mutation(
+        # Salir en la primera coincidencia: el tiempo depende de la posicion de
+        # la clave dentro del mapa. Lo caza el mismo espia.
+        "PH4: la busqueda sale en la primera coincidencia",
+        SRC / "security" / "auth.py",
+        "                identidad = Identidad(rol=rol, clave_id=_identificador(candidata))",
+        "                return Identidad(rol=rol, clave_id=_identificador(candidata))",
+        "test_auth.py",
+    ),
+    Mutation(
+        # El `clave_id` de auditoria pasa a ser la clave entera: el registro de
+        # auditoria dejaria el secreto escrito.
+        "PH4: la auditoria registra la clave entera",
+        SRC / "security" / "auth.py",
+        '    return f"{clave[:4]}...len{len(clave)}"',
+        "    return clave",
+        "test_auth.py",
+    ),
+    Mutation(
+        # Las claves de API dejan de registrarse en el redactor: una fuga en un
+        # log saldria en claro. Es la segunda linea de defensa de RNF-S3.
+        "PH4: las claves de API no se registran en el redactor",
+        SRC / "config.py",
+        "        for clave in self.api_keys:\n            if register_secret(clave):\n                registrados += 1",
+        "        for clave in self.api_keys:\n            if False:\n                registrados += 1",
+        "test_auth.py",
+    ),
+    Mutation(
+        # El flujo SSE pierde la clave por query: la excepcion que mantiene al
+        # dashboard dentro volveria a ser codigo muerto -que es exactamente el
+        # defecto que se encontro y reparo en esta fase-.
+        "PH4: el flujo SSE pierde la clave por query",
+        SRC / "api" / "app.py",
+        "            elif api_key:\n                identidad = credenciales.identificar(api_key.strip())",
+        "            elif False:\n                identidad = credenciales.identificar(api_key.strip())",
+        "test_auth.py",
+    ),
+    Mutation(
+        # La precedencia se invierte: la query manda por encima de la cabecera.
+        # Una cabecera invalida ya no es 401 -se cae a la query-, y una query
+        # invalida con cabecera valida deja de abrir el flujo.
+        "PH4: la query manda por encima de la cabecera en el flujo SSE",
+        SRC / "api" / "app.py",
+        "            if x_api_key or authorization:\n                identidad = credencial_de_peticion(credenciales, x_api_key, authorization)",
+        "            if False:\n                identidad = credencial_de_peticion(credenciales, x_api_key, authorization)",
+        "test_auth.py",
     ),
 ]
 

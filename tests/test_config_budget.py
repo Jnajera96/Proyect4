@@ -212,6 +212,37 @@ def test_una_variable_de_entorno_vacia_usa_el_valor_por_defecto(monkeypatch) -> 
     assert ajustes.max_tokens_per_run == 200_000
 
 
+def test_la_plantilla_de_entorno_completa_es_valida(monkeypatch) -> None:
+    """**Todas** las lineas de `.env.example` cargan sin error.
+
+    La plantilla promete que copiarla a `.env` no rompe el arranque, y esa promesa
+    es del archivo entero, no de las lineas que a alguien se le ocurrio probar. La
+    trampa es real: al documentar `AI_SWE_API_KEYS` se escribio `[]` -la forma
+    natural para "vacio"- y `Settings` la rechazaba, porque el campo es un
+    **diccionario**. Quien copiara la plantilla habria visto el servicio morir al
+    arrancar por una linea de documentacion.
+
+    Esta prueba carga el archivo tal cual, para que un valor mal puesto falle
+    aqui y no en el arranque de quien lo copie.
+    """
+    raiz = Path(__file__).resolve().parents[1]
+    lineas = (raiz / ".env.example").read_text(encoding="utf-8").splitlines()
+    variables = {
+        linea.split("=", 1)[0]: linea.split("=", 1)[1]
+        for linea in lineas
+        if linea.startswith("AI_SWE_")
+    }
+    assert variables, "no se leyo ninguna variable de la plantilla"
+
+    for nombre, valor in variables.items():
+        monkeypatch.setenv(nombre, valor)
+    ajustes = Settings()  # no debe lanzar
+
+    # El valor de la plantilla para las claves es el diccionario vacio, que es la
+    # autenticacion desactivada. Un `[]` aqui habria roto la carga.
+    assert ajustes.api_keys == {}
+
+
 # ----------------------------------------------- alcance de repositorios
 
 

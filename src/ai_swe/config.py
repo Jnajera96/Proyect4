@@ -173,6 +173,56 @@ class Settings(BaseSettings):
         description="Hosts aceptados en la cabecera Host. Cualquier otro es 400.",
     )
 
+    # --- Autenticacion (API keys) ---------------------------------------------
+    # Claves de API por rol. **Vacio por defecto = autenticacion DESACTIVADA**: el
+    # sistema sigue siendo utilizable en bucle local mono-usuario sin configurar
+    # nada, que es el modo en el que se ha desarrollado. Declarar al menos una
+    # clave **enciende** la autenticacion en toda la API (menos `/health`).
+    #
+    # Formato: JSON objeto `{"clave": "rol", ...}`. Los roles son una enumeracion
+    # cerrada (`docs/BASELINE-PUBLIC-EXPOSURE.md`):
+    #   admin     todo, incluido registrar proyectos.
+    #   operator  ciclo de vida de ejecuciones (crear, listar, aprobar, cancelar,
+    #             transcribir). No registra proyectos.
+    #   reader    solo lectura.
+    #
+    # **Por que un mapa y no una lista.** El rol viaja con la clave: asi una clave
+    # filtrada no concede mas de lo que su portador necesitaba, y revocar el acceso
+    # de alguien es quitar su clave, no cambiar el sistema para todos.
+    #
+    # **Las claves son secretos.** Se guardan aqui como texto porque venir del
+    # entorno es la unica forma practica de configurarlas, pero se registran en el
+    # redactor (ver `registrar_secretos`) para que ninguna acabe en un log, y la
+    # comparacion es en tiempo constante para no filtrar el prefijo por temporizacion.
+    api_keys: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Claves de API por rol: {clave: rol}. Vacio = autenticacion desactivada."
+        ),
+    )
+
+    @field_validator("api_keys")
+    @classmethod
+    def _validar_roles_de_claves(cls, value: dict[str, str]) -> dict[str, str]:
+        """Los roles deben ser de la enumeracion cerrada, y las claves no vacias.
+
+        Una clave con rol inventado se aceptaria en silencio y luego fallaria en
+        tiempo de peticion con un error que no explica nada: mejor pararlo aqui,
+        al arrancar, donde el mensaje puede nombrar la clave (no su valor) y el
+        valor recibido.
+        """
+        from ai_swe.security.auth import ROLES_VALIDOS
+
+        for clave, rol in value.items():
+            if not clave.strip():
+                raise ValueError("hay una clave de API vacia en AI_SWE_API_KEYS")
+            if rol not in ROLES_VALIDOS:
+                raise ValueError(
+                    f"rol de API no reconocido: {rol!r}. "
+                    f"Roles validos: {', '.join(sorted(ROLES_VALIDOS))}"
+                )
+        return value
+
     # --- Speech-to-Text ------------------------------------------------------
     stt_provider: str = Field(default="faster-whisper")
     stt_model: str = Field(default="large-v3")
@@ -269,6 +319,11 @@ class Settings(BaseSettings):
         registrados = 0
         for secreto in (self.model_api_key, self.langfuse_secret_key, self.langfuse_public_key):
             if register_secret(secreto.get_secret_value()):
+                registrados += 1
+        # Las claves de API son secretos como los demas. Se registran para que una
+        # fuga en un log o en un mensaje de error salga `[REDACTED]` y no en claro.
+        for clave in self.api_keys:
+            if register_secret(clave):
                 registrados += 1
         return registrados
 
