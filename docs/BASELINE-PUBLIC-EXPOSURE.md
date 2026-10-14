@@ -371,6 +371,16 @@ salido "NO CAZADA" sin que nada hubiera fallado. Desde esta fase la herramienta
 **reconstruye `dist` antes de verificar** -que un cambio sin compilar se note,
 no que se verde sobre el arbol viejo-.
 
+**Y el `dist` que deja el arnes hay que reconstruirlo antes de mirarlo.** El
+verificador compila el frontend en cada mutacion, asi que al terminar deja `dist`
+construido desde la **ultima** que probo -en esta corrida, justo la que rompe la
+mascara de la credencial-. La verificacion no se equivoca, porque reconstruye
+siempre; cualquier otra cosa que sirva `dist`, si. Al capturar la pantalla para
+revisar el diseno salio la credencial **entera a la vista**: el fichero del
+producto estaba bien y lo que estaba mal era lo que se estaba sirviendo. El
+capturador (`tools/capturar_interfaz.py`) reconstruye antes de disparar, por el
+mismo motivo que el verificador.
+
 ## 7. TESTS
 
 Suite completa (`python -m pytest -q --junitxml=_fase4_final.xml`):
