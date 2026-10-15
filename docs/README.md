@@ -9,6 +9,10 @@
 
 ## Estado verificado del proyecto
 
+Para orientarse durante la productización pausada: [mapa y guía de lectura](MAPA-DEL-PROYECTO.md),
+[progreso actual](PRODUCTIZATION-PROGRESS.md) y [punto de reanudación](RESUME-PRODUCTIZATION-v0.1.0.md).
+El laboratorio está preparado parcialmente; no confundir catálogo con benchmarks reales.
+
 | Fuente | Qué es |
 |---|---|
 | [`RELEASE-CANDIDATE-PHASE-C.md`](RELEASE-CANDIDATE-PHASE-C.md) | Candidato local de entrega, correcciones reproducidas y límites de Fase C |
