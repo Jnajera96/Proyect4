@@ -14,6 +14,7 @@
 # porque git no desciende a un directorio ya excluido.
 /var/*
 !/var/evaluation_results.json
+!/var/model_lab_results.json
 *.sqlite3
 *.sqlite3-journal
 *.sqlite3-wal
