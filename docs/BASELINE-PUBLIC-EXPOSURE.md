@@ -397,8 +397,17 @@ implementacion y una -el espia de la comparacion- se anadio al verificar,
 porque sin ella dos mutaciones reales no se veian.
 
 Frontend, en navegador real (`tools/verify_frontend.py`): 17 comprobaciones en
-modo sin autenticacion y 25 en modo autenticado, todas en verde, con la
+modo sin autenticacion y 24 en modo autenticado, todas en verde, con la
 aplicacion **reconstruida desde el fuente** en cada corrida.
+
+**Correccion de una cifra.** Una version anterior de este acta decia "25 en modo
+autenticado". El recuento real es **24**, y era un error de conteo mio, no una
+comprobacion perdida: el conjunto de comprobaciones del verificador no ha
+cambiado -`git diff` sobre `tools/verify_frontend.py` no muestra ninguna alta ni
+ninguna baja de `comprobar(`-, y el recuento definitivo se hizo contando las
+lineas `OK` de la salida. Se corrige aqui, en el snapshot y en la nota de la
+sesion. La cifra importa: un numero inflado en un acta es justo el dato que
+nadie vuelve a comprobar.
 
 En el modo `--auth` la credencial **no se inyecta en ningun almacen del
 navegador**: la sonda rellena la pantalla de acceso de la aplicacion -la teclea y
@@ -407,6 +416,28 @@ exige de verdad (401 sin ella, 200 con ella), que la sesion queda autenticada, y
 que la credencial no acaba en el almacen del navegador, ni en el DOM, ni en la
 consola. Es una verificacion mas fuerte que la anterior, que daba la clave por
 puesta inyectandola en `localStorage`.
+
+**Y tres herramientas mas, cada una para lo que la principal no llega.**
+
+  - `tools/verify_puerta_aprobacion.py` siembra una ejecucion detenida en
+    `awaiting_approval` con evidencia real y comprueba lo que la pantalla mas
+    consecuente del sistema ensena: el diff, la evidencia de pruebas con el
+    veredicto derivado del `exit_code`, el veredicto del revisor, el aviso de
+    consecuencia y que **ninguna decision viene preseleccionada**. 14/14. Que no
+    comprueba el clic en Aprobar esta dicho en la seccion 10, con su motivo.
+  - `tools/verify_pantallas.py` abre el detalle sembrado en los cuatro tamanos y
+    mide alli lo que no se puede leer en el fuente: el contraste pintado
+    (`AA`, 4,5:1, sobre fondo blanco **y tintado**), que no haya desborde
+    horizontal, que la navegacion este entera, que el presupuesto pintado sea
+    **el que manda el servidor** -no una cifra parecida-, que el coste se declare
+    "tarifas no configuradas" cuando no hay tarifas y que nunca se imprima un
+    `$0,00`. Con el almacen vacio mide ademas que los estados vacios explican la
+    situacion y que no queda ningun esqueleto de carga colgado.
+  - `tools/verify_voz.py` conduce el flujo de voz completo con el adaptador
+    fingido del backend y comprueba que la transcripcion no lanza nada sola
+    (`RF-02`) y que la ejecucion nace con su procedencia (`RF-03`), dictada y
+    tecleada -las dos, porque un sistema que marcase todo como dictado falsearia
+    el origen igual que uno que no marcase nada-.
 
 ## 8. LIMITACIONES
 
@@ -441,7 +472,7 @@ Verificacion:
     `frontend` (el conjunto del frontend crecio con el rediseno: las cinco
     anteriores mas las dos que vigilan que la credencial no se persista ni se
     pinte).
-  - Navegador real: **17/17** sin autenticacion y **25/25** con ella.
+  - Navegador real: **17/17** sin autenticacion y **24/24** con ella.
   - Dos mutaciones candidatas se retiraron **con evidencia**, no con suposicion:
     la rama defensiva de rol del SSE (verde con y sin la mutacion: la
     enumeracion cerrada la hace inalcanzable) y la de los contratos del frontend
@@ -462,3 +493,154 @@ de un solo uso que sustituya la clave en la query del SSE. Estan en la seccion 8
 y en el snapshot: **TD-02** para el vale del SSE -es codigo- y **TD-03** para la
 operacion de exposicion. Con esos puntos abiertos, el servicio sigue siendo de
 exposicion local.
+
+## 10. INTERFAZ COMPLETA (entrega posterior del frontend)
+
+Sobre la base autenticada de las secciones anteriores se completa la interfaz. **No
+se toco el backend ni el mecanismo de acceso**: `PantallaAcceso.tsx` y `auth.ts`
+siguen como estaban, y la credencial sigue viviendo solo en memoria.
+
+**Siete vistas, ninguna sin funcionalidad real.** Vista general (franja de estado,
+compositor, ejecucion seleccionada con sus puertas, ejecuciones recientes,
+proyectos y flujo), Proyectos (`GET`/`POST /projects` y `GET /projects/{id}`),
+Ejecuciones (historial con filtro de cliente), Detalle (la vista completa),
+Flujo (el diagrama de etapas), Seguridad y Sesion. **No hay seccion de ajustes**:
+el backend no expone ningun endpoint de configuracion, y unos interruptores que no
+cambian nada prometen un control que no existe; lo que hay en "Sesion" es la
+credencial de esta pestana y lo que `/health` publica.
+
+**El detalle de una ejecucion** reune: resumen (peticion, origen -incluido el
+dictado, con su proveedor y su confianza-, intencion, proyecto y `trace_id`),
+flujo, timeline, plan con la subtarea en curso, cambios de codigo con el diff
+literal, evidencia de pruebas, veredicto del revisor con sus hallazgos,
+investigacion (hallazgos e incognitas declaradas), presupuesto, aprobaciones,
+errores y resultado final.
+
+**Lo que se representa y de donde sale cada dato.** El flujo son los nodos reales
+del grafo (`interpret`, `plan`, `researcher`, `coder`, `run_tests`, `reviewer`,
+`approval_gate`, `promote_changes`), y el estado de cada etapa se deriva de
+evidencia guardada: `interpretation`, `plan`, `outputs.*`, `evidence.test_runs`,
+`approvals`, `final_report` y `next_step`. No hay un "en curso" pintado por
+temporizador. El presupuesto son los campos reales de `RunState.budget`; el
+veredicto de las pruebas se deriva del `exit_code` porque el contrato **no tiene**
+un campo `status`, y se ensena el codigo al lado para que la derivacion sea
+visible. El historial de aprobaciones son los campos reales de `Approval`
+(accion, actor, fecha, `content_sha256`, decision, motivo).
+
+**Lo que no se muestra porque no existe.** No hay Knowledge Graph, ni MCP, ni
+Langfuse, ni OAuth, ni usuarios, ni contrasenas, ni registro, ni recuperacion de
+cuenta. No hay cancelacion de ejecuciones: el endpoint responde 501 y la interfaz
+lo dice en lugar de ofrecer un boton que no puede funcionar. No hay borrado de
+ejecuciones ni de proyectos: no existe el endpoint. No hay seleccion de modelo. El
+panel de voz aparece **solo si el servidor puede transcribir** (`/health` publica
+si el adaptador esta listo): en este entorno no lo esta -falta el extra opcional de
+voz-, asi que se explica en lugar de ofrecer un microfono que fallaria al subir.
+
+**Accesibilidad y responsive.** Foco visible en todo elemento interactivo,
+`aria-current` en la navegacion, `role="status"` en los avisos de espera,
+`role="alert"` en los errores, `aria-expanded` en lo plegable, `role="progressbar"`
+en las barras y etiquetas en todos los campos. El foco se mueve al contenido al
+cambiar de vista: sin eso, quien navega con el teclado se queda en la barra. La
+rejilla de estado pasa de seis a tres a dos a una columna, y `tools/verify_pantallas.py`
+lo mide sin desborde horizontal en **1920x1080, 1440x900, 1366x768 y 834x1112**
+(tableta). Que la tableta sea 834x1112 y no 1024x768 lo dice la propia herramienta
+(`TAMANOS`), y es el tamano que se mide: un acta que invente la tableta describe
+una pantalla que nadie ha abierto.
+
+**Las cifras no cambian: se conservan.** 17/17 comprobaciones sin autenticacion,
+24/24 con ella, 7/7 mutaciones del frontend cazadas y la suite del backend en
+678/0/0/2. La verificacion del navegador sigue pulsando los botones de verdad:
+encuentra el compositor, lanza la ejecucion, responde a las dos puertas y lee el
+estado real del puente de diagnostico.
+
+**La puerta de aprobacion tiene su propio verificador, y con el alcance
+declarado.** El flujo automatizado **no llega** a esa puerta: sin repositorio ni
+modelo reales el Coder no produce cambios, el grafo termina en
+`escalate_no_changes` y la ejecucion pasa de la puerta de requisitos a `completed`
+sin pedir aprobacion. Es decir, la pantalla mas consecuente del sistema -la unica
+que promueve cambios al repositorio- no la ejercitaba nadie.
+`tools/verify_puerta_aprobacion.py` siembra una ejecucion detenida en
+`awaiting_approval` con evidencia real (diff, dos ejecuciones de pruebas -una
+correcta y una fallida-, veredicto del revisor con hallazgos y presupuesto
+consumido) y comprueba **lo que la pantalla ensena**: el diff con su cabecera y
+sus lineas, la evidencia con el veredicto derivado del `exit_code` (una pasa, una
+falla), el veredicto del revisor, el aviso de consecuencia, las tres decisiones y
+que **ninguna viene preseleccionada**. 14/14.
+
+  - **Lo que ese verificador NO comprueba, y por que.** Pulsar Aprobar reanuda el
+    grafo desde el checkpoint de LangGraph; una fila sembrada a mano no tiene
+    checkpoint y el servidor responde **409 `NOTHING_TO_RESUME`** -y hace bien:
+    aprobar sin nada que reanudar seria una promocion sin cambio-. La reanudacion y
+    la promocion las cubre la suite de pytest (F12). Fingir ahi un clic que no puede
+    funcionar seria verificar el camino de error y llamarlo exito.
+  - Para poder volcar el DOM, la sonda apaga el `EventSource` y el sondeo de 900 ms
+    de la aplicacion, **y lo dice**: el reloj virtual de Chrome no avanza mientras
+    hay una peticion pendiente, y el flujo de una ejecucion detenida es una peticion
+    abierta para siempre. El flujo y el sondeo los verifica la verificacion
+    principal, donde la ejecucion termina y se observa que la vista avanza.
+
+**Y ese verificador encontro un defecto real: contenido duplicado.** Contaba cuatro
+ejecuciones de pruebas donde hay dos, porque la vista de detalle pintaba la puerta
+-que ya ensena el diff, la evidencia y el veredicto- y **volvia a pintar** esas tres
+secciones debajo. Se corrigio: mientras la ejecucion esta en una puerta, la puerta
+es la vista; las secciones sueltas aparecen cuando la ejecucion no espera nada.
+Es el tipo de defecto que no se ve leyendo el codigo y que si se ve contando lo que
+hay en pantalla.
+
+### 10.1 Lo que se completo despues (misma entrega, sin tocar el acceso)
+
+Cuatro cosas, todas delante del backend existente.
+
+**El dictado llega hasta la ejecucion con su procedencia.** El panel de voz ya
+llevaba el audio a `POST /transcriptions` y devolvia el texto editable, pero ahi se
+perdia la pista: `crearRun` no mandaba `source` ni `transcript_meta`, asi que una
+instruccion dictada nacia como `source: "text"` y el campo `transcript_meta` del
+estado -que la vista de detalle ensena- **no podia existir nunca**. Ahora el texto
+confirmado viaja con sus metadatos (`RF-03`), y **editar el texto a mano la pierde
+procedencia**: una instruccion reescrita por la persona ya no es la que reconocio
+el modelo, y registrarla como dictada con la confianza de otro texto falsearia el
+origen. Lo verifica `tools/verify_voz.py`, que conduce el flujo completo con el
+adaptador fingido del backend y comprueba las dos mitas: la dictada queda como
+`source: "voice"` con `provider`, `confidence` y el texto **corregido**; la tecleada
+a mano queda como `source: "text"` y sin metadatos. Y que confirmar el texto **no
+lanza ninguna ejecucion** (`RF-02`). 20/20 en verde, con una correccion por el
+medio: la primera version buscaba la instruccion en `/runs`, que devuelve
+`RunSummary` y **no la lleva**; hay que pedir el detalle de cada ejecucion.
+
+**La seccion de Seguridad entro en el detalle, y dejo de estar duplicada.** El
+panel de aislamiento estaba escrito dos veces -en `evidencia.tsx`
+(`PanelSeguridadRun`, que no usaba nadie) y copiado a mano en `VistaSeguridad`-. Se
+usa el compartido en los dos sitios, que es para lo que estaba escrito, y el
+detalle de la ejecucion gana la seccion que le faltaba.
+
+**El contraste del texto secundario, sobre fondo tintado.** El gris terciario
+cumplia AA sobre blanco (4,45:1) pero se quedaba **cuatro centesimas por debajo**
+sobre el fondo azulado de la subtarea en curso. Lo encontro midiendo en el
+navegador, no la hoja de estilos: el nodo peor era un `.tenue` dentro de
+`.subtareas li.actual`. Con `--texto-tenue: #6a6a6f` da 4,72:1 sobre ese fondo y
+5,38:1 sobre blanco. Los detalles estan en el comentario de `estilos.css`, que es
+donde se van a buscar la proxima vez.
+
+**El historial de ejecuciones se cortaba en silencio.** `GET /runs` sin parametro
+devuelve 50 filas, y la vista decia "todas las ejecuciones que el servidor tiene
+guardadas" mientras el panel de estado contabilizaba el total real de `/health`. Se
+pide la pagina maxima (`limit=200`) con vuelta atras: si un servidor tiene
+`max_page_size` por debajo, responde 422 y se pide la pagina por defecto antes que
+quedarse sin historial.
+
+**Y un fallo de construccion que habia que resolver para poder verificar nada.** El
+entorno de trabajo bloquea los borrados en bloque, y Vite vacia el directorio de
+salida antes de compilar: `npm run build` moria en el `rmSync`. Eso rompe tambien a
+`verify_frontend.py`, que reconstruye antes de verificar. `build.emptyOutDir` pasa a
+`false` con el motivo escrito en `vite.config.ts`; los ficheros viejos se quedan en
+`dist` (ignorado por git) y `index.html` solo referencia los del ultimo build.
+
+**Y al capturar las pantallas, un fallo que parecia de la interfaz y era del
+instrumento.** La captura del presupuesto salia **en blanco** -un PNG de 5,8 KB con
+la pagina entera sin pintar-. No era la pagina: con `--dump-dom` se veia el detalle
+completo, presupuesto incluido. Era el `scrollIntoView` con el que la sonda llevaba
+la seccion a la vista: con el Chrome headless de este entorno deja el fotograma
+vacio, y con ventana alta devuelve un recorte de 28 KB que tampoco es lo que se
+pide. La solucion es la contraria -no hacer scroll y dar una ventana lo bastante
+alta para que la pagina quepa entera-, y asi sale la pagina completa, 174 KB. Si una
+captura sale sospechosamente pequena, el tamano del fichero es el sintoma.

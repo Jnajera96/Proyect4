@@ -10,11 +10,15 @@
  * `{decision, intent?, constraints?, rationale?}`; mandar `intent` y `constraints`
  * juntos es lo que permite arreglar una clasificacion equivocada sin reescribir la
  * peticion entera.
+ *
+ * La puerta se presenta como lo que es: **una parada**. El flujo no sigue hasta
+ * que alguien decida, y eso se dice en voz alta en la cabecera.
  */
 import { useState } from "react";
-import { api, ErrorApi } from "../lib/api";
+import { api } from "../lib/api";
+import { rutaCorta } from "../lib/formato";
 import { ETIQUETA_ESTADO, type Intent, type RunState } from "../lib/contracts";
-import { Fila } from "./ui";
+import { Chip, Fila, Seccion } from "./ui";
 
 const ETIQUETA_INTENT: Record<Intent, string> = {
   question: "pregunta",
@@ -28,9 +32,12 @@ const INTENTS: Intent[] = ["question", "inspect", "modify", "out_of_scope"];
 export function PuertaRequisitos({
   estado,
   alDecidir,
+  alFallo,
 }: {
   estado: RunState;
   alDecidir: () => void;
+  /** Anota el fallo en el shell y devuelve el mensaje que hay que enseñar. */
+  alFallo: (causa: unknown) => string;
 }) {
   const interp = estado.interpretation;
   const [modo, setModo] = useState<"revisar" | "corregir">("revisar");
@@ -49,14 +56,8 @@ export function PuertaRequisitos({
     try {
       await api.confirmarRequisitos(estado.run_id, decision, correcciones);
       alDecidir();
-    } catch (e) {
-      const mensaje =
-        e instanceof ErrorApi
-          ? e.errorClass
-            ? `${e.errorClass}: ${e.message}`
-            : e.message
-          : String(e);
-      setError(mensaje);
+    } catch (causa) {
+      setError(alFallo(causa));
     } finally {
       setOcupado(false);
     }
@@ -84,55 +85,72 @@ export function PuertaRequisitos({
   }
 
   return (
-    <section className="panel">
-      <h2 className="panel-titulo">Confirmación de requisitos</h2>
-      <p className="panel-nota">
-        El sistema ha interpretado tu petición. Confirma que es correcta o corrígela
-        antes de que se planifique nada.
-      </p>
+    <section className="puerta" aria-labelledby="titulo-puerta-requisitos">
+      <header className="puerta-cabecera">
+        <div>
+          <p className="puerta-aviso" role="status">
+            El flujo está detenido esperando tu decisión
+          </p>
+          <h2 className="puerta-titulo" id="titulo-puerta-requisitos">
+            Confirmación de requisitos
+          </h2>
+          <p className="puerta-nota">
+            Nada se planifica hasta que confirmes que lo entendido es lo que pediste.
+          </p>
+        </div>
+        <Chip tono="aviso">{ETIQUETA_ESTADO[estado.status]}</Chip>
+      </header>
 
       {!interp ? (
         <p className="vacio">Aún no hay interpretación registrada.</p>
       ) : modo === "revisar" ? (
         <>
-          <dl className="datos">
-            <dt>extraído</dt>
-            <dd className="mono">{estado.instruction.text}</dd>
-            <dt>intención</dt>
-            <dd>
-              {ETIQUETA_INTENT[interp.intent]} ({interp.intent})
-            </dd>
-            <dt>confianza</dt>
-            <dd>{(interp.confidence * 100).toFixed(0)}%</dd>
-            <dt>repositorio</dt>
-            <dd className="mono">{interp.scope.repo_path}</dd>
-            <dt>rutas libres</dt>
-            <dd className="mono">
-              {interp.scope.allowed_paths.length
-                ? interp.scope.allowed_paths.join(", ")
-                : "(todo el repositorio)"}
-            </dd>
-            <dt>rutas protegidas</dt>
-            <dd className="mono">
-              {interp.scope.protected_paths.length
-                ? interp.scope.protected_paths.join(", ")
-                : "—"}
-            </dd>
-            <dt>restricciones</dt>
-            <dd>
-              {interp.constraints.length ? (
-                <ul className="limpia">
-                  {interp.constraints.map((c, i) => (
-                    <li key={i}>{c}</li>
-                  ))}
-                </ul>
-              ) : (
-                "—"
-              )}
-            </dd>
-            <dt>por qué</dt>
-            <dd>{interp.rationale}</dd>
-          </dl>
+          <Seccion titulo="Lo que el sistema entendió">
+            <dl className="datos">
+              <dt>tu petición</dt>
+              <dd className="mono">{estado.instruction.text}</dd>
+              <dt>intención</dt>
+              <dd>
+                {ETIQUETA_INTENT[interp.intent]}{" "}
+                <span className="tenue mono">({interp.intent})</span>
+              </dd>
+              <dt>confianza</dt>
+              <dd>
+                {(interp.confidence * 100).toFixed(0)}%
+                <span className="tenue"> · lo que el modelo declara, no una certeza</span>
+              </dd>
+              <dt>repositorio</dt>
+              <dd className="mono" title={interp.scope.repo_path}>
+                {rutaCorta(interp.scope.repo_path)}
+              </dd>
+              <dt>rutas libres</dt>
+              <dd className="mono">
+                {interp.scope.allowed_paths.length
+                  ? interp.scope.allowed_paths.join(", ")
+                  : "(todo el repositorio)"}
+              </dd>
+              <dt>rutas protegidas</dt>
+              <dd className="mono">
+                {interp.scope.protected_paths.length
+                  ? interp.scope.protected_paths.join(", ")
+                  : "—"}
+              </dd>
+              <dt>restricciones</dt>
+              <dd>
+                {interp.constraints.length ? (
+                  <ul className="limpia">
+                    {interp.constraints.map((c, i) => (
+                      <li key={i}>{c}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  "—"
+                )}
+              </dd>
+              <dt>por qué</dt>
+              <dd>{interp.rationale}</dd>
+            </dl>
+          </Seccion>
 
           <Fila sep>
             <button
@@ -141,10 +159,10 @@ export function PuertaRequisitos({
               disabled={ocupado}
               onClick={() => void enviar("approved")}
             >
-              Confirmar requisitos
+              Confirmar
             </button>
             <button disabled={ocupado} onClick={() => setModo("corregir")}>
-              Corregir
+              Modificar
             </button>
             <button
               className="peligro"
@@ -153,52 +171,48 @@ export function PuertaRequisitos({
             >
               Rechazar
             </button>
+            <span className="tenue">
+              Rechazar detiene la ejecución: no se planifica nada.
+            </span>
           </Fila>
         </>
       ) : (
         <>
-          <div className="stack">
-            <div>
-              <label htmlFor="g1-intent">Intención</label>
-              <select
-                id="g1-intent"
-                value={intent}
-                onChange={(e) => setIntent(e.target.value as Intent)}
-                style={{
-                  width: "100%",
-                  font: "inherit",
-                  padding: "0.55rem 0.75rem",
-                  borderRadius: "var(--radio-sm)",
-                  border: "1px solid var(--borde)",
-                  background: "var(--superficie-2)",
-                  color: "var(--texto)",
-                }}
-              >
-                {INTENTS.map((i) => (
-                  <option key={i} value={i}>
-                    {ETIQUETA_INTENT[i]} ({i})
-                  </option>
-                ))}
-              </select>
+          <Seccion titulo="Corregir lo entendido" nota="Solo se envía lo que cambies.">
+            <div className="stack">
+              <div>
+                <label htmlFor="g1-intent">Intención</label>
+                <select
+                  id="g1-intent"
+                  value={intent}
+                  onChange={(e) => setIntent(e.target.value as Intent)}
+                >
+                  {INTENTS.map((i) => (
+                    <option key={i} value={i}>
+                      {ETIQUETA_INTENT[i]} ({i})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="g1-constraints">Restricciones (una por línea)</label>
+                <textarea
+                  id="g1-constraints"
+                  value={constraints}
+                  onChange={(e) => setConstraints(e.target.value)}
+                  placeholder="no toques el esquema de la base de datos"
+                />
+              </div>
+              <div>
+                <label htmlFor="g1-rationale">Por qué (razonamiento)</label>
+                <textarea
+                  id="g1-rationale"
+                  value={rationale}
+                  onChange={(e) => setRationale(e.target.value)}
+                />
+              </div>
             </div>
-            <div>
-              <label htmlFor="g1-constraints">Restricciones (una por línea)</label>
-              <textarea
-                id="g1-constraints"
-                value={constraints}
-                onChange={(e) => setConstraints(e.target.value)}
-                placeholder="no toques el esquema de la base de datos"
-              />
-            </div>
-            <div>
-              <label htmlFor="g1-rationale">Por qué (razonamiento)</label>
-              <textarea
-                id="g1-rationale"
-                value={rationale}
-                onChange={(e) => setRationale(e.target.value)}
-              />
-            </div>
-          </div>
+          </Seccion>
 
           <Fila sep>
             <button className="primario" disabled={ocupado} onClick={corregir}>
@@ -216,9 +230,6 @@ export function PuertaRequisitos({
           No se pudo responder a la puerta: {error}
         </p>
       ) : null}
-      <p className="tenue fila-sep">
-        Estado de la ejecución: {ETIQUETA_ESTADO[estado.status]}
-      </p>
     </section>
   );
 }

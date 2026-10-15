@@ -48,7 +48,7 @@ export function PantallaAcceso({
             if (!validando) onEntrar(clave);
           }}
         >
-          <label htmlFor="api-key">Clave de API</label>
+          <label htmlFor="api-key">Clave API</label>
           <input
             id="api-key"
             type="password"

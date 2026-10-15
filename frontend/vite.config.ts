@@ -19,7 +19,21 @@ export default defineConfig({
   base: "/app/",
   build: {
     outDir: "dist",
-    emptyOutDir: true,
+    // **No se vacia `dist` antes de escribir.** El entorno de trabajo bloquea los
+    // borrados en bloque: el `rmSync` con el que Vite vacia el directorio de
+    // salida lo aborta, y `npm run build` -y con el todo el que dependa de el,
+    // incluido `tools/verify_frontend.py`, que reconstruye antes de verificar-
+    // se quedaba sin construccion posible.
+    //
+    // Las consecuencias estan acotadas y son peores que la alternativa:
+    //   - Los ficheros viejos se quedan en `dist` (que esta ignorado por git). No
+    //     se sirven: `index.html` solo referencia los del ultimo build, y Vite
+    //     escribe nombres con hash nuevo.
+    //   - Quien quiera un `dist` limpio lo borra a mano, fuera de la herramienta.
+    //
+    // Falso verde que esto evita: construir de verdad. Si algun dia el borrado
+    // vuelve a estar permitido, `emptyOutDir: true` es preferible.
+    emptyOutDir: false,
   },
   server: {
     port: 5173,

@@ -414,6 +414,18 @@ MUTACIONES: list[Mutation] = [
         '  return "\\u2022".repeat(clave.length - visibles) + clave;',
         comando=(sys.executable, "tools/verify_frontend.py", "--auth"),
     ),
+    Mutation(
+        # La instruccion dictada pierde su procedencia: se manda como texto y la
+        # ejecucion nace sin `source: "voice"` ni metadatos, que es exactamente el
+        # hueco que habia antes de cablear el flujo de voz. Lo ve
+        # `tools/verify_voz.py`, que crea las dos ejecuciones -la dictada y la
+        # tecleada- y lee por la API como quedo registrada cada una.
+        "el frontend pierde la procedencia del dictado",
+        RAIZ / "frontend" / "src" / "App.tsx",
+        "        transcripcion ?? undefined,",
+        "        undefined,",
+        comando=(sys.executable, "tools/verify_voz.py"),
+    ),
     # ---------------------------------------------------- F2: Model Gateway
     # Cada una comprueba una propiedad que el sistema afirma tener. No se anade
     # ninguna que no haga caer a una prueba concreta.

@@ -15,6 +15,7 @@ import type {
   Project,
   RunState,
   RunSummary,
+  Transcript,
 } from "./contracts";
 import { claveActiva } from "./auth";
 
@@ -66,9 +67,9 @@ function mensajeDeError(cuerpo: unknown, status: number): string {
 export function mensajeVisible(causa: unknown, habiaCredencial: boolean): string {
   if (causa instanceof ErrorApi) {
     if (causa.status === 401) {
-      return habiaCredencial ? "Clave de API invalida." : "Se requiere autenticacion.";
+      return habiaCredencial ? "Clave API no válida." : "Autenticación requerida.";
     }
-    if (causa.status === 403) return "No tienes permiso para realizar esta accion.";
+    if (causa.status === 403) return "No tienes permisos para realizar esta acción.";
   }
   return causa instanceof Error ? causa.message : String(causa);
 }
@@ -135,11 +136,47 @@ async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: () => pedir<Health>("/health"),
 
-  listarRuns: () => pedir<RunSummary[]>("/runs"),
+  /**
+   * Lista de ejecuciones.
+   *
+   * Se pide la pagina maxima que el servidor admite por defecto (`limit=200`,
+   * contra los 50 que devuelve sin parametro): sin eso el historial se cortaba en
+   * 50 filas sin que la interfaz lo dijera, y el panel de estado contabilizaba el
+   * total real de `/health`. Si un servidor tiene `max_page_size` por debajo de
+   * 200 el listado responde 422 -es un limite suyo, no un fallo de la interfaz-,
+   * y se vuelve a pedir la pagina por defecto antes que quedarse sin historial.
+   */
+  listarRuns: async (): Promise<RunSummary[]> => {
+    try {
+      return await pedir<RunSummary[]>("/runs?limit=200");
+    } catch (causa) {
+      if (causa instanceof ErrorApi && causa.status === 422) {
+        return await pedir<RunSummary[]>("/runs");
+      }
+      throw causa;
+    }
+  },
 
   obtenerRun: (runId: string) => pedir<RunState>(`/runs/${encodeURIComponent(runId)}`),
 
   listarProyectos: () => pedir<Project[]>("/projects"),
+
+  obtenerProyecto: (projectId: string) =>
+    pedir<Project>(`/projects/${encodeURIComponent(projectId)}`),
+
+  /**
+   * Sube audio y devuelve la transcripcion. **No crea ninguna ejecucion**
+   * (`RF-02`): el texto vuelve a la persona, que lo revisa y decide.
+   *
+   * El `Content-Type` no se fija a mano: lo pone el navegador con el `boundary`
+   * del formulario, y fijarlo rompe la peticion.
+   */
+  transcribir: (audio: Blob, nombre: string, vocabulario?: string) => {
+    const cuerpo = new FormData();
+    cuerpo.append("audio", audio, nombre);
+    if (vocabulario?.trim()) cuerpo.append("vocabulary", vocabulario.trim());
+    return pedir<Transcript>("/transcriptions", { method: "POST", body: cuerpo });
+  },
 
   crearProyecto: (name: string, repoPath: string) =>
     pedir<Project>("/projects", {
@@ -148,13 +185,38 @@ export const api = {
       body: JSON.stringify({ name, repo_path: repoPath }),
     }),
 
-  crearRun: (instruccion: string, projectId?: string) =>
+  /**
+   * Crea una ejecucion.
+   *
+   * `meta` es la transcripcion de origen cuando la instruccion viene de un
+   * dictado. **Mando `meta` la ejecucion se registra como de voz** y el backend
+   * exige entonces los metadatos del reconocimiento (`RF-03`): sin ellos, la
+   * peticion es rechazada, y sin ellos la ejecucion pierde el rastro de que la
+   * instruccion se dicto -que es justo lo que el campo `transcript_meta` del
+   * estado guarda-. Sin `meta`, la instruccion es de texto y el campo no se
+   * envia, que es lo que el contrato pide.
+   */
+  crearRun: (instruccion: string, projectId?: string, meta?: Transcript) =>
     pedir<RunState>("/runs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         instruction: instruccion,
         ...(projectId ? { project_id: projectId } : {}),
+        ...(meta
+          ? {
+              source: "voice",
+              transcript_meta: {
+                provider: meta.provider,
+                language: meta.language,
+                confidence: meta.confidence,
+                duration_s: meta.duration_s,
+                // La interfaz ensena el aviso de confianza baja antes de dejar
+                // confirmar el texto, asi que esto describe lo que ocurrio.
+                low_confidence_warned: meta.low_confidence,
+              },
+            }
+          : {}),
       }),
     }),
 
@@ -170,12 +232,21 @@ export const api = {
       body: JSON.stringify({ decision, ...correcciones }),
     }),
 
-  /** Responde a la puerta de aprobacion del cambio. */
-  aprobar: (runId: string, decision: string) =>
+  /**
+   * Responde a la puerta de aprobacion del cambio (F12).
+   *
+   * `comments` solo tiene sentido al **solicitar cambios** -son las instrucciones
+   * para la siguiente iteracion- y el backend los ignora en las otras decisiones.
+   * Se envian solo si hay algo escrito: mandar una cadena vacia no anade nada.
+   */
+  aprobar: (runId: string, decision: string, comments?: string) =>
     pedir<RunState>(`/runs/${encodeURIComponent(runId)}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ decision }),
+      body: JSON.stringify({
+        decision,
+        ...(comments?.trim() ? { comments: comments.trim() } : {}),
+      }),
     }),
 
   /** El informe final de una ejecucion, si ya existe. */

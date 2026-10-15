@@ -114,6 +114,72 @@ export interface FileChange {
   sha256: string;
 }
 
+/** Una linea de la transcripcion, con su tramo de tiempo. */
+export interface Segment {
+  start_s: number;
+  end_s: number;
+  text: string;
+}
+
+/**
+ * Resultado de `POST /transcriptions`. **No crea ninguna ejecucion**: el audio se
+ * convierte en texto y el texto se le ensena a la persona para que lo confirme.
+ */
+export interface Transcript {
+  text: string;
+  language: string;
+  confidence: number;
+  duration_s: number;
+  provider: string;
+  segments: Segment[];
+  low_confidence: boolean;
+}
+
+/**
+ * Lo que el usuario **pidio** (`RunOptions`), distinto de lo que el Supervisor
+ * **entendio** (`TaskInterpretation`). Se muestran por separado a proposito: es lo
+ * que permite ver una interpretacion que se desvio de la peticion.
+ */
+export interface RunOptions {
+  repo_path: string | null;
+  allowed_paths: string[];
+  protected_paths: string[];
+}
+
+/**
+ * Presupuesto de la ejecucion. Los limites y lo consumido; lo que queda se
+ * calcula restando, no se inventa un campo que el backend no manda.
+ */
+export interface Budget {
+  max_tokens: number;
+  used_tokens: number;
+  used_input_tokens: number;
+  used_output_tokens: number;
+  max_tool_calls: number;
+  used_tool_calls: number;
+  max_model_calls: number;
+  used_model_calls: number;
+  max_seconds: number;
+  elapsed_seconds: number;
+  max_cost: number | null;
+  used_cost: number;
+  max_review_cycles: number;
+  review_cycles_used: number;
+}
+
+/**
+ * Registro de una decision humana (RNF-T2): quien, cuando, que accion, con que
+ * motivo y sobre que contenido exacto (`content_sha256`).
+ */
+export interface Approval {
+  action: string;
+  actor: string;
+  decided_at: string;
+  content_sha256: string;
+  decision: ApprovalDecision;
+  reason: string;
+}
+
 /** La propuesta del Coder. */
 export interface CodeChange {
   rationale: string;
@@ -203,7 +269,19 @@ export interface RunState {
   status: RunStatus;
   created_at: string;
   updated_at: string;
-  instruction: { text: string; source: string; confirmed_by_user: boolean };
+  instruction: {
+    text: string;
+    source: string;
+    confirmed_by_user: boolean;
+    transcript_meta: {
+      provider: string;
+      language: string;
+      confidence: number;
+      duration_s: number;
+      low_confidence_warned: boolean;
+    } | null;
+  };
+  options: RunOptions;
   interpretation: TaskInterpretation | null;
   plan: RunPlan | null;
   plan_index: number;
@@ -215,11 +293,14 @@ export interface RunState {
   };
   outputs: {
     coder_output: CodeChange | null;
-    researcher_output: unknown;
+    researcher_output: { findings: Finding[]; unknowns: string[] } | null;
     reviewer_output: ReviewVerdict | null;
   };
   evidence: { test_runs: TestRun[]; findings: Finding[] };
+  approvals: Approval[];
+  budget: Budget;
   errors: RunError[];
+  human_feedback: string[];
   final_report: FinalReport | null;
   next_step: string | null;
 }
