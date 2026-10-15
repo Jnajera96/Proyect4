@@ -10,6 +10,7 @@
  */
 import type {
   ApiError,
+  ApprovalDecision,
   FinalReport,
   Health,
   Project,
@@ -244,7 +245,7 @@ export const api = {
    * para la siguiente iteracion- y el backend los ignora en las otras decisiones.
    * Se envian solo si hay algo escrito: mandar una cadena vacia no anade nada.
    */
-  aprobar: (runId: string, decision: string, comments?: string) =>
+  aprobar: (runId: string, decision: ApprovalDecision, comments?: string) =>
     pedir<RunState>(`/runs/${encodeURIComponent(runId)}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

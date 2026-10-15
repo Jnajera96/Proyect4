@@ -97,8 +97,11 @@ def git(
             orden,
             cwd=str(cwd) if cwd else None,
             capture_output=True,
-            text=True,
-            input=entrada,
+            # Binary pipes preserve patch bytes: text mode translates LF to
+            # CRLF on Windows and normalizes CRLF content in git diff output.
+            input=(
+                entrada.encode("utf-8", errors="surrogateescape") if entrada is not None else None
+            ),
             timeout=_TIEMPO_GIT_S,
             shell=False,
         )
@@ -117,6 +120,12 @@ def git(
     except subprocess.TimeoutExpired as exc:
         raise SandboxError("git", f"'{' '.join(orden)}' supero {_TIEMPO_GIT_S}s") from exc
 
+    result = subprocess.CompletedProcess(
+        result.args,
+        result.returncode,
+        stdout=result.stdout.decode("utf-8", errors="surrogateescape"),
+        stderr=result.stderr.decode("utf-8", errors="surrogateescape"),
+    )
     if check and result.returncode != 0:
         detalle = (result.stderr or result.stdout or "").strip()[:300]
         raise SandboxError("git", f"'{' '.join(orden)}' salio {result.returncode}: {detalle}")

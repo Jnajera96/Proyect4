@@ -18,7 +18,7 @@
 import { useState } from "react";
 import { api } from "../lib/api";
 import { hashCorto, rutaCorta } from "../lib/formato";
-import type { RunState } from "../lib/contracts";
+import type { ApprovalDecision, RunState } from "../lib/contracts";
 import { ContenidoReviewer, ListaPruebas } from "./evidencia";
 import { Chip, EstadoVacio, Fila, Seccion } from "./ui";
 import { VisorDiff } from "./VisorDiff";
@@ -52,7 +52,7 @@ export function PuertaAprobacion({
 
   const pruebasFallidas = pruebas.filter((p) => p.exit_code !== 0);
 
-  async function decidir(decision: string) {
+  async function decidir(decision: ApprovalDecision) {
     setOcupado(true);
     setError(null);
     try {
@@ -200,7 +200,7 @@ export function PuertaAprobacion({
           >
             Aprobar
           </button>
-          <button disabled={ocupado} onClick={() => void decidir("request_changes")}>
+          <button disabled={ocupado} onClick={() => void decidir("modified")}>
             Solicitar cambios
           </button>
           <button

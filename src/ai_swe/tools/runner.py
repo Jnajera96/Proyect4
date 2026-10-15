@@ -153,6 +153,9 @@ def _entorno(sandbox: Sandbox) -> dict[str, str]:
     como este configurado el entorno de quien lanza.
     """
     entorno = dict(os.environ)
+    # pytest's assertion rewriting otherwise writes new .pyc files into a
+    # repository without ignore rules, invalidating the already reviewed diff.
+    entorno["PYTHONDONTWRITEBYTECODE"] = "1"
     raiz_src = sandbox.raiz / "src"
     if raiz_src.is_dir():
         entorno["PYTHONPATH"] = str(raiz_src)
