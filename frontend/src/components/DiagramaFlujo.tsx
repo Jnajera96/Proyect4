@@ -50,7 +50,17 @@ function calcular(estado: RunState): Etapa[] {
   const plan = estado.plan;
   const pruebas = estado.evidence.test_runs ?? [];
   const aprobaciones = estado.approvals ?? [];
-  const promocion = aprobaciones.find((a) => a.action === "promote_changes");
+  // El historial es append-only: una solicitud de cambios anterior no sustituye
+  // la decision de la ultima revision. Una aprobacion autoriza, no prueba exito.
+  const promocion = [...aprobaciones].reverse().find((a) => a.action === "promote_changes");
+  const falloPromocion = estado.errors.some((e) => e.error_class.startsWith("PROMOTION_"));
+  // No hay un campo promotion_success: la evidencia disponible es el resultado
+  // terminal del grafo con informe de cambios aplicados, sin error de promocion.
+  const promocionCompletada =
+    promocion?.decision === "approved" &&
+    estado.status === "completed" &&
+    (estado.final_report?.changes_applied.length ?? 0) > 0 &&
+    !falloPromocion;
 
   const etapa = (
     id: string,
@@ -64,7 +74,7 @@ function calcular(estado: RunState): Etapa[] {
     if (extra?.fallida) valor = "fallida";
     else if (extra?.esperando) valor = "esperando";
     else if (hecha) valor = "hecha";
-    else if (siguiente === nodo) valor = "en-curso";
+    else if (estado.status === "running" && siguiente === nodo) valor = "en-curso";
     return { id, nodo, nombre, detalle: hecha && extra?.detalleHecho ? extra.detalleHecho : detalle, estado: valor };
   };
 
@@ -159,7 +169,8 @@ function calcular(estado: RunState): Etapa[] {
       "promote_changes",
       "Promoción al repositorio",
       "El parche aprobado se aplica al repositorio real.",
-      promocion?.decision === "approved",
+      promocionCompletada,
+      { fallida: falloPromocion },
     ),
   ];
 }

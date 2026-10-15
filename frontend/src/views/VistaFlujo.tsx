@@ -24,6 +24,9 @@ export function VistaFlujo({ estado }: { estado: RunState | null }) {
   }
 
   const espera = estado.status.startsWith("awaiting");
+  const subtarea = estado.plan?.subtasks[estado.plan_index];
+  const subtareaActiva = estado.status === "running" && subtarea !== undefined &&
+    estado.next_step === subtarea.agent;
 
   return (
     <>
@@ -46,11 +49,11 @@ export function VistaFlujo({ estado }: { estado: RunState | null }) {
             </dd>
             <dt>siguiente paso</dt>
             <dd className="mono">{estado.next_step ?? "(ninguno: la ejecución terminó)"}</dd>
-            <dt>subtarea en curso</dt>
+            <dt>subtarea activa</dt>
             <dd>
-              {estado.plan
-                ? `${estado.plan_index + 1} de ${estado.plan.subtasks.length}`
-                : "sin plan"}
+              {subtareaActiva
+                ? `${estado.plan_index + 1} de ${estado.plan!.subtasks.length}`
+                : estado.plan ? "ninguna activa" : "sin plan"}
             </dd>
           </dl>
           {espera ? (

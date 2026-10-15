@@ -39,22 +39,29 @@ const ETIQUETA_SUBTAREA: Record<string, string> = {
 
 /* ------------------------------------------------------------------- Plan */
 
-export function PanelPlan({ plan, indice }: { plan: RunPlan; indice: number }) {
+export function PanelPlan({ plan, indice, status, siguiente }: {
+  plan: RunPlan;
+  indice: number;
+  status: RunState["status"];
+  siguiente: string | null;
+}) {
   return (
     <Panel
       titulo="Plan"
-      nota="Subtareas asignadas por el Supervisor. La marca indica por cual va la ejecucion."
+      nota="Subtareas asignadas por el Supervisor. La marca activa requiere una ejecución activa y un siguiente paso compatible."
     >
       <ol className="subtareas">
         {plan.subtasks.map((s, i) => {
-          const actual = i === indice;
+          const actual = status === "running" && i === indice && siguiente === s.agent;
           return (
             <li key={s.id} className={actual ? "actual" : ""}>
               <span className="subtarea-marca mono">{s.id}</span>
               <span className="subtarea-cuerpo">
                 <span className="subtarea-desc">{s.description}</span>
                 <span className="tenue">
-                  {s.agent} · {ETIQUETA_SUBTAREA[s.status] ?? s.status}
+                  {s.agent} · {s.status === "running" && !actual
+                    ? "sin actividad confirmada"
+                    : (ETIQUETA_SUBTAREA[s.status] ?? s.status)}
                   {s.done_criteria ? ` · criterio: ${s.done_criteria}` : ""}
                 </span>
               </span>

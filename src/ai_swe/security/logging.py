@@ -2,12 +2,13 @@
 
 **Por que un filtro y no pedir a cada llamante que redacte.** Una garantia que
 depende de que todos los autores de log se acuerden no es una garantia. El filtro
-se instala una vez en el logger raiz y actua sobre **cada** registro, lo escriba
-quien lo escriba, incluso codigo de terceros (uvicorn, httpx, langgraph).
+se instala en los handlers de salida: los filtros del logger raiz NO se ejecutan
+para registros propagados desde hijos. Se cubren tambien los handlers propios de
+loggers como uvicorn y el handler de ultimo recurso de Python. Si se reconfiguran
+los handlers despues del arranque, se debe repetir la instalacion (idempotente).
 
-**Como redacta.** Actua sobre el mensaje ya formateado (`record.getMessage()`) y,
-si es distinto, sobre el `repr` de los argumentos sueltos. Se reescribe el campo
-`msg` y se vacian `args`, de modo que cualquier `Formatter` posterior -incluido un
+**Como redacta.** Actua sobre el mensaje ya formateado (`record.getMessage()`).
+Se reescribe el campo `msg` y se vacian `args`, de modo que cualquier `Formatter` posterior -incluido un
 `format` personalizado- trabaje ya sobre el texto limpio. Los datos de excepcion
 se redactan aparte, porque un traceback puede arrastrar el valor de una variable
 local hasta el log.
@@ -20,7 +21,6 @@ sistema que enmascara de mas deja de servir para diagnosticar.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from ai_swe.security.redaction import redact
 
@@ -41,28 +41,22 @@ class RedactingFilter(logging.Filter):
             # Es preferible perder un mensaje de log que arriesgar una fuga.
             record.msg = f"<registro de log suprimido por el redactor: {type(record).__name__}>"
             record.args = ()
+            # Un fallo de formato no debe dejar que Formatter emita despues el
+            # traceback original sin sanear. Este registro ya fue suprimido.
+            record.exc_info = None
+            record.exc_text = None
+            record.stack_info = None
         return True
 
     @staticmethod
     def _limpiar(record: logging.LogRecord) -> None:
         # 1. Mensaje formateado con sus argumentos. Redactar el mensaje ya
         #    construido es lo que cubre `log.info("clave=%s", api_key)`.
-        try:
-            mensaje = record.getMessage()
-        except Exception:  # noqa: BLE001 - formato roto: no hay nada que redactar
-            mensaje = None
-        if mensaje is not None:
-            limpio = redact(mensaje)
-            if limpio != mensaje:
-                record.msg = limpio
-                record.args = ()
-
-        # 2. Argumentos sueltos, por si un manejador los usa directamente.
-        if record.args:
-            try:
-                record.args = tuple(redact(_repr_arg(a)) for a in _como_tupla(record.args))
-            except Exception:  # noqa: BLE001
-                record.args = ()
+        # Resolver el formato antes de eliminar args conserva %d, %f y mappings.
+        # Convertir los argumentos a strings rompia esos formatos, incluso cuando
+        # no habia secretos. Si el formato falla, filter suprime el registro.
+        record.msg = redact(record.getMessage())
+        record.args = ()
 
         # 3. Texto de excepcion. `exc_text` puede haberse cacheado; se regenera.
         if record.exc_info and not record.exc_text:
@@ -78,41 +72,41 @@ class RedactingFilter(logging.Filter):
             record.stack_info = redact(record.stack_info)
 
 
-def _como_tupla(args: Any) -> tuple[Any, ...]:
-    if isinstance(args, tuple):
-        return args
-    if isinstance(args, dict):
-        return tuple(args.values())
-    return (args,)
-
-
-def _repr_arg(valor: Any) -> str:
-    if isinstance(valor, str):
-        return valor
-    try:
-        return repr(valor)
-    except Exception:  # noqa: BLE001
-        return "[REDACTED]"
-
-
 def install_redacting_filter(
     logger: logging.Logger | None = None,
     *,
     level: int | None = None,
 ) -> RedactingFilter:
-    """Instala el filtro en `logger` (por defecto, el logger raiz).
+    """Protege los handlers existentes de `logger` y sus descendientes.
 
-    Idempotente: instalar dos veces no anade el filtro dos veces. Devuelve el
-    filtro, para poder quitarlo en una prueba.
+    Por defecto cubre todos los loggers, incluidos los que no propagan al root.
+    Tambien cubre los handlers de ancestros a los que propaga un logger concreto.
+    No crea handlers ni cambia destinos, niveles o propagacion. Repetir despues
+    de cambiar la configuracion conecta los handlers nuevos sin duplicar filtros.
+    Se conserva el filtro del logger para compatibilidad con llamadas directas.
     """
     destino = logger if logger is not None else logging.getLogger()
-    for existente in destino.filters:
-        if isinstance(existente, RedactingFilter):
-            if level is not None:
-                destino.setLevel(level)
-            return existente
-    filtro = RedactingFilter()
-    destino.addFilter(filtro)
+    filtro = next((f for f in destino.filters if isinstance(f, RedactingFilter)), None)
+    if filtro is None:
+        filtro = RedactingFilter()
+        destino.addFilter(filtro)
+
+    manejadores = set(destino.handlers)
+    for candidato in logging.root.manager.loggerDict.copy().values():
+        if isinstance(candidato, logging.Logger) and (
+            destino is logging.root or candidato.name.startswith(destino.name + ".")
+        ):
+            manejadores.update(candidato.handlers)
+    ancestro = destino
+    while ancestro.propagate and ancestro.parent is not None:
+        ancestro = ancestro.parent
+        manejadores.update(ancestro.handlers)
+    if logging.lastResort is not None:
+        manejadores.add(logging.lastResort)
+    for manejador in manejadores:
+        if not any(isinstance(f, RedactingFilter) for f in manejador.filters):
+            manejador.addFilter(filtro)
+
     setattr(filtro, _FILTRO_MARCA, True)
     if level is not None:
         destino.setLevel(level)

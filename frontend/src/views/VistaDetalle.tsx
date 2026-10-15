@@ -191,7 +191,12 @@ export function VistaDetalle({
       {/* ----------------------------------------------------------- Plan */}
       {estado.plan ? (
         <Seccion titulo="Plan">
-          <PanelPlan plan={estado.plan} indice={estado.plan_index} />
+          <PanelPlan
+            plan={estado.plan}
+            indice={estado.plan_index}
+            status={estado.status}
+            siguiente={estado.next_step}
+          />
         </Seccion>
       ) : null}
 
