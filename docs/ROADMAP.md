@@ -8,8 +8,9 @@ de `docs/history/` son referencias históricas.
 2. **Fase B:** experiencia de frontend para entrega sobre endpoints existentes.
    Shell, alcance, errores, voz, evidencia, temas y responsive. Resultado y
    límites de comprobación en `BASELINE-FRONTEND-DELIVERY.md`.
-3. **Fase C — pendiente de autorización:** validación final integral de entrega.
-   No se inicia automáticamente al cerrar la Fase B.
+3. **Fase C — ejecutada:** candidato local verificado, tres defectos corregidos,
+   690 pruebas Python aprobadas y tres omitidas; navegador y promoción con checkpoint
+   real verificados. Alcance, evidencia y límites en `RELEASE-CANDIDATE-PHASE-C.md`.
 4. **Jupyter / Hugging Face Agent Model Lab — PLANNED:** laboratorio externo con
    Inference Providers o GPU cloud y modelos del Hub. Descubrimiento de modelos y
    proveedores, pruebas reproducibles de structured output/tool calling/contexto,

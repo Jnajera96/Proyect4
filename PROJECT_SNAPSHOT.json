@@ -821,11 +821,38 @@
     "semantic_mutations_detected": 6,
     "baseline_document": "docs/BASELINE-FRONTEND-DELIVERY.md",
     "model_lab": "PLANNED; external experimentation independent of local runtime",
-    "phase_c": "NOT EXECUTED; separate authorization required",
-    "limitations": [
+    "phase_c": "COMPLETED; local release candidate, scoped omissions in release act",
+    "phase_b_validation_limits": [
       "No full suite or integral delivery certification",
       "Voice validated with fake adapter; real microphone and Whisper untested",
       "Seeded approval presentation has no real promotion checkpoint"
     ]
+  },
+  "release_candidate": {
+    "date": "2026-10-14",
+    "baseline_commit": "1dbd5b62b46f6ad3bf12dc9e880b657ac3fc82bf",
+    "verified_code_commit": "94256f3a2c01febb9b1a34689e3b2ee59b6cb61a",
+    "status": "LOCAL RELEASE CANDIDATE WITH DOCUMENTED LIMITATIONS",
+    "python": {
+      "passed": 690,
+      "failed": 0,
+      "skipped": 3,
+      "total": 693
+    },
+    "frontend_components_passed": 24,
+    "browser_checks_passed": 114,
+    "real_checkpoint_promotion_checks_passed": 29,
+    "verified_fixes": [
+      "test runner bytecode polluted reviewed diff",
+      "Windows text pipes altered git patch bytes",
+      "request changes button sent invalid human approval enum"
+    ],
+    "omissions": [
+      "Real STT opt-in",
+      "Real provider opt-in",
+      "Symlink vector construction denied by Windows privilege"
+    ],
+    "production_ready": false,
+    "report": "docs/RELEASE-CANDIDATE-PHASE-C.md"
   }
 }

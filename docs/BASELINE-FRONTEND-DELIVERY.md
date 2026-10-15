@@ -192,3 +192,10 @@ Whisper real ni promoción con checkpoint auténtico. No se ejecutó la Fase C n
 se certifica entrega integral o preparación para producción.
 
 Fase A cerrada en `245a4a8`, sobre baseline preservada `f095729`.
+
+## Actualizacion posterior: Fase C
+
+La Fase C fue autorizada y ejecutada despues de esta baseline. Corrigio tres
+defectos reproducibles y verifico promocion mediante checkpoint real. Este
+documento conserva los resultados historicos de B; el estado posterior, las
+tres omisiones y el candidato local se describen en [RELEASE-CANDIDATE-PHASE-C.md](RELEASE-CANDIDATE-PHASE-C.md).

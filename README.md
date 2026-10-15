@@ -1,7 +1,8 @@
 # Proyecto 4 — AI Software Engineering System
 
 > Frontend de entrega: [baseline vigente](docs/BASELINE-FRONTEND-DELIVERY.md) y
-> [roadmap](docs/ROADMAP.md). La Fase C integral requiere autorización separada.
+> [roadmap](docs/ROADMAP.md). Fase C: [candidato local y evidencia](docs/RELEASE-CANDIDATE-PHASE-C.md),
+> con tres omisiones explícitas; sin certificación de producción.
 > Jupyter / Hugging Face Agent Model Lab está **PLANNED**, fuera del runtime.
 
 

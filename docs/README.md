@@ -11,6 +11,7 @@
 
 | Fuente | Qué es |
 |---|---|
+| [`RELEASE-CANDIDATE-PHASE-C.md`](RELEASE-CANDIDATE-PHASE-C.md) | Candidato local de entrega, correcciones reproducidas y límites de Fase C |
 | [`../PROJECT_SNAPSHOT.json`](../PROJECT_SNAPSHOT.json) | **Fuente estructurada del estado**: fases, métricas, deudas `AUD-xx`, mutaciones |
 | [`audit/00-EXECUTIVE-AUDIT.md`](audit/00-EXECUTIVE-AUDIT.md) | Auditoría integral de solo lectura (2026-10-12) |
 | [`audit/FINAL-PROJECT-AUDIT.md`](audit/FINAL-PROJECT-AUDIT.md) | Informe maestro de esa auditoría |
