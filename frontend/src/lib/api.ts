@@ -196,12 +196,17 @@ export const api = {
    * estado guarda-. Sin `meta`, la instruccion es de texto y el campo no se
    * envia, que es lo que el contrato pide.
    */
-  crearRun: (instruccion: string, projectId?: string, meta?: Transcript) =>
+  crearRun: (instruccion: string, projectId?: string, meta?: Transcript,
+    alcance?: { allowed_paths: string[]; protected_paths: string[] }) =>
     pedir<RunState>("/runs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         instruction: instruccion,
+        ...(alcance ? { options: {
+          allowed_paths: [...new Set(alcance.allowed_paths.map(p => p.trim()).filter(Boolean))],
+          protected_paths: [...new Set(alcance.protected_paths.map(p => p.trim()).filter(Boolean))],
+        } } : {}),
         ...(projectId ? { project_id: projectId } : {}),
         ...(meta
           ? {

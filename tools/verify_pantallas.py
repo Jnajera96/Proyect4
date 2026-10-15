@@ -12,9 +12,8 @@ y no una cifra inventada.
 presupuesto real -el mismo sembrador que usa `verify_puerta_aprobacion.py`-, se
 abre su detalle y se comparan las filas del panel con lo que devuelve
 `GET /runs/{id}`: si la pantalla ensena otra cosa que lo que el servidor dice, la
-comprobacion falla. El coste se comprueba en su forma declarada: con la tabla de
-tarifas vacia el contrato trae `max_cost = None` y la pantalla **no** puede
-ensenar un importe; tiene que decir que no esta configurado.
+comprobacion falla. El coste se comprueba en su forma declarada: el acumulado cero no distingue desconocido de gratuito; se presenta como coste
+no disponible. max_cost nulo solo declara que no hay limite monetario.
 
 **Lo que NO se comprueba aqui.** El aspecto. Que una captura "se vea bien" no es
 una comprobacion automatica y no se finge que lo sea: lo que se mide es que no
@@ -161,7 +160,7 @@ function medir() {
     }
     anota('PRESUPUESTO', filas.join(';'));
     var cuerpo = document.body.textContent || '';
-    anota('COSTE_DECLARADO', cuerpo.indexOf('tarifas no configuradas') >= 0 ? 'no-configurado' : 'importe');
+    anota('COSTE_DECLARADO', cuerpo.indexOf('Coste no disponible') >= 0 ? 'desconocido' : 'registrado');
     anota('IMPRIME_CERO', /\$\s*0[.,]00/.test(cuerpo));
     // Los dos desgloses de tokens, leidos del propio panel.
     var dl = document.querySelector('.datos');
@@ -386,11 +385,11 @@ def main() -> int:
                     f"pintado={pintado} servidor={usado}/{maximo}",
                 )
             comprobar(
-                "el coste se declara como no configurado cuando no hay tarifas",
+                "un acumulado cero no se presenta como coste conocido",
                 (
-                    campos.get("COSTE_DECLARADO") == "no-configurado"
-                    if presupuesto["max_cost"] is None
-                    else campos.get("COSTE_DECLARADO") == "importe"
+                    campos.get("COSTE_DECLARADO") == "desconocido"
+                    if presupuesto["used_cost"] == 0
+                    else campos.get("COSTE_DECLARADO") == "registrado"
                 ),
                 f"max_cost={presupuesto['max_cost']} pintado={campos.get('COSTE_DECLARADO')}",
             )

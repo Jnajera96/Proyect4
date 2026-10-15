@@ -9,7 +9,7 @@
 import type { EstadoConexion } from "../hooks/useEventosRun";
 import type { EstadoSesion } from "../lib/auth";
 import type { Health, Project, RunState, RunSummary } from "../lib/contracts";
-import { fechaHora, numero, rutaCorta } from "../lib/formato";
+import { fechaHora, numero } from "../lib/formato";
 import { ETIQUETA_ESTADO } from "../lib/contracts";
 import { AccionesCompositor, Compositor, EstadoCompositor } from "../components/Compositor";
 import { DiagramaFlujo } from "../components/DiagramaFlujo";
@@ -18,6 +18,7 @@ import { PuertaAprobacion } from "../components/PuertaAprobacion";
 import { PuertaRequisitos } from "../components/PuertaRequisitos";
 import { Timeline } from "../components/Timeline";
 import { Chip, Esqueleto, EstadoVacio, Panel, Seccion, Tarjeta } from "../components/ui";
+import { Icono } from "../components/Icono";
 import type { VistaId } from "../components/Navegacion";
 
 function tonoDeEstado(estado: string): "" | "ok" | "aviso" | "error" | "acento" {
@@ -68,237 +69,73 @@ export function VistaGeneral({
   puedeAdministrar: boolean;
   puedeOperar: boolean;
 }) {
-  const esperando = runs.filter((r) => r.awaiting_approval || r.status.startsWith("awaiting"));
-  const recientes = runs.slice(0, 6);
+  const esperando = runs.filter(r => r.awaiting_approval || r.status.startsWith("awaiting"));
+  const proyecto = proyectos.find(p => p.project_id === compositor.projectId);
+  return <>
+    <section className="hero" aria-labelledby="hero-titulo">
+      <div className="hero-formas" aria-hidden="true"><i /><i /><i /></div>
+      <div className="hero-principal">
+        <p className="hero-antetitulo">Convierte una idea en software</p>
+        <h1 id="hero-titulo">Describe qué quieres<br className="desktop-br" /> construir.</h1>
+        <p className="hero-texto">De la idea al cambio verificado. Analizamos los requisitos, planificamos y proponemos código. Tú decides antes de promoverlo.</p>
+        {puedeOperar ? <Compositor estado={compositor} acciones={accionesCompositor}
+          proyectos={proyectos} salud={salud} puedeAdministrar={puedeAdministrar} />
+          : <Panel><p>Tu credencial es de solo lectura. Puedes consultar las ejecuciones.</p></Panel>}
+      </div>
+      <ol className="hero-proceso" aria-label="Cómo funciona">
+        {[
+          ["Captura tu idea", "Texto o voz, siempre bajo tu control."],
+          ["Analiza y confirma", "Requisitos estructurados y validación humana."],
+          ["El equipo trabaja", "Investigación, código, pruebas y revisión."],
+          ["Tú apruebas el resultado", "Solo entonces se promueven los cambios."],
+        ].map(([t, d], i) => <li key={t}><span>{i + 1}</span><div><strong>{t}</strong><p>{d}</p></div></li>)}
+      </ol>
+    </section>
 
-  return (
-    <>
-      {/* -------------------------------------------------- Franja de estado */}
-      <section className="franja" aria-label="Estado del sistema">
-        <Tarjeta
-          rotulo="Servidor"
-          valor={saludError ? "sin respuesta" : salud ? `fase ${salud.fase}` : "…"}
-          pie={salud ? `${numero(salud.ejecuciones)} ejecución(es)` : "comprobando"}
-          tono={saludError ? "error" : salud ? "ok" : ""}
-        />
-        <Tarjeta
-          rotulo="Autenticación"
-          valor={
-            sesion === "autenticado"
-              ? "activa"
-              : sesion === "sin-autenticacion"
-                ? "desactivada en el servidor"
-                : "sin credencial"
-          }
-          pie={rol ? `rol: ${rol}` : sesion === "autenticado" ? "rol no expuesto por la API" : undefined}
-          tono={sesion === "autenticado" ? "ok" : sesion === "sin-autenticacion" ? "" : "aviso"}
-        />
-        <Tarjeta
-          rotulo="Flujo de eventos"
-          valor={
-            conexion === "conectado"
-              ? "conectado"
-              : conexion === "error"
-                ? "interrumpido"
-                : conexion === "inactivo"
-                  ? "sin ejecución"
-                  : conexion
-          }
-          pie="SSE por ejecución"
-          tono={conexion === "conectado" ? "ok" : conexion === "error" ? "error" : ""}
-        />
-        <Tarjeta
-          rotulo="Dictado por voz"
-          valor={salud ? (salud.stt ? "disponible" : "no disponible") : "…"}
-          pie={salud ? (salud.stt ? "adaptador listo" : "falta el extra de voz") : ""}
-          tono={salud?.stt ? "ok" : ""}
-        />
-        <Tarjeta
-          rotulo="Proyectos"
-          valor={numero(proyectos.length)}
-          pie={proyectos.length ? "registrados" : "ninguno todavía"}
-        />
-        <Tarjeta
-          rotulo="Ejecuciones"
-          valor={numero(runs.length)}
-          pie={esperando.length ? `${esperando.length} esperando decisión` : "ninguna pendiente"}
-          tono={esperando.length ? "aviso" : ""}
-        />
+    <section className="franja" aria-label="Estado del sistema">
+      <Tarjeta rotulo="Ejecución seleccionada" valor={estado ? ETIQUETA_ESTADO[estado.status] : "Sin ejecución"}
+        pie={estado ? estado.run_id : `${numero(runs.length)} en la página consultada`} tono={estado ? tonoDeEstado(estado.status) : ""} />
+      <Tarjeta rotulo="Proyecto" valor={proyecto?.name ?? "Sin proyecto seleccionado"} pie={`${numero(proyectos.length)} en la página consultada`} />
+      <Tarjeta rotulo="Presupuesto" valor={estado ? `${numero(estado.budget.used_tokens)} tokens` : "Sin consumo seleccionado"}
+        pie={estado ? `${estado.budget.used_model_calls} llamadas al modelo` : "Se registra por ejecución"} tono="acento" />
+      <Tarjeta rotulo="Acceso" valor={sesion === "autenticado" ? "Autenticado" : "Modo local sin auth"}
+        pie={rol ? `Rol: ${rol}` : "El rol se muestra cuando el servidor lo informa"} tono={sesion === "autenticado" ? "ok" : ""} />
+    </section>
+    {saludError ? <p role="alert" className="banner error">No se pudo consultar la salud del servidor. Revisa la conexión antes de ejecutar.</p> : null}
+    {esperando.length ? <div className="banner aviso" role="status"><span>{esperando.length} ejecución(es) de esta página necesitan una decisión humana.</span>
+      <button className="sutil" onClick={() => alIrA("ejecuciones")}>Revisar ejecuciones</button></div> : null}
+
+    <div className="overview-trabajo">
+      <section className="panel workflow-panel" aria-label="Workflow multiagente">
+        <header className="panel-cabecera"><div><h2><Icono nombre="flujo" /> Workflow multiagente</h2>
+          <p className="tenue">Roles especializados. Evidencia en cada etapa.</p></div>
+          {estado ? <Chip tono={tonoDeEstado(estado.status)}>{ETIQUETA_ESTADO[estado.status]}</Chip> : null}</header>
+        <DiagramaFlujo estado={estado} />
+        {estado ? <button className="sutil" onClick={() => alIrA("detalle")}>Abrir detalle de la ejecución</button> : null}
       </section>
+      <section className="panel actividad-panel" aria-label="Actividad de ejecución">
+        <header className="panel-cabecera"><h2><Icono nombre="detalle" /> Actividad de ejecución</h2>
+          <Chip tono={conexion === "conectado" ? "ok" : ""}>{conexion === "conectado" ? "En vivo" : conexion}</Chip></header>
+        <Timeline hitos={hitos} />
+        <p className="tenue">Solo hitos recibidos del servidor. Los ciclos completos están en el detalle.</p>
+      </section>
+    </div>
 
-      {/* ------------------------------------------------------------ Avisos */}
-      {esperando.length ? (
-        <div className="banner aviso" role="status">
-          <span>
-            Hay {esperando.length} ejecución(es) detenida(s) esperando una decisión
-            humana. El flujo no continúa hasta que alguien decida.
-          </span>
-          <button className="sutil" onClick={() => alIrA("ejecuciones")}>
-            Ver las ejecuciones
-          </button>
-        </div>
-      ) : null}
-      {saludError ? (
-        <div className="banner error" role="alert">
-          <span>
-            El servidor no responde. Lo que se ve a continuación es lo último que se
-            leyó; no se puede lanzar nada nuevo.
-          </span>
-        </div>
-      ) : null}
+    {estado?.status === "awaiting_human_requirements_confirmation" ? <PuertaRequisitos key={estado.run_id}
+      estado={estado} alDecidir={() => alRefrescar(estado.run_id)} alFallo={alFallo} /> : null}
+    {estado?.status === "awaiting_approval" ? <PuertaAprobacion key={estado.run_id}
+      estado={estado} alDecidir={() => alRefrescar(estado.run_id)} alFallo={alFallo} /> : null}
+    {estado ? <div className="rejilla rejilla-doble"><PanelPresupuesto budget={estado.budget} />
+      <HistorialAprobaciones aprobaciones={estado.approvals} /></div> : null}
 
-      {/* -------------------------------------------------------- Compositor */}
-      <Seccion titulo="Lanzar una ejecución">
-        {puedeOperar ? (
-          <Compositor
-            estado={compositor}
-            acciones={accionesCompositor}
-            proyectos={proyectos}
-            salud={salud}
-            puedeAdministrar={puedeAdministrar}
-          />
-        ) : (
-          <Panel>
-            <p className="tenue">
-              Tu credencial es de solo lectura: no puede lanzar ejecuciones. Puedes
-              consultar las que ya existen y su progreso.
-            </p>
-          </Panel>
-        )}
-      </Seccion>
-
-      {/* --------------------------------------------------- Ejecución viva */}
-      {estado ? (
-        <Seccion
-          titulo="Ejecución seleccionada"
-          acciones={
-            <>
-              <Chip tono={tonoDeEstado(estado.status)}>
-                {ETIQUETA_ESTADO[estado.status]}
-              </Chip>
-              <button className="sutil" onClick={() => alIrA("detalle")}>
-                Ver el detalle completo
-              </button>
-            </>
-          }
-        >
-          <Panel>
-            <div className="fila" style={{ marginBottom: "0.75rem" }}>
-              <strong className="mono">{estado.run_id}</strong>
-              <span className="tenue">actualizada {fechaHora(estado.updated_at)}</span>
-            </div>
-            <Timeline hitos={hitos} />
-          </Panel>
-
-          {estado.status === "awaiting_human_requirements_confirmation" ? (
-            <PuertaRequisitos
-              estado={estado}
-              alDecidir={() => alRefrescar(estado.run_id)}
-              alFallo={alFallo}
-            />
-          ) : null}
-          {estado.status === "awaiting_approval" ? (
-            <PuertaAprobacion
-              estado={estado}
-              alDecidir={() => alRefrescar(estado.run_id)}
-              alFallo={alFallo}
-            />
-          ) : null}
-
-          <div className="rejilla rejilla-doble">
-            <PanelPresupuesto budget={estado.budget} />
-            <HistorialAprobaciones aprobaciones={estado.approvals} />
-          </div>
-        </Seccion>
-      ) : null}
-
-      {/* ------------------------------------------------------- Recientes */}
-      <Seccion
-        titulo="Ejecuciones recientes"
-        acciones={
-          <button className="sutil" onClick={() => alIrA("ejecuciones")}>
-            Ver todas
-          </button>
-        }
-      >
-        <Panel>
-          {cargando ? (
-            <Esqueleto lineas={3} />
-          ) : recientes.length ? (
-            <table id="tabla-ejecuciones">
-              <thead>
-                <tr>
-                  <th>run_id</th>
-                  <th>intención</th>
-                  <th>estado</th>
-                  <th>actualizado</th>
-                  <th>errores</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recientes.map((r) => (
-                  <tr
-                    key={r.run_id}
-                    className="clicable"
-                    onClick={() => alSeleccionarRun(r.run_id)}
-                    title="Ver esta ejecución"
-                  >
-                    <td className="mono">{r.run_id}</td>
-                    <td>{r.intent ?? "—"}</td>
-                    <td>
-                      <Chip tono={tonoDeEstado(r.status)}>{ETIQUETA_ESTADO[r.status]}</Chip>
-                    </td>
-                    <td className="tenue">{fechaHora(r.updated_at)}</td>
-                    <td>{r.error_count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <EstadoVacio titulo="Todavía no hay ninguna ejecución">
-              Lanza una con el formulario de arriba: aparecerá aquí con su estado y su
-              progreso en vivo.
-            </EstadoVacio>
-          )}
-        </Panel>
-      </Seccion>
-
-      {/* ------------------------------------------------------- Proyectos */}
-      <Seccion
-        titulo="Proyectos"
-        acciones={
-          <button className="sutil" onClick={() => alIrA("proyectos")}>
-            Gestionar
-          </button>
-        }
-      >
-        <Panel>
-          {proyectos.length ? (
-            <ul className="limpia">
-              {proyectos.slice(0, 5).map((p) => (
-                <li key={p.project_id}>
-                  <strong>{p.name}</strong>{" "}
-                  <span className="tenue mono" title={p.repo_path}>
-                    {rutaCorta(p.repo_path)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EstadoVacio titulo="Sin proyectos registrados">
-              Un proyecto fija la ruta del repositorio sobre el que se ejecuta. Sin
-              ninguno, la ejecución usa la ruta por defecto.
-            </EstadoVacio>
-          )}
-        </Panel>
-      </Seccion>
-
-      {/* ----------------------------------------------------------- Flujo */}
-      <Seccion titulo="Flujo de la ejecución" nota="Las etapas reales del grafo, con lo que ya está hecho.">
-        <Panel>
-          <DiagramaFlujo estado={estado} />
-        </Panel>
-      </Seccion>
-    </>
-  );
+    <Seccion titulo="Ejecuciones recientes" acciones={<button className="sutil" onClick={() => alIrA("ejecuciones")}>Ver historial</button>}>
+      <Panel>{cargando ? <Esqueleto /> : runs.length ? <div className="tabla-scroll"><table id="tabla-ejecuciones">
+        <thead><tr><th>Ejecución</th><th>Intención</th><th>Estado</th><th>Actualizada</th><th>Errores</th></tr></thead>
+        <tbody>{runs.slice(0, 5).map(r => <tr key={r.run_id} className="clicable" onClick={() => alSeleccionarRun(r.run_id)}>
+          <td><button className="sutil mono" onClick={e => { e.stopPropagation(); alSeleccionarRun(r.run_id); }}>{r.run_id}</button></td>
+          <td>{r.intent ?? "Sin clasificar"}</td><td><Chip tono={tonoDeEstado(r.status)}>{ETIQUETA_ESTADO[r.status]}</Chip></td>
+          <td>{fechaHora(r.updated_at)}</td><td>{r.error_count}</td></tr>)}</tbody></table></div>
+        : <EstadoVacio titulo="Tu primera ejecución empieza con una idea">Escribe una instrucción arriba. Aquí podrás volver a su evidencia y resultado.</EstadoVacio>}</Panel>
+    </Seccion>
+  </>;
 }

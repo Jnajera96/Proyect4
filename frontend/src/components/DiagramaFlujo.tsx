@@ -18,6 +18,7 @@
  */
 import type { RunState } from "../lib/contracts";
 import { Chip } from "./ui";
+import { Icono } from "./Icono";
 
 type EstadoEtapa = "hecha" | "en-curso" | "esperando" | "fallida" | "pendiente";
 
@@ -49,6 +50,7 @@ function calcular(estado: RunState): Etapa[] {
   const siguiente = (estado.next_step ?? "").toLowerCase();
   const plan = estado.plan;
   const pruebas = estado.evidence.test_runs ?? [];
+  const pruebasVigentes = [...new Map(pruebas.map(p => [p.target, p])).values()];
   const aprobaciones = estado.approvals ?? [];
   // El historial es append-only: una solicitud de cambios anterior no sustituye
   // la decision de la ultima revision. Una aprobacion autoriza, no prueba exito.
@@ -120,7 +122,7 @@ function calcular(estado: RunState): Etapa[] {
       "coder",
       "coder",
       "Coder",
-      "Propone el cambio y lo aplica en un sandbox aislado, nunca en tu repositorio.",
+      "Propone y aplica cambios en un worktree con confinamiento de escritura.",
       estado.outputs.coder_output !== null,
       {
         detalleHecho: estado.artifacts.changed_files?.length
@@ -135,9 +137,9 @@ function calcular(estado: RunState): Etapa[] {
       "Ejecuta los objetivos permitidos dentro del sandbox y guarda la salida.",
       pruebas.length > 0,
       {
-        fallida: pruebas.length > 0 && pruebas.every((p) => p.exit_code !== 0),
-        detalleHecho: pruebas.length
-          ? `${pruebas.filter((p) => p.exit_code === 0).length} de ${pruebas.length} objetivo(s) correctos.`
+        fallida: pruebasVigentes.some((p) => p.exit_code !== 0),
+        detalleHecho: pruebasVigentes.length
+          ? `${pruebasVigentes.filter((p) => p.exit_code === 0).length} de ${pruebasVigentes.length} objetivo(s) correctos en su última ejecución.`
           : undefined,
       },
     ),
@@ -176,28 +178,28 @@ function calcular(estado: RunState): Etapa[] {
 }
 
 export function DiagramaFlujo({ estado }: { estado: RunState | null }) {
-  if (!estado) {
-    return (
-      <p className="vacio">
-        Selecciona una ejecución para ver por qué punto del flujo va.
-      </p>
-    );
-  }
-
-  const etapas = calcular(estado);
+  const etapas: Etapa[] = estado ? calcular(estado) : [
+    ["requisitos", "interpret", "Analista de requisitos", "Interpreta la petición y espera tu confirmación."],
+    ["supervisor", "plan", "Supervisor", "Organiza el trabajo en subtareas."],
+    ["investigador", "researcher", "Investigador", "Reúne evidencia determinista del repositorio."],
+    ["coder", "coder", "Coder", "Propone cambios dentro del worktree."],
+    ["pruebas", "run_tests", "Pruebas", "Guarda evidencia de los objetivos permitidos."],
+    ["revisor", "reviewer", "Revisor", "Contrasta cambios con evidencia."],
+    ["aprobacion", "approval_gate", "Aprobación humana", "Tú decides sobre el cambio propuesto."],
+    ["promocion", "promote_changes", "Promoción", "Aplica el parche autorizado al repositorio."],
+  ].map(([id, nodo, nombre, detalle]) => ({ id, nodo, nombre, detalle, estado: "pendiente" }));
 
   return (
     <ol className="flujo" aria-label="Etapas del flujo de ejecución">
-      {etapas.map((e, i) => (
+      {etapas.map((e) => (
         <li key={e.id} className={`flujo-etapa ${e.estado}`}>
           <div className="flujo-marca" aria-hidden="true">
-            <span className="flujo-indice">{i + 1}</span>
+            <Icono nombre={e.id === "coder" ? "codigo" : e.id === "investigador" ? "buscar" : e.id === "pruebas" ? "pruebas" : e.id === "promocion" ? "flecha" : e.id === "supervisor" ? "flujo" : e.id === "revisor" ? "seguridad" : "detalle"} />
           </div>
           <div className="flujo-cuerpo">
             <div className="fila">
               <span className="flujo-nombre">{e.nombre}</span>
-              <Chip tono={TONO[e.estado]}>{ETIQUETA_ESTADO[e.estado]}</Chip>
-              <span className="mono tenue">{e.nodo}</span>
+              <Chip tono={TONO[e.estado]}>{estado ? ETIQUETA_ESTADO[e.estado] : "Sin ejecución"}</Chip>
             </div>
             <p className="flujo-detalle">{e.detalle}</p>
           </div>

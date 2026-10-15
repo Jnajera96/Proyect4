@@ -1282,5 +1282,35 @@ que ocultarlas:
 
 ---
 
+## 19. Jupyter / Hugging Face Agent Model Lab — PLANNED
+
+Laboratorio experimental externo al runtime. La aplicación conserva React →
+FastAPI → LangGraph → ModelGateway → Provider Adapter. El notebook no atiende
+peticiones del frontend y no se convierte en dependencia del servidor.
+
+Flujo previsto: Jupyter Model Lab → experimentos → resultados reproducibles →
+recomendación de configuración por rol → ModelGateway del producto.
+
+Se evaluarán Requirements Analyst, Supervisor, Coder y Reviewer por separado:
+salidas estructuradas, tool calling, contexto, latencia, tokens, errores y
+fallbacks. El coste solo se registrará si la fuente permite medirlo con fiabilidad.
+Researcher sigue siendo determinista y no entra en comparación de modelos todavía.
+
+Dos modalidades futuras: notebook con Hugging Face Inference Providers remotos,
+o notebook con GPU y transformers/PyTorch sobre modelos del Hugging Face Hub.
+Colab, Kaggle, JupyterHub o una VM son entornos experimentales posibles; si se
+apagan, el runtime local debe seguir funcionando. HF_TOKEN vendrá del entorno
+o de los secretos del entorno de notebooks; nunca se guardará en código ni outputs.
+
+Antes de crear un adapter dedicado se probará OpenAICompatibleAdapter contra
+el proveedor elegido. Solo una incompatibilidad técnica demostrada justificaría
+otro adapter. Los agentes no importarán SDKs de proveedor directamente.
+
+Entregables futuros (no creados en esta fase):
+`notebooks/01_HF_AGENT_MODEL_LAB.ipynb`, `var/model_lab_results.json` y
+`docs/MODEL-LAB-REPORT.md`. No hay pantalla, endpoint ni resultados de Model Lab
+en el producto actual. Ver [roadmap](ROADMAP.md) y
+[baseline de frontend](BASELINE-FRONTEND-DELIVERY.md).
+
 *Continúa en `02-tecnologias.md` (selección de tecnologías), `03-flujo-e-implementacion.md`
 (flujo de ejecución y plan de implementación) y `04-defensa.md` (defensa arquitectónica).*

@@ -63,7 +63,7 @@ export function Seccion({
   acciones?: ReactNode;
 }) {
   return (
-    <section className="seccion" aria-label={titulo}>
+    <section className="seccion" id={`seccion-${titulo.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`} aria-label={titulo}>
       <div className="seccion-cabecera">
         <h2 className="seccion-titulo">{titulo}</h2>
         {acciones ? <div className="fila">{acciones}</div> : null}

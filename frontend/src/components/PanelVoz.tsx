@@ -17,7 +17,7 @@
  * navegador no lo trae, queda la segunda via -elegir un fichero de audio-.
  */
 import { useEffect, useRef, useState } from "react";
-import { api, ErrorApi } from "../lib/api";
+import { api } from "../lib/api";
 import type { Transcript } from "../lib/contracts";
 import { duracion } from "../lib/formato";
 import { Chip, Fila, Panel } from "./ui";
@@ -27,11 +27,13 @@ type Fase = "inicial" | "grabando" | "listo" | "transcribiendo" | "revisando" | 
 export function PanelVoz({
   disponible,
   alConfirmar,
+  alFallo,
 }: {
   /** Lo que declara `/health`: si el adaptador de voz del servidor esta listo. */
   disponible: boolean;
   /** Entrega el texto **confirmado** para que se use como instruccion. */
   alConfirmar: (texto: string, meta: Transcript) => void;
+  alFallo: (causa: unknown) => string;
 }) {
   const [fase, setFase] = useState<Fase>("inicial");
   const [audio, setAudio] = useState<Blob | null>(null);
@@ -58,12 +60,9 @@ export function PanelVoz({
     return (
       <Panel titulo="Dictar la instrucción">
         <p className="tenue">
-          El servidor no puede transcribir en este momento: falta el adaptador de voz
-          (la dependencia <span className="mono">faster-whisper</span>, que se instala
-          con el extra opcional de voz). La capacidad existe -el endpoint
-          <span className="mono"> POST /transcriptions</span> está ahí-, pero este
-          proceso no puede atenderla, así que no se ofrece un micrófono que fallaría
-          al subir.
+          El servidor no informa un adaptador de transcripción disponible.
+          Puedes escribir la instrucción. La disponibilidad del adaptador no confirma
+          que un modelo esté cargado ni que haya una GPU preparada.
         </p>
       </Panel>
     );
@@ -115,12 +114,7 @@ export function PanelVoz({
       setTexto(resultado.text);
       setFase("revisando");
     } catch (causa) {
-      const detalle =
-        causa instanceof ErrorApi
-          ? causa.errorClass
-            ? `${causa.errorClass}: ${causa.message}`
-            : causa.message
-          : String(causa);
+      const detalle = alFallo(causa);
       setError(`No se pudo transcribir: ${detalle}`);
       setFase("error");
     }

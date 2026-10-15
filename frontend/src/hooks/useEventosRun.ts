@@ -39,8 +39,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   EVENTO_CIERRE,
   EVENTOS_ESCUCHADOS,
+  ESTADOS_TERMINALES,
   type EventKind,
   type RunEvent,
+  type RunStatus,
 } from "../lib/contracts";
 import { useClaveApi } from "../lib/auth";
 
@@ -51,6 +53,7 @@ interface ResultadoSse {
   conexion: EstadoConexion;
   /** Cierra el flujo manualmente (al cambiar de ejecucion o desmontar). */
   cerrar: () => void;
+  reanudar: () => void;
 }
 
 /**
@@ -65,6 +68,12 @@ export function useEventosRun(runId: string | null): ResultadoSse {
   const [conexion, setConexion] = useState<EstadoConexion>("inactivo");
   const fuenteRef = useRef<EventSource | null>(null);
   const clave = useClaveApi();
+  const [revision, setRevision] = useState(0);
+  const cursor = useRef(0);
+  const identidad = useRef<{ runId: string | null; clave: string | null }>({ runId: null, clave: null });
+  const reanudar = useCallback(() => {
+    setRevision(v => v + 1);
+  }, []);
 
   const cerrar = useCallback(() => {
     if (fuenteRef.current) {
@@ -81,14 +90,19 @@ export function useEventosRun(runId: string | null): ResultadoSse {
       return;
     }
 
-    // Ejecucion nueva: se empieza de cero. Reutilizar la lista anterior mezclaria
-    // los eventos de dos ejecuciones distintas.
-    setEventos([]);
+    if (identidad.current.runId !== runId || identidad.current.clave !== clave) {
+      identidad.current = { runId, clave };
+      cursor.current = 0;
+      setEventos([]);
+    }
     setConexion("conectando");
 
     // Sin clave, la URL va limpia: con la autenticacion desactivada el servidor
     // no necesita nada mas, y anadir un parametro vacio seria ruido.
-    const consulta = clave ? `?api_key=${encodeURIComponent(clave)}` : "";
+    const parametros = new URLSearchParams();
+    if (clave) parametros.set("api_key", clave);
+    if (cursor.current) parametros.set("after", String(cursor.current));
+    const consulta = parametros.size ? `?${parametros}` : "";
     const fuente = new EventSource(`/runs/${encodeURIComponent(runId)}/events${consulta}`);
     fuenteRef.current = fuente;
 
@@ -107,12 +121,15 @@ export function useEventosRun(runId: string | null): ResultadoSse {
           // Un evento ilegible no debe tumbar el flujo. Se ignora y se sigue.
           return;
         }
+        cursor.current = evento.seq;
+        setConexion("conectado");
         setEventos((previos) => [...previos, evento]);
-        if (evento.kind === EVENTO_CIERRE) {
-          // `run.done` cierra el flujo por diseno: entre dos puertas humanas el
-          // stream termina y el cliente se reconecta al reanudar. Se cierra del
-          // lado del cliente para no dejar una conexion abierta que el servidor
-          // ya cerro.
+        if (evento.kind === EVENTO_CIERRE &&
+            ESTADOS_TERMINALES.has(evento.data.status as RunStatus)) {
+          // Solo el cierre terminal detiene EventSource. Un run historico puede
+          // contener varios cierres de puertas: cerrarse en el primero pierde
+          // los hitos posteriores. Entre lotes el navegador reconecta con
+          // Last-Event-ID; una decision humana reabre desde el cursor guardado.
           fuente.close();
           fuenteRef.current = null;
           setConexion("cerrado");
@@ -126,6 +143,8 @@ export function useEventosRun(runId: string | null): ResultadoSse {
       // un error para la interfaz: se mantiene "conectando".
       if (fuente.readyState === EventSource.CLOSED) {
         setConexion("error");
+      } else {
+        setConexion("conectando");
       }
     };
 
@@ -136,9 +155,9 @@ export function useEventosRun(runId: string | null): ResultadoSse {
     // `clave` en las dependencias: guardarla u olvidarla debe reabrir el flujo
     // con la credencial nueva. Sin eso, el flujo seguiria con la clave vieja
     // hasta recargar la pagina.
-  }, [runId, clave]);
+  }, [runId, clave, revision]);
 
-  return { eventos, conexion, cerrar };
+  return { eventos, conexion, cerrar, reanudar };
 }
 
 /**

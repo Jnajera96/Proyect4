@@ -22,8 +22,10 @@ async function cargar(ruta) {
   return modulo.exports;
 }
 const { DiagramaFlujo } = await cargar("../src/components/DiagramaFlujo.tsx");
-const { PanelPlan } = await cargar("../src/components/evidencia.tsx");
+const { PanelPlan, PanelPresupuesto } = await cargar("../src/components/evidencia.tsx");
 const { VistaFlujo } = await cargar("../src/views/VistaFlujo.tsx");
+const { api } = await cargar("../src/lib/api.ts");
+const { VisorDiff } = await cargar("../src/components/VisorDiff.tsx");
 
 const decision = (valor) => ({
   action: "promote_changes", actor: "usuario", decided_at: "2026-10-14T12:00:00Z",
@@ -122,4 +124,42 @@ test("vista de flujo no declara subtarea en curso durante una puerta humana", ()
   }) }));
   assert.doesNotMatch(html, /subtarea en curso/);
   assert.match(html, /ninguna activa/);
+});
+test("crear run transmite el alcance real sin entradas vacias", async () => {
+  const original = globalThis.fetch;
+  let cuerpo;
+  globalThis.fetch = async (_url, init) => {
+    cuerpo = JSON.parse(init.body);
+    return new Response(JSON.stringify(estado()), { status: 202 });
+  };
+  try {
+    await api.crearRun("inspecciona", undefined, undefined, {
+      allowed_paths: [" src/ ", "", "tests/"], protected_paths: [".env", "  "],
+    });
+    assert.deepEqual(cuerpo.options, { allowed_paths: ["src/", "tests/"], protected_paths: [".env"] });
+  } finally { globalThis.fetch = original; }
+});
+test("presupuesto sin limite no inventa disponibilidad de tarifas ni duracion", () => {
+  const html = renderToStaticMarkup(React.createElement(PanelPresupuesto, { budget: estado().budget }));
+  assert.doesNotMatch(html, /tarifas no configuradas|tiempo transcurrido|0\.0000/);
+  assert.match(html, /Sin límite monetario/);
+  assert.match(html, /Coste no disponible/);
+});
+test("diff conserva literalmente cabeceras y rutas con espacios", () => {
+  const texto = 'diff --git a/my file.py b/my file.py\n--- a/my file.py\n+++ b/my file.py\n@@ -1 +1 @@\n-old\n+new\n';
+  const html = renderToStaticMarkup(React.createElement(VisorDiff, { texto }));
+  assert.match(html, /diff --git a\/my file\.py b\/my file\.py/);
+  assert.match(html, /\+\+\+ b\/my file\.py/);
+});
+test("una prueba fallida vigente no queda verde porque otra pasa", () => {
+  const e = etapas(estado({ evidence: { findings: [], test_runs: [
+    { target:'unit', exit_code:0 }, { target:'lint', exit_code:1 },
+  ] } }));
+  assert.equal(e["Pruebas"].clase, "fallida");
+});
+test("una repeticion exitosa sustituye el fallo anterior del mismo target", () => {
+  const e = etapas(estado({ evidence: { findings: [], test_runs: [
+    { target:'unit', exit_code:1 }, { target:'unit', exit_code:0 },
+  ] } }));
+  assert.equal(e["Pruebas"].clase, "hecha");
 });

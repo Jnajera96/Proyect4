@@ -810,5 +810,22 @@
     "scope": "Terminate TLS at a reverse proxy; move the API keys to a secret manager; switch on the Phase 3 rate limiter with the real AI_SWE_TRUSTED_HOSTS; retain the audit log (rotated file or the store); replace the SSE query key with a one-use ticket issued by an authenticated endpoint; review the frontend CSP. Six items, declared in TD-02 and section 8 of docs/BASELINE-PUBLIC-EXPOSURE.md.",
     "prerequisite": "Phase 4 committed; tree clean; 678 tests green; 16/16 + 5/5 mutations caught.",
     "awaiting": "explicit authorization from the Arquitecto — NOT to be started without it"
+  },
+  "frontend_delivery": {
+    "date": "2026-10-14",
+    "phase_a_commit": "245a4a8",
+    "phase_b": "implemented and focal checks passed",
+    "components_passed": 24,
+    "targeted_python_passed": 84,
+    "delivery_browser_checks_passed": 114,
+    "semantic_mutations_detected": 6,
+    "baseline_document": "docs/BASELINE-FRONTEND-DELIVERY.md",
+    "model_lab": "PLANNED; external experimentation independent of local runtime",
+    "phase_c": "NOT EXECUTED; separate authorization required",
+    "limitations": [
+      "No full suite or integral delivery certification",
+      "Voice validated with fake adapter; real microphone and Whisper untested",
+      "Seeded approval presentation has no real promotion checkpoint"
+    ]
   }
 }

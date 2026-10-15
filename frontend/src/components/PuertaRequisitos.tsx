@@ -117,7 +117,7 @@ export function PuertaRequisitos({
               <dt>confianza</dt>
               <dd>
                 {(interp.confidence * 100).toFixed(0)}%
-                <span className="tenue"> · lo que el modelo declara, no una certeza</span>
+                <span className="tenue"> · confianza declarada por el analista, no una certeza</span>
               </dd>
               <dt>repositorio</dt>
               <dd className="mono" title={interp.scope.repo_path}>

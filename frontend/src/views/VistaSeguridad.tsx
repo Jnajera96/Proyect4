@@ -44,7 +44,7 @@ export function VistaSeguridad({
             </dd>
             <dt>autorización por roles</dt>
             <dd>
-              {rol
+              {sesion === "sin-autenticacion" ? "No se exige rol en el modo local sin autenticación." : rol
                 ? `activa · rol de la credencial: ${rol}`
                 : "activa en el servidor; el rol no se conoce hasta que una acción sea rechazada"}
             </dd>

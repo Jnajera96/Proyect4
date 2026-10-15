@@ -67,6 +67,7 @@ export function VistaEjecuciones({
 
   return (
     <>
+      <header className="pagina-titulo"><h1>Ejecuciones</h1><p>Trabajo en curso, decisiones humanas y resultados verificables.</p></header>
       <Seccion titulo="Lanzar una ejecución">
         {puedeOperar ? (
           <Compositor
@@ -115,7 +116,7 @@ export function VistaEjecuciones({
           {cargando ? (
             <Esqueleto lineas={4} />
           ) : filtradas.length ? (
-            <table id="tabla-ejecuciones">
+            <div className="tabla-scroll"><table id="tabla-ejecuciones">
               <thead>
                 <tr>
                   <th>run_id</th>
@@ -134,7 +135,7 @@ export function VistaEjecuciones({
                     onClick={() => alSeleccionarRun(r.run_id)}
                     title="Abrir el detalle de esta ejecución"
                   >
-                    <td className="mono">{r.run_id}</td>
+                    <td><button className="sutil mono" onClick={e => { e.stopPropagation(); alSeleccionarRun(r.run_id); }}>{r.run_id}</button></td>
                     <td>{r.intent ?? "—"}</td>
                     <td>
                       <Chip tono={tonoDeEstado(r.status)}>{ETIQUETA_ESTADO[r.status]}</Chip>
@@ -145,7 +146,7 @@ export function VistaEjecuciones({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           ) : runs.length ? (
             <EstadoVacio titulo="Ninguna ejecución coincide con el filtro">
               Hay {runs.length} ejecución(es) guardada(s), pero ninguna está en el

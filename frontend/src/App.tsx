@@ -50,6 +50,7 @@ import { VistaGeneral } from "./views/VistaGeneral";
 import { VistaProyectos } from "./views/VistaProyectos";
 import { VistaSeguridad } from "./views/VistaSeguridad";
 import { VistaSesion } from "./views/VistaSesion";
+import { Icono } from "./components/Icono";
 
 /** Que respondio el servidor a las peticiones protegidas. */
 type ResultadoCarga = "ok" | "401" | "fallo";
@@ -64,6 +65,7 @@ export function App() {
 
   const [runId, setRunId] = useState<string | null>(null);
   const [estado, setEstado] = useState<RunState | null>(null);
+  const runSeleccionado = useRef<string | null>(null);
 
   // -------------------------------------------------------------- acceso
   const claveApi = useClaveApi();
@@ -90,13 +92,29 @@ export function App() {
   const [nombreProyecto, setNombreProyecto] = useState("");
   const [rutaProyecto, setRutaProyecto] = useState("");
   const [lanzando, setLanzando] = useState(false);
+  const [registrando, setRegistrando] = useState(false);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const [allowedPaths, setAllowedPaths] = useState<string[]>([]);
+  const [protectedPaths, setProtectedPaths] = useState<string[]>([]);
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const [tema, setTema] = useState<"sistema" | "claro" | "oscuro">("sistema");
+  useEffect(() => {
+    document.documentElement.dataset.tema = tema;
+  }, [tema]);
+  useEffect(() => {
+    if (!menuAbierto) return;
+    const escapar = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setMenuAbierto(false); document.getElementById("abrir-menu")?.focus(); }
+    };
+    window.addEventListener("keydown", escapar);
+    return () => window.removeEventListener("keydown", escapar);
+  }, [menuAbierto]);
 
   // ---------------------------------------------------------- navegacion
   const [vista, setVista] = useState<VistaId>("general");
   const contenido = useRef<HTMLDivElement | null>(null);
 
-  const { eventos, conexion } = useEventosRun(runId);
+  const { eventos, conexion, reanudar } = useEventosRun(runId);
 
   // Puente de diagnostico para el verificador (`tools/verify_frontend.py`).
   //
@@ -137,12 +155,16 @@ export function App() {
       borrarClave();
       setRol(null);
       setRunId(null);
+      runSeleccionado.current = null;
       setEstado(null);
       setSesion("sesion-caida");
       setMensajeAcceso("Tu credencial dejó de ser válida. Introdúcela de nuevo.");
     } else if (causa instanceof ErrorApi && causa.status === 403) {
+      setErrorAccion(mensajeVisible(causa, habiaCredencial));
       const detectado = rolDelRechazo(causa);
       if (detectado) setRol(detectado);
+    } else if (causa instanceof ErrorApi && causa.status === 0) {
+      setSaludError(true);
     }
     return mensajeVisible(causa, habiaCredencial);
   }, []);
@@ -150,7 +172,8 @@ export function App() {
   const refrescar = useCallback(
     async (id: string) => {
       try {
-        setEstado(await api.obtenerRun(id));
+        const leido = await api.obtenerRun(id);
+        if (runSeleccionado.current === id) setEstado(leido);
       } catch (causa) {
         anotarFallo(causa);
       }
@@ -232,8 +255,9 @@ export function App() {
   // el teclado se queda en el boton de la barra y tiene que tabular por toda la
   // pagina anterior para llegar a la nueva.
   useEffect(() => {
-    contenido.current?.focus();
-  }, [vista]);
+    contenido.current?.focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+  }, [vista, sesion]);
 
   const hitos = useMemo(() => hitosDe(eventos), [eventos]);
 
@@ -246,6 +270,7 @@ export function App() {
    * es un fallo, no un veredicto.
    */
   async function entrarConClave(clave: string) {
+    setErrorAccion(null);
     setMensajeAcceso(null);
     setSesion("validando");
     guardarClave(clave);
@@ -276,6 +301,7 @@ export function App() {
     setProyectos([]);
     setRuns([]);
     setRunId(null);
+    runSeleccionado.current = null;
     setEstado(null);
     setTranscripcion(null);
     setVista("general");
@@ -283,6 +309,8 @@ export function App() {
   }
 
   async function registrarProyecto() {
+    if (registrando) return;
+    setRegistrando(true);
     setErrorAccion(null);
     try {
       const p = await api.crearProyecto(nombreProyecto, rutaProyecto);
@@ -292,6 +320,8 @@ export function App() {
       setRutaProyecto("");
     } catch (causa) {
       setErrorAccion(anotarFallo(causa));
+    } finally {
+      setRegistrando(false);
     }
   }
 
@@ -306,7 +336,9 @@ export function App() {
         texto,
         projectId || undefined,
         transcripcion ?? undefined,
+        { allowed_paths: allowedPaths, protected_paths: protectedPaths },
       );
+      runSeleccionado.current = creado.run_id;
       setRunId(creado.run_id);
       setEstado(creado);
       // La ejecucion ya lleva el origen: la procedencia no se arrastra a la
@@ -321,6 +353,9 @@ export function App() {
   }
 
   function seleccionarRun(id: string) {
+    runSeleccionado.current = id;
+    setEstado(null);
+    if (id === runId) void refrescar(id);
     setRunId(id);
     setVista("detalle");
   }
@@ -332,7 +367,10 @@ export function App() {
     nombreProyecto,
     rutaProyecto,
     lanzando,
+    registrando,
     errorAccion,
+    allowedPaths,
+    protectedPaths,
   };
   const accionesCompositor: AccionesCompositor = {
     // Editar a mano **invalida la procedencia**: ver `transcripcion`.
@@ -345,6 +383,9 @@ export function App() {
     alCambiarRuta: setRutaProyecto,
     alLanzar: () => void lanzar(),
     alRegistrarProyecto: () => void registrarProyecto(),
+    alCambiarPermitidas: setAllowedPaths,
+    alCambiarProtegidas: setProtectedPaths,
+    alFallo: anotarFallo,
     alUsarTranscripcion: (texto, meta) => {
       setInstruccion(texto);
       setTranscripcion(meta);
@@ -372,16 +413,18 @@ export function App() {
   // que el verificador lee para comprobar que la fase sale de `/health`.
   const cabecera = (
     <header className="cabecera">
+      <button id="abrir-menu" className="boton-menu" aria-label="Abrir navegación" aria-expanded={menuAbierto}
+        aria-controls="sidebar" onClick={() => setMenuAbierto(v => !v)}><Icono nombre="menu" /></button>
       <div>
-        <h1 className="titulo">AI Software Engineering System</h1>
-        <p className="subtitulo">Proyecto 4 · Equipo 4</p>
+        <div className="titulo">AI Software Engineering System</div>
+        <p className="subtitulo">Espacio de trabajo · Ingeniería con evidencia</p>
       </div>
       <div className="fila">
         {saludError ? (
           <Chip tono="error">servidor inaccesible</Chip>
         ) : salud ? (
           <Chip tono="ok">
-            servidor ok · fase {salud.fase} · {salud.ejecuciones} ejecución(es)
+            servidor ok · fase {salud.fase}
           </Chip>
         ) : (
           <Chip pulsa>comprobando…</Chip>
@@ -401,6 +444,13 @@ export function App() {
           </span>
         ) : null}
         {sesion === "sin-autenticacion" ? <Chip>sin autenticación</Chip> : null}
+        {rol ? <Chip>{rol}</Chip> : null}
+        <label className="solo-lector" htmlFor="tema">Tema</label>
+        <select id="tema" className="selector-tema" value={tema}
+          onChange={e => setTema(e.target.value as typeof tema)}>
+          <option value="sistema">Tema del sistema</option><option value="claro">Claro</option><option value="oscuro">Oscuro</option>
+        </select>
+        {sesion === "autenticado" ? <button className="sutil salir-topbar" onClick={cerrarSesion}>Cerrar sesión</button> : null}
         {sesion === "sin-credencial" ||
         sesion === "clave-invalida" ||
         sesion === "sesion-caida" ? (
@@ -412,6 +462,12 @@ export function App() {
 
   // Mientras no se sabe si hace falta credencial no se ofrece nada: pintar la
   // aplicacion en ese hueco pone el primer clic sobre un boton que responde 401.
+  if (sesion === "sin-servidor") {
+    return <main className="app">{cabecera}<Panel titulo="Servidor no disponible">
+      <p role="alert">No se pudo comprobar el acceso al servidor. Revisa la conexión antes de continuar.</p>
+      <button className="primario" onClick={() => window.location.reload()}>Volver a comprobar</button>
+    </Panel></main>;
+  }
   if (sesion === "comprobando") {
     return (
       <main className="app">
@@ -451,11 +507,23 @@ export function App() {
   }
 
   return (
-    <main className="app">
+    <div className="app-shell">
+      <a className="saltar" href="#contenido">Saltar al contenido</a>
+      <aside id="sidebar" className={`sidebar ${menuAbierto ? "abierto" : ""}`}>
+        <button className="cerrar-menu sutil" aria-label="Cerrar navegación" onClick={() => {
+          setMenuAbierto(false); document.getElementById("abrir-menu")?.focus();
+        }}><Icono nombre="cerrar" /></button>
+        <Navegacion vista={vista} items={items} alCambiar={v => { setVista(v); setMenuAbierto(false); window.requestAnimationFrame(() => { contenido.current?.focus({ preventScroll: true }); window.scrollTo(0, 0); }); }}
+          proyectos={proyectos} proyectoActual={projectId}
+          alProyecto={id => { setProjectId(id); setVista("general"); setMenuAbierto(false); }}
+          alCrearProyecto={() => { setVista("proyectos"); setMenuAbierto(false); }} />
+      </aside>
       {cabecera}
-      <Navegacion vista={vista} items={items} alCambiar={setVista} />
+      <main id="contenido" className="app contenido">
 
       <div className="vista" ref={contenido} tabIndex={-1} aria-label={`Vista: ${vista}`}>
+        {!puedeOperar && errorAccion ? <p className="banner aviso" role="alert">{errorAccion}</p> : null}
+        {runId && !estado ? <p role="status" className="carga-run">Cargando la ejecución seleccionada…</p> : null}
         {vista === "general" ? (
           <VistaGeneral
             salud={salud}
@@ -471,7 +539,7 @@ export function App() {
             compositor={compositor}
             accionesCompositor={accionesCompositor}
             alSeleccionarRun={seleccionarRun}
-            alRefrescar={(id) => void refrescar(id)}
+            alRefrescar={(id) => { reanudar(); void refrescar(id); }}
             alFallo={anotarFallo}
             alIrA={setVista}
             puedeAdministrar={puedeAdministrar}
@@ -488,6 +556,8 @@ export function App() {
             alCambiarNombre={setNombreProyecto}
             alCambiarRuta={setRutaProyecto}
             alRegistrar={() => void registrarProyecto()}
+            errorRegistro={errorAccion}
+            registrando={registrando}
             alEjecutarContra={(id) => {
               setProjectId(id);
               setVista("general");
@@ -519,6 +589,7 @@ export function App() {
             conexion={conexion}
             proyectos={proyectos}
             alRefrescar={(id) => void refrescar(id)}
+            alReanudar={(id) => { reanudar(); void refrescar(id); }}
             alFallo={anotarFallo}
           />
         ) : null}
@@ -542,6 +613,7 @@ export function App() {
           />
         ) : null}
       </div>
-    </main>
+      </main>
+    </div>
   );
 }

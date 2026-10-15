@@ -13,6 +13,9 @@ import type { Health, Project, Transcript } from "../lib/contracts";
 import { duracion } from "../lib/formato";
 import { PanelVoz } from "./PanelVoz";
 import { Fila, Panel } from "./ui";
+import { EditorRutas } from "./EditorRutas";
+import { Icono } from "./Icono";
+import { rutaCorta } from "../lib/formato";
 
 export interface EstadoCompositor {
   instruccion: string;
@@ -30,7 +33,10 @@ export interface EstadoCompositor {
   nombreProyecto: string;
   rutaProyecto: string;
   lanzando: boolean;
+  registrando: boolean;
   errorAccion: string | null;
+  allowedPaths: string[];
+  protectedPaths: string[];
 }
 
 export interface AccionesCompositor {
@@ -40,6 +46,9 @@ export interface AccionesCompositor {
   alCambiarRuta: (v: string) => void;
   alLanzar: () => void;
   alRegistrarProyecto: () => void;
+  alCambiarPermitidas: (rutas: string[]) => void;
+  alCambiarProtegidas: (rutas: string[]) => void;
+  alFallo: (causa: unknown) => string;
   /** Copia el texto confirmado por voz, **con su procedencia**, al campo. */
   alUsarTranscripcion: (texto: string, meta: Transcript) => void;
 }
@@ -60,16 +69,24 @@ export function Compositor({
   return (
     <>
       <Panel
-        titulo="Nueva ejecución"
-        nota="La ejecución corre en el servidor. El progreso llega por eventos: esta página no espera a que termine."
+        titulo="Tu próxima ejecución"
       >
-        <label htmlFor="instruccion">Instrucción</label>
+        <label className="solo-lector" htmlFor="instruccion">Instrucción</label>
+        <div className="entrada-principal">
+        <button className="boton-microfono" aria-label="Abrir dictado por voz" onClick={() => {
+          const voz = document.getElementById("dictado");
+          if (voz instanceof HTMLDetailsElement) { voz.open = true; voz.querySelector("summary")?.focus(); }
+        }}><Icono nombre="microfono" /></button>
         <textarea
           id="instruccion"
           value={estado.instruccion}
           onChange={(e) => acciones.alCambiarInstruccion(e.target.value)}
-          placeholder="Analiza este proyecto, identifica los errores principales y corrige el código."
+          placeholder="Describe qué quieres construir o mejorar…"
         />
+        <button id="btn-crear" className="primario enviar" disabled={estado.lanzando || !estado.instruccion.trim()}
+          onClick={acciones.alLanzar} aria-label={estado.lanzando ? "Lanzando ejecución" : "Ejecutar"}>
+          <Icono nombre="flecha" /><span>{estado.lanzando ? "Lanzando…" : "Ejecutar"}</span>
+        </button></div>
 
         {estado.origenVoz ? (
           <p className="tenue fila-sep">
@@ -80,7 +97,7 @@ export function Compositor({
           </p>
         ) : null}
 
-        <div className="rejilla">
+        <div className="compositor-extra"><div className="rejilla">
           <div>
             <label htmlFor="proyecto">Proyecto</label>
             <select
@@ -91,24 +108,21 @@ export function Compositor({
               <option value="">(sin proyecto · ruta por defecto)</option>
               {proyectos.map((p) => (
                 <option key={p.project_id} value={p.project_id}>
-                  {p.name} — {p.repo_path}
+                  {p.name} — {rutaCorta(p.repo_path)}
                 </option>
               ))}
             </select>
           </div>
         </div>
 
-        <Fila sep>
-          <button
-            id="btn-crear"
-            className="primario"
-            disabled={estado.lanzando}
-            onClick={acciones.alLanzar}
-          >
-            {estado.lanzando ? "Lanzando…" : "Ejecutar"}
-          </button>
-          <span className="tenue">La ejecución devuelve el identificador al instante</span>
-        </Fila>
+        <details className="plegable" id="alcance-avanzado"><summary>Opciones avanzadas · alcance</summary>
+          <p className="tenue">Sin rutas permitidas se autoriza todo el repositorio. Las rutas protegidas restringen la escritura.</p>
+          <div className="rejilla rejilla-doble">
+            <EditorRutas id="allowed-paths" titulo="Rutas permitidas" rutas={estado.allowedPaths} alCambiar={acciones.alCambiarPermitidas} />
+            <EditorRutas id="protected-paths" titulo="Rutas protegidas" rutas={estado.protectedPaths} alCambiar={acciones.alCambiarProtegidas} />
+          </div>
+        </details>
+        </div>
 
         {puedeAdministrar ? (
           <details className="plegable">
@@ -136,10 +150,10 @@ export function Compositor({
               </div>
               <Fila>
                 <button
-                  disabled={!estado.nombreProyecto.trim() || !estado.rutaProyecto.trim()}
+                  disabled={estado.registrando || !estado.nombreProyecto.trim() || !estado.rutaProyecto.trim()}
                   onClick={acciones.alRegistrarProyecto}
                 >
-                  Registrar
+                  {estado.registrando ? "Registrando…" : "Registrar"}
                 </button>
                 <span className="tenue">La ruta se valida al registrar, no al ejecutar</span>
               </Fila>
@@ -154,11 +168,12 @@ export function Compositor({
         ) : null}
       </Panel>
 
-      <details className="plegable">
+      <details className="plegable" id="dictado">
         <summary>Dictar la instrucción</summary>
         <div style={{ marginTop: "0.75rem" }}>
           <PanelVoz
             disponible={salud?.stt === true}
+            alFallo={acciones.alFallo}
             alConfirmar={(texto, meta) => acciones.alUsarTranscripcion(texto, meta)}
           />
         </div>

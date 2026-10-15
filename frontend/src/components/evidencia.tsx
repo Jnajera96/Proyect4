@@ -241,11 +241,10 @@ export function ListaHallazgos({ hallazgos }: { hallazgos: Finding[] }) {
 /**
  * Presupuesto consumido frente a los limites declarados.
  *
- * **El coste se declara cuando se sabe.** El contrato lo modela como
- * `max_cost: float | None`; con la tabla de tarifas vacia no hay forma de saber
- * cuanto costo nada, y `used_cost` vale cero sin significar "gratis". Cuando no hay
- * limite de coste declarado se dice "tarifas no configuradas" y **no se ensena un
- * cero**: un `$0,00` ahi seria una afirmacion falsa sobre el gasto.
+ * `max_cost: null` declara ausencia de limite, no ausencia de tarifas. El
+ * contrato no expone si used_cost=0 es desconocido o gratuito: se muestra como
+ * no disponible. Un acumulado positivo se etiqueta como registrado, potencialmente
+ * parcial. elapsed_seconds no se presenta como tiempo real porque no se actualiza.
  */
 export function PanelPresupuesto({ budget }: { budget: Budget }) {
   const filas: { rotulo: string; usado: number; maximo: number }[] = [
@@ -262,8 +261,8 @@ export function PanelPresupuesto({ budget }: { budget: Budget }) {
         <dd>{numero(budget.used_input_tokens)}</dd>
         <dt>tokens de salida</dt>
         <dd>{numero(budget.used_output_tokens)}</dd>
-        <dt>tiempo transcurrido</dt>
-        <dd>{duracion(budget.elapsed_seconds)}</dd>
+        <dt>límite de tiempo</dt>
+        <dd>{duracion(budget.max_seconds)}</dd>
       </dl>
 
       <div className="presupuesto">
@@ -284,9 +283,11 @@ export function PanelPresupuesto({ budget }: { budget: Budget }) {
       </div>
 
       <p className="tenue fila-sep">
-        {budget.max_cost === null
-          ? "Coste: tarifas no configuradas, no hay importe que mostrar."
-          : `Coste: ${budget.used_cost.toFixed(4)} de ${budget.max_cost.toFixed(4)}.`}
+        {budget.used_cost > 0
+          ? `Coste registrado: ${budget.used_cost.toFixed(4)} (puede ser parcial).`
+          : "Coste no disponible: no hay un importe confirmado para esta ejecución."}
+        {" "}{budget.max_cost === null ? "Sin límite monetario configurado."
+          : `Límite monetario: ${budget.max_cost.toFixed(4)}.`}
       </p>
     </Panel>
   );
@@ -398,8 +399,9 @@ export function PanelSeguridadRun({ estado }: { estado: RunState }) {
           </dd>
         </dl>
         <p className="tenue">
-          Los cambios se aplican en el sandbox. El repositorio no se toca hasta que una
-          persona aprueba en la puerta de aprobación.
+          Los cambios se confinan a un worktree y se promueven con aprobación humana.
+          Esto protege la escritura: no aísla los procesos de pruebas, la red ni los
+          recursos del equipo.
         </p>
       </Panel>
 

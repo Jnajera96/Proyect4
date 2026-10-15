@@ -43,6 +43,7 @@ export function VistaDetalle({
   conexion,
   proyectos,
   alRefrescar,
+  alReanudar,
   alFallo,
 }: {
   estado: RunState | null;
@@ -50,6 +51,7 @@ export function VistaDetalle({
   conexion: EstadoConexion;
   proyectos: Project[];
   alRefrescar: (id: string) => void;
+  alReanudar: (id: string) => void;
   alFallo: (causa: unknown) => string;
 }) {
   if (!estado) {
@@ -80,6 +82,13 @@ export function VistaDetalle({
 
   return (
     <>
+      <header className="pagina-titulo"><h1>Detalle de ejecución</h1><p>El cambio propuesto y la evidencia para decidir.</p></header>
+      <nav className="detalle-nav" aria-label="Contenido de ejecución">
+        {[["Resumen", "resumen"], ["Flujo", "flujo"], ["Plan", "plan"], ["Seguridad", "seguridad"], ["Presupuesto", "presupuesto"], ["Errores", "errores"]]
+          .filter(([, id]) => id !== "plan" || estado.plan)
+          .map(([texto, id]) => <a key={id} href={`#seccion-${id}`}>{texto}</a>)}
+        {estado.final_report ? <a href="#seccion-resultado-final">Resultado</a> : null}
+      </nav>
       {/* --------------------------------------------------------- Cabecera */}
       <Panel>
         <div className="fila">
@@ -110,14 +119,14 @@ export function VistaDetalle({
       {estado.status === "awaiting_human_requirements_confirmation" ? (
         <PuertaRequisitos
           estado={estado}
-          alDecidir={() => alRefrescar(estado.run_id)}
+          alDecidir={() => alReanudar(estado.run_id)}
           alFallo={alFallo}
         />
       ) : null}
       {estado.status === "awaiting_approval" ? (
         <PuertaAprobacion
           estado={estado}
-          alDecidir={() => alRefrescar(estado.run_id)}
+          alDecidir={() => alReanudar(estado.run_id)}
           alFallo={alFallo}
         />
       ) : null}

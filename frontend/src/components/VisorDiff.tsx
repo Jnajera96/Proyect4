@@ -61,14 +61,13 @@ function parsear(texto: string): Fichero[] {
   let actual: Fichero | null = null;
   let viejo = 0;
   let nuevo = 0;
+  let enHunk = false;
 
   for (const linea of texto.split("\n")) {
     if (linea.startsWith("diff --git ")) {
-      // `diff --git a/ruta b/ruta`: se toma el lado derecho, que es el resultado.
-      const partes = linea.split(" ");
-      const ruta = (partes[partes.length - 1] || "").replace(/^b\//, "");
-      actual = { ruta, lineas: [], anadidas: 0, borradas: 0 };
+      actual = { ruta: "", lineas: [{ tipo: "meta", texto: linea, viejo: null, nuevo: null }], anadidas: 0, borradas: 0 };
       ficheros.push(actual);
+      enHunk = false;
       continue;
     }
     if (!actual) {
@@ -81,13 +80,15 @@ function parsear(texto: string): Fichero[] {
 
     const hunk = rangoDeHunk(linea);
     if (hunk) {
+      enHunk = true;
       viejo = hunk.viejo;
       nuevo = hunk.nuevo;
       actual.lineas.push({ tipo: "meta", texto: linea, viejo: null, nuevo: null });
       continue;
     }
 
-    const tipo = tipoDeLinea(linea);
+    const tipo = enHunk && (linea.startsWith("+") || linea.startsWith("-"))
+      ? tipoDeLinea(linea) : enHunk && linea.startsWith(" ") ? "ctx" : "meta";
     if (tipo === "add") {
       actual.lineas.push({ tipo, texto: linea, viejo: null, nuevo });
       actual.anadidas += 1;
@@ -105,8 +106,8 @@ function parsear(texto: string): Fichero[] {
     }
   }
 
-  // Un fichero sin lineas de contenido no aporta nada a la revision.
-  return ficheros.filter((f) => f.lineas.some((l) => l.tipo !== "meta"));
+  // Tambien se conservan renombres, binarios y metadatos sin hunks.
+  return ficheros;
 }
 
 export function VisorDiff({
@@ -156,6 +157,7 @@ export function VisorDiff({
           </div>
         </article>
       ))}
+      <details className="plegable"><summary>Diff original completo</summary><pre className="salida">{texto}</pre></details>
     </div>
   );
 }

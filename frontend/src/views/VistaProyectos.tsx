@@ -28,6 +28,8 @@ export function VistaProyectos({
   alEjecutarContra,
   alFallo,
   puedeAdministrar,
+  errorRegistro,
+  registrando,
 }: {
   proyectos: Project[];
   cargando: boolean;
@@ -39,6 +41,8 @@ export function VistaProyectos({
   alEjecutarContra: (projectId: string) => void;
   alFallo: (causa: unknown) => string;
   puedeAdministrar: boolean;
+  errorRegistro: string | null;
+  registrando: boolean;
 }) {
   const [detalle, setDetalle] = useState<Project | null>(null);
   const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
@@ -55,6 +59,8 @@ export function VistaProyectos({
 
   return (
     <>
+      <header className="pagina-titulo"><h1>Proyectos</h1><p>Repositorios autorizados para tu próximo cambio.</p></header>
+      {errorRegistro ? <p className="aviso" role="alert">{errorRegistro}</p> : null}
       {puedeAdministrar ? (
         <Seccion
           titulo="Registrar un proyecto"
@@ -86,10 +92,10 @@ export function VistaProyectos({
             <Fila sep>
               <button
                 className="primario"
-                disabled={!nombre.trim() || !ruta.trim()}
+                disabled={registrando || !nombre.trim() || !ruta.trim()}
                 onClick={alRegistrar}
               >
-                Registrar
+                {registrando ? "Registrando…" : "Registrar"}
               </button>
               <span className="tenue">
                 Registrar un proyecto es una acción de administración.
@@ -106,7 +112,7 @@ export function VistaProyectos({
         </div>
       )}
 
-      <Seccion titulo="Proyectos registrados">
+      <Seccion titulo="Proyectos registrados" nota="Página devuelta por el servidor (hasta 50 por defecto). No representa necesariamente el total.">
         {cargando ? (
           <Panel>
             <Esqueleto lineas={3} />

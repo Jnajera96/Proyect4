@@ -122,7 +122,7 @@ export function VistaSesion({
             <dd>
               {salud ? (
                 <Chip tono={salud.stt ? "ok" : "aviso"}>
-                  {salud.stt ? "disponible" : "no disponible (falta el extra de voz)"}
+                  {salud.stt ? "adaptador disponible (modelo no comprobado)" : "adaptador no disponible"}
                 </Chip>
               ) : (
                 "—"
