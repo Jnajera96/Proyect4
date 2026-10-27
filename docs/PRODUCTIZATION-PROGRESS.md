@@ -157,7 +157,7 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
 - G/H siguen parciales: falta cargar configuración instalada, launcher y paquete.
   No se añadió un bloqueo de arranque a la API actual.
 
-## F — voz real: automatización validada, micrófono físico pendiente
+## F — voz real cerrada para Windows CPU/int8
 
 - Entorno principal sincronizado con el lockfile corregido: PyAV 18.1.0 (`av<19`).
 - Settings expone dispositivo y cómputo. Windows usa CPU/int8 por defecto; CUDA
@@ -173,7 +173,8 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
   TypeScript/build y Ruff focalizado aprobados.
 - Método/evidencia: `REAL-STT-VALIDATION.md`, `REAL-STT-EVIDENCE.json` y verificador
   opt-in `tools/verify_real_voice.cjs`. No se implementó TTS ni se rediseñó UI.
-- F no se declara cerrada hasta permiso, dictado y revisión con micrófono físico.
+- Prueba física y confirmación humana completadas (detalle debajo): F cerrada
+  para small local y CPU/int8. CUDA sigue opcional y no validado.
   G/H y lanzamiento siguen pendientes; no se movió ningún tag ni se hizo push.
 
 ### F — confirmación humana recibida
@@ -181,5 +182,7 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
 - El usuario confirmó que el reconocimiento del micrófono reprodujo lo dictado.
 - La sesión física contiene tres runs de origen `text`, todos esperando la puerta
   de requisitos. No se atribuyen automáticamente a voz ni se declara cero runs.
-- Pendiente precisar si se lanzaron manualmente y si se revisó/editó el dictado
-  antes de cerrar F. El control equivalente ya pasó en la prueba automatizada.
+- El usuario confirmó la revisión/edición y aclaró: «Sí, pulsé Ejecutar; el dictado
+  no lanzó nada solo». Las tres ejecuciones fueron manuales según su reporte.
+- Cierre basado en E2E automatizado y prueba física reportada por el usuario;
+  no se inventaron mediciones de exactitud/latencia del micrófono ni se guardó audio.

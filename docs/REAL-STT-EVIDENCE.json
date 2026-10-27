@@ -136,7 +136,7 @@
     "user_report": "fue tal cual lo que dicte",
     "evidence_type": "human report",
     "audio_retained_as_evidence": false,
-    "editable_and_no_automatic_run_confirmed_by_user": null,
+    "editable_and_no_automatic_run_confirmed_by_user": true,
     "observed_session": {
       "run_count": 3,
       "sources": [
@@ -148,9 +148,11 @@
         "awaiting_human_requirements_confirmation",
         "awaiting_human_requirements_confirmation",
         "awaiting_human_requirements_confirmation"
-      ]
+      ],
+      "run_creation_attribution": "Manually launched according to explicit user confirmation; observed source remains text."
     },
-    "phase_f_closed": false,
-    "pending": "User clarification whether runs were launched explicitly and transcript was reviewed/edited."
+    "phase_f_closed": true,
+    "user_clarification": "Sí, pulsé Ejecutar; el dictado no lanzó nada solo",
+    "closure_scope": "Windows, pinned local faster-whisper-small, CPU/int8; automated browser evidence plus human physical microphone confirmation. CUDA not validated."
   }
 }

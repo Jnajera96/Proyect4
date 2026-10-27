@@ -85,9 +85,9 @@ valores inválidos. Suite completa: **751 PASS, 3 SKIP, 0 FAIL**, 183.107 s.
 Frontend: TypeScript y build aprobados. Ruff focalizado aprobado; el E501 histórico
 de `FakeAdapter.__init__` no se modificó.
 
-**Fase F: validación automatizada completada; cierre pendiente de micrófono físico.**
-Se requiere permiso del navegador, dictado humano y revisión de ese resultado antes
-de cerrar F. CUDA es opcional y sigue no disponible; no bloquea el perfil CPU validado.
+**Fase F cerrada para Windows, small local y CPU/int8.** La validación automatizada
+se completa con la prueba física y confirmación humana descritas a continuación.
+CUDA es opcional y sigue no disponible; no bloquea el perfil CPU validado.
 
 ### Comprobación física reportada por el usuario
 
@@ -96,11 +96,17 @@ dicte». Esto acredita reconocimiento fiel según validación humana; no se cons
 su audio como evidencia ni se inventó una medición de exactitud o latencia.
 
 Al revisar la sesión se encontraron tres ejecuciones de origen `text`, todas en
-`awaiting_human_requirements_confirmation`, sin metadatos de voz. Su presencia no
-demuestra que el dictado las creara automáticamente ni permite afirmar cero
-ejecuciones durante la prueba física. Está pendiente confirmar con el usuario si
-pulsó «Ejecutar» y si revisó/editó el dictado. Las garantías de edición y ausencia
-de ejecución automática siguen respaldadas por la prueba automatizada anterior.
+`awaiting_human_requirements_confirmation`, sin metadatos de voz. El usuario aclaró:
+«Sí, pulsé Ejecutar; el dictado no lanzó nada solo», en respuesta a la comprobación
+de lanzamiento manual y revisión/edición del texto. Las tres ejecuciones se
+registran como acciones manuales según su confirmación, no como creación automática
+del dictado. No se afirma cero ejecuciones en esa sesión. La procedencia `voice`
+del camino de confirmación del dictado quedó comprobada en el E2E automatizado.
+
+El cierre combina evidencia automatizada (captura simulada, archivo, edición,
+confirmación, procedencia y puerta de requisitos) con evidencia humana (micrófono
+físico, fidelidad del reconocimiento y ausencia de lanzamiento automático).
+No equivale a validar CUDA, todos los acentos/entornos acústicos ni producción.
 
 Evidencia consolidada versionada: `REAL-STT-EVIDENCE.json`.
 Evidencia local ignorada: `_tmp/voice-assets/spanish-stt-report.json`,
