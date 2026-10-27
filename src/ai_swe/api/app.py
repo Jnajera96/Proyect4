@@ -74,6 +74,7 @@ from ai_swe.contracts import (
 from ai_swe.graph.engine import NothingToResume, RunEngine, RunNotFound
 from ai_swe.graph.worker import RunWorker
 from ai_swe.models import BudgetExceededError
+from ai_swe.resources import frontend_dist
 from ai_swe.runtime_logging import close_installed_log_handler, installed_log_handler
 from ai_swe.sandbox import SandboxError, limpiar_worktree, validar_repositorio
 from ai_swe.security import (
@@ -236,7 +237,7 @@ def _configurar_nivel_de_log(nivel: str) -> None:
         logging.getLogger().setLevel(nivel)
     except (ValueError, TypeError):  # pragma: no cover - defensivo
         log.warning("nivel de log invalido en configuracion: %r", nivel)
-FRONTEND_DIR = Path(__file__).resolve().parents[3] / "frontend"
+FRONTEND_DIR = frontend_dist().parent
 
 #: Directorio **construido** que se sirve en `/app`. Ver el montaje al final de
 #: `crear_app`: se sirve lo compilado, no el fuente.

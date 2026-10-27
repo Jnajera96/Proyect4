@@ -136,6 +136,8 @@ def comando_de(target: str) -> tuple[str, ...] | None:
     Se expone para que una prueba pueda afirmar el comando **sin ejecutarlo**, y
     para que el registro de evidencia sea inspeccionable.
     """
+    if getattr(sys, "frozen", False) and target in TARGET_COMMANDS:
+        return (sys.executable, "--run-test-target", target)
     return TARGET_COMMANDS.get(target)
 
 

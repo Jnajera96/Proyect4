@@ -38,6 +38,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+packaging = ["pyinstaller==6.22.3"]
 # MCP: servidores de archivos y Git. PERTENECE A UNA FASE FUTURA (`F13`) y NO se
 # importa todavia en `src/`. Estaba declarada como dependencia OBLIGATORIA por
 # error: una instalacion limpia instalaba un paquete que ningun modulo usaba.

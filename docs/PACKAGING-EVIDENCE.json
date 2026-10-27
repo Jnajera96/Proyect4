@@ -1,0 +1,61 @@
+{
+  "build": {
+    "format": "onedir",
+    "python": "3.13.14",
+    "executable": "C:\\Users\\jose_\\Desktop\\repo_proyect\\proyecto4-ai-swe\\_tmp\\packaging-h-02\\dist\\AISWESystem\\AISWESystem.exe",
+    "sha256": "d507ba91847d2658f4110a78fd197c71834b07dab1c1079c19480fad004c41e7",
+    "bundle_bytes": 288845583,
+    "secret_files_included": false
+  },
+  "packaged_smoke": {
+    "checks": [
+      "native frozen runtime diagnostics work",
+      "sys.frozen activates installed mode",
+      "occupied preferred port is avoided",
+      "health responds without provider credential",
+      "bundled React frontend is served",
+      "bundled JavaScript is served",
+      "projects accessible in local mode",
+      "packaged CPU/int8 transcribes local Spanish audio",
+      "packaged API registers a synthetic Git project",
+      "packaged engine creates a run",
+      "packaged LangGraph waits for human confirmation",
+      "automatic test shutdown is graceful",
+      "authentication works after restart",
+      "SQLite persists across packaged restarts",
+      "restart shutdown releases server",
+      "embedded pytest.unit needs no development interpreter",
+      "embedded ruff.check needs no development interpreter",
+      "SQLite outside installation",
+      "unrelated current directory remains empty"
+    ],
+    "paid_inference_calls": 0,
+    "success": true,
+    "runtime": {
+      "frozen": true,
+      "runtime_mode": "installed",
+      "frontend_present": true
+    },
+    "voice_text": "Analiza el proyecto y muestra un resumen. No modifiques archivos. Quiero revisar el texto antes de ejecutar."
+  },
+  "python_suite": {
+    "passed": 780,
+    "skipped": 3,
+    "failed": 0,
+    "seconds": 169.816
+  },
+  "phase_i_preparation": {
+    "sandbox_executable_found": false,
+    "vmcompute_service": "Running",
+    "inno_setup_compiler_found": false,
+    "clean_windows_verified": false,
+    "installer_built": false
+  },
+  "delivery": {
+    "executable": "dist/windows-h-rc1/AISWESystem/AISWESystem.exe",
+    "archive": "dist/windows-h-rc1/AISWESystem-h-rc.zip",
+    "zip_bytes": 116200096,
+    "zip_integrity_passed": true,
+    "executable_sha256_verified": true
+  }
+}

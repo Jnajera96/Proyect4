@@ -225,3 +225,21 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
   La sincronización del contrato exportado se corrigió en el generador y volvió
   a pasar sin alterar su prueba. Evidencia XML: `_tmp/phase-g-release-check.xml`
   del worktree aislado, preservada también en `_tmp/phase-g-validation/` del principal.
+
+## H — launcher y ejecutable completados; I preparada
+
+- PyInstaller 6.22.3 fijado en extra packaging/uv.lock; construcción onedir mediante
+  `tools/build_windows.py` y `packaging/ai-swe.spec`, con frontend recién construido.
+- Launcher: socket reservado de loopback, puerto alternativo, espera de salud,
+  apertura de URL efectiva y cierre ordenado. Errores sin eco de secretos.
+- Runtime congelado activa installed de forma nativa. Assets en bundle y datos
+  en LOCALAPPDATA. Sin copiar `.env`, SQLite, caché o pesos del desarrollador.
+- Smoke real del EXE con PATH sin Python/Node, directorio ajeno y perfil temporal:
+  API/UI, Git de prueba, LangGraph hasta puerta humana, autenticación, persistencia,
+  reinicio, voz española CPU/int8 y trabajadores incluidos de pytest/Ruff aprobados.
+- Suite: 780 PASS, 3 SKIP, 0 FAIL, 169.816 s. Once pruebas nuevas; Ruff aprobado.
+- Entrega: `dist/windows-h-rc1/AISWESystem/` y ZIP de la misma carpeta. Hash,
+  reproducción y límites en `PACKAGING-REPORT.md` / `PACKAGING-EVIDENCE.json`.
+- I pendiente: WindowsSandbox.exe e Inno Setup no encontrados; vmcompute activo
+  no acredita una VM limpia. Sin instalaciones del sistema, reinicio, UAC ni firma.
+  No se declara producción o release final; presupuesto remoto intacto, sin push.

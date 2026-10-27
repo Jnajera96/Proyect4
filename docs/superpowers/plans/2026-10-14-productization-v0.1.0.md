@@ -73,16 +73,16 @@ dependencies; later PyInstaller onedir and a Windows installer.
 
 ## H — Launcher and executable
 
-- [ ] Implement src/ai_swe/launcher.py: directory/config setup, port selection,
+- [x] Implement src/ai_swe/launcher.py: directory/config setup, port selection,
   loopback-only server, health wait, real URL opening, readable errors and shutdown.
-- [ ] Test port conflicts, missing assets, invalid configuration and startup failure.
-- [ ] Fresh frontend build; PyInstaller onedir spec with required assets/imports only.
-- [ ] Run bundled EXE smoke: health/frontend/DB/project/auth/run/shutdown. Document
+- [x] Test port conflicts, missing assets, invalid configuration and startup failure.
+- [x] Fresh frontend build; PyInstaller onedir spec with required assets/imports only.
+- [x] Run bundled EXE smoke: health/frontend/DB/project/auth/run/shutdown. Document
   PACKAGING-REPORT.md; commit build(windows): add executable application packaging.
 
 ## I — Reduced environment and installer
 
-- [ ] Run bundle with reduced PATH, no development interpreter/Node/venv dependency.
+- [x] Run bundle with reduced PATH, no development interpreter/Node/venv dependency.
 - [ ] Detect available Sandbox/VM; configure only if possible without admin/reboot;
   otherwise stop at human gate. Verify persistence, promotion and clean restart there.
 - [ ] After onedir passes, build user-friendly installer with shortcuts, no services;
