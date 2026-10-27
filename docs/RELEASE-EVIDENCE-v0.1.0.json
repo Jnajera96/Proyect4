@@ -1,0 +1,137 @@
+{
+  "date": "2026-10-27",
+  "status": "candidate_pending_review_no_tag",
+  "build": {
+    "format": "onedir",
+    "python": "3.13.14",
+    "executable": "_tmp/packaging-j-01/dist/AISWESystem/AISWESystem.exe",
+    "sha256": "0137089dc1080590df3edbf35d509b370c2f81162e4932addc1a3482fbefec57",
+    "bundle_bytes": 288845660,
+    "secret_files_included": false
+  },
+  "installer_build": {
+    "installer": "dist/windows-v0.1.0-rc1/AISWESystem-v0.1.0-setup.exe",
+    "compiler": "_tmp/installer-toolchain/compiler/ISCC.exe",
+    "sha256": "1bd312a8e019773480389d95e6f7f375ae2f2d6b919774adde1967a7b22384ea",
+    "bytes": 81910274,
+    "scope": "per-user, no elevation requested",
+    "app_sha256": "0137089dc1080590df3edbf35d509b370c2f81162e4932addc1a3482fbefec57"
+  },
+  "installed_lifecycle": {
+    "environment": "isolated destination/profile and reduced PATH on development host",
+    "independent_vm": false,
+    "paid_inference_calls": 0,
+    "checks": [
+      "silent per-user installation succeeds",
+      "complete onedir runtime installed",
+      "Start Menu and Desktop shortcuts created",
+      "user uninstall registration created",
+      "functional test fails before proposal",
+      "installed API and frontend start",
+      "installed API reports release version 0.1.0",
+      "requirements gate leaves original clean",
+      "real packaged tests pass in worktree",
+      "review gate leaves original clean",
+      "graceful stop at persisted approval gate",
+      "SQLite and checkpoint survive application restart",
+      "exact reviewed bytes promoted after explicit approval",
+      "protected tests and original commit unchanged",
+      "only approved source path changed",
+      "final report has no promotion failure",
+      "deterministic fixture used only Coder and Reviewer",
+      "shutdown completes before uninstall",
+      "SQLite exists outside installation",
+      "uninstaller succeeds",
+      "program and internal runtime removed",
+      "owned shortcuts and registration removed",
+      "all user data including configuration preserved byte-for-byte"
+    ],
+    "success": true,
+    "host_elevated": false,
+    "app_sha256": "0137089dc1080590df3edbf35d509b370c2f81162e4932addc1a3482fbefec57",
+    "fixture_calls": [
+      "coder",
+      "reviewer"
+    ],
+    "run_id": "run-ced0fd03539e",
+    "final_status": "completed",
+    "preserved_user_files": [
+      "config/.env",
+      "data/state.sqlite3",
+      "logs/application.log"
+    ]
+  },
+  "packaged_smoke": {
+    "checks": [
+      "native frozen runtime diagnostics work",
+      "sys.frozen activates installed mode",
+      "occupied preferred port is avoided",
+      "health responds without provider credential",
+      "bundled React frontend is served",
+      "bundled JavaScript is served",
+      "projects accessible in local mode",
+      "packaged CPU/int8 transcribes local Spanish audio",
+      "packaged API registers a synthetic Git project",
+      "packaged engine creates a run",
+      "packaged LangGraph waits for human confirmation",
+      "automatic test shutdown is graceful",
+      "authentication works after restart",
+      "SQLite persists across packaged restarts",
+      "restart shutdown releases server",
+      "embedded pytest.unit needs no development interpreter",
+      "embedded ruff.check needs no development interpreter",
+      "SQLite outside installation",
+      "unrelated current directory remains empty"
+    ],
+    "paid_inference_calls": 0,
+    "success": true,
+    "runtime": {
+      "frozen": true,
+      "runtime_mode": "installed",
+      "frontend_present": true
+    },
+    "voice_text": "Analiza el proyecto y muestra un resumen. No modifiques archivos. Quiero revisar el texto antes de ejecutar."
+  },
+  "browser": {
+    "checks": 114,
+    "modes": [
+      "local",
+      "auth"
+    ],
+    "report": "_tmp/release-browser/1793103651774/report.json"
+  },
+  "python_suite": {
+    "passed": 785,
+    "skipped": 3,
+    "failed": 0,
+    "seconds": 226.982
+  },
+  "frontend_state_tests": {
+    "passed": 24
+  },
+  "historical_real_model_evidence": "docs/HYBRID-E2E-EVIDENCE.json",
+  "physical_microphone_evidence": "docs/REAL-STT-EVIDENCE.json",
+  "independent_vm_verified": false,
+  "new_paid_inference_calls": 0,
+  "budget": {
+    "authorized_usd": "3",
+    "reserved_usd": "1.17225088"
+  },
+  "artifacts": {
+    "AISWESystem-v0.1.0-setup.exe": {
+      "sha256": "1bd312a8e019773480389d95e6f7f375ae2f2d6b919774adde1967a7b22384ea",
+      "bytes": 81910274
+    },
+    "AISWESystem/AISWESystem.exe": {
+      "sha256": "0137089dc1080590df3edbf35d509b370c2f81162e4932addc1a3482fbefec57",
+      "bytes": 17600186
+    },
+    "AISWESystem-v0.1.0-portable.zip": {
+      "sha256": "86e3844bb42a526d75144544e4f033b6aa009155a17cd6a7ec4ac2d535987ac9",
+      "bytes": 116199915
+    }
+  },
+  "zip_integrity_verified": true,
+  "tag_created": false,
+  "push_performed": false
+}

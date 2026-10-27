@@ -1,5 +1,10 @@
 # Pausa segura — Fase I / preparación J
 
+**Actualización 27/10/2026:** el usuario solicitó continuar. La pausa fue revocada,
+el defecto de `/GROUP` se corrigió y la validación del instalador final pasó.
+Consultar `INSTALLER-VALIDATION.md` y `RELEASE-MATRIX-v0.1.0.md` para el estado actual.
+Lo que sigue conserva el checkpoint histórico de `bfc5273`, no una orden de pausa vigente.
+
 Pausa solicitada por el usuario por límite de uso diario. No continuar hasta su
 solicitud. Baseline validada de H: `75425fe`, rama `productization/v0.1.0`.
 

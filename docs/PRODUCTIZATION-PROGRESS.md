@@ -254,3 +254,32 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
 - Promoción instalada, conservación de datos al desinstalar y suite final pendientes.
   Cuatro avisos Ruff nuevos pendientes. I no cerrada; J no iniciada; sin tag final.
 - Instrucciones y rutas exactas en `RESUME-PHASE-I.md`. Reanudar solo a solicitud.
+
+## Reanudación del 27 de octubre de 2026 — I validada y J preparada
+
+- El usuario revocó la pausa con «continua». Baseline `bfc5273`, rama
+  `productization/v0.1.0`; cambios académicos previos preservados.
+- Causa de accesos confirmada con documentación de Inno: `/GROUP` se ignora si
+  `DisableProgramGroupPage=yes`. Se cambió a `no` y se protege también el grupo
+  predeterminado preexistente. Los cuatro avisos Ruff del checkpoint se resolvieron.
+- I pasó 23 controles sobre el instalador final: instalación sin elevación,
+  accesos/registro, prueba inicialmente fallida, worktree/tests/revisión, reinicio
+  en puerta de aprobación, promoción exacta tras aprobar y desinstalación conservando
+  todos los archivos de datos byte por byte. Se retiró la instalación de prueba.
+- El servidor de modelos de esa prueba es un fixture HTTP local determinista;
+  gateway, grafo, pruebas, puertas y promoción son reales. No se presenta como
+  inferencia real ni se gastó presupuesto remoto.
+- J: API/OpenAPI y frontend/lock alineados con Python/instalador a 0.1.0; regresión
+  nueva de coherencia. EXE e instalador se reconstruyeron y revalidaron después.
+- Suite final: **785 PASS, 3 SKIP, 0 FAIL**, 226.982 s. Frontend: TypeScript/build,
+  24 pruebas de estado y 114 comprobaciones reales de navegador aprobadas.
+  EXE final: 19 controles, incluida voz española CPU/int8, sin Python/Node externos.
+- Documentos: `INSTALLATION-WINDOWS.md`, `PRODUCT-v0.1.0.md`,
+  `KNOWN-LIMITATIONS-v0.1.0.md`, `INSTALLER-VALIDATION.md` y
+  `RELEASE-MATRIX-v0.1.0.md`; consolidado `RELEASE-EVIDENCE-v0.1.0.json`.
+- Artefactos y hashes: `dist/windows-v0.1.0-rc1/`. Sigue sin VM independiente ni
+  firma de producto. I se cierra solo en el alcance aislado solicitado de este host.
+- J queda lista para revisión del alcance/omisiones y aprobación de etiqueta;
+  **no se creó `v0.1.0`, no se hizo push ni se declara producción**.
+  Reserva del laboratorio intacta: 1.17225088 de 3 USD. README/documentos académicos
+  pendientes del usuario no se mezclaron con este candidato.

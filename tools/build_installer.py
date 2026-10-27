@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def find_iscc(explicit: Path | None = None) -> Path | None:
     candidates = [explicit, shutil.which("ISCC.exe")]
-    for base in (os.environ.get("ProgramFiles(x86)"), os.environ.get("ProgramFiles")):
+    for base in (os.environ.get("PROGRAMFILES(X86)"), os.environ.get("PROGRAMFILES")):
         if base:
             candidates += [Path(base) / f"Inno Setup {version}" / "ISCC.exe" for version in (6, 7)]
     local = os.environ.get("LOCALAPPDATA")

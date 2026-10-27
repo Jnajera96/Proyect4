@@ -1,7 +1,7 @@
 {
   "name": "ai-swe-frontend",
   "private": true,
-  "version": "0.11.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "React dashboard over the ai_swe REST surface and SSE event stream (F11).",
   "scripts": {

@@ -13,6 +13,7 @@ def test_installation_preserves_user_data_and_does_not_request_elevation():
     assert "[UninstallDelete]\n" not in source
     assert "{localappdata}\\Programs\\AISWESystem" in source
     assert "{autodesktop}" in source and "{group}" in source
+    assert "DisableProgramGroupPage=no" in source, "Custom /GROUP must be honored"
 
 
 def test_incomplete_bundle_is_rejected(tmp_path):

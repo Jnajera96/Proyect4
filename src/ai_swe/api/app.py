@@ -57,6 +57,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import Response
 
+from ai_swe import __version__
 from ai_swe.config import load_settings, provider_configuration, repositorio_autorizado
 from ai_swe.contracts import (
     ApprovalDecision,
@@ -488,11 +489,11 @@ def crear_app(
 
     app = FastAPI(
         title="AI Software Engineering System",
-        version="0.2.0",
+        version=__version__,
         description=(
-            "Proyecto 4, Equipo 4. Fase M1: esqueleto ejecutable con ejecucion "
-            "asincrona y progreso en vivo. Los nodos del grafo son deterministas y "
-            "sin modelo."
+            "Producto local mono-usuario con ejecucion asincrona, progreso en vivo "
+            "y aprobacion humana. Analyst/Supervisor deterministas; modelos de "
+            "Coder/Reviewer opcionales mediante configuracion explicita."
         ),
         lifespan=ciclo_de_vida,
     )

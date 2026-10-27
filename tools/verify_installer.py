@@ -24,7 +24,10 @@ import winreg
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-REGISTRY_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\{7202DDE2-BCB0-4CFE-8C15-33D97B136DD8}_is1"
+REGISTRY_KEY = (
+    r"Software\Microsoft\Windows\CurrentVersion"
+    r"\Uninstall\{7202DDE2-BCB0-4CFE-8C15-33D97B136DD8}_is1"
+)
 
 
 def hash_file(path):
@@ -59,8 +62,9 @@ def main():
     profile = output / "profile"
     group_name = "AI-SWE-Installer-Test-" + uuid.uuid4().hex[:8]
     menu = folder(0x02) / group_name
+    default_menu = folder(0x02) / "AI Software Engineering System"
     desktop = folder(0x10) / "AI Software Engineering System.lnk"
-    if desktop.exists() or menu.exists() or registered():
+    if desktop.exists() or menu.exists() or default_menu.exists() or registered():
         parser.error("Existing shortcut/product registration found; will not overwrite user state")
     report = {
         "environment": "isolated destination/profile and reduced PATH on development host",
@@ -241,6 +245,7 @@ def main():
         installed = result.returncode == 0
         check("silent per-user installation succeeds", installed)
         check("complete onedir runtime installed", (install / "_internal/python313.dll").is_file())
+        report["app_sha256"] = hash_file(install / "AISWESystem.exe")
         check(
             "Start Menu and Desktop shortcuts created",
             (menu / "AI Software Engineering System.lnk").is_file() and desktop.is_file(),
@@ -304,6 +309,10 @@ def main():
             request(base, "/health")["status"] == "ok"
             and b"AI Software Engineering System" in request(base, "/app/"),
         )
+        check(
+            "installed API reports release version 0.1.0",
+            request(base, "/openapi.json")["info"]["version"] == "0.1.0",
+        )
         project = request(
             base, "/projects", {"name": "Installer promotion fixture", "repo_path": str(repo)}
         )
@@ -311,7 +320,10 @@ def main():
             base,
             "/runs",
             {
-                "instruction": "Modifica src/app.py para que f devuelva 42. No cambies las pruebas existentes.",
+                "instruction": (
+                    "Modifica src/app.py para que f devuelva 42. "
+                    "No cambies las pruebas existentes."
+                ),
                 "project_id": project["project_id"],
                 "options": {"allowed_paths": ["src/app.py"], "protected_paths": ["tests"]},
             },

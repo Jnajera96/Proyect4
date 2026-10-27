@@ -85,9 +85,10 @@ dependencies; later PyInstaller onedir and a Windows installer.
 - [x] Run bundle with reduced PATH, no development interpreter/Node/venv dependency.
 - [ ] Detect available Sandbox/VM; configure only if possible without admin/reboot;
   otherwise stop at human gate. Verify persistence, promotion and clean restart there.
-- [ ] After onedir passes, build user-friendly installer with shortcuts, no services;
-  stop only for unavoidable UAC. Commit build(windows): add local installer and
-  clean-machine validation after evidence supports that description.
+- [x] Build per-user installer with shortcuts, no services or elevation; validate
+  install, deterministic real promotion, restart and data-preserving uninstall in
+  isolated destination/profile/PATH on this host, as explicitly requested by user.
+  Independent clean-machine validation remains unperformed, not relabeled PASS.
 
 ## J — Final product release
 
@@ -95,5 +96,11 @@ dependencies; later PyInstaller onedir and a Windows installer.
   packaged/clean-machine matrix, preserving explicit omissions rather than false PASS.
 - [ ] Write PRODUCT-v0.1.0.md, INSTALLATION-WINDOWS.md and
   KNOWN-LIMITATIONS-v0.1.0.md, update README/snapshot and coherent version 0.1.0.
+  - Documents, matrix and version alignment completed on 2026-10-27. Existing
+    user README/academic edits preserved; no unrelated content committed.
 - [ ] Only if the required matrix is green, create local v0.1.0 tag and report
   executable/installer locations, startup instructions and separate readiness verdicts.
+
+Current review matrix: docs/RELEASE-MATRIX-v0.1.0.md. Functional checks on the local
+candidate passed; independent Windows/VM, product signing and final tag approval
+remain explicit omissions/pending decisions. No automatic tag or push.

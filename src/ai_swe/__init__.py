@@ -9,8 +9,9 @@ investigacion, codificacion, sandbox aislado, ejecucion de pruebas reales, revis
 con guardas deterministas, dos puertas humanas, promocion al repositorio del usuario,
 frontend, STT local y evaluacion experimental.
 
-**Alcance declarado**: prototipo local, un solo usuario, `127.0.0.1`, sin
-autenticacion. El sandbox confina la **escritura** del Coder, pero **no aisla el
+**Alcance declarado**: producto local, un solo usuario, `127.0.0.1`, con
+autenticacion por claves configurable. El sandbox confina la **escritura** del Coder,
+pero **no aisla el
 proceso** de ejecucion. Estado verificado, riesgos abiertos y plan de evolucion:
 `docs/audit/00-EXECUTIVE-AUDIT.md`.
 """
