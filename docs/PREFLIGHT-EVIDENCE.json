@@ -1,0 +1,28 @@
+{
+  "profile": "hybrid",
+  "checks": [
+    {
+      "name": "user_config",
+      "status": "warning",
+      "code": "missing",
+      "message": "No hay configuracion instalada; las funciones locales siguen disponibles."
+    },
+    {
+      "name": "local_model",
+      "status": "not_required",
+      "code": "deterministic_roles",
+      "message": "Analyst y Supervisor son deterministas; no requieren un servidor GGUF."
+    },
+    {
+      "name": "remote_provider",
+      "status": "ok",
+      "code": "identity_validated",
+      "message": "Token aceptado por el Hub; inferencia, permisos y saldo no verificados."
+    }
+  ],
+  "remote_configuration_ready": true,
+  "credential_validated": true,
+  "inference_calls": 0,
+  "inference_verified": false,
+  "billing_verified": false
+}

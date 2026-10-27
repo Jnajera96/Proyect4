@@ -138,3 +138,21 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
   defecto ni claims de producto instalado o producción. Voz y empaquetado pendientes.
 - Próximo encargo recibido: propuesta inspirada en MADRE. Solo el preflight se
   considera para v0.1.0 (G/H); los módulos 3.2–3.5 quedan en backlog v0.2.0.
+
+## Propuesta MADRE y preflight sin inferencia
+
+- Propuesta conservada en `PROPUESTA-MEJORAS-INSPIRADAS-EN-MADRE.md`, con ajustes
+  explícitos: roles ligeros deterministas, costes reales de FTS5 y ausencia de
+  commits implícitos de promoción. Módulos 3.2–3.5 siguen en backlog v0.2.0.
+- Diagnóstico reutilizable en `models/providers/diagnostics.py` y CLI
+  `python -m ai_swe.preflight`. No requiere GGUF para el perfil aceptado y no
+  genera tokens, descarga modelos ni invoca CLIs de agentes.
+- GET real de identidad del Hub aceptó la credencial; saldo e inferencia se
+  mantuvieron como no verificados. Sin exportar token ni identidad de cuenta.
+- Se conserva la frontera HTTP en providers. La primera suite detectó su
+  ubicación incorrecta y se corrigió sin alterar la aserción arquitectónica.
+- 20 pruebas nuevas de diagnóstico aprobadas. Suite final: 745 PASS, 3 SKIP,
+  0 FAIL, 161.201 s. Ruff focalizado aprobado. XML preservado en
+  `_tmp/provider-preflight/preflight-final.xml` del checkout principal.
+- G/H siguen parciales: falta cargar configuración instalada, launcher y paquete.
+  No se añadió un bloqueo de arranque a la API actual.
