@@ -1,5 +1,18 @@
 # Índice de documentación
 
+## Cierre v0.1.0
+
+Entrega canónica y alcance local aprobado: [producto](PRODUCT-v0.1.0.md),
+[instalación](INSTALLATION-WINDOWS.md), [matriz](RELEASE-MATRIX-v0.1.0.md),
+[limitaciones](KNOWN-LIMITATIONS-v0.1.0.md) y [evidencia SAC](SAC-DISTRIBUTION-EVIDENCE.json).
+Se conserva la estructura académica y sus formatos editables originales.
+
+**Entrega organizada:** [estructura](ESTRUCTURA-DE-ENTREGA.md),
+[SRS IEEE 830](SRS/README.md), [arquitectura](arquitectura/README.md),
+[administración](administracion/README.md), [estimación](estimacion/README.md)
+y [diagramas](../diagramas/README.md). Se omiten las carpetas documentales de
+pruebas y métricas según solicitud del usuario.
+
 > **Único índice del proyecto.** Creado en la Fase 1 del plan de evolución
 > controlada. Sustituye a los índices duplicados (`01-ARCHITECTURE.md`,
 > `02-CONTRACTS.md`, `03-SECURITY.md`, `04-ROADMAP.md`, `05-DECISIONS.md`), que se

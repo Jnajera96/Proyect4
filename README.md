@@ -1,5 +1,19 @@
 # Proyecto 4 — AI Software Engineering System
 
+## v0.1.0 — entrega local aprobada
+
+Entrega canónica: `dist/windows-signed-python-rc2/AISWESystem-signed-python-rc2.zip`.
+Abrir `AISWESystem.cmd` tras extraer todo. 791 PASS, 3 SKIP, cero FAIL; SAC activo
+y cero bloqueos del paquete en este host. Sin VM independiente. Ver
+[producto](docs/PRODUCT-v0.1.0.md), [instalación](docs/INSTALLATION-WINDOWS.md) y
+[matriz](docs/RELEASE-MATRIX-v0.1.0.md). Tag local `v0.1.0` autorizado por el usuario.
+Los apartados de fases y auditorías anteriores conservan su contexto histórico.
+
+Documentación para entrega: [SRS IEEE 830](docs/SRS/README.md),
+[arquitectura](docs/arquitectura/README.md), [administración](docs/administracion/README.md),
+[estimación](docs/estimacion/README.md) y [diagramas](diagramas/README.md).
+Ver la [estructura solicitada](docs/ESTRUCTURA-DE-ENTREGA.md).
+
 > Frontend de entrega: [baseline vigente](docs/BASELINE-FRONTEND-DELIVERY.md) y
 > [roadmap](docs/ROADMAP.md). Fase C: [candidato local y evidencia](docs/RELEASE-CANDIDATE-PHASE-C.md),
 > con tres omisiones explícitas; sin certificación de producción.
