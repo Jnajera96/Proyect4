@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-27",
+  "baseline": "bbddf91",
+  "status": "frontend verified; new executable blocked by Windows Application Control",
+  "frontend_tests_passed": 24,
+  "typescript_build": "PASS",
+  "backend_changed": false,
+  "new_paid_inference_calls": 0,
+  "full_python_suite_repeated": false,
+  "external_sources": {
+    "docs/07-FRONTEND-REDESIGN-HANDOFF.md": {
+      "sha256": "f74741c8b3db974f8251b9d71bd062fc540d4d4a1b91bf0854f61260a26bbfe8",
+      "modified": false
+    },
+    "frontend/src/components/WorkflowPipeline.tsx": {
+      "sha256": "8f123a59bfe79d1769c6a1ba1a715f7c48ce2ad1ea76e7e1024ca912f2720382",
+      "modified": false
+    },
+    "frontend/src/components/AppShell.tsx": {
+      "sha256": "7607a2f99742bc3f044041e74e23f3edd3c4bdb869824b03f35f090d6062f2a6",
+      "modified": false
+    },
+    "frontend/src/components/StageDetailDrawer.tsx": {
+      "sha256": "fa01c971a72ea771383c29b1de4b6f058b30a69c77c8654f7af9f4f3bf472039",
+      "modified": false
+    },
+    "frontend/src/components/ui/DiffViewer.tsx": {
+      "sha256": "ffa746e311f4251489dc2b9268d6524d298b8e4871a4a845b53fde254a359814",
+      "modified": false
+    },
+    "frontend/src/index.css": {
+      "sha256": "8e915a630974c6301ec3d543b8610b39afad0990e0094e32ca229a35b40a0a59",
+      "modified": false
+    }
+  },
+  "reports": {
+    "browser": {
+      "path": "_tmp/antigravity-browser-04/1793113106328/report.json",
+      "sha256": "ae2e8f448e65757c0bf0ed2e142a85c92d4ab732b1a02993bbe82b2b28a2b622",
+      "checks_passed": 134,
+      "success": true
+    },
+    "voice": {
+      "path": "_tmp/antigravity-voice-01/report.json",
+      "sha256": "162339c386c5672e991551bccdb59e728765c579787bb67e36b5d2f49fd5e4d0",
+      "checks_passed": 16,
+      "success": true
+    },
+    "configuration": {
+      "path": "_tmp/antigravity-config-01/report.json",
+      "sha256": "13e998447ac29217ff0f2d73ddd8b97d228e6d6e05dafe99dc6a6c95ba576d22",
+      "checks_passed": 8,
+      "success": true
+    },
+    "packaged": {
+      "path": "_tmp/antigravity-packaged-01/report.json",
+      "sha256": "7fe052dc56191bf0747e3698a391f0553b1d2f2f202084edeb0805bc31da6546",
+      "checks_passed": 0,
+      "success": false,
+      "error": "[WinError 4551] Una directiva de Control de aplicaciones bloqueó este archivo"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "_tmp/antigravity-build-03/dist/AISWESystem/AISWESystem.exe",
+      "sha256": "1eee125a4cdd28adde5b1f0369b1b73b99425bce6676750d9a87696e3b572933",
+      "bytes": 17600185,
+      "validated": false
+    },
+    {
+      "path": "dist/windows-antigravity-rc1/AISWESystem-v0.1.0-setup.exe",
+      "sha256": "1cb70a550716ac1471a09f8abe9401e2686aee0b6aacbaad8f78da7b8e963029",
+      "bytes": 81909349,
+      "validated": false
+    }
+  ],
+  "source_build_matches_packaged_frontend": true
+}

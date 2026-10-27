@@ -6,6 +6,7 @@ const trazos: Record<string, string> = {
   ejecuciones: "m9 5 11 7-11 7Z",
   detalle: "M6 3h9l4 4v14H6ZM9 11h7M9 15h7M9 18h4",
   flujo: "M5 5h4v4H5ZM15 15h4v4h-4ZM7 9v8h8M9 7h8v8",
+  actividad: "M3 12h4l3-7 4 14 3-7h4",
   seguridad: "m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6ZM9 12l2 2 4-4",
   sesion: "M12 3v8M6 6a9 9 0 1 0 12 0",
   microfono: "M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0ZM5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8",

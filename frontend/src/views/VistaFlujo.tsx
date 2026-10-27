@@ -5,12 +5,17 @@
  * en lugar de dibujar un diagrama vacio, y cuando la hay ensena el `next_step` tal
  * como lo publica el motor, sin traducirlo a una promesa.
  */
+import { useState } from "react";
 import type { RunState } from "../lib/contracts";
 import { ETIQUETA_ESTADO } from "../lib/contracts";
-import { DiagramaFlujo } from "../components/DiagramaFlujo";
+import { calcular, type Etapa } from "../components/DiagramaFlujo";
+import { SecuenciaAgentes } from "../components/SecuenciaAgentes";
+import { InspectorEtapa } from "../components/InspectorEtapa";
 import { Chip, EstadoVacio, Panel, Seccion } from "../components/ui";
 
 export function VistaFlujo({ estado }: { estado: RunState | null }) {
+  const [etapa, setEtapa] = useState<Etapa | null>(null);
+  const etapaActual = estado && etapa ? calcular(estado).find(e => e.id === etapa.id) : null;
   if (!estado) {
     return (
       <Panel>
@@ -36,10 +41,11 @@ export function VistaFlujo({ estado }: { estado: RunState | null }) {
         acciones={<Chip tono={espera ? "aviso" : ""}>{ETIQUETA_ESTADO[estado.status]}</Chip>}
       >
         <Panel>
-          <DiagramaFlujo estado={estado} />
+          <SecuenciaAgentes estado={estado} alEtapa={setEtapa} />
         </Panel>
       </Seccion>
 
+      {etapaActual ? <InspectorEtapa key={estado.run_id + etapaActual.id} etapa={etapaActual} estado={estado} alCerrar={() => setEtapa(null)} /> : null}
       <Seccion titulo="Posición declarada por el motor">
         <Panel>
           <dl className="datos">

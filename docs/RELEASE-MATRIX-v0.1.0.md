@@ -3,6 +3,12 @@
 Fecha: 27 de octubre de 2026. Estado: **preparado para revisión, no etiquetado**.
 El tag `v0.1.0` no existe. No se solicita ni ejecuta push.
 
+Revisión posterior Antigravity: fuente/frontend aprobados con 134 controles de
+navegador, pero el EXE nuevo está bloqueado por Windows (WinError 4551). Consultar
+`ANTIGRAVITY-INTEGRATION.md` / `ANTIGRAVITY-EVIDENCE.json`. El paquete premium
+descrito abajo es histórico y no contiene esas vistas nuevas. No aprobar el
+paquete Antigravity basándose en la validación del premium anterior.
+
 Revisión visual posterior: el candidato actualizado está en
 `dist/windows-premium-rc1/`. Consultar `UI-PREMIUM-VALIDATION.md` y
 `UI-PREMIUM-EVIDENCE.json` para sus verificaciones y hashes. La suite completa

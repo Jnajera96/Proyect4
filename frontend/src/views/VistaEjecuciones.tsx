@@ -46,11 +46,13 @@ export function VistaEjecuciones({
   puedeAdministrar: boolean;
   puedeOperar: boolean;
 }) {
+  const [busqueda, setBusqueda] = useState("");
+  const [orden, setOrden] = useState("recientes");
   const [filtro, setFiltro] = useState<"todas" | "pendientes" | "en-curso" | "terminales">(
     "todas",
   );
 
-  const filtradas = useMemo(() => {
+  const porEstado = useMemo(() => {
     if (filtro === "pendientes") {
       return runs.filter((r) => r.awaiting_approval || r.status.startsWith("awaiting"));
     }
@@ -64,6 +66,11 @@ export function VistaEjecuciones({
     }
     return runs;
   }, [runs, filtro]);
+  const filtradas = useMemo(() => {
+    const consulta = busqueda.trim().toLocaleLowerCase();
+    return porEstado.filter(r => `${r.run_id} ${r.trace_id} ${r.intent ?? ""} ${ETIQUETA_ESTADO[r.status]}`.toLocaleLowerCase().includes(consulta))
+      .slice().sort((a, b) => orden === "antiguas" ? a.created_at.localeCompare(b.created_at) : orden === "errores" ? b.error_count - a.error_count : b.created_at.localeCompare(a.created_at));
+  }, [porEstado, busqueda, orden]);
 
   return (
     <>
@@ -113,6 +120,9 @@ export function VistaEjecuciones({
         }
       >
         <Panel>
+          <div className="historial-herramientas"><div><label htmlFor="historial-busqueda">Buscar en el historial cargado</label><input id="historial-busqueda" type="search" value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="ID, intención o estado" /></div>
+            <div><label htmlFor="historial-orden">Ordenar por</label><select id="historial-orden" value={orden} onChange={e => setOrden(e.target.value)}><option value="recientes">Más recientes</option><option value="antiguas">Más antiguas</option><option value="errores">Más errores</option></select></div>
+            <span className="tenue" role="status">{filtradas.length} de {runs.length} ejecuciones cargadas</span></div>
           {cargando ? (
             <Esqueleto lineas={4} />
           ) : filtradas.length ? (

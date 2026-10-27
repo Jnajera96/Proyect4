@@ -46,6 +46,7 @@ import { Chip, Panel } from "./components/ui";
 import { VistaDetalle } from "./views/VistaDetalle";
 import { VistaEjecuciones } from "./views/VistaEjecuciones";
 import { VistaFlujo } from "./views/VistaFlujo";
+import { VistaActividad } from "./views/VistaActividad";
 import { VistaGeneral } from "./views/VistaGeneral";
 import { EstadoProveedor } from "./components/EstadoProveedor";
 import { VistaProyectos } from "./views/VistaProyectos";
@@ -113,6 +114,7 @@ export function App() {
 
   // ---------------------------------------------------------- navegacion
   const [vista, setVista] = useState<VistaId>("general");
+  const [sidebarCompacta, setSidebarCompacta] = useState(false);
   const contenido = useRef<HTMLDivElement | null>(null);
 
   const { eventos, conexion, reanudar } = useEventosRun(runId);
@@ -406,6 +408,7 @@ export function App() {
     { id: "ejecuciones", etiqueta: "Ejecuciones", aviso: esperando },
     { id: "detalle", etiqueta: "Detalle" },
     { id: "flujo", etiqueta: "Flujo" },
+    { id: "actividad", etiqueta: "Actividad" },
     { id: "seguridad", etiqueta: "Seguridad" },
     { id: "sesion", etiqueta: "Sesión" },
   ];
@@ -417,6 +420,7 @@ export function App() {
       <button id="abrir-menu" className="boton-menu" aria-label="Abrir navegación" aria-expanded={menuAbierto}
         aria-controls="sidebar" onClick={() => setMenuAbierto(v => !v)}><Icono nombre="menu" /></button>
       <div>
+        <button className="contraer-sidebar" aria-label={sidebarCompacta ? "Expandir barra lateral" : "Contraer barra lateral"} aria-expanded={!sidebarCompacta} aria-controls="sidebar" onClick={() => setSidebarCompacta(v => !v)}><Icono nombre="menu" /></button>
         <div className="titulo">AI Software Engineering System</div>
         <p className="subtitulo">Espacio de trabajo · Ingeniería con evidencia</p>
       </div>
@@ -509,7 +513,7 @@ export function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${sidebarCompacta ? " sidebar-compacta" : ""}`}>
       <a className="saltar" href="#contenido">Saltar al contenido</a>
       <aside id="sidebar" className={`sidebar ${menuAbierto ? "abierto" : ""}`}>
         <button className="cerrar-menu sutil" aria-label="Cerrar navegación" onClick={() => {
@@ -517,7 +521,7 @@ export function App() {
         }}><Icono nombre="cerrar" /></button>
         <Navegacion vista={vista} items={items} alCambiar={v => { setVista(v); setMenuAbierto(false); window.requestAnimationFrame(() => { contenido.current?.focus({ preventScroll: true }); window.scrollTo(0, 0); }); }}
           proyectos={proyectos} proyectoActual={projectId}
-          runs={runs} runActual={runId} alRun={seleccionarRun}
+          runs={runs} runActual={runId} alRun={id => { seleccionarRun(id); setMenuAbierto(false); }}
           alProyecto={id => { setProjectId(id); setVista("general"); setMenuAbierto(false); }}
           alCrearProyecto={() => { setVista("proyectos"); setMenuAbierto(false); }} />
       </aside>
@@ -598,6 +602,7 @@ export function App() {
         ) : null}
 
         {vista === "flujo" ? <VistaFlujo estado={estado} /> : null}
+        {vista === "actividad" ? <VistaActividad estado={estado} eventos={eventos} conexion={conexion} /> : null}
 
         {vista === "seguridad" ? (
           <VistaSeguridad estado={estado} sesion={sesion} rol={rol} />

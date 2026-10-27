@@ -312,3 +312,17 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
 - `CLEAN-WINDOWS-VALIDATION.md` prepara la prueba externa, aún NO ejecutada.
   No hay VM independiente, firma, aprobación de tag final ni push. El próximo
   gate es validar otro Windows o decidir expresamente el alcance local del release.
+
+## Adaptación funcional del frontend de Antigravity
+
+- Código externo localizado en la ruta proporcionada por el usuario y revisado.
+  Pipeline secuencial, inspector contextual, actividad SSE, historial con búsqueda/
+  orden y sidebar contraíble adaptados a los contratos actuales; sin tocar backend.
+- 24 pruebas frontend, TypeScript/build, 134 controles de navegador, 8 de
+  configuración y 16 de voz CPU/int8 aprobados. Foco y selector de promoción
+  corregidos tras fallos reproducibles. Acta `ANTIGRAVITY-INTEGRATION.md`.
+- EXE e instalador nuevos construidos. El EXE fue bloqueado por Windows con
+  WinError 4551 antes del smoke. No se eludió la directiva; paquete nuevo no
+  validado, instalación no ejecutada. Reporte y hashes en `ANTIGRAVITY-EVIDENCE.json`.
+- La entrega premium anterior permanece intacta, sin estas nuevas vistas. La
+  integración está disponible desde fuente/build principal. No hay tag ni push.

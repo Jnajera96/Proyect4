@@ -22,7 +22,7 @@ import { Icono } from "./Icono";
 
 type EstadoEtapa = "hecha" | "en-curso" | "esperando" | "fallida" | "pendiente";
 
-interface Etapa {
+export interface Etapa {
   id: string;
   nodo: string;
   nombre: string;
@@ -46,7 +46,7 @@ const TONO: Record<EstadoEtapa, "" | "ok" | "aviso" | "error" | "acento"> = {
   pendiente: "",
 };
 
-function calcular(estado: RunState): Etapa[] {
+export function calcular(estado: RunState): Etapa[] {
   const siguiente = (estado.next_step ?? "").toLowerCase();
   const plan = estado.plan;
   const pruebas = estado.evidence.test_runs ?? [];
@@ -177,7 +177,7 @@ function calcular(estado: RunState): Etapa[] {
   ];
 }
 
-export function DiagramaFlujo({ estado }: { estado: RunState | null }) {
+export function DiagramaFlujo({ estado, alEtapa }: { estado: RunState | null; alEtapa?: (etapa: Etapa) => void }) {
   const etapas: Etapa[] = estado ? calcular(estado) : [
     ["requisitos", "interpret", "Analista de requisitos", "Interpreta la petición y espera tu confirmación."],
     ["supervisor", "plan", "Supervisor", "Organiza el trabajo en subtareas."],
@@ -202,6 +202,7 @@ export function DiagramaFlujo({ estado }: { estado: RunState | null }) {
               <Chip tono={TONO[e.estado]}>{estado ? ETIQUETA_ESTADO[e.estado] : "Sin ejecución"}</Chip>
             </div>
             <p className="flujo-detalle">{e.detalle}</p>
+            {alEtapa ? <button className="sutil etapa-inspeccionar" onClick={() => alEtapa(e)} aria-label={`Inspeccionar etapa: ${e.nombre}`}>Ver evidencia</button> : null}
           </div>
         </li>
       ))}

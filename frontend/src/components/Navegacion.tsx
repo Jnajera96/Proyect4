@@ -14,6 +14,7 @@ export type VistaId =
   | "ejecuciones"
   | "detalle"
   | "flujo"
+  | "actividad"
   | "seguridad"
   | "sesion";
 
@@ -57,6 +58,7 @@ export function Navegacion({
           <button
             key={item.id}
             type="button"
+            aria-label={item.etiqueta}
             className={activo ? "nav-item activo" : "nav-item"}
             aria-current={activo ? "page" : undefined}
             onClick={() => alCambiar(item.id)}

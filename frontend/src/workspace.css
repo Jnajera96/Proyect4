@@ -1,4 +1,42 @@
 /* Materiales del espacio de trabajo. Los estados siguen viniendo del contrato. */
+.secuencia-agentes { list-style: none; padding: 0; margin: 0; }
+.secuencia-agentes>.flujo-etapa { display: block; padding: 0; border: 0; background: transparent; border-radius: 0; }
+.secuencia-etapa { display: grid; grid-template-columns: 30px minmax(0,1fr) minmax(120px,.6fr) auto 10px; gap: 16px; align-items: center; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--borde); border-radius: 0; background: transparent; padding: 19px 8px; }
+.secuencia-etapa:hover { background: var(--acento-suave); }
+.secuencia-indice { display: grid; place-items: center; border: 1px solid var(--borde-fuerte); border-radius: 10px; width: 28px; height: 28px; color: var(--texto-suave); }
+.secuencia-etapa.hecha .secuencia-indice { background: var(--ok-suave); color: var(--ok); border-color: transparent; }
+.secuencia-etapa.en-curso .secuencia-indice { color: var(--acento); animation: nodo-activo 2s infinite; }
+.secuencia-rol, .secuencia-contrato { display: grid; min-width: 0; gap: 6px; }
+.secuencia-rol>span, .secuencia-contrato>span { font-size: 12px; color: var(--texto-suave); line-height: 1.5; }
+.secuencia-contrato code { font-size: 12px; color: var(--acento); overflow-wrap: anywhere; }
+.secuencia-etapa .chip { white-space: normal; }
+.contraer-sidebar { display: inline-grid; place-items: center; float: left; margin-right: 12px; padding: 7px; background: transparent; border: 0; }
+@media(min-width:1024px) {
+  .app-shell.sidebar-compacta { grid-template-columns: 78px minmax(0,1fr); }
+  .sidebar-compacta .marca>span:last-child, .sidebar-compacta .nav-item>span, .sidebar-compacta .sidebar-proyectos, .sidebar-compacta .sidebar-corridas, .sidebar-compacta .sidebar-pie { display: none; }
+  .sidebar-compacta .marca { padding: 0 0 28px; }
+  .sidebar-compacta .nav-item { justify-content: center; padding: 13px 8px; }
+}
+@media(max-width:1023px) { .contraer-sidebar { display: none; } }
+@media(max-width:700px) { .secuencia-etapa { grid-template-columns: 28px minmax(0,1fr) auto; gap: 10px; } .secuencia-contrato { grid-column: 2 / -1; grid-row: 2; } .secuencia-etapa>.chip { max-width: 100px; font-size: 12px; } .secuencia-etapa>span:last-child { display: none; } }
+.historial-herramientas { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; margin-bottom: 22px; }
+.historial-herramientas>div:first-child { flex: 1; min-width: 180px; }
+.historial-herramientas>div:nth-child(2) { min-width: 160px; }
+.historial-herramientas label { display: block; margin-bottom: 7px; }
+.historial-herramientas>span { padding-bottom: 10px; font-size: 12px; }
+.actividad-estados { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; }
+.actividad-estados>div { display: flex; flex-direction: column; align-items: start; gap: 10px; }
+.registro-actividad { list-style: none; padding: 0; margin: 22px 0; }
+.registro-actividad li { display: flex; gap: 16px; flex-wrap: wrap; padding: 15px 0; border-bottom: 1px solid var(--borde); font-size: 13px; }
+.registro-actividad time { margin-left: auto; color: var(--texto-suave); }
+.inspector-etapa { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(680px,100%); max-width: 100%; height: 100dvh; max-height: 100dvh; border: 0; border-left: 1px solid var(--borde); border-radius: 20px 0 0 20px; background: var(--fondo); color: var(--texto); padding: 28px; box-shadow: -16px 0 80px rgba(0,0,0,.16); overflow-y: auto; }
+.inspector-etapa::backdrop { background: rgba(0,0,0,.28); backdrop-filter: blur(3px); }
+.inspector-cabecera { display: flex; gap: 20px; justify-content: space-between; align-items: start; }
+.inspector-cabecera h2 { margin: 0 0 20px; }
+.inspector-etapa>.panel, .inspector-etapa>section { margin-top: 22px; }
+.inspector-etapa .diff { max-width: 100%; }
+.etapa-inspeccionar { margin-top: 12px; font-size: 12px; }
+@media(max-width:600px) { .actividad-estados { grid-template-columns: 1fr; } .inspector-etapa { padding: 22px 16px; border-radius: 0; } }
 :root, :root[data-tema="claro"] {
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI Variable Display", "Segoe UI", sans-serif;
   --mono: "SF Mono", "Cascadia Code", Consolas, monospace;
