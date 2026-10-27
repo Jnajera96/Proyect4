@@ -412,7 +412,10 @@ def gateway_from_settings(
         return ModelGateway(list(adapters), sleep=sleep, pricing=tabla)
 
     config = provider_config_from_settings(settings)
-    if requires_credentials(config.name) and not config.has_credentials:
+    if (
+        requires_credentials(config.name)
+        or config.base_url == "https://router.huggingface.co/v1"
+    ) and not config.has_credentials:
         raise ModelConfigurationError(
             f"el proveedor '{config.name}' exige una credencial y no hay ninguna configurada",
             provider=config.name,

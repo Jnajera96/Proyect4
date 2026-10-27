@@ -105,3 +105,23 @@ perfil instalado, voz real, ejecutable e instalador pertenece a las fases
 posteriores. D conserva sus límites documentados de tool calling y evaluación
 de modelos. La ruta E se adaptó expresamente a roles ligeros deterministas.
 No se declara producción ni se crea el tag final `v0.1.0`.
+
+## Acta de cierre de E — perfil híbrido aceptado
+
+Se revisaron nuevamente los informes originales y su consolidado al iniciar G.
+**E cerrada para Analyst/Supervisor deterministas locales y Coder/Reviewer con
+Qwen2.5-Coder-32B-Instruct:nscale**, integrado en `5849282`.
+
+- `ade1dc89`: completado con promoción real de `src/app.py`, resultado 42,
+  original intacto hasta aprobar, dos llamadas de modelo; coste estimado con
+  ambos alias de precio: 0.00021114 USD.
+- `bd5ca540`: rechazo completado, original limpio y sin promoción.
+- `04ef6878`: pedir cambios y aprobar completado; original intacto hasta aprobar.
+- Los reportes originales están bajo `_tmp/hybrid-e2e/<id>/report.json` y se
+  consolidaron en `HYBRID-E2E-EVIDENCE.json`. Incluyen los intentos fallidos previos.
+- No falta una corrida de promoción con modelo real; no se repitió ni se consumió
+  inferencia adicional para redactar esta acta. Ledger acumulado: autorización
+  3 USD, reserva conservadora 1.17225088 USD, saldo sin reservar 1.82774912 USD.
+
+El cierre es del motor y perfil acordado: no convierte en validados los GGUF
+descartados, tool calling, paquete instalado, equipo limpio ni producción.

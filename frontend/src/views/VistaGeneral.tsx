@@ -72,6 +72,9 @@ export function VistaGeneral({
   const esperando = runs.filter(r => r.awaiting_approval || r.status.startsWith("awaiting"));
   const proyecto = proyectos.find(p => p.project_id === compositor.projectId);
   return <>
+    {salud?.provider_configuration?.status === "not_configured" ? (
+      <p className="aviso" role="status">{salud.provider_configuration.message}</p>
+    ) : null}
     <section className="hero" aria-labelledby="hero-titulo">
       <div className="hero-formas" aria-hidden="true"><i /><i /><i /></div>
       <div className="hero-principal">

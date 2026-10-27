@@ -17,11 +17,25 @@ import sys
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
+from pydantic_settings import BaseSettings, DotEnvSettingsSource, SettingsConfigDict
+
+from ai_swe.runtime_paths import default_runtime_mode, prepare_user_directories, user_paths
 
 
 class Settings(BaseSettings):
+    runtime_mode: Literal["development", "installed"] = Field(default_factory=default_runtime_mode)
+
+    @classmethod
+    def settings_customise_sources(
+        cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings,
+    ):
+        mode = init_settings.init_kwargs.get("runtime_mode") or env_settings().get("runtime_mode")
+        mode = mode or default_runtime_mode()
+        if mode == "installed" and dotenv_settings.env_file == ".env":
+            dotenv_settings = DotEnvSettingsSource(settings_cls, env_file=user_paths().config_file)
+        return init_settings, env_settings, dotenv_settings, file_secret_settings
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_prefix="AI_SWE_",
@@ -64,6 +78,9 @@ class Settings(BaseSettings):
         default=SecretStr(""),
         description="Secreto: solo desde el entorno. Nunca se registra en claro.",
     )
+    hf_token: SecretStr = Field(
+        default=SecretStr(""), validation_alias=AliasChoices("AI_SWE_HF_TOKEN", "HF_TOKEN"),
+    )
     model_base_url: str | None = Field(default=None, description="Para proveedores locales.")
     # Tarifas publicadas por el proveedor, en la moneda del proveedor. Vacio = no
     # se declara ninguna, y entonces el coste de cada llamada es `None` ("no se
@@ -79,6 +96,35 @@ class Settings(BaseSettings):
 
     # --- Almacen de estado ---------------------------------------------------
     state_db_path: Path = Field(default=Path("var/state.sqlite3"))
+    log_dir: Path | None = None
+    cache_dir: Path | None = None
+    stt_download_root: Path | None = None
+
+    @model_validator(mode="after")
+    def _installed_locations_and_hf_key(self):
+        if self.runtime_mode == "installed":
+            paths = user_paths()
+            defaults = {
+                "state_db_path": paths.database, "workspace_root": paths.worktrees,
+                "log_dir": paths.logs, "cache_dir": paths.cache,
+            }
+            for name, value in defaults.items():
+                if name not in self.model_fields_set:
+                    setattr(self, name, value)
+                elif getattr(self, name) is None:
+                    raise ValueError(f"{name} no puede ser null en modo instalado")
+            if "stt_download_root" not in self.model_fields_set:
+                self.stt_download_root = self.cache_dir / "speech"
+            for name in (*defaults, "stt_download_root"):
+                value = getattr(self, name)
+                if value is not None and not value.is_absolute():
+                    raise ValueError(f"{name} debe ser una ruta absoluta en modo instalado")
+        if (
+            self.model_base_url == "https://router.huggingface.co/v1"
+            and not self.model_api_key.get_secret_value().strip()
+        ):
+            self.model_api_key = self.hf_token
+        return self
 
     # --- Alcance y seguridad -------------------------------------------------
     workspace_root: Path = Field(
@@ -331,7 +377,9 @@ class Settings(BaseSettings):
         from ai_swe.security import register_secret
 
         registrados = 0
-        for secreto in (self.model_api_key, self.langfuse_secret_key, self.langfuse_public_key):
+        for secreto in (
+            self.model_api_key, self.hf_token, self.langfuse_secret_key, self.langfuse_public_key,
+        ):
             if register_secret(secreto.get_secret_value()):
                 registrados += 1
         # Las claves de API son secretos como los demas. Se registran para que una
@@ -352,7 +400,40 @@ def load_settings() -> Settings:
     """
     settings = Settings()
     settings.registrar_secretos()
+    if settings.runtime_mode == "installed":
+        prepare_user_directories()
     return settings
+
+
+def provider_configuration(settings: Settings) -> dict:
+    """Presence only: no requests, account identity, secrets or claims of valid credit."""
+    missing = []
+    if not settings.model_name.strip():
+        missing.append("AI_SWE_MODEL_NAME")
+    if (
+        (settings.model_provider.lower() in PROVEEDORES_CON_CLAVE
+         or settings.model_base_url == "https://router.huggingface.co/v1")
+        and not settings.model_api_key.get_secret_value().strip()
+    ):
+        missing.append(
+            "HF_TOKEN / AI_SWE_MODEL_API_KEY"
+            if settings.model_base_url == "https://router.huggingface.co/v1"
+            else "AI_SWE_MODEL_API_KEY"
+        )
+    enabled = bool(settings.remote_model_roles)
+    status = "not_configured" if missing else ("configured" if enabled else "offline")
+    return {
+        "status": status, "remote_enabled": enabled, "missing_fields": missing,
+        "credential_validated": False, "inference_verified": False,
+        "message": (
+            "Proveedor de IA no configurado. Falta: " + ", ".join(missing)
+            + ". Las funciones locales siguen disponibles."
+            if missing else (
+                "Configuracion remota presente; credencial y saldo sin verificar."
+                if enabled else "Modo local: los roles remotos estan desactivados."
+            )
+        ),
+    }
 
 
 # ------------------------------------------------------------------- alcance
@@ -384,7 +465,9 @@ def repositorio_autorizado(settings: Settings, ruta: Path | str) -> bool:
 
 # Proveedores que **necesitan** una clave para llamar al modelo. Un proveedor
 # local (`ollama`, `vllm`...) expone un endpoint HTTP y no usa clave.
-PROVEEDORES_CON_CLAVE = frozenset({"openai", "anthropic", "azure", "openrouter", "mistral"})
+PROVEEDORES_CON_CLAVE = frozenset({
+    "openai", "openai_compatible", "anthropic", "azure", "openrouter", "mistral",
+})
 
 
 class ConfiguracionInsuficiente(RuntimeError):

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
@@ -11,6 +10,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from ai_swe.config import Settings
+from ai_swe.runtime_paths import user_paths
 
 HF_ROUTER = "https://router.huggingface.co/v1"
 HF_IDENTITY = "https://huggingface.co/api/whoami-v2"
@@ -35,8 +35,7 @@ class PreflightReport(BaseModel):
 
 def user_config_path() -> Path:
     """Expected installed-user location; this diagnostic never creates files."""
-    base = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
-    return base / "AISWESystem" / "config" / ".env"
+    return user_paths().config_file
 
 
 def _health_url(base_url: str) -> str | None:

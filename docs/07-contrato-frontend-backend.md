@@ -286,3 +286,17 @@ Se declara ahora para que no sorprenda después.
 | **Motivo del descarte** | El cliente no puede suscribirse a una ejecución cuyo identificador aún no tiene, y una tarea de decenas de segundos deja la interfaz congelada. Con un navegador como interfaz principal, es un fallo de diseño, no una limitación. |
 | **Coste aceptado** | Un componente más (el trabajador), un estado más que gestionar (`planned`), y la necesidad de recuperar ejecuciones huérfanas al arrancar. |
 | **Condición de revisión** | Si el trabajador se convierte en el cuello de botella, se sustituyen los hilos por procesos con el contenedor por ejecución. La interfaz no cambia: el contrato HTTP y el flujo de eventos ya están separados del mecanismo de ejecución. |
+
+## Extensión G: configuración del proveedor
+
+GET `/health` conserva su respuesta 200 y añade `provider_configuration`, con
+`status` (`not_configured`, `offline`, `configured`), `remote_enabled`,
+`missing_fields`, `message`, `credential_validated` e `inference_verified`.
+Los dos últimos son false en este diagnóstico sin red. No contiene secretos ni
+confirma saldo/conectividad. La vista general muestra el mensaje si falta configurar.
+
+POST `/runs` puede responder 503 si hay roles remotos habilitados y falta la
+configuración necesaria. El rechazo ocurre antes de guardar/encolar la ejecución.
+No bloquea GET de salud, proyectos o historial. Con roles remotos desactivados,
+continúa disponible la ejecución determinista local.
+Véase `INSTALLED-CONFIGURATION-WINDOWS.md` para rutas y precedencia.

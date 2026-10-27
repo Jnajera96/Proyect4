@@ -310,6 +310,14 @@ export interface Health {
   status: string;
   fase: string;
   stt: boolean;
+  provider_configuration?: {
+    status: "not_configured" | "configured" | "offline";
+    remote_enabled: boolean;
+    missing_fields: string[];
+    credential_validated: boolean;
+    inference_verified: boolean;
+    message: string;
+  };
   ejecuciones: number;
   proyectos: number;
 }

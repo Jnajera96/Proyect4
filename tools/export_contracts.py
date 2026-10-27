@@ -82,11 +82,22 @@ def construir() -> dict:
         "nota": NOTA,
         "esquema_estado": contratos.RunState.model_fields["schema_version"].default,
         "endpoints": {
+            "GET /health": {
+                "codigo": 200,
+                "respuesta": "Health",
+                "nota": (
+                    "Incluye provider_configuration sin secretos: presencia no acredita "
+                    "credencial ni inferencia."
+                ),
+            },
             "POST /runs": {
                 "cuerpo": "RunRequest",
                 "respuesta": "RunState",
                 "codigo": 202,
-                "nota": "Responde antes de ejecutar. El run_id llega de inmediato.",
+                "nota": (
+                    "Responde antes de ejecutar. El run_id llega de inmediato. Devuelve 503 "
+                    "sin crear run si los roles remotos estan habilitados y falta configuracion."
+                ),
             },
             "GET /runs/{run_id}": {"respuesta": "RunState", "codigo": 200},
             "GET /runs": {"respuesta": "RunSummary[]", "codigo": 200},

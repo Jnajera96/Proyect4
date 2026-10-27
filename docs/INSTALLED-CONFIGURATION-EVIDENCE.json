@@ -1,0 +1,40 @@
+{
+  "checks": [
+    "first-run health works without configuration",
+    "local APIs remain available",
+    "UI explains missing provider configuration",
+    "no browser runtime errors",
+    "external hybrid profile without token is blocked before enqueue",
+    "failed request creates no run",
+    "SQLite is external to code",
+    "config cache logs worktrees directories are external"
+  ],
+  "inference_calls": 0,
+  "success": true,
+  "hybrid_configuration": {
+    "status": "not_configured",
+    "remote_enabled": true,
+    "missing_fields": [
+      "HF_TOKEN / AI_SWE_MODEL_API_KEY"
+    ],
+    "credential_validated": false,
+    "inference_verified": false,
+    "message": "Proveedor de IA no configurado. Falta: HF_TOKEN / AI_SWE_MODEL_API_KEY. Las funciones locales siguen disponibles."
+  },
+  "blocked_response_status": 503,
+  "blocked_response": {
+    "detail": "Proveedor de IA no configurado. Falta: HF_TOKEN / AI_SWE_MODEL_API_KEY. Las funciones locales siguen disponibles."
+  },
+  "python_suite": {
+    "passed": 769,
+    "skipped": 3,
+    "failed": 0,
+    "seconds": 168.19,
+    "new_tests": 18
+  },
+  "frontend_state_tests": {
+    "passed": 24,
+    "failed": 0
+  },
+  "scope": "Installed configuration and first-run behavior only; executable, installer and clean-machine release remain pending."
+}

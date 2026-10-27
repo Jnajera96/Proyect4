@@ -66,9 +66,9 @@ dependencies; later PyInstaller onedir and a Windows installer.
 
 ## G — Installed product configuration
 
-- [ ] Separate data/log/cache/config under LOCALAPPDATA/AISWESystem, source assets in
+- [x] Separate data/log/cache/config under LOCALAPPDATA/AISWESystem, source assets in
   application bundle, secrets external; add focused path/settings regression tests.
-- [ ] Add explicit first-run provider-not-configured state without breaking local
+- [x] Add explicit first-run provider-not-configured state without breaking local
   features. Commit feat(runtime): prepare Windows product configuration.
 
 ## H — Launcher and executable

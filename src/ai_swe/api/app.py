@@ -57,7 +57,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import Response
 
-from ai_swe.config import load_settings, repositorio_autorizado
+from ai_swe.config import load_settings, provider_configuration, repositorio_autorizado
 from ai_swe.contracts import (
     ApprovalDecision,
     EventKind,
@@ -74,6 +74,7 @@ from ai_swe.contracts import (
 from ai_swe.graph.engine import NothingToResume, RunEngine, RunNotFound
 from ai_swe.graph.worker import RunWorker
 from ai_swe.models import BudgetExceededError
+from ai_swe.runtime_logging import close_installed_log_handler, installed_log_handler
 from ai_swe.sandbox import SandboxError, limpiar_worktree, validar_repositorio
 from ai_swe.security import (
     Credenciales,
@@ -446,7 +447,7 @@ def crear_app(
     # defecto es el adaptador local real; `fake` queda para pruebas y para entornos
     # sin la dependencia `voice`. Antes el defecto era `FakeAdapter`, que devolvia un
     # texto fijo con independencia del audio: una transcripcion fabricada.
-    adaptador_stt = stt or crear_adaptador_stt()
+    adaptador_stt = stt or crear_adaptador_stt(ajustes)
     motor = RunEngine(almacen, settings=ajustes)
     trabajador = worker or RunWorker(motor)
     origenes = cors_origins if cors_origins is not None else []
@@ -459,6 +460,7 @@ def crear_app(
         # momento en que la configuracion (con sus claves) esta en la mano.
         install_redacting_filter()
         _configurar_nivel_de_log(ajustes.log_level)
+        file_handler = installed_log_handler(ajustes.log_dir)
 
         # Recuperacion al arrancar: una ejecucion en `planned` o `running`
         # pertenece a un proceso que ya no existe. Dejarla asi seria la terminacion
@@ -481,6 +483,7 @@ def crear_app(
             trabajador.shutdown(wait=True)
             if store is None:
                 almacen.close()
+            close_installed_log_handler(file_handler)
 
     app = FastAPI(
         title="AI Software Engineering System",
@@ -658,6 +661,7 @@ def crear_app(
             "status": "ok",
             "fase": "M3",
             "stt": adaptador_stt.health(),
+            "provider_configuration": provider_configuration(ajustes),
             "ejecuciones": len(almacen.list_summaries(limit=1000)),
             "proyectos": len(almacen.listar_proyectos(limit=1000)),
         }
@@ -767,6 +771,9 @@ def crear_app(
         Responde 202 con el `run_id` para que el cliente pueda suscribirse al
         progreso de inmediato.
         """
+        configuration = provider_configuration(ajustes)
+        if configuration["remote_enabled"] and configuration["status"] == "not_configured":
+            raise HTTPException(status_code=503, detail=configuration["message"])
         opciones = peticion.options
         if peticion.project_id is not None:
             proyecto = almacen.proyecto(peticion.project_id)

@@ -149,12 +149,14 @@ class FasterWhisperAdapter:
         umbral_confianza: float = 0.75,
         dispositivo: str = "auto",
         tipo_computo: str = "default",
+        download_root: str | None = None,
     ) -> None:
         self._modelo = modelo
         self._idioma = idioma
         self._umbral = umbral_confianza
         self._dispositivo = dispositivo
         self._tipo_computo = tipo_computo
+        self._download_root = download_root
         # `None` = todavia no cargado. Se carga en la primera transcripcion.
         self._cargado = None
 
@@ -175,6 +177,7 @@ class FasterWhisperAdapter:
                 self._modelo,
                 device=self._dispositivo,
                 compute_type=self._tipo_computo,
+                **({"download_root": self._download_root} if self._download_root else {}),
             )
         except Exception as exc:  # noqa: BLE001 - se degrada a un error tipado
             raise STTError(
@@ -284,6 +287,10 @@ def crear_adaptador_stt(settings=None) -> STTAdapter:
             ),
             tipo_computo=getattr(
                 settings, "stt_compute_type", Settings.model_fields["stt_compute_type"].default
+            ),
+            download_root=(
+                str(settings.stt_download_root)
+                if getattr(settings, "stt_download_root", None) else None
             ),
         )
     raise STTError(

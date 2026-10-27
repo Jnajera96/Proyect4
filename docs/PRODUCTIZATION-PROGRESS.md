@@ -186,3 +186,42 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
   no lanzó nada solo». Las tres ejecuciones fueron manuales según su reporte.
 - Cierre basado en E2E automatizado y prueba física reportada por el usuario;
   no se inventaron mediciones de exactitud/latencia del micrófono ni se guardó audio.
+
+## Acta E revisada antes de G
+
+- E cerrada para el perfil aceptado: Analyst/Supervisor deterministas locales y
+  Coder/Reviewer Qwen2.5-Coder-32B-Instruct:nscale por API, integrado en `5849282`.
+- Se contrastaron nuevamente los reportes reales de aprobar/promover (`ade1dc89`),
+  rechazar (`bd5ca540`) y pedir cambios/aprobar (`04ef6878`). Todos pasaron y el
+  original se conservó hasta la aprobación humana del escenario.
+- Acta explícita añadida a `REAL-MODEL-VALIDATION.md`; no faltaba la promoción real.
+  No se repitió inferencia. Reserva acumulada intacta: 1.17225088 de 3 USD.
+
+## G — configuración instalada Windows completada
+
+- Modo installed explícito o automático en proceso frozen; development conserva
+  su `.env` y rutas actuales. Sin migrar, copiar o borrar datos/credenciales.
+- Installed carga `%LOCALAPPDATA%/AISWESystem/config/.env`, sin leer el `.env`
+  del código. Entorno/argumentos explícitos tienen prioridad. Datos SQLite,
+  logs rotados, worktrees y caché STT quedan en subdirectorios del perfil de usuario.
+- Rutas relativas instaladas se rechazan. Crear Settings no escribe ni descarga;
+  load_settings prepara directorios sin fabricar un archivo de secretos.
+- HF_TOKEN externo se usa solo para el router HF si no hay clave explícita; se
+  redacta en logs. No se copió el token real ni se habilitaron roles de pago.
+- `/health` añade diagnóstico de presencia, sin red ni claims de validez/saldo.
+  La UI explica qué falta. Lectura local y ejecuciones deterministas siguen disponibles.
+- Con roles remotos habilitados y configuración incompleta, `/runs` devuelve 503
+  antes de crear/encolar. El gateway también bloquea el router HF sin credencial.
+- El navegador detectó la divergencia entre diagnóstico y alias genérico del
+  gateway. Se reprodujo con prueba, se alinearon requisitos y se verificó que
+  `ollama` local conserva operación sin clave. No se debilitó ninguna aserción.
+- Pruebas nuevas de configuración, integración de API y navegador real. Detalles
+  y evidencia: `INSTALLED-CONFIGURATION-WINDOWS.md` y
+  `INSTALLED-CONFIGURATION-EVIDENCE.json`.
+- H (launcher/ejecutable), I (instalador/equipo limpio) y J (release final) siguen
+  pendientes. Sin tag final, push ni cambios a documentos académicos preexistentes.
+- Verificación final: 769 PASS, 3 SKIP, 0 FAIL, 168.190 s; 18 pruebas nuevas.
+  TypeScript/build, 24 pruebas de estado del frontend y Ruff focalizado aprobados.
+  La sincronización del contrato exportado se corrigió en el generador y volvió
+  a pasar sin alterar su prueba. Evidencia XML: `_tmp/phase-g-release-check.xml`
+  del worktree aislado, preservada también en `_tmp/phase-g-validation/` del principal.

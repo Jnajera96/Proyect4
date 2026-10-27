@@ -1,5 +1,10 @@
 {
   "endpoints": {
+    "GET /health": {
+      "codigo": 200,
+      "nota": "Incluye provider_configuration sin secretos: presencia no acredita credencial ni inferencia.",
+      "respuesta": "Health"
+    },
     "GET /runs": {
       "codigo": 200,
       "respuesta": "RunSummary[]"
@@ -15,7 +20,7 @@
     "POST /runs": {
       "codigo": 202,
       "cuerpo": "RunRequest",
-      "nota": "Responde antes de ejecutar. El run_id llega de inmediato.",
+      "nota": "Responde antes de ejecutar. El run_id llega de inmediato. Devuelve 503 sin crear run si los roles remotos estan habilitados y falta configuracion.",
       "respuesta": "RunState"
     },
     "POST /runs/{run_id}/approve": {
