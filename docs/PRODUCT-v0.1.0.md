@@ -18,8 +18,9 @@ No se declara servicio público, SaaS multiusuario ni aislamiento de procesos.
   Git y ejecución de pruebas siguen locales.
 - LangGraph con confirmación de requisitos, worktree, pruebas reales, revisión,
   aprobación/rechazo y promoción del diff revisado, con evidencia y límites.
-- EXE onedir con runtime Python y frontend incluidos; configuración, estado y
-  caché externos. Instalador por usuario y desinstalación conservando sus datos.
+- Onedir portable con CPython oficial firmado y frontend incluidos; configuración,
+  estado y caché externos. Retirar la carpeta del programa conserva los datos.
+  El instalador Inno/EXE PyInstaller anterior es una distribución histórica.
 
 Sin modelo conectado, el Coder no inventa un parche: declara que no tiene propuesta.
 El perfil determinista de la prueba de instalación usa un servidor local de fixture
@@ -47,8 +48,10 @@ El candidato alinea versión Python, API/OpenAPI, frontend y manifiesto del inst
 a 0.1.0. El campo histórico `fase=M3` de salud se conserva como dato de compatibilidad,
 no como número de versión del producto.
 
-Entrega actual revisable en `dist/windows-premium-rc1/`. La entrega anterior se
-conserva como histórico. No hay tag `v0.1.0`, push, firma de
+Entrega actual revisable en `dist/windows-signed-python-rc2/`: runtime oficial
+firmado, código externo y lanzador CMD, validado con SAC activo. Los EXE/instaladores
+anteriores se conservan como históricos. Ver `PACKAGING-REPORT.md` y su evidencia.
+No hay tag `v0.1.0`, push, firma de
 código ni validación en Windows limpio independiente. La prueba de instalación
 aislada no sustituye esa comprobación. El tag requiere revisión/aprobación final
 del alcance y de las omisiones documentadas; no se publica automáticamente.

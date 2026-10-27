@@ -16,6 +16,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from package_command import package_command
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -25,6 +27,8 @@ def main() -> int:
     parser.add_argument("--voice-audio", type=Path)
     args = parser.parse_args()
     exe, output = args.executable.resolve(), args.output.resolve()
+    launch_command = package_command(exe)
+    lifetime = 45 if exe.is_dir() else 18
     if output.exists():
         parser.error("Use a new evidence directory")
     output.mkdir(parents=True)
@@ -83,7 +87,7 @@ def main() -> int:
         log = (output / f"stderr-{len(children)}.log").open("w", encoding="utf-8")
         logs.append(log)
         child = subprocess.Popen(
-            [str(exe), "--no-browser", "--exit-after", "18"],
+            [*launch_command, "--no-browser", "--exit-after", str(lifetime)],
             cwd=cwd,
             env=child_env,
             stdout=subprocess.PIPE,
@@ -113,7 +117,7 @@ def main() -> int:
 
     try:
         info = subprocess.run(
-            [str(exe), "--runtime-info"],
+            [*launch_command, "--runtime-info"],
             cwd=cwd,
             env=env,
             capture_output=True,
@@ -121,13 +125,13 @@ def main() -> int:
             timeout=45,
             creationflags=flags,
         )
-        check("native frozen runtime diagnostics work", info.returncode == 0)
+        check("packaged runtime diagnostics work", info.returncode == 0)
         report["runtime"] = json.loads(info.stdout)
         check(
-            "sys.frozen activates installed mode",
+            "packaged runtime activates installed mode without pretending to be frozen",
             report["runtime"]
             == {
-                "frozen": True,
+                "frozen": not exe.is_dir(),
                 "runtime_mode": "installed",
                 "frontend_present": True,
             },
@@ -214,7 +218,7 @@ def main() -> int:
                 "packaged LangGraph waits for human confirmation",
                 state["status"] == "awaiting_human_requirements_confirmation",
             )
-            check("automatic test shutdown is graceful", child.wait(timeout=25) == 0)
+            check("automatic test shutdown is graceful", child.wait(timeout=lifetime + 15) == 0)
             key = "synthetic-package-admin"
             config = output / "user-profile/AISWESystem/config/.env"
             config.write_text(
@@ -224,10 +228,10 @@ def main() -> int:
             check("authentication works after restart", request(base, "/projects")[0] == 401)
             status, projects = request(base, "/projects", key=key)
             check("SQLite persists across packaged restarts", status == 200 and len(projects) == 1)
-            check("restart shutdown releases server", child.wait(timeout=25) == 0)
+            check("restart shutdown releases server", child.wait(timeout=lifetime + 15) == 0)
         for target in ("pytest.unit", "ruff.check"):
             result = subprocess.run(
-                [str(exe), "--run-test-target", target],
+                [*launch_command, "--run-test-target", target],
                 cwd=repo,
                 env=env,
                 capture_output=True,

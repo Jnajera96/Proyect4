@@ -2,7 +2,7 @@
  * node tools/verify_premium_ui.cjs <exe> <new-evidence-directory>
  */
 const { spawn } = require('node:child_process');
-const { mkdirSync, existsSync, writeFileSync } = require('node:fs');
+const { mkdirSync, existsSync, writeFileSync, statSync } = require('node:fs');
 const { resolve, join } = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
@@ -18,7 +18,10 @@ const check = (name, condition) => { assert.ok(condition, name); report.checks.p
 const env = { ...process.env };
 for (const key of Object.keys(env)) if (key.startsWith('AI_SWE_') || key === 'HF_TOKEN') delete env[key];
 env.LOCALAPPDATA = join(output, 'profile');
-const server = spawn(executable, ['--no-browser', '--exit-after', '50'], { cwd: output, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+const entry = statSync(executable).isDirectory()
+  ? [join(executable, 'runtime/python.exe'), '-B', join(executable, 'start.py')]
+  : [executable];
+const server = spawn(entry[0], [...entry.slice(1), '--no-browser', '--exit-after', '50'], { cwd: output, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
 let launchOutput = '';
 server.stderr.on('data', chunk => { launchOutput += chunk.toString(); });
 let browser;
@@ -40,6 +43,7 @@ async function main() {
   await page.goto(base + '/app/');
   await page.locator('.proveedor-pill.not_configured').waitFor();
   await page.getByRole('status').filter({ hasText: '%LOCALAPPDATA%/AISWESystem/config/.env' }).waitFor();
+  check('integrated Antigravity activity navigation present', await page.locator('.navegacion').getByRole('button', { name: 'Actividad', exact: true }).isVisible());
   check('frozen UI explains first-run configuration', await page.getByRole('status').filter({ hasText: '%LOCALAPPDATA%/AISWESystem/config/.env' }).count() === 1);
   check('no decorative waveform at rest', await page.locator('.voz-onda').count() === 0);
   await page.getByRole('button', { name: 'Abrir dictado por voz', exact: true }).click();

@@ -68,10 +68,19 @@ def serve(*, open_browser: bool = True, startup_timeout: float = 30, exit_after=
     app = crear_app()
     listener = reserve_listener(settings.port)
     url = f"http://{HOST}:{listener.getsockname()[1]}"
-    server = uvicorn.Server(uvicorn.Config(
-        app, host=HOST, port=listener.getsockname()[1], loop="asyncio", http="h11",
-        ws="none", lifespan="on", access_log=False, log_level="warning",
-    ))
+    server = uvicorn.Server(
+        uvicorn.Config(
+            app,
+            host=HOST,
+            port=listener.getsockname()[1],
+            loop="asyncio",
+            http="h11",
+            ws="none",
+            lifespan="on",
+            access_log=False,
+            log_level="warning",
+        )
+    )
     thread = threading.Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
     try:
         thread.start()
@@ -113,7 +122,8 @@ def main(argv=None) -> int:
     parser.add_argument("--startup-timeout", type=positive_seconds, default=30)
     parser.add_argument("--exit-after", type=positive_seconds, help=argparse.SUPPRESS)
     parser.add_argument(
-        "--run-test-target", choices=["pytest.unit", "pytest.integration", "ruff.check"],
+        "--run-test-target",
+        choices=["pytest.unit", "pytest.integration", "ruff.check"],
         help=argparse.SUPPRESS,
     )
     args = parser.parse_args(argv)
@@ -122,14 +132,19 @@ def main(argv=None) -> int:
     try:
         if args.runtime_info:
             settings = load_settings()
-            print(json.dumps({
-                "frozen": bool(getattr(sys, "frozen", False)),
-                "runtime_mode": settings.runtime_mode,
-                "frontend_present": (frontend_dist() / "index.html").is_file(),
-            }))
+            print(
+                json.dumps(
+                    {
+                        "frozen": bool(getattr(sys, "frozen", False)),
+                        "runtime_mode": settings.runtime_mode,
+                        "frontend_present": (frontend_dist() / "index.html").is_file(),
+                    }
+                )
+            )
             return 0
         return serve(
-            open_browser=not args.no_browser, startup_timeout=args.startup_timeout,
+            open_browser=not args.no_browser,
+            startup_timeout=args.startup_timeout,
             exit_after=args.exit_after,
         )
     except KeyboardInterrupt:
@@ -160,7 +175,8 @@ def embedded_test_target(target: str) -> int:
         return int(pytest.main(arguments))
     import subprocess
 
-    ruff = Path(sys._MEIPASS) / "tools" / "ruff.exe"
+    bundle = getattr(sys, "_ai_swe_bundle", None) or sys._MEIPASS
+    ruff = Path(bundle) / "tools" / "ruff.exe"
     return subprocess.run([str(ruff), *arguments], shell=False).returncode
 
 

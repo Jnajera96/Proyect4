@@ -27,6 +27,7 @@ import os
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 from ai_swe.contracts import TestRun
 from ai_swe.sandbox import Sandbox
@@ -136,6 +137,9 @@ def comando_de(target: str) -> tuple[str, ...] | None:
     Se expone para que una prueba pueda afirmar el comando **sin ejecutarlo**, y
     para que el registro de evidencia sea inspeccionable.
     """
+    signed_bundle = getattr(sys, "_ai_swe_bundle", None)
+    if signed_bundle and target in TARGET_COMMANDS:
+        return (sys.executable, str(Path(signed_bundle) / "start.py"), "--run-test-target", target)
     if getattr(sys, "frozen", False) and target in TARGET_COMMANDS:
         return (sys.executable, "--run-test-target", target)
     return TARGET_COMMANDS.get(target)

@@ -23,6 +23,9 @@ import uuid
 import winreg
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
+
+from package_command import package_command
 
 REGISTRY_KEY = (
     r"Software\Microsoft\Windows\CurrentVersion"
@@ -55,6 +58,7 @@ def main():
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
     installer, output = args.installer.resolve(), args.output.resolve()
+    portable = installer.is_dir()
     if output.exists():
         parser.error("Use a new isolated output directory")
     output.mkdir(parents=True)
@@ -73,6 +77,7 @@ def main():
         "checks": [],
         "success": False,
         "host_elevated": bool(ctypes.windll.shell32.IsUserAnAdmin()),
+        "distribution": "signed-python-portable" if portable else "inno-setup",
     }
 
     def check(name, value):
@@ -168,7 +173,12 @@ def main():
         log = (output / f"app-{len(children)}.log").open("w", encoding="utf-8")
         log_handles.append(log)
         child = subprocess.Popen(
-            [str(install / "AISWESystem.exe"), "--no-browser", "--exit-after", "20"],
+            [
+                *package_command(install if portable else install / "AISWESystem.exe"),
+                "--no-browser",
+                "--exit-after",
+                "20",
+            ],
             cwd=output,
             env={**env, "AI_SWE_PORT": "8000"},
             stdout=subprocess.PIPE,
@@ -207,6 +217,16 @@ def main():
         raise TimeoutError("Waiting for " + expected)
 
     def uninstall():
+        if portable:
+            target = install.resolve()
+            if (
+                not target.is_relative_to(output)
+                or target == output
+                or target.name != "installed-app"
+            ):
+                raise RuntimeError("Refusing removal outside the owned portable destination")
+            shutil.rmtree(target)
+            return 0
         uninstaller = (install / "unins000.exe").resolve()
         if not uninstaller.is_relative_to(output) or not uninstaller.is_file():
             raise RuntimeError("Refusing uninstall outside the owned isolated destination")
@@ -225,32 +245,49 @@ def main():
         ).returncode
 
     try:
-        result = subprocess.run(
-            [
-                str(installer),
-                "/VERYSILENT",
-                "/SUPPRESSMSGBOXES",
-                "/NORESTART",
-                "/SP-",
-                f"/DIR={install}",
-                f"/GROUP={group_name}",
-                "/TASKS=desktopicon",
-                f"/LOG={output / 'install.log'}",
-            ],
-            env=env,
-            cwd=output,
-            timeout=120,
-            creationflags=flags,
+        if portable:
+            shutil.copytree(installer, install)
+        result = (
+            SimpleNamespace(returncode=0)
+            if portable
+            else subprocess.run(
+                [
+                    str(installer),
+                    "/VERYSILENT",
+                    "/SUPPRESSMSGBOXES",
+                    "/NORESTART",
+                    "/SP-",
+                    f"/DIR={install}",
+                    f"/GROUP={group_name}",
+                    "/TASKS=desktopicon",
+                    f"/LOG={output / 'install.log'}",
+                ],
+                env=env,
+                cwd=output,
+                timeout=120,
+                creationflags=flags,
+            )
         )
         installed = result.returncode == 0
-        check("silent per-user installation succeeds", installed)
-        check("complete onedir runtime installed", (install / "_internal/python313.dll").is_file())
-        report["app_sha256"] = hash_file(install / "AISWESystem.exe")
         check(
-            "Start Menu and Desktop shortcuts created",
-            (menu / "AI Software Engineering System.lnk").is_file() and desktop.is_file(),
+            "portable deployment succeeds" if portable else "silent per-user installation succeeds",
+            installed,
         )
-        check("user uninstall registration created", registered())
+        check(
+            "complete onedir runtime installed",
+            (
+                install / ("runtime/python313.dll" if portable else "_internal/python313.dll")
+            ).is_file(),
+        )
+        report["app_sha256"] = hash_file(
+            install / ("runtime/python.exe" if portable else "AISWESystem.exe")
+        )
+        if not portable:
+            check(
+                "Start Menu and Desktop shortcuts created",
+                (menu / "AI Software Engineering System.lnk").is_file() and desktop.is_file(),
+            )
+            check("user uninstall registration created", registered())
         config = profile / "AISWESystem/config/.env"
         config.parent.mkdir(parents=True, exist_ok=True)
         config.write_text(
@@ -291,7 +328,11 @@ def main():
         )
         head, before, protected = git("rev-parse", "HEAD"), hash_file(source), hash_file(test)
         baseline = subprocess.run(
-            [str(install / "AISWESystem.exe"), "--run-test-target", "pytest.unit"],
+            [
+                *package_command(install if portable else install / "AISWESystem.exe"),
+                "--run-test-target",
+                "pytest.unit",
+            ],
             cwd=repo,
             env=env,
             capture_output=True,
@@ -321,8 +362,7 @@ def main():
             "/runs",
             {
                 "instruction": (
-                    "Modifica src/app.py para que f devuelva 42. "
-                    "No cambies las pruebas existentes."
+                    "Modifica src/app.py para que f devuelva 42. No cambies las pruebas existentes."
                 ),
                 "project_id": project["project_id"],
                 "options": {"allowed_paths": ["src/app.py"], "protected_paths": ["tests"]},
@@ -378,14 +418,19 @@ def main():
             if p.is_file()
         }
         check("SQLite exists outside installation", "data/state.sqlite3" in preserved)
-        check("uninstaller succeeds", uninstall() == 0)
+        check("portable removal succeeds" if portable else "uninstaller succeeds", uninstall() == 0)
         installed = False
         check(
             "program and internal runtime removed",
-            not (install / "AISWESystem.exe").exists() and not (install / "_internal").exists(),
+            not install.exists()
+            if portable
+            else not (install / "AISWESystem.exe").exists()
+            and not (install / "_internal").exists(),
         )
         check(
-            "owned shortcuts and registration removed",
+            "portable leaves shortcuts and registry untouched"
+            if portable
+            else "owned shortcuts and registration removed",
             not desktop.exists() and not menu.exists() and not registered(),
         )
         after = {
@@ -411,7 +456,7 @@ def main():
             if child.poll() is None:
                 child.terminate()
                 child.wait(timeout=10)
-        if installed and (install / "unins000.exe").is_file():
+        if installed and (portable or (install / "unins000.exe").is_file()):
             report["failure_cleanup_uninstall_exit"] = uninstall()
         for log in log_handles:
             log.close()

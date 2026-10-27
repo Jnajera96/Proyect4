@@ -9,7 +9,8 @@ from pathlib import Path
 
 
 def default_runtime_mode() -> str:
-    return "installed" if getattr(sys, "frozen", False) else "development"
+    bundled = getattr(sys, "frozen", False) or getattr(sys, "_ai_swe_bundle", None)
+    return "installed" if bundled else "development"
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,10 @@ def user_paths() -> UserPaths:
 def prepare_user_directories() -> None:
     paths = user_paths()
     for directory in (
-        paths.config_file.parent, paths.database.parent, paths.logs, paths.worktrees, paths.cache,
+        paths.config_file.parent,
+        paths.database.parent,
+        paths.logs,
+        paths.worktrees,
+        paths.cache,
     ):
         directory.mkdir(parents=True, exist_ok=True)

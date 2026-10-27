@@ -8,8 +8,11 @@ Fecha: 27 de octubre de 2026. Estas limitaciones forman parte de la revisión de
   reducido, no en una VM independiente ni en todos los Windows compatibles.
   Windows Sandbox no está disponible. Redistribuibles, políticas corporativas,
   antivirus y SmartScreen de otro equipo no están acreditados por esta prueba.
-- EXE e instalador no tienen firma de código. El compilador Inno Setup obtenido
-  del proveedor sí tenía firma válida; eso no firma el producto que compila.
+- El EXE PyInstaller e instalador históricos no tienen firma y el nuevo EXE fue
+  bloqueado por SAC. La entrega vigente usa CPython oficial con firma Valid y
+  módulos externos. Eso no firma el código de la aplicación ni el ZIP; no todos
+  los binarios de ruedas tienen Authenticode. Su admisión se probó con SAC activo
+  en este host y no se garantiza en políticas empresariales distintas.
 - Git es una dependencia externa. Node/Python de desarrollo no hacen falta para
   iniciar el paquete; no se promete ejecutar pruebas de cualquier proyecto con
   dependencias que no estén preparadas para él.

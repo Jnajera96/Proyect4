@@ -326,3 +326,22 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
   validado, instalación no ejecutada. Reporte y hashes en `ANTIGRAVITY-EVIDENCE.json`.
 - La entrega premium anterior permanece intacta, sin estas nuevas vistas. La
   integración está disponible desde fuente/build principal. No hay tag ni push.
+
+## Distribución admitida por Smart App Control — cierre de pasos 1 y 2
+
+- Diagnóstico confirmado: SAC=1; evento 3077/3033 y política 3099
+  `VerifiedAndReputableDesktop`, GUID `0283ac0f-fff1-49ae-ada1-8a933130cad6`.
+  Signtool encontrado. No certificados nuevos ni cambios de almacén/política.
+- Distribución vigente: CPython embeddable 3.13.14 firmado, ruedas del lock con
+  verificación RECORD, app/frontend externos y CMD. Installed con marcador
+  interno, `sys.frozen=false` real. No nuevo bootloader ni instalador EXE sin firma.
+- Entrega `dist/windows-signed-python-rc2/`. ZIP/manifiesto verificados: 4538
+  archivos, sin secretos/estado/pesos. Los binarios de ruedas conservan procedencia;
+  no todos están firmados (Ruff NotSigned, admitido por SAC en los controles).
+- 791 PASS, 3 SKIP, 0 FAIL en suite completa; 21 controles focalizados finales,
+  24 de frontend/build, 19 smoke, 21 E2E portable y 14 navegador del paquete.
+  Promoción exacta tras aprobación, reinicio/SQLite y datos preservados al retirar
+  la copia de prueba. Fixture de modelo local; ninguna llamada de pago nueva.
+- CMD probado sin Python/Node en PATH; SAC sigue en 1, cero eventos de bloqueo
+  coincidentes con la distribución nueva. Sin VM independiente ni tag/push.
+  Acta vigente en `PACKAGING-REPORT.md`; consolidado `SAC-DISTRIBUTION-EVIDENCE.json`.

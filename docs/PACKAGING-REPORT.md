@@ -1,5 +1,102 @@
 # Fase H — Launcher y ejecutable Windows
 
+## Revisión vigente: distribución compatible con Smart App Control
+
+27 de octubre de 2026. Baseline de fuente: `0b0ef5c`.
+
+### Causa exacta del WinError 4551
+
+Consulta de solo lectura: `VerifiedAndReputablePolicyState=1` en
+`HKLM/SYSTEM/CurrentControlSet/Control/CI/Policy`. El evento CodeIntegrity **3077**
+del 27/10/2026 a las 09:00:21 bloquea el `AISWESystem.exe` de
+`antigravity-build-03` con política `{0283ac0f-fff1-49ae-ada1-8a933130cad6}`.
+El evento **3099** identifica esa política como `VerifiedAndReputableDesktop`.
+El evento 3033 confirma el rechazo por nivel de firma. Authenticode del EXE:
+`NotSigned`. Es SAC aplicado a este binario, no una atribución genérica basada
+solo en el texto del error ni evidencia de que todo PyInstaller sea bloqueado.
+
+Se consultaron los registros AppLocker; no se atribuyó el rechazo a AppLocker
+sin un evento correspondiente. Se encontró `signtool.exe` del Windows SDK en
+`C:/Program Files (x86)/Windows Kits/10/bin/10.0.26100.0/x64/`.
+No se crearon certificados ni se modificaron almacenes: con SAC activo no procede
+tratar un certificado autofirmado CurrentUser como confianza de CA admitida.
+[Criterio oficial de SAC](https://learn.microsoft.com/windows/apps/develop/smart-app-control/overview).
+
+### Arquitectura adoptada
+
+- **onedir portable**, sin bootloader PyInstaller ni instalador EXE nuevo.
+- CPython embeddable 3.13.14 x64 oficial, para conservar la versión del entorno
+  validado. ZIP descargado de python.org y verificado contra SHA256 publicado:
+  `90b4e5b9898b72d744650524bff92377c367f44bd5fbd09e3148656c080ad907`.
+  [Release oficial](https://www.python.org/downloads/release/python-31314/).
+- `runtime/python.exe` y `pythonw.exe` conservan sus bytes y firmas **Valid** de
+  Python Software Foundation. No se parchean PE ni se cambia reputación/política.
+- `packages/`: cierre de dependencias de voz/dev exportado con `uv.lock`, versiones
+  comprobadas contra el entorno y archivos copiados con comprobación de RECORD.
+  Los binarios de ruedas oficiales se conservan; **no todos tienen Authenticode**.
+  Ruff no está firmado: se copia el binario existente sin alterarlo, y la política
+  activa lo admitió en las pruebas. No se afirma que todos los PE estén firmados.
+- `app/ai_swe/`, `frontend/dist/`, `start.py` y `AISWESystem.cmd` son código/datos
+  externos cargados por el intérprete firmado. El CMD usa rutas relativas citadas.
+- `python313._pth` limita importaciones al runtime y paquetes de la distribución;
+  no depende de PYTHONPATH, Python/Node globales ni del directorio actual.
+- El bootstrap identifica el bundle antes de cargar Settings: installed nativo
+  por marcador interno, **`sys.frozen=false` veraz**, datos en LOCALAPPDATA.
+- Los targets permitidos se reenvían al worker cerrado del bundle; pytest añade
+  el src del repositorio descartable y Ruff usa el binario incluido, sin shell.
+- `.env`, SQLite y pesos no se distribuyen. Bytecode desactivado y manifiesto
+  `BUNDLE-MANIFEST.json` para verificar cada archivo. Los hashes aportan integridad,
+  no una firma del producto ni una garantía universal de reputación en otros PC.
+
+### Evidencia final y entrega
+
+Entrega: `dist/windows-signed-python-rc2/AISWESystem-signed-python-rc2.zip` y carpeta
+completa `AISWESystem/`. **Abrir `AISWESystem.cmd`**, conservando todas las carpetas.
+No registrar este ZIP como un instalador Inno ni atribuirle accesos/registro de
+desinstalación que no crea. Retirar la carpeta portable no elimina los datos del
+perfil. Los instaladores anteriores se conservan como históricos.
+
+| Verificación | Resultado | Evidencia local |
+| --- | --- | --- |
+| Regresión Python completa | 791 PASS, 3 SKIP, 0 FAIL; 264.18 s | `_tmp/signed-python-regression.xml` |
+| Regresión focalizada final | 21 PASS | Signed runtime, launcher e instalador legado |
+| Frontend | 24 PASS; TypeScript/Vite PASS | Assets coincidentes con bundle |
+| Paquete firmado, PATH reducido | 19 PASS | `_tmp/signed-python-rc2-smoke/report.json` |
+| Promoción/reinicio/retirada portable | 21 PASS | `_tmp/signed python rc2 e2e/report.json` |
+| Navegador sobre paquete final | 14 PASS | `_tmp/signed-python-rc2-browser/report.json` |
+| CMD con PATH sin Python/Node | PASS | Diagnóstico installed, frontend presente, frozen false |
+| Política tras las pruebas | SAC=1; sin eventos de bloqueo coincidentes | `SAC-DISTRIBUTION-EVIDENCE.json` |
+
+Voz: small externo CPU/int8, audio español sintético; no nueva prueba física.
+E2E: repositorio descartable, fixture HTTP local de modelo, pruebas reales,
+reinicio de puerta persistida y bytes exactos promovidos solo tras aprobación.
+Se retiró únicamente la copia portable del directorio de prueba, verificado dentro
+de su raíz; configuración/SQLite/logs quedaron idénticos byte por byte.
+No llamadas de pago, importación de certificados, cambios de registro de política,
+exclusiones de antivirus, elevación de producto ni cambios de ExecutionPolicy.
+
+Los primeros intentos conservan fallos del arnés (temporizador insuficiente y
+variable de comandos reutilizada) y de construcción (import/módulo de firmas).
+Se corrigieron y repitieron sin retirar aserciones funcionales. El build final
+añade integridad RECORD/manifiesto; se volvió a probar el paquete resultante.
+Los 3 SKIP son opt-in de proveedor/STT y permiso de enlace de Windows, sin PASS falso.
+No hay VM independiente ni tag final. Hashes en `SAC-DISTRIBUTION-EVIDENCE.json`.
+
+### Construcción reproducible
+
+```powershell
+.venv/Scripts/python.exe tools/build_windows.py --format signed-python --python-archive <python-3.13.14-embed-amd64.zip> --output <directorio-nuevo>
+.venv/Scripts/python.exe tools/verify_packaged_app.py <carpeta-AISWESystem> <evidencia-nueva> --voice-model <small-local> --voice-audio <es.wav>
+.venv/Scripts/python.exe tools/verify_installer.py <carpeta-AISWESystem> <evidencia-nueva>
+node tools/verify_premium_ui.cjs <carpeta-AISWESystem> <evidencia-nueva>
+```
+
+El builder verifica firmas de CPython, versión/RECORD de dependencias y secreto/
+estado ausentes. `--format pyinstaller` conserva la construcción histórica como
+opción explícita; no es la entrega vigente para este equipo.
+
+## Histórico de Fase H (PyInstaller, previo al bloqueo SAC)
+
 ## Resultado
 
 Paquete **onedir** construido con PyInstaller 6.22.3 y Python 3.13.14 x64.

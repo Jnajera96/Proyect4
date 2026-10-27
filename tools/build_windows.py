@@ -17,6 +17,11 @@ ROOT = Path(__file__).resolve().parents[1]
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True, help="New artifact directory")
+    parser.add_argument(
+        "--format", choices=("pyinstaller", "signed-python"), default="signed-python"
+    )
+    parser.add_argument("--python-archive", type=Path)
+    parser.add_argument("--uv", type=Path, default=Path.home() / ".local/bin/uv.exe")
     args = parser.parse_args()
     output = args.output.resolve()
     if os.name != "nt" or output.exists():
@@ -27,27 +32,56 @@ def main() -> int:
     if not npm:
         parser.error("Node/npm are required only on the build machine")
     subprocess.run(
-        [npm, "exec", "--", "tsc", "--noEmit"], cwd=ROOT / "frontend", check=True,
+        [npm, "exec", "--", "tsc", "--noEmit"],
+        cwd=ROOT / "frontend",
+        check=True,
     )
     subprocess.run(
         [npm, "exec", "--", "vite", "build", "--outDir", str(frontend)],
-        cwd=ROOT / "frontend", check=True,
+        cwd=ROOT / "frontend",
+        check=True,
     )
+    if args.format == "signed-python":
+        sys.path.insert(0, str(ROOT))
+        from tools.signed_runtime import assemble
+
+        if not args.python_archive:
+            parser.error("Supply the pinned official --python-archive")
+        bundle = output / "dist/AISWESystem"
+        report = assemble(ROOT, frontend, bundle, args.python_archive, args.uv)
+        (output / "build-report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print(json.dumps(report, indent=2))
+        return 0
     env = {**os.environ, "AI_SWE_PACKAGE_FRONTEND": str(frontend)}
-    subprocess.run([
-        sys.executable, "-m", "PyInstaller", str(ROOT / "packaging/ai-swe.spec"),
-        "--distpath", str(output / "dist"), "--workpath", str(output / "build"),
-    ], cwd=ROOT, env=env, check=True)
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "PyInstaller",
+            str(ROOT / "packaging/ai-swe.spec"),
+            "--distpath",
+            str(output / "dist"),
+            "--workpath",
+            str(output / "build"),
+        ],
+        cwd=ROOT,
+        env=env,
+        check=True,
+    )
     bundle = output / "dist/AISWESystem"
-    forbidden = [p for p in bundle.rglob("*") if p.is_file() and (
-        p.name == ".env" or p.suffix in {".sqlite3", ".gguf"}
-    )]
+    forbidden = [
+        p
+        for p in bundle.rglob("*")
+        if p.is_file() and (p.name == ".env" or p.suffix in {".sqlite3", ".gguf"})
+    ]
     if forbidden:
         raise RuntimeError("Unexpected mutable or private file in bundle")
     exe = bundle / "AISWESystem.exe"
     report = {
-        "format": "onedir", "python": sys.version.split()[0],
-        "executable": str(exe), "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
+        "format": "onedir",
+        "python": sys.version.split()[0],
+        "executable": str(exe),
+        "sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
         "bundle_bytes": sum(p.stat().st_size for p in bundle.rglob("*") if p.is_file()),
         "secret_files_included": False,
     }

@@ -11,14 +11,31 @@ Git para Windows sí es requisito para registrar y operar repositorios; debe est
 disponible en PATH. Se requiere un navegador web. Los proyectos con dependencias
 propias pueden necesitar preparación adicional; no se acredita cualquier proyecto.
 
-Instalador candidato actualizado: `dist/windows-premium-rc1/AISWESystem-v0.1.0-setup.exe`.
-Portable: `dist/windows-premium-rc1/AISWESystem-premium-rc1.zip`.
-La revisión visual y sus hashes están en `UI-PREMIUM-VALIDATION.md` y
-`UI-PREMIUM-EVIDENCE.json`. La carpeta anterior se conserva como histórico.
-No está firmado y no se ha verificado en una VM/Windows independiente; las pruebas
-aisladas de este host y sus límites están en `INSTALLER-VALIDATION.md`.
+**Entrega vigente con SAC activo:**
+`dist/windows-signed-python-rc2/AISWESystem-signed-python-rc2.zip`.
+Usa CPython oficial firmado y código externo, sin EXE nuevo de la aplicación.
+No depende de Python/Node instalados. Ver `PACKAGING-REPORT.md` y
+`SAC-DISTRIBUTION-EVIDENCE.json`. Sigue sin VM independiente.
 
-## Instalar y abrir
+## Abrir el paquete portable vigente
+
+1. Extraer el ZIP completo en una **carpeta nueva** con permiso de escritura.
+   No mezclarlo con una instalación anterior ni copiar solo `python.exe`.
+2. Abrir `AISWESystem/AISWESystem.cmd`. El launcher inicia el servidor en loopback
+   y abre la URL real del frontend integrado de Antigravity.
+3. Configurar el archivo externo descrito abajo si se van a habilitar modelos/voz.
+   No se incluye ningún token ni peso STT.
+4. Cerrar el servidor antes de mover o retirar la carpeta del programa. Los datos
+   siguen en `%LOCALAPPDATA%/AISWESystem`; retirar el portable no los elimina.
+
+Este formato no registra desinstalador ni crea accesos de Inicio/Escritorio.
+Diagnóstico desde su carpeta: `runtime/python.exe -B start.py --runtime-info`.
+Devuelve `frozen=false`, `runtime_mode=installed`, `frontend_present=true`.
+
+Los siguientes pasos de Inno son **históricos**, para el candidato anterior
+`dist/windows-premium-rc1/`. No describen la instalación del ZIP vigente.
+
+## Histórico: instalar y abrir Inno Setup
 
 1. Ejecutar el instalador con la cuenta de usuario habitual. La instalación no
    solicita elevación: `PrivilegesRequired=lowest`.
@@ -103,9 +120,10 @@ no implementa borrado/retención ni una migración de datos.
 
 ## Diagnóstico
 
-Desde terminal, `AISWESystem.exe --runtime-info` informa modo frozen/installed
+Desde la carpeta portable, `runtime/python.exe -B start.py --runtime-info` informa installed
 y presencia del frontend sin mostrar secretos. `--no-browser` permite iniciar
-sin abrir una pestaña; se imprime la URL efectiva. Ante errores de configuración,
+sin abrir una pestaña; se imprime la URL efectiva. En el portable se añade el
+argumento después de `start.py`. Ante errores de configuración,
 ejecutar desde terminal para leer el campo señalado y revisar el archivo externo.
 Los logs están en el directorio del usuario. Conservarlos sin publicar tokens ni
 contenido privado de los repositorios.

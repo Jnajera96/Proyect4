@@ -1,0 +1,144 @@
+{
+  "date": "2026-10-27",
+  "baseline": "0b0ef5c",
+  "distribution": "signed CPython portable; no generated unsigned application EXE or installer",
+  "policy": {
+    "sac_state": 1,
+    "matching_block_events": 0,
+    "new_block_events": [],
+    "original_block": {
+      "id": 3077,
+      "record_id": 3350618,
+      "time": "2026-10-27T09:00:21.9509964-06:00",
+      "message": "Code Integrity determined that a process (\\Device\\HarddiskVolume6\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\python3.13.exe) attempted to load \\Device\\HarddiskVolume6\\Users\\jose_\\Desktop\\repo_proyect\\proyecto4-ai-swe\\_tmp\\antigravity-build-03\\dist\\AISWESystem\\AISWESystem.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})."
+    },
+    "signatures": [
+      {
+        "file": "runtime/python.exe",
+        "status": "Valid",
+        "signer": "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+      },
+      {
+        "file": "runtime/pythonw.exe",
+        "status": "Valid",
+        "signer": "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+      },
+      {
+        "file": "tools/ruff.exe",
+        "status": "NotSigned",
+        "signer": null
+      }
+    ]
+  },
+  "policy_id": "0283ac0f-fff1-49ae-ada1-8a933130cad6",
+  "policy_name": "VerifiedAndReputableDesktop",
+  "policy_modified": false,
+  "certificate_stores_modified": false,
+  "new_paid_inference_calls": 0,
+  "sys_frozen": false,
+  "runtime_mode": "installed",
+  "python_archive_sha256": "90b4e5b9898b72d744650524bff92377c367f44bd5fbd09e3148656c080ad907",
+  "python_suite": {
+    "passed": 791,
+    "skipped": 3,
+    "failed": 0,
+    "seconds": 264.18,
+    "xml_path": "_tmp/signed-python-regression.xml",
+    "sha256": "5774b69cf2040025f191d7b6b83973c7f0fbfa2ff9eca95a43120c81952a9a64"
+  },
+  "frontend_tests": 24,
+  "focused_tests": 21,
+  "reports": {
+    "smoke": {
+      "path": "_tmp/signed-python-rc2-smoke/report.json",
+      "sha256": "23c557c3aa7818fa433b16a63d2cb0cabb9ce1935de4ae31dd04cd0cfbb4ea34",
+      "passed": 19,
+      "checks": [
+        "packaged runtime diagnostics work",
+        "packaged runtime activates installed mode without pretending to be frozen",
+        "occupied preferred port is avoided",
+        "health responds without provider credential",
+        "bundled React frontend is served",
+        "bundled JavaScript is served",
+        "projects accessible in local mode",
+        "packaged CPU/int8 transcribes local Spanish audio",
+        "packaged API registers a synthetic Git project",
+        "packaged engine creates a run",
+        "packaged LangGraph waits for human confirmation",
+        "automatic test shutdown is graceful",
+        "authentication works after restart",
+        "SQLite persists across packaged restarts",
+        "restart shutdown releases server",
+        "embedded pytest.unit needs no development interpreter",
+        "embedded ruff.check needs no development interpreter",
+        "SQLite outside installation",
+        "unrelated current directory remains empty"
+      ]
+    },
+    "promotion": {
+      "path": "_tmp/signed python rc2 e2e/report.json",
+      "sha256": "d8f0687fee7ce18c1467c9afa2cc34acd7e9a3bbc973c2580b0de2ac58d87ff9",
+      "passed": 21,
+      "checks": [
+        "portable deployment succeeds",
+        "complete onedir runtime installed",
+        "functional test fails before proposal",
+        "installed API and frontend start",
+        "installed API reports release version 0.1.0",
+        "requirements gate leaves original clean",
+        "real packaged tests pass in worktree",
+        "review gate leaves original clean",
+        "graceful stop at persisted approval gate",
+        "SQLite and checkpoint survive application restart",
+        "exact reviewed bytes promoted after explicit approval",
+        "protected tests and original commit unchanged",
+        "only approved source path changed",
+        "final report has no promotion failure",
+        "deterministic fixture used only Coder and Reviewer",
+        "shutdown completes before uninstall",
+        "SQLite exists outside installation",
+        "portable removal succeeds",
+        "program and internal runtime removed",
+        "portable leaves shortcuts and registry untouched",
+        "all user data including configuration preserved byte-for-byte"
+      ]
+    },
+    "browser": {
+      "path": "_tmp/signed-python-rc2-browser/report.json",
+      "sha256": "a4896e0ac7195326d1a6a50d7c5e08932b4d3689b70764e52f6576487d5c8721",
+      "passed": 14,
+      "checks": [
+        "integrated Antigravity activity navigation present",
+        "frozen UI explains first-run configuration",
+        "no decorative waveform at rest",
+        "microphone toolbar opens existing voice controls",
+        "audio toolbar opens native picker and stages audio",
+        "choosing audio does not create a run",
+        "offline pill is visible",
+        "offline does not show missing-provider notice",
+        "configured pill is visible",
+        "configured does not show missing-provider notice",
+        "presence is not represented as verified credit or connectivity",
+        "native font stack and translucent material present",
+        "reduced motion suppresses active-node animation",
+        "no browser runtime errors"
+      ]
+    }
+  },
+  "bundle_manifest": {
+    "path": "AISWESystem/BUNDLE-MANIFEST.json",
+    "sha256": "df7d01b61f7bb3c0a4e6cc1ec5eee7c488c4af0b681d82c601fbc9122c6fb323",
+    "verified_files": 4538
+  },
+  "archive": {
+    "path": "dist/windows-signed-python-rc2/AISWESystem-signed-python-rc2.zip",
+    "bytes": 114851689,
+    "sha256": "790964a4aeb4e91cb54974017fa6b81fd34703689a4fdea75c7004de57133c88",
+    "crc_test": "PASS"
+  },
+  "cmd_reduced_path": "PASS",
+  "independent_vm": false,
+  "installer_shortcuts_registry": "not applicable: portable package",
+  "all_pe_files_authenticode_signed": false,
+  "wheel_binary_note": "Official wheel binaries retained unchanged; Ruff is NotSigned and admitted by active SAC during tests."
+}
