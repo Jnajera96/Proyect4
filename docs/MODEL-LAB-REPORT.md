@@ -2,7 +2,10 @@
 
 Fecha de consulta: 14 de octubre de 2026, America/Mexico_City.
 Estado: **PARTIAL — descubrimiento público y arnés offline preparados**.
-No hay todavía resultados de inferencia real ni selección validada de modelos.
+Este encabezado describe el checkpoint offline original. La actualización real
+del 26 de octubre está en [HYBRID-MODEL-VALIDATION.md](HYBRID-MODEL-VALIDATION.md):
+hay resultados sintéticos remotos y locales, pero D sigue parcial y aún no existe
+una selección completa ni integración E2E validada de todos los roles.
 
 ## Arquitectura y límite de esta entrega parcial
 

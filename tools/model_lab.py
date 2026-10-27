@@ -178,6 +178,7 @@ def benchmark(
     repeats: int = 2,
     max_retries: int = 0,
     timeout_s: float = 30,
+    max_output_tokens: int = 512,
     sleep: Callable[[float], None] = time.sleep,
 ) -> list[dict]:
     if not token.strip():
@@ -188,6 +189,8 @@ def benchmark(
         raise ValueError("repeats 1..5 and retries 0..2 required")
     if not math.isfinite(timeout_s) or not 0 < timeout_s <= 120:
         raise ValueError("timeout must be 0..120 seconds")
+    if type(max_output_tokens) is not int or not 1 <= max_output_tokens <= 4096:
+        raise ValueError("max_output_tokens must be an integer in 1..4096")
     if not candidates or not cases:
         raise ValueError("at least one candidate and case required")
     register_secret(token)
@@ -195,7 +198,7 @@ def benchmark(
     # Preflight complete maximum call count so a gate never loses partial results.
     for candidate in candidates:
         for _ in range(len(cases) * repeats * (max_retries + 1)):
-            guard.reserve(candidate, 512)
+            guard.reserve(candidate, max_output_tokens)
     rows = []
     for candidate in candidates:
         with OpenAICompatibleAdapter(
@@ -220,7 +223,7 @@ def benchmark(
                                 ModelRequest(
                                     messages=[ModelMessage(role="user", content=case.prompt)],
                                     model=candidate.routing_id,
-                                    max_output_tokens=512,
+                                    max_output_tokens=max_output_tokens,
                                     timeout_s=timeout_s,
                                     temperature=0,
                                 ),
@@ -271,6 +274,8 @@ def benchmark(
                                 "cost_basis": "catalog_estimate" if cost is not None else None,
                                 "error_class": error.error_class if error else None,
                                 "tool_call_compatibility": "not_probed",
+                                "max_output_tokens": max_output_tokens,
+                                "finish_reason": raw.finish_reason if raw else None,
                             }
                         )
                         if isinstance(error, (ModelAuthenticationError, ModelBillingError)):

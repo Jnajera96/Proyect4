@@ -34,3 +34,82 @@ Trabajo detenido en un checkpoint local por límite de uso de Work. Reanudar sol
 cuando el usuario lo pida. Resumen operativo en `RESUME-PRODUCTIZATION-v0.1.0.md`.
 No hay procesos de prueba pendientes; la suite completa terminó correctamente.
 No se comprobó todavía el token ni se consumió inferencia o dinero.
+
+## Reanudación solicitada el 26 de octubre de 2026
+
+- Rama y HEAD confirmados: `productization/v0.1.0`, `7419818`.
+- Los cambios pendientes son la entrega documental realizada en este chat;
+  se preservaron sin restaurar archivos ni mezclarlos con cambios del runtime.
+- `delivery-rc1` existe; no se modificó. No hay remotos configurados.
+- El plan está en `docs/superpowers/plans/2026-10-14-productization-v0.1.0.md`.
+- Se ejecutó el chequeo local `python -m tools.model_lab check-gate` con el
+  intérprete del proyecto: `GATE_REQUIRED: HF_TOKEN is not configured`.
+- No se mostraron secretos ni se realizaron llamadas de inferencia, descargas
+  o gastos. La siguiente acción depende de configurar la credencial y autorizar
+  un límite económico antes de las pruebas reales. No se avanzó a E–J.
+- La pausa anterior por uso fue revocada por la solicitud de continuar. El
+  trabajo queda ahora pendiente de la credencial; no se declara cerrada D.
+
+## Ruta híbrida aceptada por el usuario
+
+- Evaluar Analyst y Supervisor con modelos locales cuantizados; Coder y Reviewer
+  mediante API. Mantener LangGraph, políticas, Git y verificaciones locales.
+- La asignación es una hipótesis que debe superar evaluación semántica, de
+  memoria y latencia; no garantiza eficiencia ni calidad por el nombre del modelo.
+- Jupyter será laboratorio externo; no dependencia obligatoria del ejecutable.
+- Presupuesto autorizado por el usuario: hasta 3 USD para pruebas reales.
+  Es un techo total de esta autorización, no un importe renovable por comando.
+- Hardware consultado: GTX 1650 Ti, 4096 MiB VRAM total y 3773 MiB libre en
+  ese instante. La consulta de RAM mediante CIM fue denegada por el entorno;
+  las cifras del notebook siguen siendo históricas hasta nueva medición.
+- Chequeo con `--max-usd 3`: `GATE_REQUIRED: HF_TOKEN is not configured`.
+  No hubo inferencia ni gasto. No se descargaron pesos ni se cambiaron contratos
+  o routing del runtime. El siguiente paso sigue siendo la credencial.
+- El código del repositorio enviado a un proveedor remoto deja el equipo local;
+  las pruebas iniciales deben usar únicamente casos sintéticos o descartables.
+
+## Credencial disponible y bloqueo de facturación
+
+- Tras confirmar el usuario la configuración, `check-gate --max-usd 3` pasó.
+  Esto comprueba presencia de credencial, no saldo ni validez ante el proveedor.
+- Catálogo público actualizado: 269 pares modelo/proveedor, sin inferencia.
+- Prueba sintética de Coder: `Qwen/Qwen2.5-Coder-32B-Instruct:nscale`.
+  El arnés registró `INVALID_RESPONSE` sin usage. Un diagnóstico mínimo posterior
+  confirmó HTTP 402 y contenido relacionado con facturación/créditos.
+- No se guardaron cuerpos del servidor ni secretos. No hay evidencia de calidad
+  del modelo y no se modificó el routing del producto.
+- Dos intentos, cero reintentos automáticos. Reserva acumulada conservadora:
+  0.01583424 USD sobre los 3 USD autorizados. Usage y cargo real desconocidos;
+  no se reembolsa la reserva por falta de usage. No renovar presupuesto por comando.
+- Evidencia local ignorada por Git: `_tmp/hybrid-validation/spend-ledger.json`,
+  `remote-probe-01.json` y `http-diagnostic-01.json`; catálogo en
+  `_tmp/hybrid-catalog.json`. Consultar el ledger antes de nuevas llamadas.
+- Se detuvieron las llamadas remotas al encontrar el gate humano de facturación.
+  El usuario debe comprobar créditos/acceso a Inference Providers en su cuenta.
+- Mejora pendiente demostrada: distinguir HTTP 402 de respuesta inválida genérica
+  en la clasificación del adapter y abortar baterías ante errores de facturación.
+  No se declara corregido todavía.
+
+## Evaluación híbrida tras la recarga de créditos
+
+- El bloqueo HTTP 402 quedó resuelto para las peticiones posteriores. Corrección
+  del manejo de 402 y aborto de baterías guardada en commit local `95ddf64`.
+- Suite offline completa: 715 PASS, 3 SKIP, 0 FAIL. Después, 28 pruebas focalizadas
+  del laboratorio PASS y Ruff focalizado PASS; no confundir ambas ejecuciones.
+- Coder/Reviewer remotos: Qwen2.5-Coder-32B-Instruct:nscale pasó 8/8; candidato
+  provisional para integración, no validación E2E del producto.
+- Qwen3-32B:nscale pasó 6/8. Prueba mínima de JSON Schema estricto pasó con el
+  primer modelo; tool calling forzado recibió HTTP 400, sin ejecutar herramientas.
+- GGUF locales públicos con revisión y checksum verificados: Qwen2.5-1.5B Q4_K_M
+  y Qwen3-1.7B Q8_0, ejecutados con llama.cpp b11700 CPU y apagado al finalizar.
+  Ninguno pasó todos los casos de Analyst/Supervisor; no se activó routing local.
+- Los planes remotos a 512 tokens se truncaban; se añadió un límite configurable
+  con reserva previa. A 1024 se completaron, pero no superaron el criterio semántico
+  de modificación. No se debilitaron aserciones ni se ocultaron esos resultados.
+- Presupuesto total sigue siendo 3 USD. Reserva acumulada 0.22656320 USD;
+  estimación conocida con usage 0.00299420 USD, no factura conciliada.
+- Resultados y métodos en `HYBRID-MODEL-VALIDATION.md` y evidencia consolidada en
+  `HYBRID-MODEL-LAB-EVIDENCE.json`, sin secretos ni respuestas brutas.
+- Pendiente decisión del usuario: respaldo determinista local para los roles
+  ligeros e integración de Coder/Reviewer remotos, o evaluar un modelo local mayor.
+  D/E permanecen abiertos. Sin cambios al routing ni al tag `delivery-rc1`.

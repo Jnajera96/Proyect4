@@ -293,3 +293,35 @@ def test_billing_error_aborts_entire_benchmark_without_retry_or_secret():
     assert rows[0]["error_class"] == "MODEL_BILLING_ERROR"
     assert rows[0]["cost_usd"] is None
     assert "synthetic-billing-secret" not in json.dumps(rows)
+
+
+def test_larger_output_limit_is_reserved_before_any_request():
+    def server(_):
+        pytest.fail("larger cap must be reserved before inference")
+
+    with (
+        httpx.Client(transport=httpx.MockTransport(server)) as client,
+        pytest.raises(GateRequired),
+    ):
+        benchmark(
+            [candidate()], token="synthetic", max_usd=Decimal("0.0006"),
+            client=client, cases=CASES[:1], repeats=1, max_output_tokens=1024,
+        )
+
+
+def test_larger_output_limit_reaches_provider_and_records_truncation():
+    def server(request):
+        assert json.loads(request.content)["max_tokens"] == 1024
+        return httpx.Response(200, json={
+            "choices": [{"message": {"content": '{"intent":'}, "finish_reason": "length"}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 1024, "total_tokens": 1034},
+        })
+
+    with httpx.Client(transport=httpx.MockTransport(server)) as client:
+        rows = benchmark(
+            [candidate()], token="synthetic", max_usd=Decimal("1"),
+            client=client, cases=CASES[:1], repeats=1, max_output_tokens=1024,
+        )
+    assert rows[0]["finish_reason"] == "length"
+    assert rows[0]["max_output_tokens"] == 1024
+    assert not rows[0]["task_success"]
