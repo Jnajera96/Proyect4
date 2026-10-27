@@ -17,7 +17,9 @@ contenedor por ejecucion, y esta declarado en `docs/02-tecnologias.md`.
 from __future__ import annotations
 
 import logging
+import threading
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 
 from ai_swe.graph.engine import RunEngine
 
@@ -33,11 +35,13 @@ class RunWorker:
             max_workers=max(1, max_workers), thread_name_prefix="ai-swe-run"
         )
         self._cerrado = False
+        self._active = 0
+        self._active_lock = threading.Lock()
 
     def submit(self, run_id: str) -> None:
         if self._cerrado:
             raise RuntimeError("el trabajador esta cerrado")
-        self._pool.submit(self._ejecutar_seguro, run_id)
+        self._submit(self._ejecutar_seguro, run_id)
 
     def submit_resume(self, run_id: str, decision) -> None:
         """Reanuda una ejecucion en el trabajador.
@@ -47,7 +51,29 @@ class RunWorker:
         """
         if self._cerrado:
             raise RuntimeError("el trabajador esta cerrado")
-        self._pool.submit(self._reanudar_seguro, run_id, decision)
+        self._submit(self._reanudar_seguro, run_id, decision)
+
+    @property
+    def active(self):
+        with self._active_lock:
+            return self._active
+
+    def _submit(self, operation, *args):
+        context = copy_context()
+        with self._active_lock:
+            self._active += 1
+        def run():
+            try:
+                context.run(operation, *args)
+            finally:
+                with self._active_lock:
+                    self._active -= 1
+        try:
+            self._pool.submit(run)
+        except BaseException:
+            with self._active_lock:
+                self._active -= 1
+            raise
 
     def _ejecutar_seguro(self, run_id: str) -> None:
         """Ejecuta y **siempre** deja la ejecucion en un estado terminal.

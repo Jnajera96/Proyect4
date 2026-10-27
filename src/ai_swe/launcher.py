@@ -117,6 +117,7 @@ def positive_seconds(value: str) -> float:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="AI Software Engineering System local")
+    parser.add_argument("--profiles", action="store_true", help="Activar perfiles autenticados")
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--runtime-info", action="store_true")
     parser.add_argument("--startup-timeout", type=positive_seconds, default=30)
@@ -127,6 +128,8 @@ def main(argv=None) -> int:
         help=argparse.SUPPRESS,
     )
     args = parser.parse_args(argv)
+    if args.profiles:
+        os.environ["AI_SWE_PROFILE_MODE"] = "true"
     if args.run_test_target:
         return embedded_test_target(args.run_test_target)
     try:

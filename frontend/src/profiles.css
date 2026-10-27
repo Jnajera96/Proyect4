@@ -1,0 +1,15 @@
+.profile-access,.profile-vault { max-width: 640px; margin: 6vh auto; padding: 32px; background: var(--panel, #fff); border: 1px solid #d8dfdc; border-radius: 16px; color: #172c27; }
+.profile-access h1,.profile-vault h1 { font-size: 28px; margin: 12px 0; }
+.profile-access p,.profile-vault p { line-height: 1.6; margin: 16px 0; }
+.profile-access form,.profile-vault form { display: grid; gap: 18px; }
+.profile-access label,.profile-vault label { display: grid; gap: 6px; font-weight: 600; }
+.profile-access input,.profile-vault input,.profile-vault textarea { padding: 11px; border: 1px solid #aebeb6; border-radius: 6px; background: #fff; color: #172c27; font: inherit; width: 100%; box-sizing: border-box; }
+.profile-access button,.profile-vault button,.profile-bar button { padding: 10px 16px; border: 1px solid #3d6558; border-radius: 6px; color: #234c3e; background: #f3f8f5; cursor: pointer; font: inherit; }
+.profile-access button[type=submit],.profile-vault button[type=submit] { background: #234c3e; color: #fff; }
+.profile-check { display: flex !important; align-items: center; }
+.profile-check input { width: auto; }
+.profile-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 24px; background: #edf5f0; border-bottom: 1px solid #bdcfc2; }
+.profile-bar strong { margin-right: auto; }
+.profile-message { padding: 10px 24px; background: #f4f5ed; }
+.profile-eyebrow { text-transform: uppercase; letter-spacing: .1em; font-size: 12px; }
+@media(max-width: 680px) { .profile-access,.profile-vault { margin: 16px; padding: 20px; } }

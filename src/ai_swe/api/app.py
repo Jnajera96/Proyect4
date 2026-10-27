@@ -58,7 +58,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import Response
 
 from ai_swe import __version__
-from ai_swe.config import load_settings, provider_configuration, repositorio_autorizado
+from ai_swe.config import Settings, load_settings, provider_configuration, repositorio_autorizado
 from ai_swe.contracts import (
     ApprovalDecision,
     EventKind,
@@ -432,6 +432,7 @@ def crear_app(
     stt: STTAdapter | None = None,
     worker: RunWorker | None = None,
     cors_origins: list[str] | None = None,
+    settings: Settings | None = None,
 ) -> FastAPI:
     # La configuracion se carga **una vez**, al construir la aplicacion. Los
     # manejadores la necesitan -la ruta del almacen y el alcance de repositorios- y
@@ -443,7 +444,10 @@ def crear_app(
     # `AI_SWE_STATE_DB_PATH` en el entorno **o** en `.env` funcionan igual, y hay una
     # sola fuente tipada. Sigue permitiendo que una verificacion arranque con una
     # base limpia y sea reproducible.
-    ajustes = load_settings()
+    ajustes = settings or load_settings()
+    if ajustes.profile_mode:
+        from ai_swe.api.profiles import create_profile_app
+        return create_profile_app(ajustes)
     almacen = store or RunStore(ajustes.state_db_path)
     # F13: el adaptador se elige por configuracion (`AI_SWE_STT_PROVIDER`). El
     # defecto es el adaptador local real; `fake` queda para pruebas y para entornos
@@ -462,7 +466,7 @@ def crear_app(
         # momento en que la configuracion (con sus claves) esta en la mano.
         install_redacting_filter()
         _configurar_nivel_de_log(ajustes.log_level)
-        file_handler = installed_log_handler(ajustes.log_dir)
+        file_handler = installed_log_handler(ajustes.log_dir, profile_id=ajustes.profile_id)
 
         # Recuperacion al arrancar: una ejecucion en `planned` o `running`
         # pertenece a un proceso que ya no existe. Dejarla asi seria la terminacion
@@ -482,7 +486,7 @@ def crear_app(
             # Cerrar por debajo de un trabajador activo lo hace fallar con
             # `Cannot operate on a closed database` y deja la ejecucion sin estado
             # terminal. El orden importa.
-            trabajador.shutdown(wait=True)
+            await run_in_threadpool(trabajador.shutdown, wait=True)
             if store is None:
                 almacen.close()
             close_installed_log_handler(file_handler)
@@ -538,6 +542,7 @@ def crear_app(
             respuesta.headers.setdefault(nombre, valor)
         return respuesta
 
+    app.state.settings = ajustes
     app.state.store = almacen
     app.state.engine = motor
     app.state.worker = trabajador
@@ -657,6 +662,10 @@ def crear_app(
     registrar_manejadores_de_error(app)
 
     # ------------------------------------------------------------------ salud
+    @app.get("/auth/status")
+    def profile_status():
+        return {"profile_mode": False, "authenticated": False}
+
     @app.get("/health")
     def salud() -> dict:
         return {

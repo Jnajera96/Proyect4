@@ -19,6 +19,7 @@ import { Chip, Fila, Panel, Seccion } from "../components/ui";
 
 export function VistaSesion({
   sesion,
+  profileName,
   rol,
   credencial,
   conexion,
@@ -28,6 +29,7 @@ export function VistaSesion({
   alCerrarSesion,
 }: {
   sesion: EstadoSesion;
+  profileName?: string;
   rol: string | null;
   /** Credencial enmascarada, o `null` si no hay ninguna. */
   credencial: string | null;
@@ -37,6 +39,15 @@ export function VistaSesion({
   alCambiarCredencial: () => void;
   alCerrarSesion: () => void;
 }) {
+  if (profileName) return <Seccion titulo="Sesión del perfil">
+    <Panel nota="La sesión caduca y se revoca al cerrar sesión. Los trabajos ya aceptados terminan antes de cerrar su contexto.">
+      <dl className="datos"><dt>perfil</dt><dd>{profileName}</dd>
+        <dt>permisos</dt><dd>Administrador de su propio espacio</dd>
+        <dt>acceso</dt><dd>Cookie de sesión protegida; las escrituras requieren CSRF.</dd></dl>
+      <Fila sep><button onClick={alCambiarCredencial}>Configurar bóveda</button>
+        <button onClick={alCerrarSesion}>Cerrar sesión</button></Fila>
+    </Panel>
+  </Seccion>;
   const autenticado = sesion === "autenticado";
 
   return (

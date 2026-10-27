@@ -50,6 +50,11 @@ class Settings(BaseSettings):
         env_ignore_empty=True,
     )
 
+    profile_mode: bool = Field(default_factory=lambda: default_runtime_mode() == "installed")
+    profiles_root: Path | None = None
+    profile_id: str | None = None
+    profile_session_seconds: int = Field(default=28800, ge=60, le=604800)
+
     # --- Servidor ------------------------------------------------------------
     # El **puerto** es configurable; la **interfaz** no (ver `ai_swe.__main__`):
     # cambiar el puerto no amplia quien puede llegar, escuchar en la red si.
@@ -451,9 +456,13 @@ def repositorio_autorizado(settings: Settings, ruta: Path | str) -> bool:
     resolver, `repo/../otro` o un enlace simbolico esquivarian la lista. Se resuelve
     primero y se compara despues.
     """
+    objetivo = Path(ruta).resolve()
+    if settings.profile_id and settings.profiles_root is not None:
+        private = settings.profiles_root.resolve()
+        if objetivo == private or private in objetivo.parents or objetivo in private.parents:
+            return False
     if not settings.authorized_repos:
         return True
-    objetivo = Path(ruta).resolve()
     for permitido in settings.authorized_repos:
         base = Path(permitido).resolve()
         if objetivo == base or base in objetivo.parents:

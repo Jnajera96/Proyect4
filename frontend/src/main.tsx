@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./App";
+import { ProfileRoot } from "./components/ProfileRoot";
 import "./estilos.css";
 import "./workspace.css";
 
@@ -14,6 +14,6 @@ if (!raiz) {
 
 createRoot(raiz).render(
   <StrictMode>
-    <App />
+    <ProfileRoot />
   </StrictMode>,
 );

@@ -40,6 +40,7 @@ from ai_swe.models.contracts import (
     ModelMessage,
     ModelRequest,
     ModelResponse,
+    ModelUsage,
 )
 from ai_swe.models.errors import (
     ModelConfigurationError,
@@ -147,6 +148,7 @@ class ModelGateway:
         max_backoff_s: float = 8.0,
         sleep: Callable[[float], None] = time.sleep,
         pricing: PricingTable | None = None,
+        profile_settings: Settings | None = None,
     ) -> None:
         if not adapters:
             raise ModelConfigurationError("el gateway necesita al menos un adapter")
@@ -161,6 +163,11 @@ class ModelGateway:
         # 7 s por el backoff es una suite que nadie ejecuta.
         self._sleep = sleep
         self._pricing = pricing if pricing is not None else TABLA_POR_DEFECTO
+        self._profile_settings = profile_settings
+        self._ledger = None
+        if profile_settings is not None:
+            from ai_swe.state.budget_ledger import BudgetLedger
+            self._ledger = BudgetLedger(profile_settings.state_db_path)
 
     # ------------------------------------------------------------------ consulta
 
@@ -257,7 +264,9 @@ class ModelGateway:
             return min(float(sugerida), self._max_backoff_s)
         return min(self._backoff_base_s * (2**intento), self._max_backoff_s)
 
-    def _intentar(self, adapter: ProviderAdapter, request: ModelRequest) -> tuple[ProviderResponse, float]:
+    def _intentar(
+        self, adapter: ProviderAdapter, request: ModelRequest
+    ) -> tuple[ProviderResponse, float]:
         """Llama al adapter con reintentos. Devuelve la respuesta cruda y la latencia.
 
         Solo se reintenta lo que el **tipo** de error declara recuperable. Reintentar
@@ -267,7 +276,31 @@ class ModelGateway:
         for intento in range(self._max_retries + 1):
             inicio = time.perf_counter()
             try:
+                reservation = None
+                if self._ledger is not None:
+                    from ai_swe.state.budget_ledger import LedgerError
+                    settings = self._profile_settings
+                    model = request.model or settings.model_name
+                    if settings.max_cost_per_run is None or request.max_output_tokens is None:
+                        raise ModelConfigurationError("El perfil requiere limite y salida acotada")
+                    # UTF-8 bytes plus structural overhead are a conservative local estimate.
+                    inputs = len(request.model_dump_json().encode()) + 1024
+                    estimate = self._pricing.cost(model, ModelUsage(
+                        input_tokens=inputs, output_tokens=request.max_output_tokens))
+                    if estimate is None:
+                        raise ModelConfigurationError("El perfil requiere una tarifa declarada")
+                    try:
+                        reservation = self._ledger.reserve_call(request.run_id or '',
+                            run_limit=settings.max_cost_per_run, estimate=estimate)
+                    except LedgerError as exc:
+                        raise ModelConfigurationError(str(exc)) from None
                 bruto = adapter.generate(request)
+                if reservation is not None:
+                    declared = self._pricing.cost(bruto.model or model, bruto.usage)
+                    self._ledger.settle(reservation, declared)
+                    if declared is None:
+                        raise ModelConfigurationError(
+                            "Consumo desconocido; se conserva la reserva y se detiene la ejecucion")
             except ModelGatewayError as exc:
                 ultimo = exc
                 if not exc.recoverable or intento >= self._max_retries:
@@ -287,7 +320,9 @@ class ModelGateway:
             return bruto, latencia_ms
 
         # Inalcanzable: el bucle o devuelve o lanza. Se deja por correccion de tipos.
-        raise ultimo if ultimo is not None else ModelGatewayError("fallo sin error")  # pragma: no cover
+        if ultimo is not None:  # pragma: no cover
+            raise ultimo
+        raise ModelGatewayError("fallo sin error")  # pragma: no cover
 
     def _validar(self, contenido: str, response_model: type[BaseModel], provider: str) -> dict:
         """Valida el contenido contra el contrato. Nunca deja pasar un dict invalido."""
@@ -409,7 +444,8 @@ def gateway_from_settings(
     tabla = pricing_from_json(settings.model_pricing)
 
     if adapters is not None:
-        return ModelGateway(list(adapters), sleep=sleep, pricing=tabla)
+        return ModelGateway(list(adapters), sleep=sleep, pricing=tabla,
+                            profile_settings=settings if settings.profile_id else None)
 
     config = provider_config_from_settings(settings)
     if (
@@ -429,4 +465,5 @@ def gateway_from_settings(
         max_retries=config.max_retries,
         sleep=sleep,
         pricing=tabla,
+        profile_settings=settings if settings.profile_id else None,
     )

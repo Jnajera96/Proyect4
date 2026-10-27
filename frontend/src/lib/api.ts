@@ -19,6 +19,7 @@ import type {
   Transcript,
 } from "./contracts";
 import { claveActiva } from "./auth";
+import { profileHeaders, expireProfile } from "./profile";
 
 /** Error de la API con la clase de dominio, si la trae. */
 export class ErrorApi extends Error {
@@ -107,7 +108,8 @@ async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
     : (init ?? {});
   let respuesta: Response;
   try {
-    respuesta = await fetch(ruta, conClave);
+    respuesta = await fetch(ruta, { ...conClave, credentials: "same-origin",
+      headers: { ...conClave.headers, ...profileHeaders() } });
   } catch (causa) {
     // Fallo de red: no hay respuesta. Se distingue de un 4xx para que la interfaz
     // pueda decir "servidor inaccesible" en lugar de "peticion rechazada".
@@ -125,6 +127,7 @@ async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
   }
 
   if (!respuesta.ok) {
+    if (respuesta.status === 401) expireProfile();
     const clase =
       cuerpo && typeof cuerpo === "object" && "error_class" in cuerpo
         ? String((cuerpo as ApiError).error_class)

@@ -57,7 +57,9 @@ import { Icono } from "./components/Icono";
 /** Que respondio el servidor a las peticiones protegidas. */
 type ResultadoCarga = "ok" | "401" | "fallo";
 
-export function App() {
+export function App({ profile }: { profile?: {
+  name: string; onLogout: () => void; onVault: () => void;
+} } = {}) {
   // --------------------------------------------------------------- datos
   const [salud, setSalud] = useState<Health | null>(null);
   const [saludError, setSaludError] = useState(false);
@@ -535,8 +537,8 @@ export function App() {
           <VistaGeneral
             salud={salud}
             saludError={saludError}
-            sesion={sesion}
-            rol={rol}
+            sesion={profile ? "autenticado" : sesion}
+            rol={profile ? "admin" : rol}
             conexion={conexion}
             proyectos={proyectos}
             runs={runs}
@@ -605,19 +607,20 @@ export function App() {
         {vista === "actividad" ? <VistaActividad estado={estado} eventos={eventos} conexion={conexion} /> : null}
 
         {vista === "seguridad" ? (
-          <VistaSeguridad estado={estado} sesion={sesion} rol={rol} />
+          <VistaSeguridad estado={estado} sesion={profile ? "autenticado" : sesion} rol={profile ? "admin" : rol} />
         ) : null}
 
         {vista === "sesion" ? (
           <VistaSesion
-            sesion={sesion}
-            rol={rol}
+            profileName={profile?.name}
+            sesion={profile ? "autenticado" : sesion}
+            rol={profile ? "admin" : rol}
             credencial={enmascarar(claveApi)}
             conexion={conexion}
             salud={salud}
             saludError={saludError}
-            alCambiarCredencial={() => setCambiandoClave(true)}
-            alCerrarSesion={cerrarSesion}
+            alCambiarCredencial={profile?.onVault ?? (() => setCambiandoClave(true))}
+            alCerrarSesion={profile?.onLogout ?? cerrarSesion}
           />
         ) : null}
       </div>

@@ -11,6 +11,7 @@ name = "ai-swe-system"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "cryptography" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "langgraph" },
@@ -45,6 +46,7 @@ voice = [
 [package.metadata]
 requires-dist = [
     { name = "av", marker = "extra == 'voice'", specifier = "<19" },
+    { name = "cryptography", specifier = "==50.0.2" },
     { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "faster-whisper", marker = "extra == 'voice'", specifier = ">=1.0" },
     { name = "httpx", specifier = ">=0.27,<1" },
