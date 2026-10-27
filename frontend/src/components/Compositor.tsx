@@ -66,6 +66,15 @@ export function Compositor({
   salud: Health | null;
   puedeAdministrar: boolean;
 }) {
+  function abrirDictado(archivo = false) {
+    const voz = document.getElementById("dictado");
+    if (!(voz instanceof HTMLDetailsElement)) return;
+    voz.open = true;
+    const campo = voz.querySelector<HTMLInputElement>("#audio-fichero");
+    if (archivo && campo) campo.click();
+    else voz.querySelector("summary")?.focus();
+  }
+
   return (
     <>
       <Panel
@@ -73,20 +82,24 @@ export function Compositor({
       >
         <label className="solo-lector" htmlFor="instruccion">Instrucción</label>
         <div className="entrada-principal">
-        <button className="boton-microfono" aria-label="Abrir dictado por voz" onClick={() => {
-          const voz = document.getElementById("dictado");
-          if (voz instanceof HTMLDetailsElement) { voz.open = true; voz.querySelector("summary")?.focus(); }
-        }}><Icono nombre="microfono" /></button>
         <textarea
           id="instruccion"
           value={estado.instruccion}
           onChange={(e) => acciones.alCambiarInstruccion(e.target.value)}
           placeholder="Describe qué quieres construir o mejorar…"
+          autoFocus={typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches && !estado.instruccion}
         />
+        <div className="comando-herramientas">
+        <button className="boton-microfono" aria-label="Abrir dictado por voz"
+          title="Abrir dictado por voz" onClick={() => abrirDictado()}><Icono nombre="microfono" /></button>
+        <button className="boton-audio" aria-label="Elegir un fichero de audio"
+          title="Elegir un fichero de audio en el estudio de voz" onClick={() => abrirDictado(true)}>
+          <Icono nombre="detalle" /><span>Audio</span></button>
+        <span className="comando-ayuda">Texto o voz. Tú decides cuándo ejecutar.</span>
         <button id="btn-crear" className="primario enviar" disabled={estado.lanzando || !estado.instruccion.trim()}
           onClick={acciones.alLanzar} aria-label={estado.lanzando ? "Lanzando ejecución" : "Ejecutar"}>
           <Icono nombre="flecha" /><span>{estado.lanzando ? "Lanzando…" : "Ejecutar"}</span>
-        </button></div>
+        </button></div></div>
 
         {estado.origenVoz ? (
           <p className="tenue fila-sep">

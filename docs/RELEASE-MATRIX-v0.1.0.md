@@ -3,6 +3,11 @@
 Fecha: 27 de octubre de 2026. Estado: **preparado para revisión, no etiquetado**.
 El tag `v0.1.0` no existe. No se solicita ni ejecuta push.
 
+Revisión visual posterior: el candidato actualizado está en
+`dist/windows-premium-rc1/`. Consultar `UI-PREMIUM-VALIDATION.md` y
+`UI-PREMIUM-EVIDENCE.json` para sus verificaciones y hashes. La matriz siguiente
+conserva el baseline anterior; la suite Python completa no se volvió a ejecutar.
+
 ## Controles y alcance de la evidencia
 
 | Control | Resultado | Evidencia / límite |

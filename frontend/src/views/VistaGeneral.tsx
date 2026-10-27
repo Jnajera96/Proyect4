@@ -19,6 +19,7 @@ import { PuertaRequisitos } from "../components/PuertaRequisitos";
 import { Timeline } from "../components/Timeline";
 import { Chip, Esqueleto, EstadoVacio, Panel, Seccion, Tarjeta } from "../components/ui";
 import { Icono } from "../components/Icono";
+import { AvisoProveedor } from "../components/EstadoProveedor";
 import type { VistaId } from "../components/Navegacion";
 
 function tonoDeEstado(estado: string): "" | "ok" | "aviso" | "error" | "acento" {
@@ -72,9 +73,7 @@ export function VistaGeneral({
   const esperando = runs.filter(r => r.awaiting_approval || r.status.startsWith("awaiting"));
   const proyecto = proyectos.find(p => p.project_id === compositor.projectId);
   return <>
-    {salud?.provider_configuration?.status === "not_configured" ? (
-      <p className="aviso" role="status">{salud.provider_configuration.message}</p>
-    ) : null}
+    <AvisoProveedor configuracion={salud?.provider_configuration} />
     <section className="hero" aria-labelledby="hero-titulo">
       <div className="hero-formas" aria-hidden="true"><i /><i /><i /></div>
       <div className="hero-principal">

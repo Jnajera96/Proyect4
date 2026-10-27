@@ -283,3 +283,17 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
   **no se creó `v0.1.0`, no se hizo push ni se declara producción**.
   Reserva del laboratorio intacta: 1.17225088 de 3 USD. README/documentos académicos
   pendientes del usuario no se mezclaron con este candidato.
+
+## Interfaz premium — revisión posterior de I/J, 27 de octubre de 2026
+
+- Rediseño solicitado por el usuario: materiales nativos claros/oscuros, cabecera
+  de proveedor, sidebar de proyectos/corridas, compositor voz/audio, transcripción
+  editable, pipeline, decisiones humanas y visor de evidencia. HTTP/SSE intactos.
+- 24 pruebas frontend, TypeScript/build y 114 controles de navegador aprobados.
+  Configuración instalada: 8; voz real CPU/int8: 16; EXE: 19; instalador: 23;
+  smoke adicional del navegador sobre EXE: 13 controles aprobados.
+- Entrega nueva en `dist/windows-premium-rc1/`, con instalador, carpeta completa y
+  ZIP. Acta `UI-PREMIUM-VALIDATION.md` y hashes `UI-PREMIUM-EVIDENCE.json`.
+- La suite Python completa del baseline no se repitió por este cambio visual.
+  Sin inferencia pagada, VM nueva, firma, tag final o push. Actas anteriores
+  conservadas como evidencia histórica; documentos académicos preservados.

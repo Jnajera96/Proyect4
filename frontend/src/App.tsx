@@ -47,6 +47,7 @@ import { VistaDetalle } from "./views/VistaDetalle";
 import { VistaEjecuciones } from "./views/VistaEjecuciones";
 import { VistaFlujo } from "./views/VistaFlujo";
 import { VistaGeneral } from "./views/VistaGeneral";
+import { EstadoProveedor } from "./components/EstadoProveedor";
 import { VistaProyectos } from "./views/VistaProyectos";
 import { VistaSeguridad } from "./views/VistaSeguridad";
 import { VistaSesion } from "./views/VistaSesion";
@@ -429,6 +430,7 @@ export function App() {
         ) : (
           <Chip pulsa>comprobando…</Chip>
         )}
+        <EstadoProveedor configuracion={salud?.provider_configuration} />
         {sesion === "autenticado" ? <Chip tono="ok">sesión autenticada</Chip> : null}
         {/* La credencial enmascarada se enseña **en la cabecera**, discreta y en
             todas las vistas: confirma cual esta en uso sin revelarla. Estuvo solo
@@ -515,6 +517,7 @@ export function App() {
         }}><Icono nombre="cerrar" /></button>
         <Navegacion vista={vista} items={items} alCambiar={v => { setVista(v); setMenuAbierto(false); window.requestAnimationFrame(() => { contenido.current?.focus({ preventScroll: true }); window.scrollTo(0, 0); }); }}
           proyectos={proyectos} proyectoActual={projectId}
+          runs={runs} runActual={runId} alRun={seleccionarRun}
           alProyecto={id => { setProjectId(id); setVista("general"); setMenuAbierto(false); }}
           alCrearProyecto={() => { setVista("proyectos"); setMenuAbierto(false); }} />
       </aside>

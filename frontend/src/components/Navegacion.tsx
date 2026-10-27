@@ -5,7 +5,7 @@
  * fingir una URL que no existe daria un boton "atras" que no funciona. Cada boton
  * es enfocable con el teclado y anuncia cual esta activo con `aria-current`.
  */
-import type { Project } from "../lib/contracts";
+import { ETIQUETA_ESTADO, type Project, type RunSummary } from "../lib/contracts";
 import { Icono } from "./Icono";
 
 export type VistaId =
@@ -32,6 +32,9 @@ export function Navegacion({
   proyectoActual,
   alProyecto,
   alCrearProyecto,
+  runs = [],
+  runActual,
+  alRun,
 }: {
   vista: VistaId;
   items: ItemNav[];
@@ -40,6 +43,9 @@ export function Navegacion({
   proyectoActual?: string;
   alProyecto?: (id: string) => void;
   alCrearProyecto?: () => void;
+  runs?: RunSummary[];
+  runActual?: string | null;
+  alRun?: (id: string) => void;
 }) {
   return (
     <div className="sidebar-contenido">
@@ -71,6 +77,18 @@ export function Navegacion({
         <span className="punto" /><span>{p.name}</span>
       </button>) : <p className="tenue">Sin proyectos</p>}
       <button className="sutil" onClick={alCrearProyecto}>Ver proyectos</button>
+    </section>
+    <section className="sidebar-corridas" aria-label="Ejecuciones recientes">
+      <h2>Actividad reciente</h2>
+      {runs.slice(0, 5).map(run => <button key={run.run_id}
+        className={`sidebar-run ${runActual === run.run_id ? "seleccionado" : ""}`}
+        aria-label={`Abrir ejecución ${run.run_id}`} aria-pressed={runActual === run.run_id}
+        onClick={() => alRun?.(run.run_id)}>
+        <span className={`run-indicador ${run.status}`} aria-hidden="true" />
+        <span className="sidebar-run-info"><span className="sidebar-run-id">{run.run_id}</span>
+          <span className="sidebar-run-estado">{ETIQUETA_ESTADO[run.status]}</span></span>
+      </button>)}
+      {!runs.length ? <p className="sidebar-vacio">Tus ejecuciones aparecerán aquí.</p> : null}
     </section>
     <p className="sidebar-pie">Tu espacio de ingeniería.<br />Cada cambio, con evidencia.</p>
     </div>

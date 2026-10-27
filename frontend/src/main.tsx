@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./estilos.css";
+import "./workspace.css";
 
 // El montaje real: un unico punto de entrada. La sonda del verificador
 // (`tools/verify_frontend.py`) marca el arranque como fallido si algo lanza aqui,

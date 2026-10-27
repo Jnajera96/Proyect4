@@ -5,6 +5,7 @@
   "type": "module",
   "description": "React dashboard over the ai_swe REST surface and SSE event stream (F11).",
   "scripts": {
+    "test": "node --test tests/estados.test.mjs",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",

@@ -129,10 +129,16 @@ export function PanelVoz({
   }
 
   return (
+    <div className={`voz-estudio voz-${fase}`}>
     <Panel
       titulo="Dictar la instrucción"
       nota="El audio se convierte en texto y el texto se te enseña para que lo revises. Nada se ejecuta hasta que tú lo confirmes."
     >
+      {fase === "grabando" || fase === "transcribiendo" ? (
+        <div className="voz-onda" aria-hidden="true">
+          {Array.from({ length: 11 }, (_, i) => <span key={i} style={{ animationDelay: `${i * 65}ms` }} />)}
+        </div>
+      ) : null}
       {fase === "inicial" || fase === "error" ? (
         <Fila>
           {hayGrabadora && hayMicrofono ? (
@@ -190,7 +196,7 @@ export function PanelVoz({
       ) : null}
 
       {fase === "revisando" && transcripcion ? (
-        <>
+        <div className="transcripcion-revision">
           <div className="fila">
             <Chip tono={transcripcion.low_confidence ? "aviso" : "ok"}>
               confianza {(transcripcion.confidence * 100).toFixed(0)}%
@@ -227,7 +233,7 @@ export function PanelVoz({
               dictada; no se ejecuta nada hasta que pulses Ejecutar.
             </span>
           </Fila>
-        </>
+        </div>
       ) : null}
 
       {error ? (
@@ -236,5 +242,6 @@ export function PanelVoz({
         </p>
       ) : null}
     </Panel>
+    </div>
   );
 }
