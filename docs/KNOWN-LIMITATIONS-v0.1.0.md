@@ -1,6 +1,8 @@
 # Limitaciones conocidas — candidato v0.1.0
 
 Fecha: 27 de octubre de 2026. Estas limitaciones forman parte de la revisión del tag.
+El usuario las acepta para el cierre local v0.1.0. El tag no acredita producción
+pública, perfiles multiusuario ni recuperación entre equipos.
 
 ## Entorno y distribución
 

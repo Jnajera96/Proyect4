@@ -1,7 +1,9 @@
 # Matriz de revisión — candidato v0.1.0
 
-Fecha: 27 de octubre de 2026. Estado: **preparado para revisión, no etiquetado**.
-El tag `v0.1.0` no existe. No se solicita ni ejecuta push.
+Fecha: 27 de octubre de 2026. Estado: **v0.1.0 aprobada para el entorno local validado**.
+El usuario autorizó expresamente el cierre y tag local `v0.1.0`. Sin push.
+Entrega canónica: `dist/windows-signed-python-rc2/AISWESystem-signed-python-rc2.zip`.
+SHA256: `790964a4aeb4e91cb54974017fa6b81fd34703689a4fdea75c7004de57133c88`.
 
 Distribución vigente: `dist/windows-signed-python-rc2/`, CPython oficial firmado
 con app/frontend externos. Se resolvió el bloqueo del launcher generado mediante
@@ -36,7 +38,7 @@ distribución SAC. No son los hashes ni los resultados del portable vigente.
 | VM independiente / Windows limpio | NO EJECUTADO | Windows Sandbox no disponible; mismo host con destinos/PATH aislados |
 | Firma y política en este host | PASS con límites | CPython PSF Valid; SAC activo. App/ZIP no firmados; no todos los binarios de ruedas tienen Authenticode |
 | SmartScreen/equipo ajeno | NO VALIDADO | No equivale a aceptación universal ni a firma propia del producto |
-| Tag final y publicación | PENDIENTE | Revisión/aprobación del usuario; no se creó tag ni se hizo push |
+| Tag final y publicación | Tag local autorizado | Cierre solicitado expresamente; sin push ni publicación remota |
 
 ## Omisiones de la suite, sin convertirlas a PASS
 
@@ -55,13 +57,12 @@ el alcance aislado solicitado en este host; no sustituye la VM independiente.
 J queda preparada con instalación, producto, limitaciones, artefactos y matriz.
 Una matriz sin VM real no se denomina una matriz completa en equipo limpio.
 
-Antes del tag se debe revisar/aceptar el alcance local y las omisiones anteriores,
-o completar las verificaciones externas que se exijan. No hay aprobación implícita
-ni automatismo que convierta este documento en autorización de etiqueta.
+El usuario aceptó expresamente el alcance local y las omisiones al solicitar el
+cierre formal v0.1.0. Los controles externos no ejecutados no se convierten en PASS.
 El producto no se declara listo para exposición pública o producción multiusuario.
 
-Los cambios académicos pendientes en el checkout principal se preservan y quedan
-fuera del commit del candidato. La entrega portable/instalador no incluye esos
+Los cambios académicos se conservan en un commit documental previo al tag.
+La entrega portable no incluye esos
 documentos ni archivos de credenciales. Consultar `PRODUCTIZATION-PROGRESS.md`
 para commits y contexto; `RELEASE-EVIDENCE-v0.1.0.json` vincula cada capa de evidencia.
 

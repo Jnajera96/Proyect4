@@ -1,6 +1,8 @@
 # Instalación Windows — candidato v0.1.0
 
 Fecha: 27 de octubre de 2026. Uso local, una persona, Windows x64.
+Entrega canónica v0.1.0 aprobada expresamente para este entorno local: 791 PASS,
+3 SKIP y cero FAIL/bloqueos SAC. No se extiende la aprobación a una VM no probada.
 Consultar el estado de aprobación en `RELEASE-MATRIX-v0.1.0.md` antes de distribuir.
 
 ## Requisitos y archivos

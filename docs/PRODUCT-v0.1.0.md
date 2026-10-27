@@ -1,6 +1,6 @@
 # AI Software Engineering System — candidato v0.1.0
 
-Fecha: 27 de octubre de 2026. Estado: candidato local para revisión; tag pendiente.
+Fecha: 27 de octubre de 2026. Estado: v0.1.0 aprobada para el entorno local validado.
 
 ## Objetivo y alcance
 
@@ -51,10 +51,9 @@ no como número de versión del producto.
 Entrega actual revisable en `dist/windows-signed-python-rc2/`: runtime oficial
 firmado, código externo y lanzador CMD, validado con SAC activo. Los EXE/instaladores
 anteriores se conservan como históricos. Ver `PACKAGING-REPORT.md` y su evidencia.
-No hay tag `v0.1.0`, push, firma de
-código ni validación en Windows limpio independiente. La prueba de instalación
-aislada no sustituye esa comprobación. El tag requiere revisión/aprobación final
-del alcance y de las omisiones documentadas; no se publica automáticamente.
+El usuario autorizó el tag local `v0.1.0` y aceptó el alcance documentado.
+No hay push ni firma propia del producto ni validación en Windows independiente.
+La prueba aislada no sustituye esa comprobación; no se publica automáticamente.
 
 Consultar `INSTALLATION-WINDOWS.md` y `KNOWN-LIMITATIONS-v0.1.0.md` antes de usar.
 Los documentos académicos y cambios previos del usuario se preservaron sin mezclarlos

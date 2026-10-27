@@ -345,3 +345,15 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
 - CMD probado sin Python/Node en PATH; SAC sigue en 1, cero eventos de bloqueo
   coincidentes con la distribución nueva. Sin VM independiente ni tag/push.
   Acta vigente en `PACKAGING-REPORT.md`; consolidado `SAC-DISTRIBUTION-EVIDENCE.json`.
+
+## Cierre formal v0.1.0 autorizado por el usuario
+
+- Documentación académica y contexto conservados en commit documental, con sus
+  formatos editables, PDF, draw.io e imágenes. Sin borrar ni reubicar código.
+- Entrega canónica aprobada para el entorno local validado:
+  `dist/windows-signed-python-rc2/AISWESystem-signed-python-rc2.zip`.
+  SHA256 `790964a4aeb4e91cb54974017fa6b81fd34703689a4fdea75c7004de57133c88`.
+- 791 PASS, 3 SKIP, cero FAIL y bloqueos SAC; no se afirma una VM independiente.
+  Se autoriza tag local `v0.1.0` sobre el cierre documental limpio, sin push.
+- La evolución K/L/M se abre después en `feature/v0.2.0-madre-continuity`;
+  ningún cambio funcional v0.2.0 pertenece al tag v0.1.0.
