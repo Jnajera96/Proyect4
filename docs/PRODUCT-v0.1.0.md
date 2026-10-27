@@ -37,13 +37,18 @@ y credencial explícitamente; el proveedor no viene habilitado con un token ajen
 
 Las actas separan fuente, navegador, modelo real, voz, EXE e instalador. La matriz
 de aprobación se conserva en `RELEASE-MATRIX-v0.1.0.md`, con evidencia consolidada
-en `RELEASE-EVIDENCE-v0.1.0.json`. Una casilla no ejecutada no se transforma en PASS.
+en `RELEASE-EVIDENCE-v0.1.0.json` para el baseline y `UI-PREMIUM-EVIDENCE.json`
+para la revisión visual posterior. Una casilla no ejecutada no se transforma en PASS.
+
+El cierre posterior de regresión sobre `4accb8e` y la vinculación de artefactos
+se registran en `FINAL-RELEASE-EVIDENCE-v0.1.0.json`.
 
 El candidato alinea versión Python, API/OpenAPI, frontend y manifiesto del instalador
 a 0.1.0. El campo histórico `fase=M3` de salud se conserva como dato de compatibilidad,
 no como número de versión del producto.
 
-Entrega revisable en `dist/windows-v0.1.0-rc1/`. No hay tag `v0.1.0`, push, firma de
+Entrega actual revisable en `dist/windows-premium-rc1/`. La entrega anterior se
+conserva como histórico. No hay tag `v0.1.0`, push, firma de
 código ni validación en Windows limpio independiente. La prueba de instalación
 aislada no sustituye esa comprobación. El tag requiere revisión/aprobación final
 del alcance y de las omisiones documentadas; no se publica automáticamente.

@@ -297,3 +297,18 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
 - La suite Python completa del baseline no se repitió por este cambio visual.
   Sin inferencia pagada, VM nueva, firma, tag final o push. Actas anteriores
   conservadas como evidencia histórica; documentos académicos preservados.
+
+## J — regresión final del candidato premium
+
+- Continuación solicitada por el usuario; baseline `4accb8e` verificado. Suite
+  Python completa nueva: **785 PASS, 3 SKIP, 0 FAIL**, 214.96 s. XML/log en
+  `_tmp/release-premium-final-suite.*`. Sin llamadas de pago.
+- Hashes de instalador/EXE/ZIP contrastados contra el acta premium; ZIP íntegro,
+  incluido `_internal`. Contratos y pruebas frontend conservados byte por byte
+  respecto al baseline previo al rediseño.
+- Guías de producto/instalación actualizadas a `dist/windows-premium-rc1/`.
+  Matriz vigente y `FINAL-RELEASE-EVIDENCE-v0.1.0.json` distinguen la suite nueva
+  de las validaciones del paquete ya aprobadas, reutilizadas sin inventar reruns.
+- `CLEAN-WINDOWS-VALIDATION.md` prepara la prueba externa, aún NO ejecutada.
+  No hay VM independiente, firma, aprobación de tag final ni push. El próximo
+  gate es validar otro Windows o decidir expresamente el alcance local del release.

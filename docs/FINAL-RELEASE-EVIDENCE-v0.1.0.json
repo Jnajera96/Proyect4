@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-27",
+  "runtime_commit": "4accb8e",
+  "status": "local candidate verified; external Windows and final tag approval pending",
+  "python_suite": {
+    "tests": 788,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 3,
+    "passed": 785,
+    "console_duration_s": 214.96,
+    "xml_duration_s": 209.91,
+    "xml_path": "_tmp/release-premium-final-suite.xml",
+    "xml_sha256": "bd13345e790a1c3b75ab67e437cc258438229cfb126b337da2dbd2dc4ba18adf",
+    "log_path": "_tmp/release-premium-final-suite.log",
+    "log_sha256": "27f8682d3c3263c4b377c7b6dcf9195b6078b36b2c82d3554d30140767be7d6e",
+    "omissions": [
+      {
+        "test": "tests.test_f13_stt.test_transcripcion_real_opt_in",
+        "reason": "opt-in: define AI_SWE_RUN_REAL_STT_TESTS=1 (descarga un modelo)"
+      },
+      {
+        "test": "tests.test_f7_sandbox.test_la_plataforma_no_permite_construir_el_vector_de_enlace",
+        "reason": "el sistema no permite crear enlaces: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-jose_\\\\pytest-2\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test' -> 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-jose_\\\\pytest-2\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test\\\\enlace_de_prueba'"
+      },
+      {
+        "test": "tests.test_model_gateway_real.test_llamada_real_controlada",
+        "reason": "prueba de integracion real: exige AI_SWE_RUN_REAL_PROVIDER_TESTS=1, AI_SWE_MODEL_API_KEY y AI_SWE_MODEL_NAME"
+      }
+    ]
+  },
+  "reused_premium_evidence": {
+    "path": "docs/UI-PREMIUM-EVIDENCE.json",
+    "sha256": "7f33caa3be24b0a6bf98e6cb2d65c5e9856a54f9d627dac1e5ea4f937598603a",
+    "note": "These package/browser/voice checks were executed for the premium candidate in the preceding turn; not rerun in this closure.",
+    "checks": {
+      "browser": 114,
+      "configuration": 8,
+      "voice": 16,
+      "packaged": 19,
+      "installer": 23,
+      "frozen_browser": 13
+    }
+  },
+  "artifacts_verified_again": [
+    {
+      "path": "dist/windows-premium-rc1/AISWESystem-v0.1.0-setup.exe",
+      "bytes": 81907852,
+      "sha256": "70989aa8fbd2c5776003f29f30f1c0fed59f5c9ea440b678e8322638fe723554"
+    },
+    {
+      "path": "dist/windows-premium-rc1/AISWESystem-premium-rc1.zip",
+      "bytes": 116204335,
+      "sha256": "54f6f17afae7d7cf33ecf693802523da0da5c7c93caa016c17c451c51b205a8e"
+    },
+    {
+      "path": "dist/windows-premium-rc1/AISWESystem/AISWESystem.exe",
+      "bytes": 17600185,
+      "sha256": "be6544ee84ff3b721368be6285f6f72261b88fe9b903fa6593514760f22de550"
+    }
+  ],
+  "zip_crc_integrity": "PASS",
+  "rebuilt_frontend_matches_packaged_assets": true,
+  "new_paid_inference_calls": 0,
+  "independent_windows_tested": false,
+  "product_signed": false,
+  "final_tag_created": false,
+  "push_performed": false
+}

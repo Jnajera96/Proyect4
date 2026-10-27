@@ -11,7 +11,10 @@ Git para Windows sí es requisito para registrar y operar repositorios; debe est
 disponible en PATH. Se requiere un navegador web. Los proyectos con dependencias
 propias pueden necesitar preparación adicional; no se acredita cualquier proyecto.
 
-Instalador candidato: `dist/windows-v0.1.0-rc1/AISWESystem-v0.1.0-setup.exe`.
+Instalador candidato actualizado: `dist/windows-premium-rc1/AISWESystem-v0.1.0-setup.exe`.
+Portable: `dist/windows-premium-rc1/AISWESystem-premium-rc1.zip`.
+La revisión visual y sus hashes están en `UI-PREMIUM-VALIDATION.md` y
+`UI-PREMIUM-EVIDENCE.json`. La carpeta anterior se conserva como histórico.
 No está firmado y no se ha verificado en una VM/Windows independiente; las pruebas
 aisladas de este host y sus límites están en `INSTALLER-VALIDATION.md`.
 
