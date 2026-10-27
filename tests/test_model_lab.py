@@ -270,3 +270,26 @@ def test_notebook_does_not_store_outputs_or_tokens():
         if cell["cell_type"] == "code":
             assert cell["outputs"] == []
             assert cell["execution_count"] is None
+
+
+def test_billing_error_aborts_entire_benchmark_without_retry_or_secret():
+    calls = []
+
+    def server(request):
+        calls.append(request)
+        return httpx.Response(402, json={"error": "Insufficient credits synthetic-billing-secret"})
+
+    with httpx.Client(transport=httpx.MockTransport(server)) as client:
+        rows = benchmark(
+            [candidate(), candidate().model_copy(update={"provider": "other"})],
+            token="synthetic-billing-secret",
+            max_usd=Decimal("1"),
+            client=client,
+            repeats=2,
+            max_retries=2,
+        )
+    assert len(calls) == 1
+    assert len(rows) == 1
+    assert rows[0]["error_class"] == "MODEL_BILLING_ERROR"
+    assert rows[0]["cost_usd"] is None
+    assert "synthetic-billing-secret" not in json.dumps(rows)

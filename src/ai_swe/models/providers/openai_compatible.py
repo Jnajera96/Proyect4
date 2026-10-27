@@ -21,6 +21,7 @@ from ai_swe.models.contracts import ModelRequest, ModelUsage
 from ai_swe.models.errors import (
     InvalidResponseError,
     ModelAuthenticationError,
+    ModelBillingError,
     ModelConfigurationError,
     ModelRateLimitError,
     ModelTimeoutError,
@@ -178,6 +179,8 @@ class OpenAICompatibleAdapter:
 
         if codigo in (401, 403):
             return ModelAuthenticationError(f"credencial rechazada (HTTP {codigo})", **comun)
+        if codigo == 402:
+            return ModelBillingError("pago o credito requerido (HTTP 402)", **comun)
         if codigo == 429:
             espera: float | None = None
             crudo = respuesta.headers.get("retry-after")

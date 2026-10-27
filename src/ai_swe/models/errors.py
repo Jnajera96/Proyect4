@@ -72,6 +72,12 @@ class ModelAuthenticationError(ModelGatewayError):
     error_class = "MODEL_AUTHENTICATION_ERROR"
 
 
+class ModelBillingError(ModelGatewayError):
+    """Pago o credito rechazado; repetir peticiones no resuelve la facturacion."""
+
+    error_class = "MODEL_BILLING_ERROR"
+
+
 class UnknownProviderError(ModelGatewayError):
     """Proveedor no registrado. Es un fallo de programa, no de red."""
 

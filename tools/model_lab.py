@@ -24,7 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ai_swe.contracts import Budget
 from ai_swe.models import ModelGateway, ModelMessage, ModelRequest
-from ai_swe.models.errors import ModelAuthenticationError, ModelGatewayError
+from ai_swe.models.errors import ModelAuthenticationError, ModelBillingError, ModelGatewayError
 from ai_swe.models.providers.openai_compatible import OpenAICompatibleAdapter
 from ai_swe.security import redact_deep, register_secret
 from tools.model_lab_cases import CASES, LabCase, task_success
@@ -273,8 +273,8 @@ def benchmark(
                                 "tool_call_compatibility": "not_probed",
                             }
                         )
-                        if isinstance(error, ModelAuthenticationError):
-                            return rows  # Authentication never triggers another paid attempt.
+                        if isinstance(error, (ModelAuthenticationError, ModelBillingError)):
+                            return rows  # Account gates never trigger another paid attempt.
                         if error is None or not error.recoverable or retry == max_retries:
                             break
                         sleep(min(2**retry, 8))
