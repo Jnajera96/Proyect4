@@ -196,9 +196,11 @@ def _gateway_por_defecto(settings=None):
     ocultaria la diferencia entre «no hay proveedor» y «hay proveedor mal configurado».
     """
     from ai_swe.config import load_settings
+    from ai_swe.graph.model_routing import settings_for_node
     from ai_swe.models import gateway_from_settings
 
-    return gateway_from_settings(settings if settings is not None else load_settings())
+    configured = settings if settings is not None else settings_for_node()
+    return gateway_from_settings(configured if configured is not None else load_settings())
 
 
 class _SinGateway:
@@ -1237,19 +1239,29 @@ def usar_targets_permitidos(targets: tuple[str, ...] | list[str] | None) -> None
 
 
 def _workspace_root() -> Path:
+    from ai_swe.graph.model_routing import settings_for_node
+
+    configured = settings_for_node()
+    if configured is not None and configured.profile_id:
+        return configured.workspace_root
     if _WORKSPACE_ROOT is not None:
         return _WORKSPACE_ROOT
     from ai_swe.config import load_settings
 
-    return load_settings().workspace_root
+    return (configured if configured is not None else load_settings()).workspace_root
 
 
 def _targets_permitidos() -> tuple[str, ...]:
+    from ai_swe.graph.model_routing import settings_for_node
+
+    configured = settings_for_node()
+    if configured is not None and configured.profile_id:
+        return tuple(configured.allowed_test_targets)
     if _TARGETS_PERMITIDOS is not None:
         return _TARGETS_PERMITIDOS
     from ai_swe.config import load_settings
 
-    return tuple(load_settings().allowed_test_targets)
+    return tuple((configured if configured is not None else load_settings()).allowed_test_targets)
 
 
 def apply_sandbox(state: RunState) -> dict:
@@ -1514,11 +1526,13 @@ def _modelo_del_reviewer() -> str | None:
     a `None` en la peticion: el gateway distingue "no se pide modelo concreto" de
     "se pide la cadena vacia".
     """
-    if _MODELO_REVIEWER is not None:
-        return _MODELO_REVIEWER or None
     from ai_swe.graph.model_routing import settings_for_node
 
     configured = settings_for_node()
+    if configured is not None and configured.profile_id:
+        return configured.reviewer_model.strip() or None
+    if _MODELO_REVIEWER is not None:
+        return _MODELO_REVIEWER or None
     if configured is not None:
         return configured.reviewer_model.strip() or None
     from ai_swe.config import load_settings

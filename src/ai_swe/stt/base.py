@@ -150,6 +150,7 @@ class FasterWhisperAdapter:
         dispositivo: str = "auto",
         tipo_computo: str = "default",
         download_root: str | None = None,
+        use_auth_token: str | bool | None = None,
     ) -> None:
         self._modelo = modelo
         self._idioma = idioma
@@ -157,6 +158,8 @@ class FasterWhisperAdapter:
         self._dispositivo = dispositivo
         self._tipo_computo = tipo_computo
         self._download_root = download_root
+        # None preserves legacy Hub resolution; False forbids environment/cache auth.
+        self._use_auth_token = use_auth_token
         # `None` = todavia no cargado. Se carga en la primera transcripcion.
         self._cargado = None
 
@@ -178,6 +181,10 @@ class FasterWhisperAdapter:
                 device=self._dispositivo,
                 compute_type=self._tipo_computo,
                 **({"download_root": self._download_root} if self._download_root else {}),
+                **(
+                    {"use_auth_token": self._use_auth_token}
+                    if self._use_auth_token is not None else {}
+                ),
             )
         except Exception as exc:  # noqa: BLE001 - se degrada a un error tipado
             raise STTError(
@@ -288,6 +295,9 @@ def crear_adaptador_stt(settings=None) -> STTAdapter:
             tipo_computo=getattr(
                 settings, "stt_compute_type", Settings.model_fields["stt_compute_type"].default
             ),
+            # Speech uses public local models. Profile vault credentials belong to
+            # remote inference; do not silently reuse them for model downloads.
+            use_auth_token=False if getattr(settings, "profile_id", None) else None,
             download_root=(
                 str(settings.stt_download_root)
                 if getattr(settings, "stt_download_root", None) else None

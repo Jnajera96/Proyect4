@@ -68,9 +68,16 @@ from ai_swe.graph import nodes
 def construir_grafo(*, settings=None) -> StateGraph:
     grafo = StateGraph(RunState)
 
-    def model_node(node, role):
-        if settings is None or not settings.remote_model_roles:
+    def configured_node(node):
+        if settings is None:
             return node
+        from ai_swe.graph.model_routing import bind_settings_node
+
+        return bind_settings_node(node, settings)
+
+    def model_node(node, role):
+        if settings is None or (not settings.remote_model_roles and not settings.profile_id):
+            return configured_node(node)
         from ai_swe.graph.model_routing import bind_model_node
 
         return bind_model_node(node, role, settings, nodes.SIN_GATEWAY)
@@ -83,8 +90,8 @@ def construir_grafo(*, settings=None) -> StateGraph:
     grafo.add_node("answer_direct", nodes.answer_direct)
     grafo.add_node("explain_limits", nodes.explain_limits)
     grafo.add_node("coder", model_node(nodes.coder, "coder"))
-    grafo.add_node("apply_sandbox", nodes.apply_sandbox)
-    grafo.add_node("run_tests", nodes.run_tests)
+    grafo.add_node("apply_sandbox", configured_node(nodes.apply_sandbox))
+    grafo.add_node("run_tests", configured_node(nodes.run_tests))
     grafo.add_node("reviewer", model_node(nodes.reviewer, "reviewer"))
     grafo.add_node("mark_awaiting", nodes.mark_awaiting)
     grafo.add_node("approval_gate", nodes.approval_gate)

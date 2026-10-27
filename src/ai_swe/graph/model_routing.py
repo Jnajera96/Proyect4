@@ -8,7 +8,7 @@ from functools import wraps
 from ai_swe.contracts import RunState
 
 _FACTORY: ContextVar = ContextVar("ai_swe_node_gateway_factory", default=None)
-_SETTINGS: ContextVar = ContextVar("ai_swe_node_model_settings", default=None)
+_SETTINGS: ContextVar = ContextVar("ai_swe_node_settings", default=None)
 
 
 def gateway_from_settings(settings):
@@ -25,6 +25,19 @@ def settings_for_node():
 def gateway_for_node(default):
     factory = _FACTORY.get()
     return factory() if factory is not None else default
+
+
+def bind_settings_node(node, settings):
+    """Keep configuration local to this node, including deterministic/tool nodes."""
+    @wraps(node)
+    def invoke(state: RunState):
+        token = _SETTINGS.set(settings)
+        try:
+            return node(state)
+        finally:
+            _SETTINGS.reset(token)
+
+    return invoke
 
 
 def bind_model_node(node, role: str, settings, disabled):

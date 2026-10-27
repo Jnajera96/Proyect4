@@ -1,6 +1,6 @@
 # Task 1 / K — Authenticated profiles
 
-Status: implementation complete; full and focused regression passed; ready for independent review.
+Status: K implementation plus round-1 isolation fixes complete; focused regression passed; ready for scoped re-review.
 Base: 03e09c9. Worktree: C:/Users/jose_/.codex/worktrees/provider-preflight/proyecto4-ai-swe.
 Scope: K plus profile-mode activation. L/M are intentionally deferred to their own tasks.
 No external model calls, paid inference, push, tag, primary-checkout edits, trust/policy changes,
@@ -152,3 +152,57 @@ or reading/printing the primary .env were performed.
 
 Full regression:803 passed,3 skipped. Focused profiles after connection cleanup:13 passed.
 Source frozen. Commit identifier is supplied in the agent handoff (this report is part of it).
+
+
+## Round 1 — focused isolation review fixes
+
+Review base: ef73156; findings: task-1-review.md (two Important findings).
+Both were reproduced by seven new failing regression cases before the source fix.
+
+- Added invocation-local `bind_settings_node(node, settings)` using the existing
+  ContextVar boundary. Workflow binds sandbox and test-runner nodes, as well as
+  deterministic model nodes. Workspace root and allowed test targets now use the
+  supplied child Settings. Profile settings override legacy global injection hooks;
+  those hooks remain supported outside profile mode. Profile model roles are bound
+  even when empty, so a legacy injected gateway/reviewer model cannot bleed across.
+  Default gateway construction also consults the bound settings before global load.
+- Inspected every load_settings read in graph nodes. Reviewer settings share the
+  same bound configuration; promotion/finalize/abort continue using persisted paths
+  and were not refactored.
+- `FasterWhisperAdapter` accepts optional `use_auth_token: str | bool | None`.
+  Profile factory explicitly passes False to Whisper, which forwards it to Hub.
+  Speech downloads are deliberately anonymous for all profiles, even if the owner
+  has a vault token for remote inference. No credential is implicitly repurposed.
+  Legacy adapters retain None/omitted auth and their existing Hub resolution behavior.
+  Production code never changes process environment variables.
+
+Focused validation (no models downloaded, network/paid calls, frontend changes or full-suite rerun):
+
+1. New `tests/test_profile_execution_isolation.py`: original 7 cases failed before
+   the fix and passed after it. Final module, including 2 explicit legacy cases:
+   9 passed. Real temporary Git worktrees for two profiles remain under each UUID;
+   another authenticated profile gets403 for both project registration and run repo
+   access. Different target allowlists reach the runner independently, with and
+   without remote roles. Source repo remains unchanged. No Git config is modified.
+2. Offline speech cases use installed faster_whisper.download_model and Hub header
+   generation, replacing only model construction, snapshot I/O and the credential
+   resolver with synthetic sentinels. Both fake environment and cached credentials
+   are excluded; the implicit resolver is never called for profiles. Same boundary
+   confirms legacy behavior still resolves the synthetic credential. Empty and
+   nonempty owner vault tokens both retain anonymous speech; environment unchanged.
+3. Focused selection: test_profile_execution_isolation, test_profiles,
+   test_hybrid_routing, test_workflow, test_f7_sandbox, test_f8_test_runner,
+   test_f9_reviewer, test_f13_stt, test_stt_settings, with real_stt/real_provider
+   excluded:187 selected tests executed,186 passed,1 skipped, exit0. This selection
+   included the original7 new cases; the final9-case module then passed separately.
+   Final collection is189 selected plus1 real-STT deselected (two legacy cases added).
+4. Ruff passes for model_routing.py, workflow.py and the new regression module.
+   Existing nodes.py18 and stt/base.py1 lint findings were compared by code/message
+   against git HEAD baseline and are identical; no unrelated lint cleanup.
+5. Self-review and git diff --check completed. Changes are limited to the two review
+   findings and their settings-isolation boundary. No L/M, SAC/trust/policy changes,
+   push, source-repository destructive operations, or frontend rerun.
+
+Interfaces for follow-on work are unchanged except the additive optional adapter
+argument and internal invocation binder above. Prior full-suite evidence remains
+historical evidence from before this focused correction, not a claimed rerun.
