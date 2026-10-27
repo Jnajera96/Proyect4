@@ -243,3 +243,14 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
 - I pendiente: WindowsSandbox.exe e Inno Setup no encontrados; vmcompute activo
   no acredita una VM limpia. Sin instalaciones del sistema, reinicio, UAC ni firma.
   No se declara producción o release final; presupuesto remoto intacto, sin push.
+
+## I — checkpoint pausado por límite diario solicitado por el usuario
+
+- Instalador per-user compilado con Inno Setup 6.7.3 oficial firmado, sin UAC ni
+  reinicio. Candidato en `dist/windows-i-rc1/`; todavía no apto para entrega.
+- Cuatro pruebas unitarias nuevas aprobadas. La validación instalada pasó copia
+  del runtime pero falló al comprobar el grupo de accesos directos: arnés esperaba
+  grupo único y Setup usó el predeterminado. Cleanup desinstaló con exit 0.
+- Promoción instalada, conservación de datos al desinstalar y suite final pendientes.
+  Cuatro avisos Ruff nuevos pendientes. I no cerrada; J no iniciada; sin tag final.
+- Instrucciones y rutas exactas en `RESUME-PHASE-I.md`. Reanudar solo a solicitud.
