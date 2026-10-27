@@ -11,6 +11,7 @@
 import type {
   ApiError,
   ApprovalDecision,
+  ExecutionMode,
   FinalReport,
   Health,
   Project,
@@ -201,13 +202,14 @@ export const api = {
    * envia, que es lo que el contrato pide.
    */
   crearRun: (instruccion: string, projectId?: string, meta?: Transcript,
-    alcance?: { allowed_paths: string[]; protected_paths: string[] }) =>
+    alcance?: { allowed_paths: string[]; protected_paths: string[]; mode?: ExecutionMode }) =>
     pedir<RunState>("/runs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         instruction: instruccion,
         ...(alcance ? { options: {
+          ...(alcance.mode ? { mode: alcance.mode } : {}),
           allowed_paths: [...new Set(alcance.allowed_paths.map(p => p.trim()).filter(Boolean))],
           protected_paths: [...new Set(alcance.protected_paths.map(p => p.trim()).filter(Boolean))],
         } } : {}),
@@ -256,6 +258,11 @@ export const api = {
         decision,
         ...(comments?.trim() ? { comments: comments.trim() } : {}),
       }),
+    }),
+
+  revertirRun: (runId: string) =>
+    pedir<RunState>(`/runs/${encodeURIComponent(runId)}/rollback`, {
+      method: "POST",
     }),
 
   /** El informe final de una ejecucion, si ya existe. */

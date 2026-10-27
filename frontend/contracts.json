@@ -268,6 +268,17 @@
       "type": "object"
     },
     "RunOptions": {
+      "$defs": {
+        "ExecutionMode": {
+          "enum": [
+            "FULL_PROPOSAL",
+            "INSPECT_ONLY",
+            "PLAN_ONLY"
+          ],
+          "title": "ExecutionMode",
+          "type": "string"
+        }
+      },
       "description": "Lo que el usuario **pidio**. Distinto de `TaskInterpretation`, que es lo que\nel Supervisor **entendio**.\n\nMantenerlos separados permite comparar ambos y detectar una interpretacion que\nse desvio de la peticion, cosa imposible si se funden en un solo objeto.",
       "properties": {
         "allowed_paths": {
@@ -277,6 +288,10 @@
           },
           "title": "Allowed Paths",
           "type": "array"
+        },
+        "mode": {
+          "$ref": "#/$defs/ExecutionMode",
+          "default": "FULL_PROPOSAL"
         },
         "protected_paths": {
           "description": "Rutas que exigen aprobacion explicita.",
@@ -305,6 +320,15 @@
     },
     "RunRequest": {
       "$defs": {
+        "ExecutionMode": {
+          "enum": [
+            "FULL_PROPOSAL",
+            "INSPECT_ONLY",
+            "PLAN_ONLY"
+          ],
+          "title": "ExecutionMode",
+          "type": "string"
+        },
         "InstructionSource": {
           "enum": [
             "text",
@@ -323,6 +347,10 @@
               },
               "title": "Allowed Paths",
               "type": "array"
+            },
+            "mode": {
+              "$ref": "#/$defs/ExecutionMode",
+              "default": "FULL_PROPOSAL"
             },
             "protected_paths": {
               "description": "Rutas que exigen aprobacion explicita.",
@@ -694,6 +722,31 @@
           "title": "CodeChange",
           "type": "object"
         },
+        "CodeProposal": {
+          "description": "**Lo que el modelo genera (F6).** La propuesta de cambio del Coder.\n\nEl modelo propone **archivos y contenido**; el nodo `coder` deriva el diff\nunificado, cuenta lineas y calcula el `sha256` de forma determinista. El\nmodelo propone; el codigo verifica.",
+          "properties": {
+            "files": {
+              "items": {
+                "$ref": "#/$defs/FileProposal"
+              },
+              "maxItems": 50,
+              "title": "Files",
+              "type": "array"
+            },
+            "rationale": {
+              "description": "Por que esta propuesta satisface el criterio de la subtarea.",
+              "maxLength": 4000,
+              "minLength": 1,
+              "title": "Rationale",
+              "type": "string"
+            }
+          },
+          "required": [
+            "rationale"
+          ],
+          "title": "CodeProposal",
+          "type": "object"
+        },
         "Evidence": {
           "description": "Evidencia verificable: lo que permite decir 'esto se comprobo'.",
           "properties": {
@@ -716,6 +769,15 @@
           },
           "title": "Evidence",
           "type": "object"
+        },
+        "ExecutionMode": {
+          "enum": [
+            "FULL_PROPOSAL",
+            "INSPECT_ONLY",
+            "PLAN_ONLY"
+          ],
+          "title": "ExecutionMode",
+          "type": "string"
         },
         "FileChange": {
           "properties": {
@@ -748,6 +810,58 @@
             "sha256"
           ],
           "title": "FileChange",
+          "type": "object"
+        },
+        "FileOperation": {
+          "description": "Que le hace la propuesta a un archivo. Sin esto, crear y borrar se confunden.\n\nUn fichero eliminado con `added=0, removed=N` es indistinguible de uno\nmodificado que borro N lineas. La operacion es lo que desambigua.",
+          "enum": [
+            "create",
+            "modify",
+            "delete"
+          ],
+          "title": "FileOperation",
+          "type": "string"
+        },
+        "FileProposal": {
+          "description": "**Lo que el modelo genera (F6).** Una edicion propuesta sobre un archivo.\n\nSe distingue de `FileChange` a proposito: aqui vive el **contenido** que el\nmodelo si sabe producir, y no los metadatos derivados (`added`, `removed`,\n`sha256`) que el modelo **no puede** calcular -no conoce el hash de un fichero\nque aun no ha escrito, y pedirselo solo produciria un dato inventado.\n\n`new_content` es obligatorio en `create`/`modify` y debe faltar en `delete`:\nun borrado no tiene contenido nuevo. Se codifica en el validador para que la\nincoherencia se detecte en la frontera del contrato y no mas tarde.",
+          "properties": {
+            "new_content": {
+              "anyOf": [
+                {
+                  "maxLength": 500000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Contenido completo resultante. Obligatorio en create/modify.",
+              "title": "New Content"
+            },
+            "operation": {
+              "$ref": "#/$defs/FileOperation"
+            },
+            "path": {
+              "maxLength": 500,
+              "minLength": 1,
+              "title": "Path",
+              "type": "string"
+            },
+            "rationale": {
+              "description": "Por que este archivo concreto necesita este cambio.",
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Rationale",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "operation",
+            "rationale"
+          ],
+          "title": "FileProposal",
           "type": "object"
         },
         "FinalReport": {
@@ -843,6 +957,35 @@
           "title": "Finding",
           "type": "object"
         },
+        "HistoricalContext": {
+          "properties": {
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "run_id": {
+              "title": "Run Id",
+              "type": "string"
+            },
+            "score": {
+              "title": "Score",
+              "type": "number"
+            },
+            "text": {
+              "maxLength": 4000,
+              "title": "Text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "run_id",
+            "kind",
+            "text",
+            "score"
+          ],
+          "title": "HistoricalContext",
+          "type": "object"
+        },
         "Instruction": {
           "description": "La instruccion tal como entra al sistema: siempre texto confirmado.",
           "properties": {
@@ -901,6 +1044,17 @@
         "Outputs": {
           "description": "Salidas de los agentes. Cada agente escribe solo su propio campo.",
           "properties": {
+            "code_proposal": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CodeProposal"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
             "coder_output": {
               "anyOf": [
                 {
@@ -936,6 +1090,47 @@
             }
           },
           "title": "Outputs",
+          "type": "object"
+        },
+        "PromotionReceipt": {
+          "properties": {
+            "head": {
+              "title": "Head",
+              "type": "string"
+            },
+            "paths": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Paths",
+              "type": "array"
+            },
+            "pre_promotion_sha": {
+              "title": "Pre Promotion Sha",
+              "type": "string"
+            },
+            "promoted_sha": {
+              "title": "Promoted Sha",
+              "type": "string"
+            },
+            "receipt_id": {
+              "title": "Receipt Id",
+              "type": "string"
+            },
+            "status": {
+              "default": "promoted",
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "receipt_id",
+            "pre_promotion_sha",
+            "promoted_sha",
+            "head",
+            "paths"
+          ],
+          "title": "PromotionReceipt",
           "type": "object"
         },
         "ResearchOutput": {
@@ -1078,6 +1273,10 @@
               },
               "title": "Allowed Paths",
               "type": "array"
+            },
+            "mode": {
+              "$ref": "#/$defs/ExecutionMode",
+              "default": "FULL_PROPOSAL"
             },
             "protected_paths": {
               "description": "Rutas que exigen aprobacion explicita.",
@@ -1451,6 +1650,14 @@
           ],
           "default": null
         },
+        "historical_context": {
+          "items": {
+            "$ref": "#/$defs/HistoricalContext"
+          },
+          "maxItems": 8,
+          "title": "Historical Context",
+          "type": "array"
+        },
         "human_feedback": {
           "items": {
             "type": "string"
@@ -1508,6 +1715,17 @@
           "minimum": 0,
           "title": "Plan Index",
           "type": "integer"
+        },
+        "promotion_receipt": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromotionReceipt"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "run_id": {
           "maxLength": 64,

@@ -32,6 +32,7 @@ import {
 } from "./lib/auth";
 import {
   ESTADOS_TERMINALES,
+  type ExecutionMode,
   type Health,
   type Project,
   type RunState,
@@ -100,6 +101,7 @@ export function App({ profile }: { profile?: {
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const [allowedPaths, setAllowedPaths] = useState<string[]>([]);
   const [protectedPaths, setProtectedPaths] = useState<string[]>([]);
+  const [mode, setMode] = useState<ExecutionMode>("FULL_PROPOSAL");
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [tema, setTema] = useState<"sistema" | "claro" | "oscuro">("sistema");
   useEffect(() => {
@@ -341,7 +343,7 @@ export function App({ profile }: { profile?: {
         texto,
         projectId || undefined,
         transcripcion ?? undefined,
-        { allowed_paths: allowedPaths, protected_paths: protectedPaths },
+        { allowed_paths: allowedPaths, protected_paths: protectedPaths, mode },
       );
       runSeleccionado.current = creado.run_id;
       setRunId(creado.run_id);
@@ -376,6 +378,7 @@ export function App({ profile }: { profile?: {
     errorAccion,
     allowedPaths,
     protectedPaths,
+    mode,
   };
   const accionesCompositor: AccionesCompositor = {
     // Editar a mano **invalida la procedencia**: ver `transcripcion`.
@@ -390,6 +393,7 @@ export function App({ profile }: { profile?: {
     alRegistrarProyecto: () => void registrarProyecto(),
     alCambiarPermitidas: setAllowedPaths,
     alCambiarProtegidas: setProtectedPaths,
+    alCambiarModo: setMode,
     alFallo: anotarFallo,
     alUsarTranscripcion: (texto, meta) => {
       setInstruccion(texto);

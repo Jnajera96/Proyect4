@@ -101,6 +101,11 @@ class RunEngine:
         # opcional para no obligar a cargar `.env` en las pruebas que construyen el
         # motor directamente.
         self._settings = settings
+        from ai_swe.state.memory import MemoryStore
+        from ai_swe.tools.rollback import RollbackStore
+        owner = (settings.profile_id or "legacy") if settings else "legacy"
+        self.memory = MemoryStore(store._db_path, owner)
+        self.rollbacks = RollbackStore(store._db_path, owner)
         # El grafo se compila **por hilo**, no una sola vez. El checkpointer lleva
         # una conexion SQLite, y compartir una conexion entre el hilo de la
         # peticion y los trabajadores producia fallos intermitentes en el `commit`.
@@ -310,6 +315,42 @@ class RunEngine:
         finally:
             self.olvidar_reclamacion(run_id)
 
+    def rollback(self, run_id: str) -> RunState:
+        """Revierte en 1 clic los archivos promovidos por esta ejecucion."""
+        from ai_swe.tools.rollback import RollbackError
+
+        with self._lock_de(run_id):
+            estado = self.get(run_id)
+            receipt = estado.promotion_receipt or self.rollbacks.for_run(run_id)
+            if receipt is None:
+                raise RollbackError("La ejecucion no tiene recibo de promocion")
+            alcance = (
+                estado.interpretation.scope
+                if estado.interpretation is not None
+                else estado.options
+            )
+            repo = alcance.repo_path or estado.options.repo_path
+            if not repo:
+                raise RollbackError("La ejecucion no tiene repositorio asociado")
+            self.rollbacks.rollback(
+                receipt.receipt_id,
+                repo,
+                allowed_paths=tuple(alcance.allowed_paths),
+                protected_paths=tuple(alcance.protected_paths),
+            )
+            actualizado = self.rollbacks.for_run(run_id)
+            datos = estado.model_dump()
+            datos["promotion_receipt"] = (
+                actualizado.model_dump() if actualizado is not None else None
+            )
+            datos["updated_at"] = _ahora()
+            nuevo = RunState.model_validate(datos)
+            config = self._config(run_id)
+            if self._app.get_state(config).values:
+                self._app.update_state(config, nuevo.model_dump())
+            self._store.sync(nuevo)
+            return nuevo
+
     # ---------------------------------------------------------------- interno
     @staticmethod
     def _config(run_id: str) -> dict:
@@ -342,7 +383,9 @@ class RunEngine:
                     self._store.append_event(run_id, hito, {"node": nodo})
                 # Se sincroniza el indice en cada paso para que `GET /runs/{id}`
                 # refleje el avance mientras la ejecucion sigue en curso.
-                self._store.sync(self._estado_actual(config, run_id))
+                current = self._estado_actual(config, run_id)
+                self._store.sync(current)
+                self.memory.project(current)
 
         return self._persistir(run_id, self._estado_actual(config, run_id))
 
@@ -356,6 +399,7 @@ class RunEngine:
         estado = self._aplicar_red_de_seguridad(estado)
 
         self._store.sync(estado)
+        self.memory.project(estado)
         # F11 (AUD-11): `run.status`, `run.report` y `run.error` **se retiraron**.
         #
         # Que los sustituye:

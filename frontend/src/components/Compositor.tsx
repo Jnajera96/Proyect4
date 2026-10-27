@@ -9,7 +9,7 @@
  * El estado vive en el shell (`App`) y no aqui: cambiar de seccion y volver no
  * puede borrar lo que la persona estaba escribiendo.
  */
-import type { Health, Project, Transcript } from "../lib/contracts";
+import type { ExecutionMode, Health, Project, Transcript } from "../lib/contracts";
 import { duracion } from "../lib/formato";
 import { PanelVoz } from "./PanelVoz";
 import { Fila, Panel } from "./ui";
@@ -37,6 +37,7 @@ export interface EstadoCompositor {
   errorAccion: string | null;
   allowedPaths: string[];
   protectedPaths: string[];
+  mode?: ExecutionMode;
 }
 
 export interface AccionesCompositor {
@@ -48,6 +49,7 @@ export interface AccionesCompositor {
   alRegistrarProyecto: () => void;
   alCambiarPermitidas: (rutas: string[]) => void;
   alCambiarProtegidas: (rutas: string[]) => void;
+  alCambiarModo?: (modo: ExecutionMode) => void;
   alFallo: (causa: unknown) => string;
   /** Copia el texto confirmado por voz, **con su procedencia**, al campo. */
   alUsarTranscripcion: (texto: string, meta: Transcript) => void;
@@ -124,6 +126,18 @@ export function Compositor({
                   {p.name} — {rutaCorta(p.repo_path)}
                 </option>
               ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="modo-ejecucion">Modo de ejecución</label>
+            <select
+              id="modo-ejecucion"
+              value={estado.mode ?? "FULL_PROPOSAL"}
+              onChange={(e) => acciones.alCambiarModo?.(e.target.value as ExecutionMode)}
+            >
+              <option value="FULL_PROPOSAL">Propuesta completa (FULL_PROPOSAL)</option>
+              <option value="PLAN_ONLY">Solo planificar (PLAN_ONLY)</option>
+              <option value="INSPECT_ONLY">Solo inspeccionar (INSPECT_ONLY)</option>
             </select>
           </div>
         </div>

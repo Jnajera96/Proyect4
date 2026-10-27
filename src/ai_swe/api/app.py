@@ -426,6 +426,12 @@ def registrar_manejadores_de_error(app: FastAPI) -> None:
         # voz reconocible) o del motor, no por un fallo del servidor.
         return JSONResponse(status_code=422, content=_cuerpo(exc, "STT_ERROR"))
 
+    from ai_swe.tools.rollback import RollbackError
+
+    @app.exception_handler(RollbackError)
+    async def _rollback(_peticion: Request, exc: RollbackError):
+        return JSONResponse(status_code=409, content=_cuerpo(exc, "ROLLBACK_ERROR"))
+
 
 def crear_app(
     store: RunStore | None = None,
@@ -1082,6 +1088,29 @@ def crear_app(
             motor.olvidar_reclamacion(run_id)
             raise
         return motor.get(run_id)
+
+    @app.post(
+        "/runs/{run_id}/rollback", response_model=RunState, dependencies=[OPERAR]
+    )
+    def revertir_run(
+        run_id: str,
+        identidad: Identidad | None = Depends(_identidad),
+    ) -> RunState:
+        """Revierte en 1 clic los archivos promovidos por esta ejecucion."""
+        estado = motor.rollback(run_id)
+        _auditar(
+            "ejecucion.revertida",
+            identidad,
+            {
+                "run_id": run_id,
+                "receipt_id": (
+                    estado.promotion_receipt.receipt_id
+                    if estado.promotion_receipt is not None
+                    else ""
+                ),
+            },
+        )
+        return estado
 
     @app.post("/runs/{run_id}/cancel", status_code=501, dependencies=[OPERAR])
     def cancelar_run(run_id: str) -> dict:

@@ -140,7 +140,38 @@ export interface Transcript {
  * **entendio** (`TaskInterpretation`). Se muestran por separado a proposito: es lo
  * que permite ver una interpretacion que se desvio de la peticion.
  */
+export type ExecutionMode = "FULL_PROPOSAL" | "INSPECT_ONLY" | "PLAN_ONLY";
+
+export interface HistoricalContext {
+  run_id: string;
+  kind: string;
+  text: string;
+  score: number;
+}
+
+export interface PromotionReceipt {
+  receipt_id: string;
+  pre_promotion_sha: string;
+  promoted_sha: string;
+  head: string;
+  paths: string[];
+  status: string;
+}
+
+export interface FileProposal {
+  path: string;
+  operation: "create" | "modify" | "delete";
+  new_content?: string | null;
+  rationale: string;
+}
+
+export interface CodeProposal {
+  files: FileProposal[];
+  rationale: string;
+}
+
 export interface RunOptions {
+  mode?: ExecutionMode;
   repo_path: string | null;
   allowed_paths: string[];
   protected_paths: string[];
@@ -285,6 +316,8 @@ export interface RunState {
   interpretation: TaskInterpretation | null;
   plan: RunPlan | null;
   plan_index: number;
+  historical_context?: HistoricalContext[];
+  promotion_receipt?: PromotionReceipt | null;
   artifacts: {
     diff: string | null;
     changed_files: FileChange[];
@@ -293,6 +326,7 @@ export interface RunState {
   };
   outputs: {
     coder_output: CodeChange | null;
+    code_proposal?: CodeProposal | null;
     researcher_output: { findings: Finding[]; unknowns: string[] } | null;
     reviewer_output: ReviewVerdict | null;
   };

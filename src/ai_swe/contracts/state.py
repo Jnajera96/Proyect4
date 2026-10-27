@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, model_validator
 from ai_swe.contracts.outputs import (
     Approval,
     CodeChange,
+    CodeProposal,
     FileChange,
     FinalReport,
     Finding,
@@ -118,6 +119,28 @@ class Instruction(BaseModel):
         return self
 
 
+class ExecutionMode(StrEnum):
+    FULL_PROPOSAL = "FULL_PROPOSAL"
+    INSPECT_ONLY = "INSPECT_ONLY"
+    PLAN_ONLY = "PLAN_ONLY"
+
+
+class HistoricalContext(BaseModel):
+    run_id: str
+    kind: str
+    text: str = Field(max_length=4000)
+    score: float
+
+
+class PromotionReceipt(BaseModel):
+    receipt_id: str
+    pre_promotion_sha: str
+    promoted_sha: str
+    head: str
+    paths: list[str]
+    status: str = "promoted"
+
+
 class RunOptions(BaseModel):
     """Lo que el usuario **pidio**. Distinto de `TaskInterpretation`, que es lo que
     el Supervisor **entendio**.
@@ -125,6 +148,8 @@ class RunOptions(BaseModel):
     Mantenerlos separados permite comparar ambos y detectar una interpretacion que
     se desvio de la peticion, cosa imposible si se funden en un solo objeto.
     """
+
+    mode: ExecutionMode = ExecutionMode.FULL_PROPOSAL
 
     repo_path: str | None = Field(
         default=None, description="Repositorio autorizado sobre el que trabajar."
@@ -269,6 +294,7 @@ class Outputs(BaseModel):
 
     researcher_output: ResearchOutput | None = None
     coder_output: CodeChange | None = None
+    code_proposal: CodeProposal | None = None
     reviewer_output: ReviewVerdict | None = None
 
 
@@ -289,6 +315,8 @@ class RunState(BaseModel):
     interpretation: TaskInterpretation | None = None
     plan: RunPlan | None = None
 
+    historical_context: list[HistoricalContext] = Field(default_factory=list, max_length=8)
+    promotion_receipt: PromotionReceipt | None = None
     outputs: Outputs = Field(default_factory=Outputs)
     artifacts: Artifacts = Field(default_factory=Artifacts)
     evidence: Evidence = Field(default_factory=Evidence)

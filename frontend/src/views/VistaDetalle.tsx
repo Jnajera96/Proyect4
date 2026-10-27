@@ -7,6 +7,8 @@
  * aqui se calcula en el cliente salvo las restas de presupuesto, que son
  * aritmetica sobre campos reales.
  */
+import { useState } from "react";
+import { api } from "../lib/api";
 import type { EstadoConexion } from "../hooks/useEventosRun";
 import type { Project, RunState } from "../lib/contracts";
 import { ETIQUETA_ESTADO } from "../lib/contracts";
@@ -54,6 +56,9 @@ export function VistaDetalle({
   alReanudar: (id: string) => void;
   alFallo: (causa: unknown) => string;
 }) {
+  const [revirtiendo, setRevirtiendo] = useState(false);
+  const [errorRollback, setErrorRollback] = useState<string | null>(null);
+
   if (!estado) {
     return (
       <Panel>
@@ -175,6 +180,8 @@ export function VistaDetalle({
                 "—"
               )}
             </dd>
+            <dt>modo</dt>
+            <dd className="mono">{estado.options.mode ?? "FULL_PROPOSAL"}</dd>
             <dt>trace</dt>
             <dd className="mono" title={estado.trace_id}>
               {hashCorto(estado.trace_id)}
@@ -240,6 +247,139 @@ export function VistaDetalle({
       {!enPuerta && estado.outputs.reviewer_output ? (
         <Seccion titulo="Revisor">
           <PanelReviewer veredicto={estado.outputs.reviewer_output} />
+        </Seccion>
+      ) : null}
+
+      {/* --------------------------------------------------- Memoria MADRE */}
+      {estado.historical_context?.length ? (
+        <Seccion
+          titulo="Memoria contextual MADRE (FTS5 local)"
+          nota="Precedentes locales del mismo perfil y repositorio recuperados con BM25 sin llamadas remotas."
+        >
+          <Panel>
+            <ul className="limpia">
+              {estado.historical_context.map((hit, i) => (
+                <li key={`${hit.run_id}-${hit.kind}-${i}`}>
+                  <strong className="mono">{hit.run_id}</strong> · <span className="mono">{hit.kind}</span>{" "}
+                  <span className="tenue">(BM25 {hit.score.toFixed(2)})</span>
+                  <pre className="mono" style={{ whiteSpace: "pre-wrap", marginTop: "0.35rem" }}>
+                    {hit.text}
+                  </pre>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </Seccion>
+      ) : null}
+
+      {/* --------------------------------------- Auditoria Coder vs Reviewer */}
+      {estado.outputs.coder_output || estado.outputs.code_proposal || estado.outputs.reviewer_output ? (
+        <Seccion
+          titulo="Auditoría cruzada Coder vs Reviewer"
+          nota="Propuesta del Coder frente al juicio del Reviewer. Aceptar una revisión no promueve cambios sin aprobación humana explícita."
+        >
+          <div className="rejilla rejilla-doble">
+            <Panel titulo="Propuesta del Coder">
+              <p>{estado.outputs.code_proposal?.rationale ?? estado.outputs.coder_output?.rationale ?? "Sin propuesta estructurada."}</p>
+              {estado.outputs.code_proposal?.files?.length ? (
+                <ul className="limpia">
+                  {estado.outputs.code_proposal.files.map((f, i) => (
+                    <li key={`${f.path}-${i}`}>
+                      <span className="mono">{f.operation}</span> · <strong className="mono">{f.path}</strong>:{" "}
+                      {f.rationale}
+                    </li>
+                  ))}
+                </ul>
+              ) : estado.artifacts.changed_files.length ? (
+                <ul className="limpia">
+                  {estado.artifacts.changed_files.map((f) => (
+                    <li key={f.path}>
+                      <strong className="mono">{f.path}</strong> (+{f.added} / -{f.removed})
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="tenue">Ningún archivo modificado.</p>
+              )}
+            </Panel>
+            <Panel titulo="Veredicto del Reviewer">
+              {estado.outputs.reviewer_output ? (
+                <>
+                  <p>
+                    Decisión: <strong className="mono">{estado.outputs.reviewer_output.decision}</strong>{" "}
+                    <span className="tenue">
+                      ({estado.promotion_receipt?.status === "promoted"
+                        ? "promovido tras aprobación humana"
+                        : "pendiente o no promovido al repositorio"})
+                    </span>
+                  </p>
+                  <p>{estado.outputs.reviewer_output.summary}</p>
+                  {estado.outputs.reviewer_output.required_fixes.length ? (
+                    <>
+                      <p className="rotulo">Correcciones requeridas</p>
+                      <ul className="limpia">
+                        {estado.outputs.reviewer_output.required_fixes.map((fix, i) => (
+                          <li key={i}>{fix}</li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <p className="tenue">El Reviewer aún no ha emitido veredicto.</p>
+              )}
+            </Panel>
+          </div>
+        </Seccion>
+      ) : null}
+
+      {/* ----------------------------------------- Recibo y Rollback 1-Clic */}
+      {estado.promotion_receipt ? (
+        <Seccion
+          titulo="Recibo de promoción y Rollback seguro"
+          nota="Árboles Git capturados sobre las rutas promovidas sin alterar HEAD ni el índice del usuario."
+        >
+          <Panel>
+            <dl className="datos">
+              <dt>estado</dt>
+              <dd className="mono">{estado.promotion_receipt.status}</dd>
+              <dt>HEAD base</dt>
+              <dd className="mono">{hashCorto(estado.promotion_receipt.head)}</dd>
+              <dt>árbol previo</dt>
+              <dd className="mono">{hashCorto(estado.promotion_receipt.pre_promotion_sha)}</dd>
+              <dt>árbol promovido</dt>
+              <dd className="mono">{hashCorto(estado.promotion_receipt.promoted_sha)}</dd>
+              <dt>rutas</dt>
+              <dd className="mono">{estado.promotion_receipt.paths.join(", ")}</dd>
+            </dl>
+            {estado.promotion_receipt.status === "promoted" ? (
+              <div className="fila" style={{ marginTop: "0.75rem" }}>
+                <button
+                  id="btn-rollback"
+                  disabled={revirtiendo}
+                  onClick={async () => {
+                    setRevirtiendo(true);
+                    setErrorRollback(null);
+                    try {
+                      await api.revertirRun(estado.run_id);
+                      alRefrescar(estado.run_id);
+                    } catch (causa) {
+                      setErrorRollback(alFallo(causa));
+                    } finally {
+                      setRevirtiendo(false);
+                    }
+                  }}
+                >
+                  {revirtiendo ? "Revirtiendo…" : "Revertir promoción en 1 clic"}
+                </button>
+              </div>
+            ) : null}
+            {errorRollback ? (
+              <p className="aviso" role="alert">
+                {errorRollback}
+              </p>
+            ) : null}
+          </Panel>
         </Seccion>
       ) : null}
 

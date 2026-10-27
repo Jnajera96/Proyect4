@@ -705,6 +705,14 @@ def researcher(state: RunState) -> dict:
     **F5: ahora es iterativo.** Acumula hallazgos en `evidence.findings` sin
     sobrescribir los de subtareas anteriores, y avanza `plan_index`.
     """
+    from ai_swe.graph.model_routing import settings_for_node
+    from ai_swe.state.memory import MemoryStore
+
+    configured = settings_for_node()
+    history = []
+    if configured is not None and state.options.repo_path:
+        history = MemoryStore(configured.state_db_path, configured.profile_id or "legacy").search(
+            state.options.repo_path, state.instruction.text, exclude_run=state.run_id)
     hallazgos: list[Finding] = []
     leidos: list[str] = []
     incognitas = [
@@ -760,6 +768,7 @@ def researcher(state: RunState) -> dict:
     # Avance del indice: el nodo que ejecuta la tarea es el que declara que
     # la ha completado. El router solo compara, nunca calcula.
     return {
+        "historical_context": history,
         "outputs": _con_salidas(state, researcher_output=salida),
         "evidence": _con_evidencia(state, findings=hallazgos_totales),
         "plan_index": state.plan_index + 1,
@@ -1038,7 +1047,7 @@ def _cambio_desde_propuesta(
     )
 
 
-def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str]] | None:
+def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], CodeProposal] | None:
     """Intenta que el modelo proponga el cambio. `None` si hay que caer al fallback.
 
     Devuelve `(cambio, presupuesto_consumido, avisos)`. Los avisos son los recortes
@@ -1125,7 +1134,7 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str]] |
     avisos = [motivo] if motivo else []
     cambio = _cambio_desde_propuesta(propuesta)
     nuevo_presupuesto = gateway.consume(state.budget, respuesta)
-    return cambio, nuevo_presupuesto, avisos
+    return cambio, nuevo_presupuesto, avisos, propuesta
 
 
 def _cambio_vacio(motivo: str) -> CodeChange:
@@ -1155,6 +1164,10 @@ def coder(state: RunState) -> dict:
 
     **F5:** cada nodo ejecutor avanza `plan_index`; el router solo lee.
     """
+    if state.options.mode != "FULL_PROPOSAL":
+        return _escalar(state, _error(state, "MODE_DENIED", "supervisor",
+            "El modo seleccionado no permite esta operacion", recuperable=False))
+
     errores = list(state.errors)
     avisos: list[str] = []
     try:
@@ -1194,7 +1207,7 @@ def coder(state: RunState) -> dict:
             "updated_at": _ahora(),
         }
 
-    cambio, presupuesto, avisos = resultado
+    cambio, presupuesto, avisos, propuesta = resultado
     # Un recorte por alcance no puede quedar sin dejar rastro.
     for aviso in avisos:
         errores = _error(
@@ -1205,7 +1218,7 @@ def coder(state: RunState) -> dict:
             recuperable=True,
         )
     salida = {
-        "outputs": _con_salidas(state, coder_output=cambio),
+        "outputs": _con_salidas(state, coder_output=cambio, code_proposal=propuesta),
         "budget": presupuesto,
         "plan_index": state.plan_index + 1,
         "next_step": "run_tests",
@@ -1284,6 +1297,10 @@ def apply_sandbox(state: RunState) -> dict:
     Nunca propaga una excepcion: un fallo del sandbox se convierte en un error
     tipado y la ejecucion termina en `needs_human`, no en una traza de LangGraph.
     """
+    if state.options.mode != "FULL_PROPOSAL":
+        return _escalar(state, _error(state, "MODE_DENIED", "supervisor",
+            "El modo seleccionado no permite esta operacion", recuperable=False))
+
     cambio = state.outputs.coder_output
     if cambio is None or not cambio.files_changed:
         return _escalar(
@@ -1392,6 +1409,10 @@ def run_tests(state: RunState) -> dict:
     Nunca propaga una excepcion: un fallo del ejecutor se convierte en un error
     tipado y la ejecucion termina en `needs_human`.
     """
+    if state.options.mode != "FULL_PROPOSAL":
+        return _escalar(state, _error(state, "MODE_DENIED", "supervisor",
+            "El modo seleccionado no permite esta operacion", recuperable=False))
+
     ruta_worktree = state.artifacts.worktree_path
     if not ruta_worktree:
         return _escalar(
@@ -1853,6 +1874,10 @@ def reviewer(state: RunState) -> dict:
     decidir la ruta. `review_cycles_used` **solo** avanza cuando de verdad se vuelve
     al Coder: un `ACCEPT` o un `ESCALATE` no gastan ciclo.
     """
+    if state.options.mode != "FULL_PROPOSAL":
+        return _escalar(state, _error(state, "MODE_DENIED", "supervisor",
+            "El modo seleccionado no permite esta operacion", recuperable=False))
+
     errores = list(state.errors)
     presupuesto = state.budget
 
@@ -2196,6 +2221,10 @@ def promote_changes(state: RunState) -> dict:
     ejecucion escala a un humano: nunca se marca `completed` un cambio que no se
     aplico.
     """
+    if state.options.mode != "FULL_PROPOSAL":
+        return _escalar(state, _error(state, "MODE_DENIED", "supervisor",
+            "El modo seleccionado no permite esta operacion", recuperable=False))
+
     aprobacion = state.approvals[-1] if state.approvals else None
     if aprobacion is None or aprobacion.decision is not ApprovalDecision.APPROVED:
         return _escalar(
@@ -2235,7 +2264,36 @@ def promote_changes(state: RunState) -> dict:
     )
 
     try:
-        promover(
+        from ai_swe.graph.model_routing import settings_for_node
+        from ai_swe.tools.rollback import RollbackError, RollbackStore
+
+        configured = settings_for_node()
+        paths = [f.path for f in state.artifacts.changed_files]
+        receipts = None
+        before_tree = None
+        if configured is not None and paths and (Path(alcance.repo_path) / ".git").exists():
+            try:
+                receipts = RollbackStore(
+                    configured.state_db_path, configured.profile_id or "legacy"
+                )
+                before_tree = receipts.capture(
+                    alcance.repo_path,
+                    paths,
+                    allowed_paths=tuple(alcance.allowed_paths),
+                    protected_paths=tuple(alcance.protected_paths),
+                )
+            except RollbackError as exc:
+                return _escalar(
+                    state,
+                    _error(
+                        state,
+                        "PROMOTION_FAILED",
+                        AgentRole.SUPERVISOR.value,
+                        f"no se pudo capturar el arbol previo a la promocion: {exc}",
+                        recuperable=False,
+                    ),
+                )
+        resultado_promocion = promover(
             sandbox,
             repo_autorizado=alcance.repo_path,
             allowed_paths=tuple(alcance.allowed_paths),
@@ -2252,6 +2310,60 @@ def promote_changes(state: RunState) -> dict:
                 "PROMOTION_DENIED" if type(exc).__name__ == "PromotionDenied" else "PROMOTION_FAILED",
                 AgentRole.SUPERVISOR.value,
                 f"no se pudo promover el cambio al repositorio del usuario: {exc}",
+                recuperable=False,
+            ),
+        )
+
+    receipt = None
+    if (
+        receipts is not None
+        and before_tree is not None
+        and getattr(resultado_promocion, "applied", True)
+    ):
+        try:
+            after_tree = receipts.capture(
+                alcance.repo_path,
+                paths,
+                allowed_paths=tuple(alcance.allowed_paths),
+                protected_paths=tuple(alcance.protected_paths),
+            )
+            receipt = receipts.record(
+                state.run_id,
+                alcance.repo_path,
+                before_tree,
+                after_tree,
+                paths,
+            )
+        except RollbackError as exc:
+            return _escalar(
+                state,
+                _error(
+                    state,
+                    "PROMOTION_FAILED",
+                    AgentRole.SUPERVISOR.value,
+                    f"no se pudo registrar el recibo de promocion: {exc}",
+                    recuperable=False,
+                ),
+            )
+
+    salida: dict = {
+        "next_step": "finalize",
+        "updated_at": _ahora(),
+    }
+    if receipt is not None:
+        salida["promotion_receipt"] = receipt
+    return salida
+
+
+def _unused_promote_tail():
+    if False:
+        return _escalar(
+            state,
+            _error(
+                state,
+                "PROMOTION_FAILED",
+                AgentRole.SUPERVISOR.value,
+                "unused",
                 recuperable=False,
             ),
         )
@@ -2394,6 +2506,8 @@ def route_after_interpret(state: RunState) -> str:
     confirme unos requisitos que el sistema va a rechazar de todos modos seria
     gastar una decision humana en algo ya decidido.
     """
+    if state.options.mode == "INSPECT_ONLY":
+        return "researcher"
     intencion = state.interpretation.intent if state.interpretation else Intent.INSPECT
     if intencion is Intent.OUT_OF_SCOPE:
         return "explain_limits"
@@ -2410,6 +2524,10 @@ def route_after_plan(state: RunState) -> str:
     topologia. Si no hay plan -no deberia ocurrir, el nodo siempre produce uno- se
     cae a `researcher`, que es el comienzo seguro.
     """
+    if state.options.mode == "PLAN_ONLY":
+        return "finalize"
+    if state.options.mode == "INSPECT_ONLY":
+        return "researcher"
     if state.plan is None or not state.plan.subtasks:
         return "researcher"
     return state.plan.subtasks[0].agent.value
@@ -2426,6 +2544,8 @@ def route_after_execution(state: RunState) -> str:
     anadiria un paso vacio al grafo y un punto de friccion al checkpoint. El
     enrutador condicional de LangGraph esta disenado exactamente para esto.
     """
+    if state.options.mode != "FULL_PROPOSAL":
+        return "finalize"
     # Si no hay plan, no hay iteracion: se cae a la ruta estatica de M1.
     if state.plan is None or not state.plan.subtasks:
         return _ruta_estatica_m1(state)
