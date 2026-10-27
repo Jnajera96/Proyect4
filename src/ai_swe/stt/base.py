@@ -273,10 +273,18 @@ def crear_adaptador_stt(settings=None) -> STTAdapter:
     if proveedor in {"fake", "deterministic"}:
         return FakeAdapter()
     if proveedor in {"faster-whisper", "faster_whisper", "local"}:
+        from ai_swe.config import Settings
+
         return FasterWhisperAdapter(
             modelo=settings.stt_model,
             idioma=settings.stt_language,
             umbral_confianza=settings.stt_confidence_warn_threshold,
+            dispositivo=getattr(
+                settings, "stt_device", Settings.model_fields["stt_device"].default
+            ),
+            tipo_computo=getattr(
+                settings, "stt_compute_type", Settings.model_fields["stt_compute_type"].default
+            ),
         )
     raise STTError(
         f"proveedor de STT desconocido: {proveedor!r}; se esperaba 'faster-whisper' o 'fake'"

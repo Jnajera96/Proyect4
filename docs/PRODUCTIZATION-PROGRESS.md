@@ -156,3 +156,22 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
   `_tmp/provider-preflight/preflight-final.xml` del checkout principal.
 - G/H siguen parciales: falta cargar configuración instalada, launcher y paquete.
   No se añadió un bloqueo de arranque a la API actual.
+
+## F — voz real: automatización validada, micrófono físico pendiente
+
+- Entorno principal sincronizado con el lockfile corregido: PyAV 18.1.0 (`av<19`).
+- Settings expone dispositivo y cómputo. Windows usa CPU/int8 por defecto; CUDA
+  explícito conserva errores sin fallback. En este equipo falta `cublas64_12.dll`.
+- small local con revisión/checksum verificados transcribió la muestra española
+  sintética completa: 8.74 s de audio en 5.122 s por la factoría real CPU/int8.
+- Chromium + getUserMedia + MediaRecorder + FastAPI + STT real y carga de archivo
+  verificados. Captura alimentada por WAV sintético, no micrófono físico.
+- Texto editable; vacío bloquea confirmación; transcribir/confirmar no crea runs.
+  Solo «Ejecutar» crea la ejecución de voz, que espera confirmación de requisitos.
+  Repo descartable intacto y sin llamadas de inferencia remota.
+- Seis pruebas nuevas. Suite completa: 751 PASS, 3 SKIP, 0 FAIL (183.107 s).
+  TypeScript/build y Ruff focalizado aprobados.
+- Método/evidencia: `REAL-STT-VALIDATION.md`, `REAL-STT-EVIDENCE.json` y verificador
+  opt-in `tools/verify_real_voice.cjs`. No se implementó TTS ni se rediseñó UI.
+- F no se declara cerrada hasta permiso, dictado y revisión con micrófono físico.
+  G/H y lanzamiento siguen pendientes; no se movió ningún tag ni se hizo push.

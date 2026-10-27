@@ -13,6 +13,7 @@ sitios donde un secreto llegue igualmente en texto.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Literal
 
@@ -232,6 +233,14 @@ class Settings(BaseSettings):
     stt_provider: str = Field(default="faster-whisper")
     stt_model: str = Field(default="large-v3")
     stt_language: str = Field(default="es")
+    stt_device: Literal["cpu", "cuda", "auto"] = Field(
+        default="cpu" if sys.platform == "win32" else "auto",
+        description="Dispositivo STT. CUDA explicito falla si no esta disponible; sin fallback.",
+    )
+    stt_compute_type: Literal[
+        "default", "auto", "int8", "int8_float32", "int8_float16", "int8_bfloat16",
+        "int16", "float16", "bfloat16", "float32",
+    ] = Field(default="int8" if sys.platform == "win32" else "default")
     stt_confidence_warn_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
     # Salida por voz. **NO IMPLEMENTADA.** No existe `TTSAdapter` ni un solo
     # consumidor de este ajuste: se conserva porque `docs/01-arquitectura.md` la

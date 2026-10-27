@@ -1,0 +1,138 @@
+{
+  "date": "2026-10-26",
+  "spanish_file_validation": {
+    "model": "Systran/faster-whisper-small",
+    "revision": "536b0662742c02347bc0e980a01041f333bce120",
+    "device": "cpu",
+    "compute_type": "int8",
+    "source": "Windows SAPI Microsoft Sabina es-MX; synthetic fixture, not a microphone",
+    "audio_sha256": "34270c7184e56e26a82f379df7762838030b7014efcbe47f991d435240eac71c",
+    "audio_bytes": 385378,
+    "expected_text": "Analiza el proyecto y muestra un resumen. No modifiques archivos. Quiero revisar el texto antes de ejecutar.",
+    "transcript": {
+      "text": "Analiza el proyecto y muestra un resumen. No modifiques archivos. Quiero revisar el texto antes de ejecutar.",
+      "language": "es",
+      "confidence": 0.8471317972974424,
+      "duration_s": 8.7376875,
+      "provider": "faster-whisper:Systran/faster-whisper-small (local pinned revision)",
+      "segments": [
+        {
+          "start_s": 0.0,
+          "end_s": 2.56,
+          "text": " Analiza el proyecto y muestra un resumen."
+        },
+        {
+          "start_s": 3.32,
+          "end_s": 4.86,
+          "text": " No modifiques archivos."
+        },
+        {
+          "start_s": 5.64,
+          "end_s": 7.94,
+          "text": " Quiero revisar el texto antes de ejecutar."
+        }
+      ],
+      "low_confidence": false
+    },
+    "elapsed_s": 5.122,
+    "semantic_pass": true,
+    "physical_microphone_verified": false,
+    "versions": {
+      "av": "18.1.0",
+      "faster-whisper": "1.2.1",
+      "ctranslate2": "4.8.2"
+    }
+  },
+  "browser_validation": {
+    "physical_microphone_verified": false,
+    "capture_source": "Chromium fake audio device fed by local Spanish WAV",
+    "device": "cpu",
+    "compute_type": "int8",
+    "remote_inference_calls": 0,
+    "checks": [
+      "local server ready",
+      "synthetic project registered",
+      "MediaRecorder audio transcribed by real backend",
+      "Spanish speech recognized from browser capture",
+      "transcript editable",
+      "no run after transcription",
+      "empty transcript cannot be confirmed",
+      "only confirmed edited text copied to instruction",
+      "confirming transcript does not run",
+      "explicit Execute creates exactly one run",
+      "voice provenance retained",
+      "execution waits for requirements confirmation",
+      "synthetic repository unchanged",
+      "file upload transcribed by real backend",
+      "file upload remains editable and creates no extra run",
+      "no browser runtime errors"
+    ],
+    "captured_transcript": {
+      "text": "Analiza el proyecto y muestra un resumen. No modifiques archivos. Quiero revisar el texto antes de ejecutar. Analiza el proyecto.",
+      "language": "es",
+      "confidence": 0.7843752921804221,
+      "duration_s": 9.9,
+      "provider": "faster-whisper:Systran/faster-whisper-small (local pinned revision)",
+      "segments": [
+        {
+          "start_s": 0,
+          "end_s": 2.56,
+          "text": " Analiza el proyecto y muestra un resumen."
+        },
+        {
+          "start_s": 3.32,
+          "end_s": 4.86,
+          "text": " No modifiques archivos."
+        },
+        {
+          "start_s": 5.64,
+          "end_s": 7.94,
+          "text": " Quiero revisar el texto antes de ejecutar."
+        },
+        {
+          "start_s": 8.7,
+          "end_s": 9.98,
+          "text": " Analiza el proyecto."
+        }
+      ],
+      "low_confidence": false
+    },
+    "run_id": "run-c0c92f3c23b6",
+    "uploaded_transcript": {
+      "text": "Analiza el proyecto y muestra un resumen. No modifiques archivos. Quiero revisar el texto antes de ejecutar.",
+      "language": "es",
+      "confidence": 0.8471317972974424,
+      "duration_s": 8.7376875,
+      "provider": "faster-whisper:Systran/faster-whisper-small (local pinned revision)",
+      "segments": [
+        {
+          "start_s": 0,
+          "end_s": 2.56,
+          "text": " Analiza el proyecto y muestra un resumen."
+        },
+        {
+          "start_s": 3.32,
+          "end_s": 4.86,
+          "text": " No modifiques archivos."
+        },
+        {
+          "start_s": 5.64,
+          "end_s": 7.94,
+          "text": " Quiero revisar el texto antes de ejecutar."
+        }
+      ],
+      "low_confidence": false
+    },
+    "success": true
+  },
+  "suite": {
+    "passed": 751,
+    "skipped": 3,
+    "failed": 0,
+    "seconds": 183.107
+  },
+  "physical_microphone": {
+    "verified": false,
+    "reason": "Requires user permission and live speech; synthetic browser device is not physical microphone evidence."
+  }
+}
