@@ -14,6 +14,7 @@ sitios donde un secreto llegue igualmente en texto.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -42,6 +43,10 @@ class Settings(BaseSettings):
     # --- Proveedor de modelo -------------------------------------------------
     model_provider: str = Field(default="openai", description="Proveedor del Foundation Model.")
     model_name: str = Field(default="", description="Identificador del modelo a usar.")
+    remote_model_roles: list[Literal["coder", "reviewer"]] = Field(
+        default_factory=list,
+        description="Roles con modelo remoto; vacio conserva el modo offline.",
+    )
     # Modelo especifico del Reviewer (F9). Vacio = usa `model_name`.
     #
     # **Por que un campo aparte y no reutilizar `model_name`.** Criticar no es

@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import threading
 import uuid
+from functools import partial
 from datetime import UTC, datetime
 
 from langgraph.types import Command
@@ -110,7 +111,7 @@ class RunEngine:
         # Lo usa el arnes de evaluacion para comparar el flujo multiagente de
         # produccion contra un flujo directo de un solo agente. Por defecto es el
         # grafo de produccion, asi que la API no cambia de comportamiento.
-        self._constructor = constructor_grafo or compilar
+        self._constructor = constructor_grafo or partial(compilar, settings=settings)
         self._locks: dict[str, threading.Lock] = {}
         self._locks_guard = threading.Lock()
         # Reanudaciones ya reclamadas y todavia no terminadas. Ver `reclamar_reanudacion`.

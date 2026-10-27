@@ -65,20 +65,27 @@ from ai_swe.contracts import RunState
 from ai_swe.graph import nodes
 
 
-def construir_grafo() -> StateGraph:
+def construir_grafo(*, settings=None) -> StateGraph:
     grafo = StateGraph(RunState)
 
-    grafo.add_node("interpret", nodes.interpret)
+    def model_node(node, role):
+        if settings is None or not settings.remote_model_roles:
+            return node
+        from ai_swe.graph.model_routing import bind_model_node
+
+        return bind_model_node(node, role, settings, nodes.SIN_GATEWAY)
+
+    grafo.add_node("interpret", model_node(nodes.interpret, "requirements_analyst"))
     grafo.add_node("mark_awaiting_requirements", nodes.mark_awaiting_requirements)
     grafo.add_node("confirm_requirements_gate", nodes.confirm_requirements_gate)
-    grafo.add_node("plan", nodes.plan)
+    grafo.add_node("plan", model_node(nodes.plan, "supervisor"))
     grafo.add_node("researcher", nodes.researcher)
     grafo.add_node("answer_direct", nodes.answer_direct)
     grafo.add_node("explain_limits", nodes.explain_limits)
-    grafo.add_node("coder", nodes.coder)
+    grafo.add_node("coder", model_node(nodes.coder, "coder"))
     grafo.add_node("apply_sandbox", nodes.apply_sandbox)
     grafo.add_node("run_tests", nodes.run_tests)
-    grafo.add_node("reviewer", nodes.reviewer)
+    grafo.add_node("reviewer", model_node(nodes.reviewer, "reviewer"))
     grafo.add_node("mark_awaiting", nodes.mark_awaiting)
     grafo.add_node("approval_gate", nodes.approval_gate)
     grafo.add_node("promote_changes", nodes.promote_changes)
@@ -110,6 +117,6 @@ def construir_grafo() -> StateGraph:
     return grafo
 
 
-def compilar(store):
+def compilar(store, *, settings=None):
     """Compila el grafo con el checkpointer del almacen."""
-    return construir_grafo().compile(checkpointer=store.checkpointer())
+    return construir_grafo(settings=settings).compile(checkpointer=store.checkpointer())

@@ -188,7 +188,7 @@ def _escalar(state: RunState, errores: list[RunError]) -> dict:
 #     falla en el borde), no al arrancar el sistema.
 
 
-def _gateway_por_defecto():
+def _gateway_por_defecto(settings=None):
     """Construye el gateway real desde la configuracion. Puede lanzar.
 
     **No se captura aqui el error de credencial**: quien llama decide si un fallo de
@@ -198,7 +198,7 @@ def _gateway_por_defecto():
     from ai_swe.config import load_settings
     from ai_swe.models import gateway_from_settings
 
-    return gateway_from_settings(load_settings())
+    return gateway_from_settings(settings if settings is not None else load_settings())
 
 
 class _SinGateway:
@@ -332,7 +332,9 @@ def _interpretacion_del_modelo(
     )
     from pydantic import ValidationError
 
-    gateway = _GATEWAY
+    from ai_swe.graph.model_routing import gateway_for_node
+
+    gateway = gateway_for_node(_GATEWAY)
     if isinstance(gateway, _SinGateway):
         return None
     gateway = _gateway_por_defecto() if gateway is None else gateway
@@ -556,7 +558,9 @@ def _plan_del_modelo(state: RunState) -> tuple[RunPlan, Budget, int] | None:
     )
     from pydantic import ValidationError
 
-    gateway = _GATEWAY
+    from ai_swe.graph.model_routing import gateway_for_node
+
+    gateway = gateway_for_node(_GATEWAY)
     if isinstance(gateway, _SinGateway):
         return None
     gateway = _gateway_por_defecto() if gateway is None else gateway
@@ -1046,7 +1050,9 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str]] |
     )
     from pydantic import ValidationError
 
-    gateway = _GATEWAY
+    from ai_swe.graph.model_routing import gateway_for_node
+
+    gateway = gateway_for_node(_GATEWAY)
     if isinstance(gateway, _SinGateway):
         return None
     gateway = _gateway_por_defecto() if gateway is None else gateway
@@ -1510,6 +1516,11 @@ def _modelo_del_reviewer() -> str | None:
     """
     if _MODELO_REVIEWER is not None:
         return _MODELO_REVIEWER or None
+    from ai_swe.graph.model_routing import settings_for_node
+
+    configured = settings_for_node()
+    if configured is not None:
+        return configured.reviewer_model.strip() or None
     from ai_swe.config import load_settings
 
     return load_settings().reviewer_model.strip() or None
@@ -1560,7 +1571,14 @@ def _contexto_de_revision(state: RunState) -> str:
     archivos = (
         ", ".join(f.path for f in cambio.files_changed) if cambio and cambio.files_changed else "(sin archivos)"
     )
-    diff = cambio.diff if cambio else ""
+    # La propuesta codifica reemplazos completos como /dev/null. Despues de
+    # aplicar, el Reviewer debe juzgar el diff Git real, que distingue modificar
+    # de crear. Es tambien el snapshot que se valida antes de promover.
+    diff = (
+        state.artifacts.diff
+        if state.artifacts.worktree_path
+        else (cambio.diff if cambio else "")
+    )
 
     return (
         f"Peticion original del usuario:\n{state.instruction.text}\n\n"
@@ -1671,7 +1689,9 @@ def _veredicto_del_modelo(state: RunState) -> tuple[ReviewVerdict, Budget] | Non
     )
     from pydantic import ValidationError
 
-    gateway = _GATEWAY
+    from ai_swe.graph.model_routing import gateway_for_node
+
+    gateway = gateway_for_node(_GATEWAY)
     if isinstance(gateway, _SinGateway):
         return None
     gateway = _gateway_por_defecto() if gateway is None else gateway

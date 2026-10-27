@@ -113,3 +113,28 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
 - Pendiente decisión del usuario: respaldo determinista local para los roles
   ligeros e integración de Coder/Reviewer remotos, o evaluar un modelo local mayor.
   D/E permanecen abiertos. Sin cambios al routing ni al tag `delivery-rc1`.
+
+## Integración E adaptada al perfil aceptado
+
+- El usuario aceptó Analyst/Supervisor deterministas y Coder/Reviewer por API.
+- `AI_SWE_REMOTE_MODEL_ROLES` es opt-in, vacío por defecto. La configuración se
+  vincula al motor y los gateways se aíslan y cierran por invocación del nodo.
+- El Reviewer recibía un diff de reemplazo como creación incluso al modificar
+  archivos existentes. Se reprodujo el defecto y se corrigió para usar el diff
+  aplicado del worktree, sin debilitar gates o aserciones.
+- Pruebas reales en repositorios descartables: aprobar, rechazar y pedir cambios
+  antes de aprobar, todas verificadas. Hubo dos ejecuciones iniciales sin converger;
+  sus informes se conservan. La solicitud exitosa explicita la prueba ya existente.
+- Contabilidad verificada con los alias routed y reportado del modelo. La última
+  corrida con tarifas reconocidas estimó 0.00021114 USD; los ceros anteriores en el
+  acumulador no se interpretan como inferencia gratuita.
+- Suite final: 725 PASS, 3 SKIP, 0 FAIL, 159.882 s. La primera pasada detectó una
+  importación no perezosa; se corrigió sin modificar su aserción arquitectónica.
+- Reserva acumulada de la autorización de 3 USD: 1.17225088 USD; quedan
+  1.82774912 USD sin reservar. No se libera reserva por fallos o falta de usage.
+- Método y límites: `REAL-MODEL-VALIDATION.md`; evidencia consolidada en
+  `HYBRID-E2E-EVIDENCE.json`; verificador opt-in `tools/verify_hybrid_models.py`.
+- No se activó automáticamente el perfil remoto en `.env`. No hay inferencia por
+  defecto ni claims de producto instalado o producción. Voz y empaquetado pendientes.
+- Próximo encargo recibido: propuesta inspirada en MADRE. Solo el preflight se
+  considera para v0.1.0 (G/H); los módulos 3.2–3.5 quedan en backlog v0.2.0.

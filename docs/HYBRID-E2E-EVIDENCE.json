@@ -1,0 +1,313 @@
+{
+  "scope": "real hybrid engine on synthetic repositories",
+  "runs": [
+    {
+      "scenario": "changes",
+      "repo": "_tmp\\hybrid-e2e\\04ef6878\\repo",
+      "model": "Qwen/Qwen2.5-Coder-32B-Instruct:nscale",
+      "statuses": [
+        "awaiting_human_requirements_confirmation",
+        "awaiting_approval",
+        "awaiting_approval",
+        "completed"
+      ],
+      "reserved_usd": "0.15630336",
+      "errors": [],
+      "original_unchanged_before_approval": true,
+      "model_calls": 2,
+      "unchanged_after_change_request": true,
+      "final_status": "completed",
+      "promoted_return_42": true,
+      "git_status": "M src/app.py",
+      "model_calls_budget": {
+        "max_tokens": 200000,
+        "used_tokens": 6168,
+        "used_input_tokens": 5761,
+        "used_output_tokens": 407,
+        "max_tool_calls": 60,
+        "used_tool_calls": 2,
+        "max_model_calls": 6,
+        "used_model_calls": 4,
+        "max_seconds": 180.0,
+        "elapsed_seconds": 0.0,
+        "max_cost": null,
+        "used_cost": 0.0,
+        "max_review_cycles": 1,
+        "review_cycles_used": 1
+      },
+      "interpretation_rationale": "clasificacion determinista por vocabulario -> modify; motivo del fallback: modelo no conectado",
+      "plan_rationale": "plan determinista de respaldo: 2 subtarea(s) para la intencion 'modify'; motivo del fallback: modelo no conectado",
+      "passed": true,
+      "evidence_path": "_tmp\\hybrid-e2e\\04ef6878\\report.json",
+      "cost_note": "runtime used_cost zero in old fixtures means price identifier unmatched, not free inference"
+    },
+    {
+      "repo": "_tmp\\hybrid-e2e\\51e12444\\repo",
+      "model": "Qwen/Qwen2.5-Coder-32B-Instruct:nscale",
+      "statuses": [
+        "awaiting_human_requirements_confirmation",
+        "needs_human"
+      ],
+      "reserved_usd": "0.15630336",
+      "errors": [
+        "UNSPECIFIED_ESCALATION"
+      ],
+      "original_unchanged_before_approval": true,
+      "model_calls": 4,
+      "final_status": "needs_human",
+      "promoted_return_42": false,
+      "git_status": "",
+      "model_calls_budget": {
+        "max_tokens": 200000,
+        "used_tokens": 6225,
+        "used_input_tokens": 5579,
+        "used_output_tokens": 646,
+        "max_tool_calls": 60,
+        "used_tool_calls": 2,
+        "max_model_calls": 6,
+        "used_model_calls": 4,
+        "max_seconds": 180.0,
+        "elapsed_seconds": 0.0,
+        "max_cost": null,
+        "used_cost": 0.0,
+        "max_review_cycles": 1,
+        "review_cycles_used": 1
+      },
+      "interpretation_rationale": "clasificacion determinista por vocabulario -> modify; motivo del fallback: modelo no conectado",
+      "plan_rationale": "plan determinista de respaldo: 2 subtarea(s) para la intencion 'modify'; motivo del fallback: modelo no conectado",
+      "passed": false,
+      "evidence_path": "_tmp\\hybrid-e2e\\51e12444\\report.json",
+      "cost_note": "runtime used_cost zero in old fixtures means price identifier unmatched, not free inference"
+    },
+    {
+      "repo": "_tmp\\hybrid-e2e\\5e3a28a8\\repo",
+      "model": "Qwen/Qwen2.5-Coder-32B-Instruct:nscale",
+      "statuses": [
+        "awaiting_human_requirements_confirmation",
+        "awaiting_approval",
+        "completed"
+      ],
+      "reserved_usd": "0.15630336",
+      "errors": [],
+      "original_unchanged_before_approval": true,
+      "model_calls": 2,
+      "final_status": "completed",
+      "promoted_return_42": true,
+      "git_status": "M src/app.py",
+      "model_calls_budget": {
+        "max_tokens": 200000,
+        "used_tokens": 3064,
+        "used_input_tokens": 2869,
+        "used_output_tokens": 195,
+        "max_tool_calls": 60,
+        "used_tool_calls": 1,
+        "max_model_calls": 6,
+        "used_model_calls": 2,
+        "max_seconds": 180.0,
+        "elapsed_seconds": 0.0,
+        "max_cost": null,
+        "used_cost": 0.0,
+        "max_review_cycles": 1,
+        "review_cycles_used": 0
+      },
+      "interpretation_rationale": "clasificacion determinista por vocabulario -> modify; motivo del fallback: modelo no conectado",
+      "plan_rationale": "plan determinista de respaldo: 2 subtarea(s) para la intencion 'modify'; motivo del fallback: modelo no conectado",
+      "passed": true,
+      "evidence_path": "_tmp\\hybrid-e2e\\5e3a28a8\\report.json",
+      "cost_note": "runtime used_cost zero in old fixtures means price identifier unmatched, not free inference"
+    },
+    {
+      "repo": "_tmp\\hybrid-e2e\\ade1dc89\\repo",
+      "model": "Qwen/Qwen2.5-Coder-32B-Instruct:nscale",
+      "statuses": [
+        "awaiting_human_requirements_confirmation",
+        "awaiting_approval",
+        "completed"
+      ],
+      "reserved_usd": "0.15630336",
+      "errors": [],
+      "original_unchanged_before_approval": true,
+      "model_calls": 2,
+      "final_status": "completed",
+      "promoted_return_42": true,
+      "git_status": "M src/app.py",
+      "model_calls_budget": {
+        "max_tokens": 200000,
+        "used_tokens": 3064,
+        "used_input_tokens": 2869,
+        "used_output_tokens": 195,
+        "max_tool_calls": 60,
+        "used_tool_calls": 1,
+        "max_model_calls": 6,
+        "used_model_calls": 2,
+        "max_seconds": 180.0,
+        "elapsed_seconds": 0.0,
+        "max_cost": null,
+        "used_cost": 0.00021113999999999996,
+        "max_review_cycles": 1,
+        "review_cycles_used": 0
+      },
+      "interpretation_rationale": "clasificacion determinista por vocabulario -> modify; motivo del fallback: modelo no conectado",
+      "plan_rationale": "plan determinista de respaldo: 2 subtarea(s) para la intencion 'modify'; motivo del fallback: modelo no conectado",
+      "passed": true,
+      "evidence_path": "_tmp\\hybrid-e2e\\ade1dc89\\report.json",
+      "cost_note": "runtime used_cost zero in old fixtures means price identifier unmatched, not free inference"
+    },
+    {
+      "repo": "_tmp\\hybrid-e2e\\b907d977\\repo",
+      "model": "Qwen/Qwen2.5-Coder-32B-Instruct:nscale",
+      "statuses": [
+        "awaiting_human_requirements_confirmation",
+        "needs_human"
+      ],
+      "reserved_usd": "0.15630336",
+      "errors": [
+        "UNSPECIFIED_ESCALATION"
+      ],
+      "original_unchanged_before_approval": true,
+      "model_calls": 4,
+      "final_status": "needs_human",
+      "promoted_return_42": false,
+      "git_status": "",
+      "model_calls_budget": {
+        "max_tokens": 200000,
+        "used_tokens": 6094,
+        "used_input_tokens": 5499,
+        "used_output_tokens": 595,
+        "max_tool_calls": 60,
+        "used_tool_calls": 2,
+        "max_model_calls": 6,
+        "used_model_calls": 4,
+        "max_seconds": 180.0,
+        "elapsed_seconds": 0.0,
+        "max_cost": null,
+        "used_cost": 0.0,
+        "max_review_cycles": 1,
+        "review_cycles_used": 1
+      },
+      "interpretation_rationale": "clasificacion determinista por vocabulario -> modify; motivo del fallback: modelo no conectado",
+      "plan_rationale": "plan determinista de respaldo: 2 subtarea(s) para la intencion 'modify'; motivo del fallback: modelo no conectado",
+      "passed": false,
+      "evidence_path": "_tmp\\hybrid-e2e\\b907d977\\report.json",
+      "cost_note": "runtime used_cost zero in old fixtures means price identifier unmatched, not free inference"
+    },
+    {
+      "scenario": "reject",
+      "repo": "_tmp\\hybrid-e2e\\bd5ca540\\repo",
+      "model": "Qwen/Qwen2.5-Coder-32B-Instruct:nscale",
+      "statuses": [
+        "awaiting_human_requirements_confirmation",
+        "awaiting_approval",
+        "cancelled"
+      ],
+      "reserved_usd": "0.15630336",
+      "errors": [],
+      "original_unchanged_before_approval": true,
+      "model_calls": 2,
+      "final_status": "cancelled",
+      "promoted_return_42": false,
+      "git_status": "",
+      "model_calls_budget": {
+        "max_tokens": 200000,
+        "used_tokens": 3064,
+        "used_input_tokens": 2869,
+        "used_output_tokens": 195,
+        "max_tool_calls": 60,
+        "used_tool_calls": 1,
+        "max_model_calls": 6,
+        "used_model_calls": 2,
+        "max_seconds": 180.0,
+        "elapsed_seconds": 0.0,
+        "max_cost": null,
+        "used_cost": 0.0,
+        "max_review_cycles": 1,
+        "review_cycles_used": 0
+      },
+      "interpretation_rationale": "clasificacion determinista por vocabulario -> modify; motivo del fallback: modelo no conectado",
+      "plan_rationale": "plan determinista de respaldo: 2 subtarea(s) para la intencion 'modify'; motivo del fallback: modelo no conectado",
+      "passed": true,
+      "evidence_path": "_tmp\\hybrid-e2e\\bd5ca540\\report.json",
+      "cost_note": "runtime used_cost zero in old fixtures means price identifier unmatched, not free inference"
+    }
+  ],
+  "spending_snapshot": {
+    "authorized_usd": "3",
+    "reserved_usd": "1.17225088",
+    "batches": [
+      {
+        "output": "_tmp\\hybrid-validation\\remote-probe-01.json",
+        "reserved_usd": "0.00796672",
+        "created_at": "2026-10-27T00:49:17.122603+00:00"
+      },
+      {
+        "output": "_tmp\\hybrid-validation\\http-diagnostic-01.json",
+        "reserved_usd": "0.00786752"
+      },
+      {
+        "output": "_tmp\\hybrid-validation\\remote-probe-02.json",
+        "reserved_usd": "0.00796672",
+        "created_at": "2026-10-27T00:57:00.057097+00:00"
+      },
+      {
+        "output": "_tmp\\hybrid-validation\\remote-benchmark-01.json",
+        "reserved_usd": "0.09097216"
+      },
+      {
+        "output": "_tmp\\hybrid-validation\\capabilities-01.json",
+        "reserved_usd": "0.01577984"
+      },
+      {
+        "output": "_tmp\\hybrid-validation\\remote-reference-light-roles-01.json",
+        "reserved_usd": "0.06373376"
+      },
+      {
+        "output": "_tmp\\hybrid-validation\\remote-supervisor-1024-01.json",
+        "reserved_usd": "0.03227648"
+      },
+      {
+        "output": "_tmp\\hybrid-e2e\\b907d977\\report.json",
+        "reserved_usd": "0.15630336",
+        "maximum_attempts": 18
+      },
+      {
+        "output": "_tmp\\hybrid-e2e\\51e12444\\report.json",
+        "reserved_usd": "0.15630336",
+        "maximum_attempts": 18
+      },
+      {
+        "output": "_tmp\\hybrid-e2e\\5e3a28a8\\report.json",
+        "reserved_usd": "0.15630336",
+        "maximum_attempts": 18
+      },
+      {
+        "output": "_tmp\\hybrid-e2e\\bd5ca540\\report.json",
+        "reserved_usd": "0.15630336",
+        "maximum_attempts": 18
+      },
+      {
+        "output": "_tmp\\hybrid-e2e\\04ef6878\\report.json",
+        "reserved_usd": "0.15630336",
+        "maximum_attempts": 18
+      },
+      {
+        "output": "_tmp\\hybrid-validation\\response-model-alias-01.json",
+        "reserved_usd": "0.00786752"
+      },
+      {
+        "output": "_tmp\\hybrid-e2e\\ade1dc89\\report.json",
+        "reserved_usd": "0.15630336",
+        "maximum_attempts": 18
+      }
+    ]
+  },
+  "reported_model_probe": {
+    "http_status": 200,
+    "requested_model": "Qwen/Qwen2.5-Coder-32B-Instruct:nscale",
+    "reported_model": "Qwen/Qwen2.5-Coder-32B-Instruct",
+    "usage": {
+      "prompt_tokens": 38,
+      "total_tokens": 44,
+      "completion_tokens": 6
+    }
+  }
+}
