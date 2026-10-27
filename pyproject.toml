@@ -49,6 +49,8 @@ mcp = [
 # Speech-to-Text local. Opcional por diseno: el sistema funciona sin voz.
 voice = [
     "faster-whisper>=1.0",
+    # faster-whisper 1.2.1 usa av.open(metadata_errors=...), eliminado en PyAV 19.
+    "av<19",
 ]
 # Observabilidad. Prescindible en ejecucion, no en evaluacion.
 observability = [
