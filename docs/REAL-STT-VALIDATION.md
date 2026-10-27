@@ -89,6 +89,19 @@ de `FakeAdapter.__init__` no se modificó.
 Se requiere permiso del navegador, dictado humano y revisión de ese resultado antes
 de cerrar F. CUDA es opcional y sigue no disponible; no bloquea el perfil CPU validado.
 
+### Comprobación física reportada por el usuario
+
+El usuario probó el dictado en la sesión local y confirmó: «fue tal cual lo que
+dicte». Esto acredita reconocimiento fiel según validación humana; no se conservó
+su audio como evidencia ni se inventó una medición de exactitud o latencia.
+
+Al revisar la sesión se encontraron tres ejecuciones de origen `text`, todas en
+`awaiting_human_requirements_confirmation`, sin metadatos de voz. Su presencia no
+demuestra que el dictado las creara automáticamente ni permite afirmar cero
+ejecuciones durante la prueba física. Está pendiente confirmar con el usuario si
+pulsó «Ejecutar» y si revisó/editó el dictado. Las garantías de edición y ausencia
+de ejecución automática siguen respaldadas por la prueba automatizada anterior.
+
 Evidencia consolidada versionada: `REAL-STT-EVIDENCE.json`.
 Evidencia local ignorada: `_tmp/voice-assets/spanish-stt-report.json`,
 `_tmp/voice-assets/small/manifest.json`, `_tmp/phase-f-browser-06/report.json`,

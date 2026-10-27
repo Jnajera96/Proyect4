@@ -175,3 +175,11 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
   opt-in `tools/verify_real_voice.cjs`. No se implementó TTS ni se rediseñó UI.
 - F no se declara cerrada hasta permiso, dictado y revisión con micrófono físico.
   G/H y lanzamiento siguen pendientes; no se movió ningún tag ni se hizo push.
+
+### F — confirmación humana recibida
+
+- El usuario confirmó que el reconocimiento del micrófono reprodujo lo dictado.
+- La sesión física contiene tres runs de origen `text`, todos esperando la puerta
+  de requisitos. No se atribuyen automáticamente a voz ni se declara cero runs.
+- Pendiente precisar si se lanzaron manualmente y si se revisó/editó el dictado
+  antes de cerrar F. El control equivalente ya pasó en la prueba automatizada.

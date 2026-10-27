@@ -132,7 +132,25 @@
     "seconds": 183.107
   },
   "physical_microphone": {
-    "verified": false,
-    "reason": "Requires user permission and live speech; synthetic browser device is not physical microphone evidence."
+    "recognition_verified_by_user": true,
+    "user_report": "fue tal cual lo que dicte",
+    "evidence_type": "human report",
+    "audio_retained_as_evidence": false,
+    "editable_and_no_automatic_run_confirmed_by_user": null,
+    "observed_session": {
+      "run_count": 3,
+      "sources": [
+        "text",
+        "text",
+        "text"
+      ],
+      "statuses": [
+        "awaiting_human_requirements_confirmation",
+        "awaiting_human_requirements_confirmation",
+        "awaiting_human_requirements_confirmation"
+      ]
+    },
+    "phase_f_closed": false,
+    "pending": "User clarification whether runs were launched explicitly and transcript was reviewed/edited."
   }
 }
