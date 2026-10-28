@@ -169,6 +169,11 @@ export const api = {
   obtenerProyecto: (projectId: string) =>
     pedir<Project>(`/projects/${encodeURIComponent(projectId)}`),
 
+  eliminarProyecto: (projectId: string) =>
+    pedir<void>(`/projects/${encodeURIComponent(projectId)}`, {
+      method: "DELETE",
+    }),
+
   /**
    * Sube audio y devuelve la transcripcion. **No crea ninguna ejecucion**
    * (`RF-02`): el texto vuelve a la persona, que lo revisa y decide.

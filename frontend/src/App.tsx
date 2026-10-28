@@ -315,6 +315,19 @@ export function App({ profile }: { profile?: {
     setSesion("sin-credencial");
   }
 
+  async function eliminarProyecto(id: string) {
+    if (!window.confirm("¿Quitar este proyecto de la lista? No borrará archivos ni el repositorio local.")) return;
+    try {
+      await api.eliminarProyecto(id);
+      setProyectos((previos) => previos.filter((p) => p.project_id !== id));
+      if (projectId === id) {
+        setProjectId("");
+      }
+    } catch (causa) {
+      setErrorAccion(anotarFallo(causa));
+    }
+  }
+
   async function registrarProyecto(createIfMissing = false) {
     if (registrando) return;
     setRegistrando(true);
@@ -577,6 +590,7 @@ export function App({ profile }: { profile?: {
               setProjectId(id);
               setVista("general");
             }}
+            alEliminar={eliminarProyecto}
             alFallo={anotarFallo}
             puedeAdministrar={puedeAdministrar}
           />

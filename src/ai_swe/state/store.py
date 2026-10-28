@@ -283,7 +283,8 @@ class RunStore:
         """
         with self._lock:
             self._conn.execute(
-                "INSERT INTO projects (project_id, name, repo_path, created_at) VALUES (?, ?, ?, ?)",
+                ("INSERT INTO projects (project_id, name, repo_path, created_at) "
+                 "VALUES (?, ?, ?, ?)"),
                 (
                     proyecto.project_id,
                     proyecto.name,
@@ -307,6 +308,19 @@ class RunStore:
             repo_path=fila["repo_path"],
             created_at=_fecha(fila["created_at"]),
         )
+
+    def eliminar_proyecto(self, project_id: str) -> bool:
+        """Da de baja un proyecto del almacen.
+
+        No toca los archivos del disco ni el repositorio Git. Devuelve True si
+        existia y se elimino, False si no existia.
+        """
+        with self._lock:
+            cur = self._conn.execute(
+                "DELETE FROM projects WHERE project_id = ?", (project_id,)
+            )
+            self._conn.commit()
+            return cur.rowcount > 0
 
     def listar_proyectos(self, limit: int = 50) -> list[Project]:
         with self._lock:

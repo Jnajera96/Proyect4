@@ -26,6 +26,7 @@ export function VistaProyectos({
   alCambiarRuta,
   alRegistrar,
   alEjecutarContra,
+  alEliminar,
   alFallo,
   puedeAdministrar,
   errorRegistro,
@@ -39,6 +40,7 @@ export function VistaProyectos({
   alCambiarRuta: (v: string) => void;
   alRegistrar: (crear?: boolean) => void;
   alEjecutarContra: (projectId: string) => void;
+  alEliminar?: (projectId: string) => void;
   alFallo: (causa: unknown) => string;
   puedeAdministrar: boolean;
   errorRegistro: string | null;
@@ -140,6 +142,16 @@ export function VistaProyectos({
                   <button className="sutil" onClick={() => void verDetalle(p.project_id)}>
                     Ver detalle
                   </button>
+                  {alEliminar && puedeAdministrar ? (
+                    <button
+                      className="sutil"
+                      style={{ color: "var(--color-peligro, #ef4444)" }}
+                      title="Quita el proyecto del registro sin borrar archivos del disco"
+                      onClick={() => alEliminar(p.project_id)}
+                    >
+                      Quitar de la lista
+                    </button>
+                  ) : null}
                 </Fila>
               </Panel>
             ))}

@@ -39,7 +39,7 @@ from ai_swe.api.app import registrar_manejadores_de_error
 from ai_swe.contracts import EventKind
 from ai_swe.graph import nodes
 from ai_swe.graph.engine import NothingToResume, RunNotFound
-from ai_swe.models import BudgetExceededError, FakeModelAdapter, ModelGateway
+from ai_swe.models import BudgetExceededError, ModelGateway
 from ai_swe.sandbox import SandboxError
 from ai_swe.state import RunStore
 
@@ -325,6 +325,26 @@ def test_un_proyecto_inexistente_da_404(cliente) -> None:
 
     assert respuesta.status_code == 404
     assert "no existe el proyecto" in respuesta.json()["detail"]
+
+
+def test_eliminar_proyecto_sin_borrar_archivos(cliente, repo: Path) -> None:
+    creado = cliente.post("/projects", json={"name": "eliminar", "repo_path": str(repo)}).json()
+    pid = creado["project_id"]
+
+    # 1. Dar de baja devuelve 204
+    resp = cliente.delete(f"/projects/{pid}")
+    assert resp.status_code == 204
+
+    # 2. Ya no figura en la lista ni en get
+    assert cliente.get(f"/projects/{pid}").status_code == 404
+    assert all(p["project_id"] != pid for p in cliente.get("/projects").json())
+
+    # 3. Eliminar de nuevo devuelve 404
+    assert cliente.delete(f"/projects/{pid}").status_code == 404
+
+    # 4. El directorio local y el repositorio git siguen existiendo intactos
+    assert repo.exists()
+    assert (repo / ".git").exists()
 
 
 def test_un_run_puede_apuntar_a_un_proyecto(cliente, repo: Path) -> None:

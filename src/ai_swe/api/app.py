@@ -767,6 +767,23 @@ def crear_app(
             raise HTTPException(status_code=404, detail=f"no existe el proyecto {project_id}")
         return proyecto
 
+    @app.delete("/projects/{project_id}", status_code=204, dependencies=[ADMINISTRAR])
+    def eliminar_proyecto(
+        project_id: str,
+        identidad: Identidad | None = Depends(_identidad),
+    ) -> None:
+        """Da de baja un proyecto del registro sin borrar archivos del disco.
+
+        Solo retira el proyecto de la lista autorizada en base de datos.
+        Los repositorios locales y el historial de ejecuciones se conservan intactos.
+        """
+        _auditar("proyecto.baja", identidad, {"project_id": project_id})
+        borrado = almacen.eliminar_proyecto(project_id)
+        if not borrado:
+            raise HTTPException(
+                status_code=404, detail=f"no existe el proyecto {project_id}"
+            )
+
     # ----------------------------------------------------------- transcripcion
     @app.post("/transcriptions", response_model=Transcript, dependencies=[OPERAR])
     async def transcribir(
