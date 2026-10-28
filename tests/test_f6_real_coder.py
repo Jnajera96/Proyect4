@@ -41,6 +41,40 @@ from ai_swe.models import FakeModelAdapter, ModelGateway
 CONTENIDO = "def f():\n    return 1\n"
 
 
+@pytest.mark.parametrize("instruction", [
+    "Crea una calculadora cientifica capaz de hacer calculos a nivel universidad",
+    "Modifica el parser existente para aceptar numeros negativos",
+])
+def test_primera_generacion_no_exige_fallos_previos(monkeypatch, instruction):
+    fake = FakeModelAdapter(structured=_propuesta())
+    monkeypatch.setattr(nodes, "_GATEWAY", ModelGateway([fake]))
+    state = _estado()
+    state = state.model_copy(update={
+        "instruction": state.instruction.model_copy(update={"text": instruction}),
+    })
+    nodes._coder_del_modelo(state)
+    prompt = fake.calls[0].messages[1].content
+    assert "Implementacion inicial" in prompt
+    assert "no requiere fallos previos" in prompt
+    assert "Corrige los fallos verificados" not in prompt
+    assert "max_files_changed" in prompt
+    assert state.instruction.text in prompt
+
+
+def test_respuesta_vacia_no_se_presenta_como_ausencia_de_modelo(monkeypatch):
+    fake = FakeModelAdapter(structured={"files": [], "rationale": "Falta alcance concreto"})
+    monkeypatch.setattr(nodes, "_GATEWAY", ModelGateway([fake]))
+    state = _estado()
+    state = state.model_copy(update=nodes.coder(state))
+    result = nodes.escalate_no_changes(state)
+    message = result["errors"][-1].message
+    assert len(fake.calls) == 1
+    assert "respondio sin proponer archivos" in message
+    assert "M1" not in message
+    assert "al no haber modelo" not in message
+    assert state.outputs.code_proposal.rationale == "Falta alcance concreto"
+
+
 def _propuesta(**cambios) -> dict:
     """El `CodeProposal` que un modelo bien portado devolveria."""
     base = {

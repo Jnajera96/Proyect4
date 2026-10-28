@@ -431,3 +431,7 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
 ## Checkpoint builder offline — 28 de octubre de 2026
 
 Avances de creación explícita de proyectos Git, fixtures E2E calendario/calorías, recorte seguro y presupuesto guardados a petición del usuario. Evidencia y pendientes en RESUME-PROJECT-BUILDER-2026-10-28.md. Sin suite completa final, sin nuevo portable y sin nuevas llamadas pagadas; no constituye cierre de release.
+
+## Ruta 3, entrega 1 — Contexto inicial del Coder
+
+Corrección del prompt que exigía reparaciones previas al generar un proyecto por primera vez y del error que atribuía una respuesta vacía a ausencia de modelo. Coder recibe interpretación confirmada, alcance y contexto diferenciado entre primera implementación y corrección. Evidencia: 91 pruebas focalizadas PASS, Ruff de pruebas aprobado y compilación TypeScript/Vite aprobada. No hubo llamadas pagadas ni se certificó una nueva generación remota. Portable nuevo `windows-v0.2.0-coder-initial-rc1`; acta `CODER-INITIAL-GENERATION-VALIDATION.md`. Las mejoras de Workflow, actualización visible y eliminación de registros duplicados son la siguiente entrega, todavía pendientes.

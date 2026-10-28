@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "checks": [
+    "all manifest hashes match",
+    "no developer state or secrets files",
+    "installed defaults to profiles",
+    "private API gated before login",
+    "integrated frontend served",
+    "profile registration with packaged cryptography",
+    "empty profile has no global token",
+    "packaged graph accepts deterministic run",
+    "human confirmation required",
+    "graceful packaged shutdown",
+    "encrypted profile login survives restart",
+    "SQLite and graph checkpoint survive restart",
+    "persisted SQLite integrity",
+    "restart shutdown graceful"
+  ],
+  "paid_calls": 0
+}

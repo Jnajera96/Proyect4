@@ -1158,10 +1158,26 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], C
         "(sin comentarios del usuario)"
     )
 
+    es_correccion = bool(
+        state.evidence.test_runs or state.outputs.reviewer_output or retroalimentacion
+    )
+    instrucciones_iteracion = (
+        "Correccion de una propuesta previa: corrige los fallos verificados de la ultima "
+        "ejecucion y las correcciones concretas del Reviewer o del usuario. "
+        "Usa la evidencia adjunta; no inventes fallos.\n"
+        if es_correccion else
+        "Implementacion inicial de la peticion confirmada: no requiere fallos previos "
+        "ni una revision anterior. Si se solicita crear una aplicacion, propone los "
+        "archivos nuevos y sus pruebas aunque el repositorio solo tenga un README. "
+        "Si se solicita modificar codigo existente, usa la evidencia disponible y "
+        "respeta el comportamiento y el alcance autorizados.\n"
+    )
     contexto = (
         "Interpretacion de la peticion:\n"
         f"- intencion: {interpretacion.intent.value if interpretacion else 'desconocida'}\n"
         f"- restricciones: {interpretacion.constraints if interpretacion else []}\n\n"
+        f"- interpretacion confirmada: {interpretacion.rationale if interpretacion else 'no declarada'}\n"
+        f"Alcance autorizado:\n{_alcance(state).model_dump_json()}\n\n"
         f"Subtarea a completar:\n"
         f"- descripcion: {subtarea.description if subtarea else 'no declarada'}\n"
         f"- criterio de termino: {subtarea.done_criteria if subtarea else 'no declarado'}\n\n"
@@ -1169,9 +1185,9 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], C
         # hemos escrito. Se marca como **dato**, no como orden (inyeccion indirecta).
         f"Evidencia acumulada por el Researcher:\n"
         f"{bloque_no_confiable('evidencia del repositorio (extractos de ficheros)', lineas_evidencia)}\n\n"
-        f"Comentarios del usuario que pidio cambios (obligatorio atenderlos):\n"
+        f"Comentarios del usuario para esta iteracion:\n"
         f"{lineas_humano}\n\n"
-        "Corrige los fallos verificados de la ultima ejecucion y las correcciones del Reviewer. "
+        f"{instrucciones_iteracion}"
         "Conserva las pruebas y reglas de calidad autorizadas; no las omitas ni inventes exitos.\n"
         f"{_contexto_correccion_coder(state)}\n\n"
         f"Peticion original del usuario:\n{state.instruction.text}"
@@ -2493,13 +2509,23 @@ def escalate(state: RunState) -> dict:
 
 def escalate_no_changes(state: RunState) -> dict:
     """El Coder no produjo cambios, asi que no hay nada que probar ni revisar."""
+    if state.outputs.code_proposal is not None:
+        motivo = (
+            "El modelo respondio sin proponer archivos. Revisa la explicacion del Coder "
+            "y concreta o corrige la peticion antes de iniciar una nueva ejecucion."
+        )
+    else:
+        motivo = (
+            "No hay una propuesta de archivos del modelo. Revisa la configuracion del "
+            "proveedor y los errores registrados; no hay cambios que probar ni revisar."
+        )
     return _escalar(
         state,
         _error(
             state,
             "CODER_PRODUCED_NO_CHANGES",
             AgentRole.CODER.value,
-            "el Coder no produjo ningun cambio; en M1 es lo esperado al no haber modelo",
+            motivo,
             recuperable=False,
         ),
     )
