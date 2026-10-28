@@ -84,21 +84,27 @@ export function Compositor({
       >
         <label className="solo-lector" htmlFor="instruccion">Instrucción</label>
         <div className="entrada-principal">
-        <textarea
-          id="instruccion"
-          value={estado.instruccion}
-          onChange={(e) => acciones.alCambiarInstruccion(e.target.value)}
-          placeholder="Describe qué quieres construir o mejorar…"
-          autoFocus={typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches && !estado.instruccion}
-        />
+        <div className="entrada-area-wrap">
+          <textarea
+            id="instruccion"
+            value={estado.instruccion}
+            onChange={(e) => acciones.alCambiarInstruccion(e.target.value)}
+            placeholder="Describe qué quieres construir o mejorar..."
+            autoFocus={typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches && !estado.instruccion}
+          />
+          <div className="entrada-adornos" aria-hidden="true">
+            <span className="adorno-destello"><Icono nombre="destello" /></span>
+            <span className="adorno-asistente"><Icono nombre="robot" /></span>
+          </div>
+        </div>
         <div className="comando-herramientas">
         <button className="boton-microfono" aria-label="Abrir dictado por voz"
           title="Abrir dictado por voz" onClick={() => abrirDictado()}><Icono nombre="microfono" /></button>
         <button className="boton-audio" aria-label="Elegir un fichero de audio"
           title="Elegir un fichero de audio en el estudio de voz" onClick={() => abrirDictado(true)}>
-          <Icono nombre="audio" /><span>Audio</span></button>
+          <Icono nombre="detalle" /><span>Audio</span></button>
         <span className="comando-ayuda">Texto o voz. Tú decides cuándo ejecutar.</span>
-        <button id="btn-crear" className="primario enviar" disabled={estado.lanzando || !estado.instruccion.trim()}
+        <button id="btn-crear" className="primario enviar" disabled={estado.lanzando}
           onClick={acciones.alLanzar} aria-label={estado.lanzando ? "Lanzando ejecución" : "Ejecutar"}>
           <Icono nombre="play" /><span>{estado.lanzando ? "Lanzando…" : "Ejecutar"}</span>
         </button></div></div>
@@ -112,9 +118,10 @@ export function Compositor({
           </p>
         ) : null}
 
-        <div className="compositor-extra"><div className="rejilla">
-          <div>
-            <label htmlFor="proyecto">Proyecto</label>
+        <div className="compositor-extra">
+          <div className="pill-control pill-proyecto">
+            <label className="solo-lector" htmlFor="proyecto">Proyecto</label>
+            <Icono nombre="cubo" />
             <select
               id="proyecto"
               value={estado.projectId}
@@ -128,27 +135,29 @@ export function Compositor({
               ))}
             </select>
           </div>
-          <div>
-            <label htmlFor="modo-ejecucion">Modo de ejecución</label>
-            <select
-              id="modo-ejecucion"
-              value={estado.mode ?? "FULL_PROPOSAL"}
-              onChange={(e) => acciones.alCambiarModo?.(e.target.value as ExecutionMode)}
-            >
-              <option value="FULL_PROPOSAL">Propuesta completa (FULL_PROPOSAL)</option>
-              <option value="PLAN_ONLY">Solo planificar (PLAN_ONLY)</option>
-              <option value="INSPECT_ONLY">Solo inspeccionar (INSPECT_ONLY)</option>
-            </select>
-          </div>
-        </div>
 
-        <details className="plegable" id="alcance-avanzado"><summary>Opciones avanzadas · alcance</summary>
-          <p className="tenue">Sin rutas permitidas se autoriza todo el repositorio. Las rutas protegidas restringen la escritura.</p>
-          <div className="rejilla rejilla-doble">
-            <EditorRutas id="allowed-paths" titulo="Rutas permitidas" rutas={estado.allowedPaths} alCambiar={acciones.alCambiarPermitidas} />
-            <EditorRutas id="protected-paths" titulo="Rutas protegidas" rutas={estado.protectedPaths} alCambiar={acciones.alCambiarProtegidas} />
-          </div>
-        </details>
+          <details className="plegable pill-alcance" id="alcance-avanzado">
+            <summary><Icono nombre="ajustes" /><span>Opciones avanzadas · alcance</span><span className="chevron-der" aria-hidden="true">›</span></summary>
+            <div className="alcance-panel-desplegado">
+              <div style={{ marginBottom: "0.75rem" }}>
+                <label htmlFor="modo-ejecucion">Modo de ejecución</label>
+                <select
+                  id="modo-ejecucion"
+                  value={estado.mode ?? "FULL_PROPOSAL"}
+                  onChange={(e) => acciones.alCambiarModo?.(e.target.value as ExecutionMode)}
+                >
+                  <option value="FULL_PROPOSAL">Propuesta completa (FULL_PROPOSAL)</option>
+                  <option value="PLAN_ONLY">Solo planificar (PLAN_ONLY)</option>
+                  <option value="INSPECT_ONLY">Solo inspeccionar (INSPECT_ONLY)</option>
+                </select>
+              </div>
+              <p className="tenue">Sin rutas permitidas se autoriza todo el repositorio. Las rutas protegidas restringen la escritura.</p>
+              <div className="rejilla rejilla-doble">
+                <EditorRutas id="allowed-paths" titulo="Rutas permitidas" rutas={estado.allowedPaths} alCambiar={acciones.alCambiarPermitidas} />
+                <EditorRutas id="protected-paths" titulo="Rutas protegidas" rutas={estado.protectedPaths} alCambiar={acciones.alCambiarProtegidas} />
+              </div>
+            </div>
+          </details>
         </div>
 
         <div className="ejemplos-bloque" aria-label="Ejemplos para empezar">
@@ -156,32 +165,32 @@ export function Compositor({
           <div className="ejemplos-rejilla">
             {[
               {
-                icono: "codigo",
+                icono: "lapiz",
                 tono: "violeta",
                 titulo: "Crear una API REST",
-                subtitulo: "con autenticación JWT y CRUD completo",
-                prompt: "Diseña e implementa una API REST con autenticación JWT, validación de esquemas y operaciones CRUD completas.",
+                subtitulo: "Con autenticación y tests",
+                prompt: "Diseña e implementa una API REST con autenticación JWT, validación de esquemas y tests automatizados.",
               },
               {
                 icono: "basedatos",
                 tono: "cian",
                 titulo: "Diseñar base de datos",
-                subtitulo: "esquema relacional para e-commerce",
-                prompt: "Diseña el esquema relacional de base de datos, migraciones e índices para una plataforma de e-commerce.",
+                subtitulo: "Modelo y migraciones",
+                prompt: "Diseña el modelo relacional de base de datos, migraciones e índices para el proyecto.",
               },
               {
-                icono: "destello",
-                tono: "rosa",
+                icono: "terminal",
+                tono: "verde",
                 titulo: "Implementar feature",
-                subtitulo: "sistema de notificaciones en tiempo real",
-                prompt: "Implementa un sistema de notificaciones en tiempo real con entrega verificable y pruebas automatizadas.",
+                subtitulo: "Desde una descripción",
+                prompt: "Implementa una nueva funcionalidad completa a partir de los requisitos con pruebas verificables.",
               },
               {
-                icono: "seguridad",
-                tono: "ambar",
+                icono: "bug",
+                tono: "rosa",
                 titulo: "Revisar y mejorar",
-                subtitulo: "rendimiento y seguridad del código",
-                prompt: "Analiza el proyecto e identifica mejoras de rendimiento, seguridad y cobertura de pruebas.",
+                subtitulo: "Análisis de código existente",
+                prompt: "Analiza el proyecto e identifica los errores principales, mejoras de rendimiento y seguridad.",
               },
             ].map((ej) => (
               <button

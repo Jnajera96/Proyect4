@@ -24,6 +24,12 @@ const trazos: Record<string, string> = {
   basedatos: "M12 3c4.97 0 9 1.34 9 3s-4.03 3-9 3-9-1.34-9-3 4.03-3 9-3ZM3 6v6c0 1.66 4.03 3 9 3s9-1.34 9-3V6M3 12v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6",
   destello: "m12 3 1.9 5.8L20 10.7l-6.1 1.9L12 18.4l-1.9-5.8L4 10.7l6.1-1.9L12 3Z",
   audio: "M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4",
+  capas: "M12 2 2 7l10 5 10-5-10-5ZM2 12l10 5 10-5M2 17l10 5 10-5",
+  lapiz: "M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z",
+  terminal: "m4 17 6-6-6-6M12 19h8",
+  bug: "M8 6a4 4 0 0 1 8 0v2H8V6ZM6 8h12v6a6 6 0 0 1-12 0V8ZM9 3l1 2M15 3l-1 2M3 11h3M18 11h3M4 16l2.5-1M20 16l-2.5-1M4 7l2.5 1M20 7l-2.5 1",
+  burbuja: "M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z",
+  robot: "M12 8V4H8M12 4h4M6 8h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2ZM9 13v2M15 13v2",
 };
 export function Icono({ nombre, style }: { nombre: string; style?: CSSProperties }) {
   return <svg className="icono" style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor"

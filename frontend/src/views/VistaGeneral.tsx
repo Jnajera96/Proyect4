@@ -73,7 +73,6 @@ export function VistaGeneral({
   const esperando = runs.filter(r => r.awaiting_approval || r.status.startsWith("awaiting"));
   const proyecto = proyectos.find(p => p.project_id === compositor.projectId);
   return <>
-    <AvisoProveedor configuracion={salud?.provider_configuration} />
     <section className="hero" aria-labelledby="hero-titulo">
       <div className="hero-formas" aria-hidden="true"><i /><i /><i /></div>
       <div className="hero-principal">
@@ -92,38 +91,59 @@ export function VistaGeneral({
             <div className="paso-cuerpo">
               <strong>Captura tu idea</strong>
               <p>Texto o voz, siempre bajo tu control.</p>
-              <div className="paso-preview paso-preview-input" aria-hidden="true">
-                <span className="preview-prompt">&ldquo;Crear una API REST...&rdquo;</span>
-                <span className="preview-iconos"><Icono nombre="microfono" /><Icono nombre="audio" /></span>
+              <div className="paso-preview paso-preview-burbuja" aria-hidden="true">
+                <span className="preview-burbuja-icono"><Icono nombre="burbuja" /></span>
+                <div className="preview-lineas">
+                  <span className="linea-corta" />
+                  <span className="linea-larga" />
+                  <span className="linea-media" />
+                </div>
               </div>
             </div>
           </li>
-          <li className="paso-esmeralda">
+          <li className="paso-cian">
             <span className="paso-numero">2</span>
             <div className="paso-cuerpo">
               <strong>Analiza y confirma</strong>
               <p>Requisitos estructurados y validación humana.</p>
               <div className="paso-preview paso-preview-checks" aria-hidden="true">
-                <div><span className="check-ok">✓</span> Requisitos validados</div>
-                <div><span className="check-ok">✓</span> Plan aprobado</div>
+                <div className="preview-check-fila">
+                  <span className="check-circulo">✓</span>
+                  <div className="preview-lineas">
+                    <span className="linea-larga" />
+                    <span className="linea-corta" />
+                  </div>
+                </div>
+                <div className="preview-check-fila">
+                  <span className="check-circulo">✓</span>
+                  <div className="preview-lineas">
+                    <span className="linea-larga" />
+                    <span className="linea-corta" />
+                  </div>
+                </div>
               </div>
             </div>
           </li>
-          <li className="paso-cian">
+          <li className="paso-rosa">
             <span className="paso-numero">3</span>
             <div className="paso-cuerpo">
               <strong>El equipo trabaja</strong>
               <p>Investigación, código, pruebas y revisión.</p>
-              <div className="paso-preview paso-preview-code" aria-hidden="true">
-                <div><span className="code-tag">&lt;/&gt;</span> Generando código...</div>
-                <div><span className="check-ok">✓</span> Tests pasados</div>
+              <div className="paso-preview paso-preview-codigo" aria-hidden="true">
+                <span className="code-tag">&lt;/&gt;</span>
+                <div className="preview-lineas">
+                  <span className="linea-media" />
+                  <span className="linea-corta" />
+                  <span className="linea-larga" />
+                  <span className="linea-acento" />
+                </div>
               </div>
-              <p className="paso-nota-final">Tú apruebas el resultado antes de promover los cambios.</p>
             </div>
           </li>
         </ol>
       </div>
     </section>
+    <AvisoProveedor configuracion={salud?.provider_configuration} />
 
     <section className="franja" aria-label="Estado del sistema">
       <Tarjeta rotulo="Ejecución seleccionada" valor={estado ? ETIQUETA_ESTADO[estado.status] : "Sin ejecución"}

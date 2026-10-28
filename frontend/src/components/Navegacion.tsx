@@ -66,7 +66,6 @@ export function Navegacion({
             onClick={() => alCambiar(item.id)}
           >
             <Icono nombre={item.id} /><span>{item.etiqueta}</span>
-            {activo ? <span className="nav-punto-activo" aria-hidden="true" /> : null}
             {item.aviso ? (
               <span className="nav-aviso" title="Requiere tu decisión" aria-label="Requiere tu decisión" />
             ) : null}
@@ -81,27 +80,27 @@ export function Navegacion({
         onClick={() => alProyecto?.(p.project_id)} aria-pressed={proyectoActual === p.project_id}>
         <span className="punto" /><span>{p.name}</span>
       </button>) : <p className="tenue sidebar-sin-items">Sin proyectos</p>}
-      <button className="sutil sidebar-ver-proyectos" onClick={alCrearProyecto}>+ Ver proyectos</button>
+      <button className="sutil sidebar-ver-proyectos" onClick={alCrearProyecto}><span>Ver proyectos</span><Icono nombre="flecha" /></button>
     </section>
-    <section className="sidebar-corridas" aria-label="Ejecuciones recientes">
-      <h2>Actividad reciente</h2>
-      {runs.slice(0, 5).map(run => <button key={run.run_id}
-        className={`sidebar-run ${runActual === run.run_id ? "seleccionado" : ""}`}
-        aria-label={`Abrir ejecución ${run.run_id}`} aria-pressed={runActual === run.run_id}
-        onClick={() => alRun?.(run.run_id)}>
-        <span className={`run-indicador ${run.status}`} aria-hidden="true" />
-        <span className="sidebar-run-info"><span className="sidebar-run-id">{run.run_id}</span>
-          <span className="sidebar-run-estado">{ETIQUETA_ESTADO[run.status]}</span></span>
-      </button>)}
-      {!runs.length ? <p className="sidebar-vacio">Tus ejecuciones aparecerán aquí.</p> : null}
-    </section>
+    {runs.length ? (
+      <section className="sidebar-corridas" aria-label="Ejecuciones recientes">
+        <h2>Actividad reciente</h2>
+        {runs.slice(0, 4).map(run => <button key={run.run_id}
+          className={`sidebar-run ${runActual === run.run_id ? "seleccionado" : ""}`}
+          aria-label={`Abrir ejecución ${run.run_id}`} aria-pressed={runActual === run.run_id}
+          onClick={() => alRun?.(run.run_id)}>
+          <span className={`run-indicador ${run.status}`} aria-hidden="true" />
+          <span className="sidebar-run-info"><span className="sidebar-run-id">{run.run_id}</span>
+            <span className="sidebar-run-estado">{ETIQUETA_ESTADO[run.status]}</span></span>
+        </button>)}
+      </section>
+    ) : null}
     <div className="sidebar-footer">
-      <p className="sidebar-pie">Tu espacio de ingeniería.<br />Cada cambio, con evidencia.</p>
       <div className="sidebar-usuario">
         <span className="usuario-avatar" aria-hidden="true" />
         <div className="usuario-info">
           <strong>{perfilNombre || "Desarrollador"}</strong>
-          <span>{perfilNombre ? `${perfilNombre}@aiswe.local` : "admin@aiswe.io"}</span>
+          <span>{perfilNombre ? `${perfilNombre}@aiswe.local` : "dev@empresa.com"}</span>
         </div>
         <button
           type="button"

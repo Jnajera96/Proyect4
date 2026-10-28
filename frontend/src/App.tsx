@@ -81,7 +81,7 @@ export function App({ profile }: { profile?: {
 
   // ----------------------------------------------------------- compositor
   const [instruccion, setInstruccion] = useState(
-    "Analiza el proyecto e identifica los errores principales.",
+    "",
   );
   /**
    * Procedencia de la instruccion cuando viene de un dictado.
@@ -333,7 +333,7 @@ export function App({ profile }: { profile?: {
   }
 
   async function lanzar() {
-    const texto = instruccion.trim();
+    const texto = instruccion.trim() || "Analiza el proyecto e identifica los errores principales.";
     if (!texto) return;
     setLanzando(true);
     setErrorAccion(null);
@@ -426,7 +426,7 @@ export function App({ profile }: { profile?: {
       <button id="abrir-menu" className="boton-menu" aria-label="Abrir navegación" aria-expanded={menuAbierto}
         aria-controls="sidebar" onClick={() => setMenuAbierto(v => !v)}><Icono nombre="menu" /></button>
       <div>
-        <button className="contraer-sidebar" aria-label={sidebarCompacta ? "Expandir barra lateral" : "Contraer barra lateral"} aria-expanded={!sidebarCompacta} aria-controls="sidebar" onClick={() => setSidebarCompacta(v => !v)}><Icono nombre="menu" /></button>
+        <button className="contraer-sidebar" aria-label={sidebarCompacta ? "Expandir barra lateral" : "Contraer barra lateral"} aria-expanded={!sidebarCompacta} aria-controls="sidebar" onClick={() => setSidebarCompacta(v => !v)}><Icono nombre="capas" /></button>
         <div className="titulo">AI Software Engineering System</div>
         <p className="subtitulo">Espacio de trabajo · Ingeniería con evidencia</p>
       </div>
@@ -462,7 +462,7 @@ export function App({ profile }: { profile?: {
           onChange={e => setTema(e.target.value as typeof tema)}>
           <option value="oscuro">Oscuro</option><option value="claro">Claro</option><option value="sistema">Tema del sistema</option>
         </select>
-        <button type="button" className="topbar-icono-btn" aria-label="Actividad y notificaciones" title="Ver actividad" onClick={() => setVista(esperando ? "ejecuciones" : "actividad")}><Icono nombre="campana" />{esperando ? <span className="topbar-punto-alerta" aria-hidden="true" /> : null}</button>
+        <button type="button" className="topbar-icono-btn" aria-label="Actividad y notificaciones" title="Ver actividad" onClick={() => setVista(esperando ? "ejecuciones" : "actividad")}><Icono nombre="campana" /><span className="topbar-punto-alerta" aria-hidden="true" /></button>
         <button type="button" className="topbar-avatar-btn" aria-label="Perfil y sesión" title={profile?.name ?? "Sesión"} onClick={() => setVista("sesion")} />
         {sesion === "autenticado" ? <button className="sutil salir-topbar" onClick={cerrarSesion}>Cerrar sesión</button> : null}
         {sesion === "sin-credencial" ||
