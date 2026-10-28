@@ -59,6 +59,11 @@ _REGISTRO: dict[str, AdapterFactory] = {
     "openai": _fabrica_openai_compatible,
     "ollama": _fabrica_openai_compatible,
     "vllm": _fabrica_openai_compatible,
+    "groq": _fabrica_openai_compatible,
+    "deepseek": _fabrica_openai_compatible,
+    "openrouter": _fabrica_openai_compatible,
+    "together": _fabrica_openai_compatible,
+    "mistral": _fabrica_openai_compatible,
 }
 
 

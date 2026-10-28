@@ -31,6 +31,17 @@ from ai_swe.models.providers.base import ProviderResponse
 from ai_swe.security import redact, register_secret
 
 BASE_URL_POR_DEFECTO = "https://api.openai.com/v1"
+PROVIDER_BASE_URLS: dict[str, str] = {
+    "openai": "https://api.openai.com/v1",
+    "openai_compatible": "https://api.openai.com/v1",
+    "groq": "https://api.groq.com/openai/v1",
+    "deepseek": "https://api.deepseek.com",
+    "openrouter": "https://openrouter.ai/api/v1",
+    "together": "https://api.together.xyz/v1",
+    "mistral": "https://api.mistral.ai/v1",
+    "ollama": "http://localhost:11434/v1",
+    "vllm": "http://localhost:8000/v1",
+}
 # Tope al detalle de error que se propaga. Un cuerpo de error de miles de lineas
 # no aporta y acaba en un log; se recorta antes de redactar.
 _MAX_DETALLE_ERROR = 800
@@ -83,7 +94,8 @@ class OpenAICompatibleAdapter:
         self._name = name
         self._model = model
         self._api_key = api_key
-        self._base_url = (base_url or BASE_URL_POR_DEFECTO).rstrip("/")
+        default_base = PROVIDER_BASE_URLS.get(name.lower(), BASE_URL_POR_DEFECTO)
+        self._base_url = (base_url or default_base).rstrip("/")
         self._timeout_s = timeout_s
         self._client = client
         self._cliente_propio = client is None

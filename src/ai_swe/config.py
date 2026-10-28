@@ -476,6 +476,7 @@ def repositorio_autorizado(settings: Settings, ruta: Path | str) -> bool:
 # local (`ollama`, `vllm`...) expone un endpoint HTTP y no usa clave.
 PROVEEDORES_CON_CLAVE = frozenset({
     "openai", "openai_compatible", "anthropic", "azure", "openrouter", "mistral",
+    "groq", "deepseek", "together",
 })
 
 
