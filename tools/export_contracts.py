@@ -25,6 +25,8 @@ SALIDA = RAIZ / "frontend" / "contracts.json"
 # la **superficie publica** del backend, no todos los tipos internos. Exportar
 # todo invitaria al frontend a depender de detalles que no son suyos.
 CONTRATOS_PUBLICOS = (
+    "Project",
+    "ProjectRequest",
     "RunEvent",
     "RunSummary",
     "RunState",
@@ -82,6 +84,10 @@ def construir() -> dict:
         "nota": NOTA,
         "esquema_estado": contratos.RunState.model_fields["schema_version"].default,
         "endpoints": {
+            "POST /projects": {
+                "cuerpo": "ProjectRequest", "respuesta": "Project", "codigo": 201,
+                "nota": "create_if_missing autoriza crear un nuevo repositorio local vacío.",
+            },
             "GET /health": {
                 "codigo": 200,
                 "respuesta": "Health",

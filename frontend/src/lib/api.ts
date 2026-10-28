@@ -183,11 +183,11 @@ export const api = {
     return pedir<Transcript>("/transcriptions", { method: "POST", body: cuerpo });
   },
 
-  crearProyecto: (name: string, repoPath: string) =>
+  crearProyecto: (name: string, repoPath: string, createIfMissing = false) =>
     pedir<Project>("/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, repo_path: repoPath }),
+      body: JSON.stringify({ name, repo_path: repoPath, create_if_missing: createIfMissing }),
     }),
 
   /**

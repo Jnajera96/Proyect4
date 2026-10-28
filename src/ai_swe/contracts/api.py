@@ -17,7 +17,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool
 
 from ai_swe.contracts.state import RunStatus
 
@@ -109,6 +109,7 @@ class ProjectRequest(BaseModel):
 
     name: str = Field(min_length=1, max_length=200)
     repo_path: str = Field(min_length=1)
+    create_if_missing: StrictBool = False
 
 
 class RunSummary(BaseModel):

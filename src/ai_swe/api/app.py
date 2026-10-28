@@ -75,6 +75,7 @@ from ai_swe.contracts import (
 from ai_swe.graph.engine import NothingToResume, RunEngine, RunNotFound
 from ai_swe.graph.worker import RunWorker
 from ai_swe.models import BudgetExceededError
+from ai_swe.projects import crear_proyecto_git
 from ai_swe.resources import frontend_dist
 from ai_swe.runtime_logging import close_installed_log_handler, installed_log_handler
 from ai_swe.sandbox import SandboxError, limpiar_worktree, validar_repositorio
@@ -721,7 +722,10 @@ def crear_app(
         escribe.
         """
         _auditar("proyecto.registrado", identidad, {"repo_path": peticion.repo_path})
-        ruta = validar_repositorio(peticion.repo_path)
+        ruta = (
+            crear_proyecto_git(peticion.repo_path, peticion.name, ajustes)
+            if peticion.create_if_missing else validar_repositorio(peticion.repo_path)
+        )
         if not repositorio_autorizado(ajustes, ruta):
             raise HTTPException(
                 status_code=403,

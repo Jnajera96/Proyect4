@@ -93,3 +93,19 @@ def test_activity_requires_remote_review_after_tests():
     verify_activity(events)
     with pytest.raises(AssertionError):
         verify_activity(events[:-1])
+
+
+@pytest.mark.parametrize(
+    "bounds",
+    [
+        {"maximum_attempts": 2, "logical_calls": 2},
+        {"max_output_tokens": 992},
+        {"max_input_tokens": 11200},
+    ],
+)
+def test_unenforced_smaller_bounds_cannot_shrink_reservation(tmp_path, bounds):
+    ledger, observations, candidate = fixture_paths(tmp_path)
+    before = ledger.read_bytes()
+    with pytest.raises(ValueError):
+        reserve_batch(ledger, observations, candidate, tmp_path / "report.json", **bounds)
+    assert ledger.read_bytes() == before

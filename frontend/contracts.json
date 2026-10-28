@@ -17,6 +17,12 @@
       "nota": "Cada evento lleva id, event y data. data es un RunEvent. Reanudable con la cabecera Last-Event-ID.",
       "respuesta": "text/event-stream"
     },
+    "POST /projects": {
+      "codigo": 201,
+      "cuerpo": "ProjectRequest",
+      "nota": "create_if_missing autoriza crear un nuevo repositorio local vacío.",
+      "respuesta": "Project"
+    },
     "POST /runs": {
       "codigo": 202,
       "cuerpo": "RunRequest",
@@ -170,6 +176,69 @@
       ],
       "title": "Intent",
       "type": "string"
+    },
+    "Project": {
+      "description": "Un repositorio registrado sobre el que se puede ejecutar (F10).\n\nHasta F10 cada ejecucion llevaba su `repo_path` suelto en `RunOptions`, sin\nnada que lo validara antes de lanzar el trabajo. Un proyecto es ese mismo\nrepositorio **con nombre y validado una vez**: la ruta se comprueba al\nregistrarlo, de modo que un repositorio inexistente o que no sea git se\nrechaza en el alta y no dentro de una ejecucion ya en marcha.",
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "project_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9_-]*$",
+          "title": "Project Id",
+          "type": "string"
+        },
+        "repo_path": {
+          "minLength": 1,
+          "title": "Repo Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_id",
+        "name",
+        "repo_path",
+        "created_at"
+      ],
+      "title": "Project",
+      "type": "object"
+    },
+    "ProjectRequest": {
+      "description": "Alta de un proyecto. El `project_id` lo asigna el servidor, no el cliente.",
+      "properties": {
+        "create_if_missing": {
+          "default": false,
+          "title": "Create If Missing",
+          "type": "boolean"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "repo_path": {
+          "minLength": 1,
+          "title": "Repo Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "repo_path"
+      ],
+      "title": "ProjectRequest",
+      "type": "object"
     },
     "RunError": {
       "description": "Error tipado. La taxonomia esta en docs/01-arquitectura.md, seccion 9.8.",

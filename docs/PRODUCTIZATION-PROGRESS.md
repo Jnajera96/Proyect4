@@ -427,3 +427,7 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
 - Verificación: 77 PASS en suite focalizada Python (`test_calculator_pipeline.py`, `test_verify_calculator_e2e.py`, `test_f3_interpret_analyst.py`, `test_f5_plan_driven_execution.py`, `test_launcher.py`, `test_profile_recovery.py`), 32 PASS en `frontend/tests/estados.test.mjs`, 8/8 PASS en Chromium (`verify_dynamic_pipeline.cjs`), 14/14 PASS en smoke portable (`verify_portable_profiles.py`).
 - E2E real calculadora aprobado (`_tmp/calculator-e2e/7b2c59473aff/report.json`, `"passed": true`): `Coder` y `Reviewer` remotos con `Qwen/Qwen2.5-Coder-32B-Instruct:nscale`, `pytest.unit` (`exit_code=0`) y `ruff.check` (`exit_code=0`) reales en el sandbox, `accept` en el primer ciclo (`used_model_calls=2`, `used_cost=$0.000343 USD`), promoción tras aprobación y oráculo matemático independiente en verde (`exit_code=0`).
 - Paquete portable actualizado: `dist/windows-v0.2.0-calculator-rc1/AISWESystem-windows-x64.zip` (SHA256 `8fe147f13f3118cc28f58ee79229d851116d934050d4d5008b251174ce6dddc7`) y carpeta lista para ejecutar `dist/windows-v0.2.0-calculator-rc1/dist/AISWESystem/AISWESystem.cmd`.
+
+## Checkpoint builder offline — 28 de octubre de 2026
+
+Avances de creación explícita de proyectos Git, fixtures E2E calendario/calorías, recorte seguro y presupuesto guardados a petición del usuario. Evidencia y pendientes en RESUME-PROJECT-BUILDER-2026-10-28.md. Sin suite completa final, sin nuevo portable y sin nuevas llamadas pagadas; no constituye cierre de release.

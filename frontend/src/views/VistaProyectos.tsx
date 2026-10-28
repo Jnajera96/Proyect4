@@ -37,13 +37,14 @@ export function VistaProyectos({
   ruta: string;
   alCambiarNombre: (v: string) => void;
   alCambiarRuta: (v: string) => void;
-  alRegistrar: () => void;
+  alRegistrar: (crear?: boolean) => void;
   alEjecutarContra: (projectId: string) => void;
   alFallo: (causa: unknown) => string;
   puedeAdministrar: boolean;
   errorRegistro: string | null;
   registrando: boolean;
 }) {
+  const [nuevo, setNuevo] = useState(false);
   const [detalle, setDetalle] = useState<Project | null>(null);
   const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
 
@@ -67,6 +68,8 @@ export function VistaProyectos({
           nota="El proyecto fija la ruta del repositorio y se valida al registrarlo, no al ejecutar."
         >
           <Panel>
+            <button type="button" disabled={registrando} onClick={() => setNuevo(!nuevo)}>{nuevo ? "Usar repositorio existente" : "Nuevo proyecto Git"}</button>
+            {nuevo ? <p role="note">Al crear autorizas crear esta carpeta local vacía, inicializar Git y escribir README.md y un commit inicial. Indica una ruta local absoluta, no una URL.</p> : null}
             <div className="rejilla rejilla-doble">
               <div>
                 <label htmlFor="proy-nombre">Nombre</label>
@@ -93,9 +96,9 @@ export function VistaProyectos({
               <button
                 className="primario"
                 disabled={registrando || !nombre.trim() || !ruta.trim()}
-                onClick={alRegistrar}
+                onClick={() => alRegistrar(nuevo)}
               >
-                {registrando ? "Registrando…" : "Registrar"}
+                {registrando ? "Registrando…" : nuevo ? "Crear proyecto Git" : "Registrar"}
               </button>
               <span className="tenue">
                 Registrar un proyecto es una acción de administración.

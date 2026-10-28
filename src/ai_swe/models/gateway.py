@@ -285,7 +285,10 @@ class ModelGateway:
                     if settings.max_cost_per_run is None or request.max_output_tokens is None:
                         raise ModelConfigurationError("El perfil requiere limite y salida acotada")
                     # UTF-8 bytes plus structural overhead are a conservative local estimate.
-                    inputs = len(request.model_dump_json().encode()) // 3 + 256
+                    # Without a verified model tokenizer, a bytes/3 heuristic is
+                    # not an upper bound. Reserve bytes plus framing overhead;
+                    # duplicate schema serialization deliberately over-reserves.
+                    inputs = len(request.model_dump_json().encode()) + 1024
                     estimate = self._pricing.cost(
                         model,
                         ModelUsage(input_tokens=inputs, output_tokens=request.max_output_tokens),

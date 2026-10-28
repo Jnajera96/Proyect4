@@ -72,6 +72,14 @@ def reserve_batch(
     """
     from tools.model_lab import SpendGuard
 
+    # Bounds must cover the requests emitted by the current graph and all
+    # configured retries. A smaller declaration does not constrain the adapter.
+    if maximum_attempts < logical_calls * 3 or max_output_tokens < 4096:
+        raise ValueError("Reservation must cover three attempts per call and 4096 output tokens")
+    if max_input_tokens is not None and (
+        candidate.context_length is None or max_input_tokens < candidate.context_length
+    ):
+        raise ValueError("An unenforced input-token cap cannot reduce the reservation")
     lock = ledger.with_suffix(".calculator.lock")
     with exclusive_lock(lock):
         try:
@@ -109,15 +117,8 @@ def reserve_batch(
             state["reserved_usd"] = str(used)
             ledger.write_text(json.dumps(state, indent=2), encoding="utf-8")
             guard = SpendGuard(authorized - used)
-            effective_candidate = (
-                candidate.model_copy(
-                    update={"context_length": min(candidate.context_length, max_input_tokens)}
-                )
-                if max_input_tokens is not None and candidate.context_length is not None
-                else candidate
-            )
             for _ in range(maximum_attempts):
-                guard.reserve(effective_candidate, max_output_tokens)
+                guard.reserve(candidate, max_output_tokens)
             state["reserved_usd"] = str(used + guard.reserved_usd)
             state["batches"].append(
                 {
@@ -240,10 +241,9 @@ def run_real(args, root: Path, report: dict) -> None:
         args.observations,
         candidate,
         root / "report.json",
-        maximum_attempts=2,
-        logical_calls=2,
-        max_output_tokens=992,
-        max_input_tokens=11200,
+        maximum_attempts=18,
+        logical_calls=6,
+        max_output_tokens=4096,
     )
     report["reserved_usd"] = str(reserved)
     repo = root / "repo"
@@ -291,8 +291,8 @@ def run_real(args, root: Path, report: dict) -> None:
         hf_token=SecretStr(token),
         model_base_url="https://router.huggingface.co/v1",
         model_pricing=pricing,
-        max_model_calls_per_run=2,
-        max_review_cycles=1,
+        max_model_calls_per_run=6,
+        max_review_cycles=2,
         max_seconds_per_run=300,
         max_cost_per_run=float(reserved),
         authorized_repos=[repo],

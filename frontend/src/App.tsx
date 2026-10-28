@@ -315,12 +315,12 @@ export function App({ profile }: { profile?: {
     setSesion("sin-credencial");
   }
 
-  async function registrarProyecto() {
+  async function registrarProyecto(createIfMissing = false) {
     if (registrando) return;
     setRegistrando(true);
     setErrorAccion(null);
     try {
-      const p = await api.crearProyecto(nombreProyecto, rutaProyecto);
+      const p = await api.crearProyecto(nombreProyecto, rutaProyecto, createIfMissing);
       setProyectos((previos) => [p, ...previos]);
       setProjectId(p.project_id);
       setNombreProyecto("");
@@ -390,7 +390,7 @@ export function App({ profile }: { profile?: {
     alCambiarNombre: setNombreProyecto,
     alCambiarRuta: setRutaProyecto,
     alLanzar: () => void lanzar(),
-    alRegistrarProyecto: () => void registrarProyecto(),
+    alRegistrarProyecto: (crear = false) => void registrarProyecto(crear),
     alCambiarPermitidas: setAllowedPaths,
     alCambiarProtegidas: setProtectedPaths,
     alCambiarModo: setMode,
@@ -570,7 +570,7 @@ export function App({ profile }: { profile?: {
             ruta={rutaProyecto}
             alCambiarNombre={setNombreProyecto}
             alCambiarRuta={setRutaProyecto}
-            alRegistrar={() => void registrarProyecto()}
+            alRegistrar={(crear = false) => void registrarProyecto(crear)}
             errorRegistro={errorAccion}
             registrando={registrando}
             alEjecutarContra={(id) => {

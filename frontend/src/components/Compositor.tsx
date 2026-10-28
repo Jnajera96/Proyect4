@@ -1,3 +1,4 @@
+import { useState } from "react";
 /**
  * Compositor de una ejecucion: la instruccion, el proyecto y el disparo.
  *
@@ -46,7 +47,7 @@ export interface AccionesCompositor {
   alCambiarNombre: (v: string) => void;
   alCambiarRuta: (v: string) => void;
   alLanzar: () => void;
-  alRegistrarProyecto: () => void;
+  alRegistrarProyecto: (crear?: boolean) => void;
   alCambiarPermitidas: (rutas: string[]) => void;
   alCambiarProtegidas: (rutas: string[]) => void;
   alCambiarModo?: (modo: ExecutionMode) => void;
@@ -68,6 +69,7 @@ export function Compositor({
   salud: Health | null;
   puedeAdministrar: boolean;
 }) {
+  const [nuevoProyecto, setNuevoProyecto] = useState(false);
   function abrirDictado(archivo = false) {
     const voz = document.getElementById("dictado");
     if (!(voz instanceof HTMLDetailsElement)) return;
@@ -215,6 +217,8 @@ export function Compositor({
           <details className="plegable">
             <summary>Registrar un proyecto</summary>
             <div className="stack" style={{ marginTop: "0.75rem" }}>
+              <button type="button" disabled={estado.registrando} onClick={() => setNuevoProyecto(!nuevoProyecto)}>{nuevoProyecto ? "Usar repositorio existente" : "Nuevo proyecto Git"}</button>
+              {nuevoProyecto ? <p role="note">Al crear autorizas crear esta carpeta local vacía, inicializar Git y escribir README.md y un commit inicial. Indica una ruta local absoluta, no una URL.</p> : null}
               <div>
                 <label htmlFor="p-nombre">Nombre</label>
                 <input
@@ -238,9 +242,9 @@ export function Compositor({
               <Fila>
                 <button
                   disabled={estado.registrando || !estado.nombreProyecto.trim() || !estado.rutaProyecto.trim()}
-                  onClick={acciones.alRegistrarProyecto}
+                  onClick={() => acciones.alRegistrarProyecto(nuevoProyecto)}
                 >
-                  {estado.registrando ? "Registrando…" : "Registrar"}
+                  {estado.registrando ? "Registrando…" : nuevoProyecto ? "Crear proyecto Git" : "Registrar"}
                 </button>
                 <span className="tenue">La ruta se valida al registrar, no al ejecutar</span>
               </Fila>

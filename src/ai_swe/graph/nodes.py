@@ -34,6 +34,7 @@ from ai_swe.contracts import (
     Evidence,
     FileChange,
     FileOperation,
+    FileProposal,
     FinalReport,
     Finding,
     Intent,
@@ -88,7 +89,10 @@ _INSPECCIONAR = (
     "lista", "listar", "enumera", "enumerar", "describe", "describir",
 )
 
-_EXTENSIONES = {".py", ".md", ".toml", ".cfg", ".txt", ".json", ".yaml", ".yml"}
+_EXTENSIONES = {
+    ".py", ".md", ".toml", ".cfg", ".txt", ".json", ".yaml", ".yml",
+    ".html", ".css", ".js", ".mjs", ".ts", ".tsx", ".jsx", ".sql",
+}
 _MAX_ARCHIVOS = 20
 _MAX_LINEAS_POR_ARCHIVO = 4000
 
@@ -543,6 +547,14 @@ Reglas obligatorias:
   - Usa como maximo unas pocas subtareas. Un plan de una sola tarea es valido y a
     menudo preferible a uno inflado.
   - `done_criteria` debe ser comprobable, no una intencion vaga.
+  - Para proyectos web nuevos, planifica HTML/CSS/JavaScript vanilla autocontenido
+    y Python stdlib (http.server); FastAPI solo si ya esta disponible. No requieras
+    npm, descargas, dependencias nuevas ni compilacion en red.
+  - Un calendario necesita navegacion de meses y CRUD persistente de eventos.
+    Un contador de calorias necesita SQLite o JSON, CRUD y calculos comprobables.
+    Incluye pruebas pytest de comportamiento y persistencia, con Ruff e imports
+    ordenados y lineas de hasta 100 caracteres; existencia de archivos no demuestra
+    interacciones en navegador. Respeta los limites sin omitir las pruebas.
   - Si la intencion es "question" o "inspect", planifica SOLO trabajo de lectura: no
     incluyas ninguna subtarea que escriba.
   - Si la intencion es "out_of_scope", no planifiques la accion prohibida.
@@ -878,6 +890,18 @@ Reglas obligatorias:
   - Respeta el criterio de termino de la subtarea: si no puedes cumplirlo, deja
     `files` vacio y explicalo en `rationale` en lugar de proponer un cambio falso.
   - No propongas mas archivos de los que permite el alcance declarado.
+  - Para proyectos web nuevos, prefiere HTML, CSS y JavaScript vanilla
+    autocontenidos, sin npm, CDN, descargas ni compilacion en red. Si hace falta
+    servidor usa Python stdlib (http.server); FastAPI solo si ya esta disponible,
+    sin anadir dependencias. Documenta como arrancarlo.
+  - Calendario: implementa navegacion entre meses y CRUD persistente de eventos.
+    Calorias: implementa CRUD de alimentos/registros, calculos de calorias y
+    persistencia SQLite o JSON, validando entradas y errores.
+  - Incluye pruebas pytest reales de CRUD, persistencia y calculos, ademas de
+    estructura. No escribas pruebas solo para obtener exit 0. La existencia de
+    HTML/JS no verifica interacciones web: declara ese limite sin navegador.
+  - Entrega una implementacion pequena y completa dentro del alcance: no omitas
+    pruebas ni funcionalidades solicitadas para fingir completitud.
   - En archivos Python (.py), cumple Ruff (I001): agrupa los imports al inicio sin lineas en blanco entre imports del mismo bloque y deja exactamente dos lineas en blanco (dos saltos vacios) despues del bloque de imports antes de la primera funcion o clase.
 """ + AVISO_NO_CONFIABLE
 
@@ -961,31 +985,34 @@ def _respetar_limites(propuesta: CodeProposal, scope: Scope) -> tuple[CodePropos
     if not propuesta.files:
         return propuesta, None
 
-    motivo: str | None = None
     archivos = list(propuesta.files)
+    descartados: list[str] = []
 
-    if len(archivos) > scope.max_files_changed:
+    def es_prueba(archivo: FileProposal) -> bool:
+        nombre = Path(archivo.path).name
+        return (
+            nombre.startswith("test_") and nombre.endswith(".py")
+        ) or nombre.endswith("_test.py")
+
+    def descartar() -> None:
+        candidatos = [i for i, archivo in enumerate(archivos) if not es_prueba(archivo)]
+        indice = candidatos[-1] if candidatos else len(archivos) - 1
+        descartados.append(archivos.pop(indice).path)
+
+    while len(archivos) > scope.max_files_changed:
+        descartar()
+    while archivos and (
+        sum(_contar_lineas(f.new_content or "") for f in archivos) > scope.max_lines_changed
+    ):
+        descartar()
+
+    motivo = None
+    if descartados:
         motivo = (
-            f"la propuesta tocaba {len(archivos)} archivos y el alcance permite "
-            f"{scope.max_files_changed}: se conservan los primeros"
+            f"propuesta parcial: limites de {scope.max_files_changed} archivos y "
+            f"{scope.max_lines_changed} lineas; se descarto: " + ", ".join(descartados)
+            + ". Se requiere reducir o replantear el proyecto antes de aprobarlo."
         )
-        archivos = archivos[: scope.max_files_changed]
-
-    # Limite de lineas: se van descartando archivos por el final hasta que el
-    # total de lineas de contenido nuevo quepa.
-    def _lineas(fs: list[FileProposal]) -> int:
-        return sum(_contar_lineas(f.new_content or "") for f in fs)
-
-    while archivos and _lineas(archivos) > scope.max_lines_changed:
-        quitado = archivos.pop()
-        extra = (
-            f"la propuesta superaba {scope.max_lines_changed} lineas y el alcance "
-            f"permite {scope.max_lines_changed}: se descarto '{quitado.path}'"
-            if motivo is None
-            else f"; ademas se descarto '{quitado.path}' por el limite de lineas"
-        )
-        motivo = (motivo or "") + extra if motivo else extra
-
     return propuesta.model_copy(update={"files": archivos}), motivo
 
 
@@ -1274,6 +1301,8 @@ def coder(state: RunState) -> dict:
     }
     if avisos:
         salida["errors"] = errores
+        salida["status"] = RunStatus.NEEDS_HUMAN
+        salida["next_step"] = None
     return salida
 
 
@@ -1345,6 +1374,8 @@ def apply_sandbox(state: RunState) -> dict:
     Nunca propaga una excepcion: un fallo del sandbox se convierte en un error
     tipado y la ejecucion termina en `needs_human`, no en una traza de LangGraph.
     """
+    if state.status.is_terminal:
+        return {"updated_at": _ahora()}
     if state.options.mode != "FULL_PROPOSAL":
         return _escalar(state, _error(state, "MODE_DENIED", "supervisor",
             "El modo seleccionado no permite esta operacion", recuperable=False))
@@ -1574,10 +1605,11 @@ Reglas obligatorias:
     distinto de cero, la decision no puede ser "accept". El sistema lo vetara de
     todos modos, pero aprobarlo tu seria un error de criterio.
   - **No bloquees con pruebas en verde por preferencias o recomendaciones opcionales.**
-    Si todas las pruebas registradas tienen `exit 0` y el cambio implementa los
-    archivos y funciones pedidos por el usuario, tu decision DEBE ser `"accept"`
-    (con `required_fixes` vacio). No uses `"request_changes"` para pedir mejoras
-    estilisticas, parametros opcionales como `rel=` o casos adicionales no pedidos.
+    No uses `"request_changes"` para mejoras estilisticas o casos no pedidos.
+    Las pruebas verdes no sustituyen una revision independiente: puedes pedir
+    cambios por problemas concretos de seguridad, funcionalidad, integridad de
+    datos o alcance, incluso con `exit 0`, aportando evidencia real y una
+    correccion accionable. Acepta si cumple la peticion y no hay esos problemas.
   - Cada `finding` necesita `evidence` real: un fragmento de la salida de las
     pruebas, del diff o de la peticion. Sin evidencia, un hallazgo es una opinion.
   - `summary` resume el juicio en una o dos frases. No repitas la evidencia entera.

@@ -113,6 +113,12 @@ export interface Project {
   created_at: string;
 }
 
+export interface ProjectRequest {
+  name: string;
+  repo_path: string;
+  create_if_missing?: boolean;
+}
+
 /** Un fichero tocado por el cambio, con su recuento de lineas. */
 export interface FileChange {
   path: string;
