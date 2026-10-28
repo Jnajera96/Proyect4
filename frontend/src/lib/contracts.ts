@@ -375,6 +375,7 @@ export const ETIQUETA_ESTADO: Record<RunStatus, string> = {
   running: "ejecutando",
   awaiting_human_requirements_confirmation: "esperando confirmación de requisitos",
   awaiting_approval: "esperando aprobación",
+  paused: "pausada",
   completed: "completada",
   failed: "fallida",
   needs_human: "requiere intervención",

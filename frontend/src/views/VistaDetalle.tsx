@@ -36,6 +36,7 @@ function tonoDeEstado(estado: string): "" | "ok" | "aviso" | "error" | "acento" 
   if (estado.startsWith("awaiting")) return "aviso";
   if (estado === "needs_human") return "error";
   if (estado === "running") return "acento";
+  if (estado === "paused") return "aviso";
   return "";
 }
 
@@ -110,6 +111,38 @@ export function VistaDetalle({
             <span className="tenue">
               siguiente paso: <span className="mono">{estado.next_step}</span>
             </span>
+          ) : null}
+          {estado.status === "running" || estado.status === "planned" ? (
+            <button
+              id="btn-pausar"
+              className="sutil"
+              onClick={async () => {
+                try {
+                  await api.pausarRun(estado.run_id);
+                  alRefrescar(estado.run_id);
+                } catch (causa) {
+                  setErrorRollback(alFallo(causa));
+                }
+              }}
+            >
+              Pausar ejecución
+            </button>
+          ) : null}
+          {estado.status === "paused" ? (
+            <button
+              id="btn-reanudar-pausa"
+              className="primario"
+              onClick={async () => {
+                try {
+                  await api.reanudarRunPausado(estado.run_id);
+                  alReanudar(estado.run_id);
+                } catch (causa) {
+                  setErrorRollback(alFallo(causa));
+                }
+              }}
+            >
+              Reanudar ejecución
+            </button>
           ) : null}
           <button className="sutil" style={{ marginLeft: "auto" }} onClick={() => alRefrescar(estado.run_id)}>
             Releer del servidor

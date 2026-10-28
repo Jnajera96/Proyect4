@@ -341,6 +341,21 @@ def _valor_de_aprobacion(peticion: ApproveRequest) -> str | dict:
     return peticion.decision.value
 
 
+class BackupConfigRequest(BaseModel):
+    folder: str | None = Field(default=None, max_length=500)
+    enabled: bool = True
+
+
+class ExportVaultRequest(BaseModel):
+    password: str = Field(min_length=12, max_length=1024)
+
+
+class ImportVaultRequest(BaseModel):
+    archive_b64: str = Field(min_length=1)
+    password: str = Field(min_length=12, max_length=1024)
+    repo_mapping: dict[str, str] = Field(default_factory=dict)
+
+
 def _detalle_validacion(exc: ValidationError) -> list[dict]:
     """Convierte los errores de Pydantic en algo serializable.
 
@@ -427,6 +442,11 @@ def registrar_manejadores_de_error(app: FastAPI) -> None:
         return JSONResponse(status_code=422, content=_cuerpo(exc, "STT_ERROR"))
 
     from ai_swe.tools.rollback import RollbackError
+    from ai_swe.state.continuity import ContinuityError
+
+    @app.exception_handler(ContinuityError)
+    async def _continuity(_peticion: Request, exc: ContinuityError):
+        return JSONResponse(status_code=409, content=_cuerpo(exc, "CONTINUITY_ERROR"))
 
     @app.exception_handler(RollbackError)
     async def _rollback(_peticion: Request, exc: RollbackError):
@@ -1111,6 +1131,94 @@ def crear_app(
             },
         )
         return estado
+
+    @app.post(
+        "/runs/{run_id}/pause", response_model=RunState, dependencies=[OPERAR]
+    )
+    def pausar_run(
+        run_id: str,
+        identidad: Identidad | None = Depends(_identidad),
+    ) -> RunState:
+        """Solicita una pausa manual cooperativa en frontera de nodo."""
+        estado = motor.request_pause(run_id)
+        _auditar("ejecucion.pausada", identidad, {"run_id": run_id})
+        return estado
+
+    @app.post(
+        "/runs/{run_id}/resume", response_model=RunState, dependencies=[OPERAR]
+    )
+    def reanudar_pausa_run(
+        run_id: str,
+        identidad: Identidad | None = Depends(_identidad),
+    ) -> RunState:
+        """Reanuda una ejecucion en pausa manual (`paused`)."""
+        estado = motor.get(run_id)
+        if estado.status is not RunStatus.PAUSED:
+            raise NothingToResume(
+                f"la ejecucion {run_id} no esta en pausa manual (estado: {estado.status.value})"
+            )
+        _auditar("ejecucion.reanudada", identidad, {"run_id": run_id})
+        trabajador.submit_resume_paused(run_id)
+        return motor.get(run_id)
+
+    @app.get("/continuity/status", dependencies=[LEER])
+    def estado_continuidad() -> dict:
+        return motor.continuity.backup_status()
+
+    @app.post("/continuity/backup-config", dependencies=[ADMINISTRAR])
+    def configurar_respaldo(
+        peticion: BackupConfigRequest,
+        identidad: Identidad | None = Depends(_identidad),
+    ) -> dict:
+        resultado = motor.continuity.configure_backup(
+            peticion.folder, enabled=peticion.enabled
+        )
+        _auditar(
+            "continuidad.respaldo_configurado",
+            identidad,
+            {"enabled": resultado["enabled"], "backup_dir": resultado["backup_dir"] or ""},
+        )
+        return resultado
+
+    @app.post("/continuity/export", dependencies=[ADMINISTRAR])
+    def exportar_boveda(
+        peticion: ExportVaultRequest,
+        identidad: Identidad | None = Depends(_identidad),
+    ) -> dict:
+        import base64
+
+        archive = motor.continuity.export_archive(
+            peticion.password, active_runs=trabajador.active
+        )
+        _auditar("continuidad.exportada", identidad, {"bytes": len(archive)})
+        return {
+            "filename": f"aiswe-{motor.continuity.owner[:8]}.aiswe-vault",
+            "archive_b64": base64.b64encode(archive).decode("ascii"),
+            "size": len(archive),
+        }
+
+    @app.post("/continuity/import", dependencies=[ADMINISTRAR])
+    def importar_boveda(
+        peticion: ImportVaultRequest,
+        identidad: Identidad | None = Depends(_identidad),
+    ) -> dict:
+        import base64
+
+        try:
+            raw = base64.b64decode(peticion.archive_b64, validate=True)
+        except Exception as exc:
+            raise ContinuityError("El archivo .aiswe-vault en base64 no es valido") from exc
+        resultado = motor.continuity.import_archive(
+            raw,
+            peticion.password,
+            repo_mapping=peticion.repo_mapping,
+        )
+        _auditar(
+            "continuidad.importada",
+            identidad,
+            {"runs": len(resultado["restored_runs"])},
+        )
+        return resultado
 
     @app.post("/runs/{run_id}/cancel", status_code=501, dependencies=[OPERAR])
     def cancelar_run(run_id: str) -> dict:

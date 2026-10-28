@@ -47,6 +47,7 @@ class RunStatus(StrEnum):
     RUNNING = "running"
     AWAITING_HUMAN_REQUIREMENTS_CONFIRMATION = "awaiting_human_requirements_confirmation"
     AWAITING_APPROVAL = "awaiting_approval"
+    PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
     NEEDS_HUMAN = "needs_human"

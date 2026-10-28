@@ -53,6 +53,11 @@ class RunWorker:
             raise RuntimeError("el trabajador esta cerrado")
         self._submit(self._reanudar_seguro, run_id, decision)
 
+    def submit_resume_paused(self, run_id: str) -> None:
+        if self._cerrado:
+            raise RuntimeError("el trabajador esta cerrado")
+        self._submit(self._reanudar_pausa_seguro, run_id)
+
     @property
     def active(self):
         with self._active_lock:
@@ -101,6 +106,17 @@ class RunWorker:
             self._engine.reanudar_reclamada(run_id, decision)
         except Exception as exc:  # noqa: BLE001
             log.exception("la reanudacion de %s fallo", run_id)
+            self._engine.abortar(
+                run_id,
+                error_class="RESUME_EXCEPTION",
+                message=f"{type(exc).__name__}: {exc}"[:1000],
+            )
+
+    def _reanudar_pausa_seguro(self, run_id: str) -> None:
+        try:
+            self._engine.resume_paused(run_id)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("la reanudacion de pausa de %s fallo", run_id)
             self._engine.abortar(
                 run_id,
                 error_class="RESUME_EXCEPTION",

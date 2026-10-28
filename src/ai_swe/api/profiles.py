@@ -332,6 +332,45 @@ def create_profile_app(settings: Settings) -> FastAPI:
     async def login(request: Request, credentials: Credentials):
         return await authenticate(request, credentials)
 
+    @app.post("/auth/import-vault")
+    async def import_vault_profile(request: Request):
+        import base64
+        from ai_swe.state.continuity import ContinuityError, import_vault_to_profile
+
+        manager.throttle(request.client.host if request.client else "local")
+        if request.headers.get("content-type", "").split(";")[0] != "application/json":
+            raise HTTPException(415, "Usa JSON")
+        try:
+            body = await request.json()
+            archive_raw = base64.b64decode(body["archive_b64"], validate=True)
+            password = str(body["password"])
+            new_name = body.get("name")
+            new_password = body.get("new_password") or password
+            repo_mapping = body.get("repo_mapping") or {}
+            profile = await run_in_threadpool(
+                import_vault_to_profile,
+                manager.store,
+                archive_raw,
+                password,
+                new_name=new_name,
+                new_password=new_password,
+                repo_mapping=repo_mapping,
+            )
+        except (KeyError, ValueError, OSError, VaultError, ContinuityError) as exc:
+            raise HTTPException(400, str(exc) or "No se pudo importar el respaldo") from None
+        session = await manager.login(profile)
+        response = JSONResponse(status(session), status_code=201)
+        response.set_cookie(
+            COOKIE,
+            session.token,
+            httponly=True,
+            samesite="strict",
+            secure=request.url.scheme == "https",
+            path="/",
+            max_age=settings.profile_session_seconds,
+        )
+        return response
+
     @app.post("/auth/logout")
     async def logout(request: Request):
         session = require_session(request)

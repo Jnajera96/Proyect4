@@ -102,10 +102,14 @@ class RunEngine:
         # motor directamente.
         self._settings = settings
         from ai_swe.state.memory import MemoryStore
+        from ai_swe.state.continuity import ContinuityStore
         from ai_swe.tools.rollback import RollbackStore
         owner = (settings.profile_id or "legacy") if settings else "legacy"
+        wt_root = settings.workspace_root if settings else None
         self.memory = MemoryStore(store._db_path, owner)
         self.rollbacks = RollbackStore(store._db_path, owner)
+        self.continuity = ContinuityStore(store._db_path, owner, worktrees_root=wt_root)
+        self._pause_requested: set[str] = set()
         # El grafo se compila **por hilo**, no una sola vez. El checkpointer lleva
         # una conexion SQLite, y compartir una conexion entre el hilo de la
         # peticion y los trabajadores producia fallos intermitentes en el `commit`.
@@ -351,6 +355,47 @@ class RunEngine:
             self._store.sync(nuevo)
             return nuevo
 
+    def request_pause(self, run_id: str) -> RunState:
+        """Solicita una pausa manual cooperativa en frontera de nodo."""
+        estado = self.get(run_id)
+        if estado.status.is_terminal:
+            raise NothingToResume(
+                f"la ejecucion {run_id} ya esta en estado terminal ({estado.status.value})"
+            )
+        if estado.status.is_awaiting_human or estado.status is RunStatus.PAUSED:
+            self.continuity.capture_run(estado)
+            return estado
+        lock = self._lock_de(run_id)
+        if lock.acquire(blocking=False):
+            try:
+                actual = self.get(run_id)
+                if not actual.status.is_terminal and not actual.status.is_awaiting_human:
+                    self.continuity.set_checkpoint_status(run_id, RunStatus.PAUSED)
+                    actual = self.get(run_id)
+                    self.continuity.capture_run(actual)
+                return actual
+            finally:
+                lock.release()
+        with self._locks_guard:
+            self._pause_requested.add(run_id)
+        return estado
+
+    def resume_paused(self, run_id: str) -> RunState:
+        """Reanuda explicitamente una ejecucion en estado `paused`."""
+        with self._lock_de(run_id):
+            estado = self.get(run_id)
+            if estado.status is not RunStatus.PAUSED:
+                raise NothingToResume(
+                    f"la ejecucion {run_id} no esta en pausa manual (estado: {estado.status.value})"
+                )
+            with self._locks_guard:
+                self._pause_requested.discard(run_id)
+            self.continuity.set_checkpoint_status(run_id, RunStatus.RUNNING)
+            config = self._config(run_id)
+            if self._app.get_state(config).values:
+                return self._ejecutar(None, run_id)
+            return self._ejecutar(self._store.initial_state(run_id), run_id)
+
     # ---------------------------------------------------------------- interno
     @staticmethod
     def _config(run_id: str) -> dict:
@@ -386,6 +431,14 @@ class RunEngine:
                 current = self._estado_actual(config, run_id)
                 self._store.sync(current)
                 self.memory.project(current)
+                self.continuity.capture_run(current)
+                with self._locks_guard:
+                    pausar = run_id in self._pause_requested
+                    if pausar:
+                        self._pause_requested.discard(run_id)
+                if pausar and not current.status.is_terminal and not current.status.is_awaiting_human:
+                    self.continuity.set_checkpoint_status(run_id, RunStatus.PAUSED)
+                    break
 
         return self._persistir(run_id, self._estado_actual(config, run_id))
 
@@ -400,6 +453,7 @@ class RunEngine:
 
         self._store.sync(estado)
         self.memory.project(estado)
+        self.continuity.capture_run(estado)
         # F11 (AUD-11): `run.status`, `run.report` y `run.error` **se retiraron**.
         #
         # Que los sustituye:
@@ -513,7 +567,11 @@ class RunEngine:
         cambios- cuentan. Cualquier otro estado no terminal al volver del grafo si
         lo es, y significa que la topologia tiene un camino sin salida.
         """
-        if estado.status.is_terminal or estado.status.is_awaiting_human:
+        if (
+            estado.status.is_terminal
+            or estado.status.is_awaiting_human
+            or estado.status is RunStatus.PAUSED
+        ):
             return estado
 
         datos = estado.model_dump()

@@ -265,6 +265,64 @@ export const api = {
       method: "POST",
     }),
 
+  pausarRun: (runId: string) =>
+    pedir<RunState>(`/runs/${encodeURIComponent(runId)}/pause`, {
+      method: "POST",
+    }),
+
+  reanudarRunPausado: (runId: string) =>
+    pedir<RunState>(`/runs/${encodeURIComponent(runId)}/resume`, {
+      method: "POST",
+    }),
+
+  estadoContinuidad: () =>
+    pedir<{
+      enabled: boolean;
+      backup_dir: string | null;
+      deferred: boolean;
+      last_backup_path: string | null;
+      last_backup_at: string | null;
+      status: string;
+      error: string | null;
+    }>("/continuity/status"),
+
+  configurarRespaldo: (folder: string | null, enabled = true) =>
+    pedir<{
+      enabled: boolean;
+      backup_dir: string | null;
+      deferred: boolean;
+      last_backup_path: string | null;
+      last_backup_at: string | null;
+      status: string;
+      error: string | null;
+    }>("/continuity/backup-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder, enabled }),
+    }),
+
+  exportarBoveda: (password: string) =>
+    pedir<{ filename: string; archive_b64: string; size: number }>("/continuity/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    }),
+
+  importarBoveda: (archiveB64: string, password: string, repoMapping: Record<string, string>) =>
+    pedir<{
+      restored_runs: { run_id: string; status: string }[];
+      rebound_repositories: Record<string, string>;
+      reconstructed_worktrees: Record<string, string>;
+    }>("/continuity/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        archive_b64: archiveB64,
+        password,
+        repo_mapping: repoMapping,
+      }),
+    }),
+
   /** El informe final de una ejecucion, si ya existe. */
   informe: async (runId: string): Promise<FinalReport | null> => {
     const estado = await api.obtenerRun(runId);
