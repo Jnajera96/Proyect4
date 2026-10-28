@@ -26,6 +26,9 @@ const { PanelPlan, PanelPresupuesto } = await cargar("../src/components/evidenci
 const { VistaFlujo } = await cargar("../src/views/VistaFlujo.tsx");
 const { api } = await cargar("../src/lib/api.ts");
 const { VisorDiff } = await cargar("../src/components/VisorDiff.tsx");
+const { calcular } = await cargar("../src/components/DiagramaFlujo.tsx");
+const { actividadesPendientes, ActividadPipeline } = await cargar("../src/components/ActividadPipeline.tsx");
+const { PuertaRequisitos } = await cargar("../src/components/PuertaRequisitos.tsx");
 
 const decision = (valor) => ({
   action: "promote_changes", actor: "usuario", decided_at: "2026-10-14T12:00:00Z",
@@ -50,6 +53,56 @@ function estado(cambios = {}) {
   };
 }
 const informe = { summary: "completado", changes_applied: ["app.py (+1/-0)"], tests_executed: [], pending: [], review: "accept" };
+const evento = (kind, seq, data = {}) => ({ kind, seq, at: "2026-10-28T12:00:00Z", data });
+
+test("inspect y PLAN_ONLY muestran No aplica para etapas que no ejecutaran", () => {
+  for (const cambios of [{ interpretation: { intent: "inspect" } }, { options: { mode: "PLAN_ONLY" } }]) {
+    const run = estado({ status: "completed", artifacts: { diff: "", changed_files: [] }, ...cambios });
+    for (const e of calcular(run).filter(e => ["coder", "pruebas", "revisor", "aprobacion", "promocion"].includes(e.id))) {
+      assert.equal(e.estado, "omitida", e.id);
+      assert.match(e.detalle, /No aplica/);
+    }
+  }
+});
+test("bloqueo terminal y Coder vacio no se muestran como completados", () => {
+  const run = estado({ status: "needs_human", artifacts: { diff: "", changed_files: [] },
+    outputs: { coder_output: { diff: "", rationale: "fallback" }, researcher_output: null, reviewer_output: null } });
+  const etapas = calcular(run);
+  assert.equal(etapas.find(e => e.id === "coder").estado, "fallida");
+  assert.equal(etapas.find(e => e.id === "pruebas").estado, "bloqueada");
+});
+test("evento de prueba mantiene etapa activa aunque ya exista evidencia de otro objetivo", () => {
+  const run = estado({ evidence: { test_runs: [{ target: "pytest.unit", exit_code: 0 }] } });
+  const eventos = [evento("test_target_started", 1, { node: "run_tests", target: "ruff.check" })];
+  assert.equal(calcular(run, eventos).find(e => e.id === "pruebas").estado, "en-curso");
+});
+test("actividad empareja objetivos y llamadas reales, sin fingir exito", () => {
+  const base = { node: "coder", role: "coder", mode: "remote", model: "Qwen/test", provider: "nscale" };
+  const eventos = [evento("node_started", 1, base), evento("model_request_started", 2, base)];
+  assert.equal(actividadesPendientes(eventos).length, 2);
+  eventos.push(evento("model_response_received", 3, base), evento("node_completed", 4, base));
+  assert.equal(actividadesPendientes(eventos).length, 0);
+  eventos.push(evento("test_target_started", 5, { node: "run_tests", target: "pytest.unit" }));
+  assert.equal(actividadesPendientes(eventos).length, 1);
+  eventos.push(evento("test_target_completed", 6, { node: "run_tests", target: "pytest.unit", exit_code: 5, evidence: { stdout: "no tests ran", stderr: "literal stderr" } }));
+  const html = renderToStaticMarkup(React.createElement(ActividadPipeline, { eventos, estado: estado() }));
+  assert.match(html, /Código de salida: 5/);
+  assert.match(html, /no tests ran/);
+  assert.match(html, /literal stderr/);
+  assert.match(html, /Qwen\/test/);
+  assert.doesNotMatch(html, /PASS/);
+  assert.equal(actividadesPendientes(eventos).length, 0);
+});
+test("texto escrito distingue captura literal de intencion heuristica y exige proyecto para modificar", () => {
+  const run = estado({ status: "awaiting_human_requirements_confirmation", interpretation: {
+    intent: "modify", confidence: 0.5, constraints: [], rationale: "reglas", scope: { repo_path: "(sin repositorio configurado)", allowed_paths: [], protected_paths: [] },
+  } });
+  const html = renderToStaticMarkup(React.createElement(PuertaRequisitos, { estado: run, alDecidir() {}, alFallo() {} }));
+  assert.match(html, /Fidelidad de captura: <strong>100%/);
+  assert.match(html, /no calibrada/);
+  assert.match(html, /repositorio Git autorizado/);
+  assert.match(html, /id="btn-confirmar-requisitos"[^>]*disabled/);
+});
 function etapas(run) {
   const html = renderToStaticMarkup(React.createElement(DiagramaFlujo, { estado: run }));
   const filas = [...html.matchAll(/<li class="flujo-etapa ([^"]+)">([\s\S]*?)<\/li>/g)];
@@ -83,7 +136,7 @@ test("solicitar cambios, nueva revision y approved usa la ultima decision", () =
 });
 test("ultima decision rejected impide promocion aunque antes hubiera approved", () => {
   const e = etapas(estado({ status: "cancelled", approvals: [decision("approved"), decision("rejected")] }));
-  assert.equal(e["Promoción al repositorio"].clase, "pendiente");
+  assert.equal(e["Promoción al repositorio"].clase, "bloqueada");
   assert.match(e["Aprobación humana"].contenido, /Decisión: rejected/);
 });
 test("completed sin evidencia final de cambios no afirma promocion", () => {
@@ -162,4 +215,38 @@ test("una repeticion exitosa sustituye el fallo anterior del mismo target", () =
     { target:'unit', exit_code:1 }, { target:'unit', exit_code:0 },
   ] } }));
   assert.equal(e["Pruebas"].clase, "hecha");
+});
+
+const { ModelSelector, pricingForSelection } = await cargar("../src/components/ModelConfiguration.tsx");
+test("selector distingue la evidencia E2E de candidatos y admite identificador personalizado", () => {
+  const html = renderToStaticMarkup(React.createElement(ModelSelector, {
+    name: "model_name", label: "Modelo Coder", value: "mi-organizacion/mi-modelo:proveedor", onChange() {},
+  }));
+  assert.match(html, /Validación E2E previa/);
+  assert.match(html, /pendientes de prueba/);
+  assert.match(html, /Otro modelo/);
+  assert.match(html, /mi-organizacion\/mi-modelo:proveedor/);
+  assert.match(html, /id="model_name-custom"/);
+  assert.equal((html.match(/<option/g) || []).length, 12); // diez modelos, vacío y personalizado
+});
+test("selector reviewer conserva la herencia de Coder sin inventar un modelo", () => {
+  const html = renderToStaticMarkup(React.createElement(ModelSelector, {
+    name: "reviewer_model", label: "Modelo Reviewer", value: "", onChange() {},
+  }));
+  assert.match(html, /Usar el mismo modelo que Coder/);
+  assert.match(html, /name="reviewer_model" value=""/);
+});
+test("tarifas del catálogo convierten millón a mil y conservan alias de respuesta y entradas propias", () => {
+  const old = { model: "modelo-propio", input_per_1k: 2, output_per_1k: 3, currency: "USD" };
+  const id = "Qwen/Qwen2.5-Coder-32B-Instruct:nscale";
+  const prices = JSON.parse(pricingForSelection([id, id], JSON.stringify([old])));
+  assert.equal(prices.length, 3);
+  assert.deepEqual(prices.find(p => p.model === "modelo-propio"), old);
+  for (const alias of [id, id.split(":")[0]]) {
+    const price = prices.find(p => p.model === alias);
+    assert.equal(price.input_per_1k, 0.00006);
+    assert.equal(price.output_per_1k, 0.0002);
+  }
+  assert.throws(() => pricingForSelection(["modelo-no-catalogado"], ""), /propias tarifas/);
+  assert.throws(() => pricingForSelection([id], "{}"), /lista JSON/);
 });

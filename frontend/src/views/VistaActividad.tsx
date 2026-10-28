@@ -4,6 +4,7 @@ import { ETIQUETA_ESTADO } from "../lib/contracts";
 import type { EstadoConexion } from "../hooks/useEventosRun";
 import { Chip, EstadoVacio, Panel } from "../components/ui";
 import { fechaHora } from "../lib/formato";
+import { ActividadPipeline } from "../components/ActividadPipeline";
 
 export function VistaActividad({ estado, eventos, conexion }: {
   estado: RunState | null; eventos: RunEvent[]; conexion: EstadoConexion;
@@ -12,6 +13,7 @@ export function VistaActividad({ estado, eventos, conexion }: {
   const visibles = eventos.filter(e => filtro === "todos" || (filtro === "decisiones" ? e.kind === "run.awaiting_human" : filtro === "errores" ? e.kind === "run.failed" : e.kind.endsWith(".completed")));
   return <>
     <header className="pagina-titulo"><h1>Actividad en tiempo real</h1><p>Eventos recibidos del motor para la ejecución seleccionada.</p></header>
+    {estado ? <ActividadPipeline eventos={eventos} estado={estado} /> : null}
     <Panel><div className="actividad-estados">
       <div><span className="tenue">Conexión SSE</span><Chip tono={conexion === "error" ? "error" : conexion === "conectado" ? "ok" : ""}>{conexion}</Chip></div>
       <div><span className="tenue">Estado de ejecución</span><strong>{estado ? ETIQUETA_ESTADO[estado.status] : "Sin ejecución"}</strong></div>

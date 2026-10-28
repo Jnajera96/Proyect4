@@ -1,5 +1,5 @@
 /** Adaptación de WorkflowPipeline de Antigravity al estado canónico actual. */
-import type { RunState } from "../lib/contracts";
+import type { RunEvent, RunState } from "../lib/contracts";
 import { calcular, type Etapa } from "./DiagramaFlujo";
 import { Chip } from "./ui";
 const CONTRATOS: Record<string, string> = {
@@ -7,11 +7,11 @@ const CONTRATOS: Record<string, string> = {
   coder: "outputs.coder_output", pruebas: "evidence.test_runs", revisor: "ReviewVerdict",
   aprobacion: "approvals", promocion: "final_report",
 };
-const ETIQUETAS = { hecha: "completada", "en-curso": "en curso", esperando: "espera decisión humana", fallida: "fallida", pendiente: "pendiente" };
-const TONOS = { hecha: "ok", "en-curso": "acento", esperando: "aviso", fallida: "error", pendiente: "" } as const;
-export function SecuenciaAgentes({ estado, alEtapa }: { estado: RunState; alEtapa: (etapa: Etapa) => void }) {
+const ETIQUETAS = { hecha: "completada", "en-curso": "en curso", esperando: "espera decisión humana", fallida: "fallida", pendiente: "pendiente", omitida: "No aplica", bloqueada: "bloqueada / no ejecutada" };
+const TONOS = { hecha: "ok", "en-curso": "acento", esperando: "aviso", fallida: "error", pendiente: "", omitida: "", bloqueada: "aviso" } as const;
+export function SecuenciaAgentes({ estado, alEtapa, eventos = [] }: { estado: RunState; alEtapa: (etapa: Etapa) => void; eventos?: RunEvent[] }) {
   return <ol className="secuencia-agentes" aria-label="Secuencia coordinada de ocho etapas">
-    {calcular(estado).map((etapa, indice) => <li key={etapa.id} className={`flujo-etapa ${etapa.estado}`}>
+    {calcular(estado, eventos).map((etapa, indice) => <li key={etapa.id} className={`flujo-etapa ${etapa.estado}`}>
       <button className={`secuencia-etapa ${etapa.estado}`} onClick={() => alEtapa(etapa)} aria-label={`Inspeccionar etapa: ${etapa.nombre}`}>
         <span className="secuencia-indice" aria-hidden="true">{indice + 1}</span>
         <span className="secuencia-rol"><strong>{etapa.nombre}</strong><span>{etapa.detalle}</span></span>

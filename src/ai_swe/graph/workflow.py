@@ -63,6 +63,7 @@ from langgraph.graph import END, START, StateGraph
 
 from ai_swe.contracts import RunState
 from ai_swe.graph import nodes
+from ai_swe.graph.activity import activity_node
 
 
 def construir_grafo(*, settings=None) -> StateGraph:
@@ -70,42 +71,44 @@ def construir_grafo(*, settings=None) -> StateGraph:
 
     def configured_node(node):
         if settings is None:
-            return node
+            return activity_node(node)
         from ai_swe.graph.model_routing import bind_settings_node
 
-        return bind_settings_node(node, settings)
+        return activity_node(bind_settings_node(node, settings))
 
     def model_node(node, role):
         if settings is None or (not settings.remote_model_roles and not settings.profile_id):
             return configured_node(node)
         from ai_swe.graph.model_routing import bind_model_node
 
-        return bind_model_node(node, role, settings, nodes.SIN_GATEWAY)
+        return activity_node(
+            bind_model_node(node, role, settings, nodes.SIN_GATEWAY),
+            role,
+            "remote" if role in settings.remote_model_roles else "deterministic",
+        )
 
     grafo.add_node("interpret", model_node(nodes.interpret, "requirements_analyst"))
-    grafo.add_node("mark_awaiting_requirements", nodes.mark_awaiting_requirements)
-    grafo.add_node("confirm_requirements_gate", nodes.confirm_requirements_gate)
+    grafo.add_node("mark_awaiting_requirements", activity_node(nodes.mark_awaiting_requirements))
+    grafo.add_node("confirm_requirements_gate", activity_node(nodes.confirm_requirements_gate))
     grafo.add_node("plan", model_node(nodes.plan, "supervisor"))
     grafo.add_node("researcher", configured_node(nodes.researcher))
-    grafo.add_node("answer_direct", nodes.answer_direct)
-    grafo.add_node("explain_limits", nodes.explain_limits)
+    grafo.add_node("answer_direct", activity_node(nodes.answer_direct))
+    grafo.add_node("explain_limits", activity_node(nodes.explain_limits))
     grafo.add_node("coder", model_node(nodes.coder, "coder"))
     grafo.add_node("apply_sandbox", configured_node(nodes.apply_sandbox))
     grafo.add_node("run_tests", configured_node(nodes.run_tests))
     grafo.add_node("reviewer", model_node(nodes.reviewer, "reviewer"))
-    grafo.add_node("mark_awaiting", nodes.mark_awaiting)
-    grafo.add_node("approval_gate", nodes.approval_gate)
+    grafo.add_node("mark_awaiting", activity_node(nodes.mark_awaiting))
+    grafo.add_node("approval_gate", activity_node(nodes.approval_gate))
     grafo.add_node("promote_changes", configured_node(nodes.promote_changes))
-    grafo.add_node("escalate", nodes.escalate)
-    grafo.add_node("escalate_no_changes", nodes.escalate_no_changes)
-    grafo.add_node("finalize", nodes.finalize)
+    grafo.add_node("escalate", activity_node(nodes.escalate))
+    grafo.add_node("escalate_no_changes", activity_node(nodes.escalate_no_changes))
+    grafo.add_node("finalize", activity_node(nodes.finalize))
 
     grafo.add_edge(START, "interpret")
     grafo.add_conditional_edges("interpret", nodes.route_after_interpret)
     grafo.add_edge("mark_awaiting_requirements", "confirm_requirements_gate")
-    grafo.add_conditional_edges(
-        "confirm_requirements_gate", nodes.route_after_requirements_gate
-    )
+    grafo.add_conditional_edges("confirm_requirements_gate", nodes.route_after_requirements_gate)
     grafo.add_conditional_edges("plan", nodes.route_after_plan)
     grafo.add_edge("explain_limits", "finalize")
     grafo.add_conditional_edges("researcher", nodes.route_after_execution)

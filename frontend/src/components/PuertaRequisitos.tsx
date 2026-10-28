@@ -46,6 +46,8 @@ export function PuertaRequisitos({
   const [rationale, setRationale] = useState(interp?.rationale ?? "");
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const sinRepositorio = !estado.options.repo_path || estado.options.repo_path.startsWith("(");
+  const requiereRepositorio = sinRepositorio && (modo === "corregir" ? intent : interp?.intent) === "modify";
 
   async function enviar(
     decision: string,
@@ -100,6 +102,8 @@ export function PuertaRequisitos({
         </div>
         <Chip tono="aviso">{ETIQUETA_ESTADO[estado.status]}</Chip>
       </header>
+      {estado.instruction.source === "text" ? <p>Fidelidad de captura: <strong>100%</strong> · texto escrito conservado literalmente. La comprensión de intención se revisa por separado.</p> : null}
+      {requiereRepositorio ? <p className="aviso" role="alert">Para modificar archivos necesitas un repositorio Git autorizado. Selecciona un proyecto registrado en el compositor e inicia una nueva ejecución; esta solicitud no tiene repositorio.</p> : null}
 
       {!interp ? (
         <p className="vacio">Aún no hay interpretación registrada.</p>
@@ -114,10 +118,10 @@ export function PuertaRequisitos({
                 {ETIQUETA_INTENT[interp.intent]}{" "}
                 <span className="tenue mono">({interp.intent})</span>
               </dd>
-              <dt>confianza</dt>
+              <dt>puntuación de intención</dt>
               <dd>
                 {(interp.confidence * 100).toFixed(0)}%
-                <span className="tenue"> · confianza declarada por el analista, no una certeza</span>
+                <span className="tenue"> · heurística declarada por el analista, no calibrada; no mide la fidelidad de captura ni la transcripción</span>
               </dd>
               <dt>repositorio</dt>
               <dd className="mono" title={interp.scope.repo_path}>
@@ -156,7 +160,7 @@ export function PuertaRequisitos({
             <button
               id="btn-confirmar-requisitos"
               className="primario"
-              disabled={ocupado}
+              disabled={ocupado || requiereRepositorio}
               onClick={() => void enviar("approved")}
             >
               Confirmar
@@ -215,7 +219,7 @@ export function PuertaRequisitos({
           </Seccion>
 
           <Fila sep>
-            <button className="primario" disabled={ocupado} onClick={corregir}>
+            <button className="primario" disabled={ocupado || requiereRepositorio} onClick={corregir}>
               Enviar correcciones
             </button>
             <button disabled={ocupado} onClick={() => setModo("revisar")}>

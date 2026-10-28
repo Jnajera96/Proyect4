@@ -1,12 +1,24 @@
 # Perfiles locales
 
-Activa perfiles con `AI_SWE_PROFILE_MODE=true` o inicia el launcher con `--profiles`.
-La distribución instalada usa perfiles por defecto. Para conservar el modo local heredado,
-configura explícitamente `AI_SWE_PROFILE_MODE=false`. No se migran datos antiguos automáticamente.
+El launcher abre por defecto el registro y acceso por nombre de usuario y contraseña,
+incluso si una configuración anterior contiene `AI_SWE_PROFILE_MODE=false`.
+Usa `python -m ai_swe.launcher` desde el entorno del proyecto o `AISWESystem.cmd`
+en el portable. El modo heredado solo se solicita expresamente con `--no-profiles`.
+Al iniciar directamente con uvicorn, activa `AI_SWE_PROFILE_MODE=true`.
+No se migran datos antiguos automáticamente.
 
 Abre `/app/`, crea un perfil con una contraseña de al menos 12 caracteres y entra a tu espacio.
 Cada persona tiene su propio historial, SQLite, worktrees, logs y bóveda cifrada.
-Sin la contraseña no se puede recuperar la bóveda.
+Si olvidas la contraseña, necesitas una clave de rescate generada previamente desde
+«Recuperación de acceso», confirmando tu contraseña actual. Guárdala fuera del equipo.
+«Olvidé mi contraseña» permite usarla una sola vez para definir otra contraseña,
+conservando la misma bóveda y datos. Después hay que generar otra clave de rescate.
+Sin contraseña ni clave previamente generada, no existe un bypass de descifrado.
+La clave no sustituye una copia de los archivos del perfil ante pérdida del equipo.
+
+El registro confirma dos contraseñas y permite mostrarlas/ocultarlas. El nombre
+admite letras, números, espacios, guiones y guion bajo; no es un correo electrónico.
+Si ya existe, inicia sesión con él o elige otro: alargar la contraseña no libera nombres.
 
 La carpeta por defecto es `users/` junto a la base configurada; puedes elegir otra con
 `AI_SWE_PROFILES_ROOT`. Usa una carpeta fuera de los repositorios de trabajo: los repositorios

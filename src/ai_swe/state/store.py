@@ -379,7 +379,7 @@ class RunStore:
         """
         momento = datetime.now(UTC)
         redactado = redact_deep(data or {})
-        carga = json.dumps(redactado, ensure_ascii=False, separators=(",", ":"))[:4000]
+        carga = json.dumps(redactado, ensure_ascii=False, separators=(",", ":"))
         with self._lock:
             fila = self._conn.execute(
                 "INSERT INTO run_events (run_id, seq, at, kind, data)"

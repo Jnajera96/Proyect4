@@ -10,7 +10,8 @@
 import { useState } from "react";
 import { api } from "../lib/api";
 import type { EstadoConexion } from "../hooks/useEventosRun";
-import type { Project, RunState } from "../lib/contracts";
+import type { Project, RunEvent, RunState } from "../lib/contracts";
+import { ActividadPipeline } from "../components/ActividadPipeline";
 import { ETIQUETA_ESTADO } from "../lib/contracts";
 import { fechaHora, hashCorto, rutaCorta } from "../lib/formato";
 import { DiagramaFlujo } from "../components/DiagramaFlujo";
@@ -42,6 +43,7 @@ function tonoDeEstado(estado: string): "" | "ok" | "aviso" | "error" | "acento" 
 
 export function VistaDetalle({
   estado,
+  eventos = [],
   hitos,
   conexion,
   proyectos,
@@ -50,6 +52,7 @@ export function VistaDetalle({
   alFallo,
 }: {
   estado: RunState | null;
+  eventos?: RunEvent[];
   hitos: { kind: string; seq: number; at: string }[];
   conexion: EstadoConexion;
   proyectos: Project[];
@@ -73,7 +76,7 @@ export function VistaDetalle({
   }
 
   const cambio = estado.outputs.coder_output;
-  const diff = estado.artifacts.diff ?? cambio?.diff ?? "";
+  const diff = estado.artifacts.diff || cambio?.diff || "";
   const proyecto = proyectos.find((p) => p.repo_path === estado.options.repo_path);
 
   // **Cuando la ejecucion esta en la puerta, la puerta es la vista.** La puerta ya
@@ -154,6 +157,7 @@ export function VistaDetalle({
       </Panel>
 
       {/* -------------------------------------------------------- Puertas */}
+      <ActividadPipeline eventos={eventos} estado={estado} />
       {estado.status === "awaiting_human_requirements_confirmation" ? (
         <PuertaRequisitos
           estado={estado}
@@ -186,12 +190,14 @@ export function VistaDetalle({
             </dd>
             <dt>confirmada</dt>
             <dd>{estado.instruction.confirmed_by_user ? "sí" : "todavía no"}</dd>
+            <dt>fidelidad de captura</dt>
+            <dd>{estado.instruction.source === "text" ? "100% · texto escrito conservado literalmente; no mide comprensión de intención." : "Entrada de voz: consulta la confianza de transcripción; no mide comprensión de intención."}</dd>
             <dt>intención</dt>
             <dd>
               {estado.interpretation?.intent ?? "—"}{" "}
               {estado.interpretation ? (
                 <span className="tenue">
-                  (confianza {(estado.interpretation.confidence * 100).toFixed(0)}%)
+                  (puntuación declarada de intención {(estado.interpretation.confidence * 100).toFixed(0)}% · heurística no calibrada, distinta de la fidelidad de captura)
                 </span>
               ) : null}
             </dd>

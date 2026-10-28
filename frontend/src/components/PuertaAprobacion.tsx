@@ -37,7 +37,7 @@ export function PuertaAprobacion({
   const [error, setError] = useState<string | null>(null);
 
   const cambio = estado.outputs.coder_output;
-  const diff = estado.artifacts.diff ?? cambio?.diff ?? "";
+  const diff = estado.artifacts.diff || cambio?.diff || "";
   const ficheros = estado.artifacts.changed_files ?? [];
   const pruebas = estado.evidence.test_runs ?? [];
   const veredicto = estado.outputs.reviewer_output;

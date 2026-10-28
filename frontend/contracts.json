@@ -86,6 +86,13 @@
     },
     "EventKind": {
       "enum": [
+        "node_started",
+        "model_request_started",
+        "model_response_received",
+        "test_target_started",
+        "test_target_completed",
+        "node_completed",
+        "node_skipped",
         "run.created",
         "run.started",
         "run.done",
@@ -222,6 +229,13 @@
         "EventKind": {
           "description": "Tipos de evento del flujo de progreso.\n\nSon un conjunto **cerrado**: el frontend puede hacer un `switch` exhaustivo y\nun tipo nuevo no se cuela sin que alguien lo note.\n\n**F10 anadio los eventos de ciclo de vida por nodo.** Hasta F9 el progreso se\ncontaba con `run.step`, que lleva `{\"node\": \"<nodo>\"}`: suficiente para pintar\nuna lista, insuficiente para un `switch` exhaustivo, porque el nombre del nodo\nviajaba como **dato** y no como **tipo**.\n\n**F11 retiro los nombres heredados (AUD-11).** Se fueron `run.step`,\n`run.status`, `run.report`, `run.error` y `run.awaiting_approval`, cada uno con\nun sustituto canonico:\n\n  - `run.step` -> los hitos por nodo (`requirements.completed`, ...);\n  - `run.status` -> `GET /runs/{id}`, que es la vista autoritativa del estado;\n  - `run.report` -> `final_report`, que viaja en el estado;\n  - `run.error` -> `estado.errors` + el desenlace `run.failed`;\n  - `run.awaiting_approval` -> `run.awaiting_human`, que cubre las dos puertas.\n\n**Se conservan** `run.created` y `run.started` (marcas de arranque sin\nsustituto canonico) y `run.done`, que **no es un alias** de nada: es la senal\ncon la que el flujo SSE se cierra en cada pausa y reanudacion.",
           "enum": [
+            "node_started",
+            "model_request_started",
+            "model_response_received",
+            "test_target_started",
+            "test_target_completed",
+            "node_completed",
+            "node_skipped",
             "run.created",
             "run.started",
             "run.done",
@@ -989,6 +1003,14 @@
         "Instruction": {
           "description": "La instruccion tal como entra al sistema: siempre texto confirmado.",
           "properties": {
+            "capture_fidelity": {
+              "default": 1.0,
+              "description": "Fidelidad de captura, no certeza semantica: texto=1; voz=confianza STT.",
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Capture Fidelity",
+              "type": "number"
+            },
             "confirmed_by_user": {
               "title": "Confirmed By User",
               "type": "boolean"

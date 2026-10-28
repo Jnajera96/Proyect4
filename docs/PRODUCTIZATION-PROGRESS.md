@@ -365,3 +365,65 @@ No se comprobó todavía el token ni se consumió inferencia o dinero.
 - **Fase M (Portabilidad de checkpoints, pausa cooperativa y recuperación `.aiswe-vault`):** estado `PAUSED` en `RunStatus`, pausa cooperativa entre nodos (`request_pause` / `resume_paused`), capturas de worktree (modificados, binarios, no rastreados y eliminados), exportación/importación cifrada `.aiswe-vault` (Scrypt + AES-256-GCM) con copia consistente SQLite y paquetes Git (`git bundle`), revinculación de rutas de repositorio/worktree preservando `checkpoint_id` y puertas humanas sin reejecutar Coder ni Reviewer, y configuración de auto-respaldo. 6 pruebas E2E en `tests/test_continuity_m.py` aprobadas.
 - **Transformación visual Nebula / Cosmic Glass UI:** tema oscuro espacial (`#050508`) con planeta/horizonte cósmico sutil, barra lateral flotante de cristal oscuro con indicador degradado violeta-azul y tarjeta de perfil, barra superior flotante con estado en píldora y controles rápidos, título con degradado violeta a cian y cursor luminoso, cuadro principal de entrada con borde luminoso violeta-cian y botón «Ejecutar» degradado, tarjetas interactivas de «Ejemplos para empezar» y línea de tiempo vertical de 3 pasos con previsualizaciones. TypeScript (`tsc --noEmit`), 24 pruebas de estado frontend y build de producción Vite aprobados.
 - El tag local `v0.1.0` (`b158d9b`) y la distribución `dist/windows-signed-python-rc2/` permanecen intactos. Cero llamadas a APIs de pago.
+
+## Revisión portable v0.2.0 — candidato experimental, 27 de octubre de 2026
+
+- Avances Antigravity verificados en Git hasta `5f230f4`; ZIP nuevo con runtime
+  CPython firmado y dependencias del lock, sin sobrescribir v0.1.0.
+- Build/frontend24 PASS; suite Python828 PASS/3 SKIP/2 FAIL por configuración
+  privada heredada. Esas dos pruebas pasan aisladas; no se declara suite limpia.
+- Paquete:14 controles de perfiles/reinicio/SQLite; Chromium4 controles; voz local
+  CPU/int8 aprobados. Sin Python/Node en PATH para el smoke ni llamadas de pago.
+- **NO listo para lanzamiento**: auto-backup sin integración productiva, importación
+  UI incompatible, recuperación post-promoción incompleta, reserva de nombre huérfana
+  y validación del archivo/esquema pendientes. Versión interna aún0.1.0.
+- Evidencia y guía: `PORTABLE-v0.2.0-TEST-REPORT.md` y
+  `ANTIGRAVITY-v0.2.0-AUDIT.md`. Falta promoción E2E sobre este ZIP y otra PC real.
+- El apartado anterior describe avances declarados; no equivale a cierre independiente
+  de K/L/M. La bóveda usa Scrypt+AES-GCM/AAD, no HKDF; la continuidad exportada no
+  incluye las credenciales del perfil. No se creó tagv0.2.0 ni se hizo push.
+
+## Selector de modelos por perfil — 27 de octubre de 2026
+
+- Diez opciones HF por rol y nombre personalizado; Reviewer puede heredar Coder.
+- Solo Qwen2.5 Coder32B:nscale tiene evidencia E2E histórica; candidatos restantes
+  diferenciados, sin pruebas pagadas nuevas ni promesa de diez modelos validados.
+- Tarifas públicas fechadas aplicables mediante botón, alias de solicitud/respuesta,
+  campos existentes de API y roles remotos explícitos conservados.
+- Frontend27 PASS, TypeScript/Vite y Chromium sobre paquete10 PASS. ZIP nuevo
+  `dist/windows-v0.2.0-model-selector-rc1/`; anteriores conservados.
+- Evidencia/instrucciones: `MODEL-SELECTION.md`. Bloqueadores del candidato de
+  continuidad permanecen pendientes; esta mejora no declara release ni producción.
+
+## Inicio explícito por usuario y contraseña — 27 de octubre de 2026
+
+- El launcher ahora fuerza perfiles por defecto, incluso frente a una variable
+  antigua AI_SWE_PROFILE_MODE=false; --profiles sigue válido y --no-profiles solicita
+  expresamente el acceso heredado. El servidor uvicorn directo mantiene su configuración.
+- --runtime-info expone profile_mode sin credenciales. El portable devuelve true aun
+  con la variable heredada en false; runtime installed, CPython firmado, frontend presente.
+- Pruebas launcher+perfiles:27 PASS; tras aislar la variable por prueba, launcher14
+  PASS y Ruff PASS. Sin migración ni alteración de datos existentes del usuario.
+- Portable nuevo `dist/windows-v0.2.0-user-login-rc1/`; incluye selector de modelos.
+  No se declara producción ni cierre de los defectos previos de continuidad.
+
+## Registro y recuperación de acceso — 28 de octubre de 2026
+
+- Campos inválidos visibles, confirmación de contraseña y Mostrar/Ocultar.
+- Nombre duplicado/inválido diferenciado sin reflejar credenciales.
+- Clave de rescate generada tras reautenticación, cifrada por propietario, de un uso;
+  nueva contraseña conserva DEK/datos y revoca sesiones. No recupera sin clave previa.
+- Frontend27 PASS; recuperación/perfiles/aislamiento26 PASS; recuperación final5 PASS;
+  Chromium fuente10 y paquete10 PASS; guard final probado con Python embebido.
+- Revisión independiente sin hallazgos críticos/importantes. No se reproduce ni se
+  inventa la causa específica del registro del equipo del usuario a partir de un aviso.
+- Acta PROFILE-RECOVERY-VALIDATION.md. Portable nuevo windows-v0.2.0-recovery-rc1.
+  Continuidad/auto-backup pendientes: no es producción ni respaldo completo de equipo.
+
+## Diagnóstico forense run-60d2055db7c6, UI dinámica y E2E real calculadora — 28 de octubre de 2026
+
+- Forense `run-60d2055db7c6`: `Analyst` clasificó `intent=modify` con `confidence=0.5` porque no había repositorio configurado (`(sin repositorio configurado)`) y la UI mostraba esa confianza sin distinguir `instruction.capture_fidelity=1.0` (100 % texto manual). `Coder` remoto (`Qwen/Qwen2.5-Coder-32B-Instruct:nscale`) generó `calculator.py` y `test_calculator.py`, pero `apply_sandbox` abortó con `SANDBOX_NO_REPO`, dejando `run_tests` sin corridas («Sin evidencia de pruebas»).
+- Correcciones backend/frontend: separación explícita entre `capture_fidelity` (100 % en texto escrito) y confianza de clasificación; verbos imperativos/infinitivos en español (`construye`, `construir`, `desarrolla`, `implementa`, `programa`, `genera`, `haz`, `crea`) clasificados con `confidence=0.9`; edición interactiva de intención y requisitos en `PuertaRequisitos`; etapas posteriores marcadas como `skipped` en modo `inspect`; bloqueo temprano `SANDBOX_NO_REPO` antes de invocar al `Coder` remoto si falta un repositorio Git válido; descubrimiento de `test_*.py` en raíz del worktree (`.` en `runner.py` y `cwd` en `sys.path` del worker `signed-python`); inyección de `stdout`/`stderr` y `required_fixes` en el reintento del `Coder`; reglas explícitas en `PROMPT_CODIFICACION` (Ruff `I001`) y `PROMPT_REVISION` (no bloquear pruebas en verde por preferencias opcionales); streaming SSE granular (`ActividadPipeline`, `InspectorEtapa`, `SecuenciaAgentes`, `DiagramaFlujo`).
+- Verificación: 77 PASS en suite focalizada Python (`test_calculator_pipeline.py`, `test_verify_calculator_e2e.py`, `test_f3_interpret_analyst.py`, `test_f5_plan_driven_execution.py`, `test_launcher.py`, `test_profile_recovery.py`), 32 PASS en `frontend/tests/estados.test.mjs`, 8/8 PASS en Chromium (`verify_dynamic_pipeline.cjs`), 14/14 PASS en smoke portable (`verify_portable_profiles.py`).
+- E2E real calculadora aprobado (`_tmp/calculator-e2e/7b2c59473aff/report.json`, `"passed": true`): `Coder` y `Reviewer` remotos con `Qwen/Qwen2.5-Coder-32B-Instruct:nscale`, `pytest.unit` (`exit_code=0`) y `ruff.check` (`exit_code=0`) reales en el sandbox, `accept` en el primer ciclo (`used_model_calls=2`, `used_cost=$0.000343 USD`), promoción tras aprobación y oráculo matemático independiente en verde (`exit_code=0`).
+- Paquete portable actualizado: `dist/windows-v0.2.0-calculator-rc1/AISWESystem-windows-x64.zip` (SHA256 `8fe147f13f3118cc28f58ee79229d851116d934050d4d5008b251174ce6dddc7`) y carpeta lista para ejecutar `dist/windows-v0.2.0-calculator-rc1/dist/AISWESystem/AISWESystem.cmd`.

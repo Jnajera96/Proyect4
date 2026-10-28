@@ -303,16 +303,16 @@ export function PanelPresupuesto({ budget }: { budget: Budget }) {
 export function HistorialAprobaciones({ aprobaciones }: { aprobaciones: Approval[] }) {
   if (!aprobaciones.length) {
     return (
-      <Panel titulo="Aprobaciones">
-        <EstadoVacio titulo="Todavía no hay ninguna decisión humana registrada">
-          Cuando alguien confirme los requisitos o apruebe el cambio, aquí quedará
-          el registro con el actor, la fecha y el hash del contenido decidido.
+      <Panel titulo="Aprobaciones de promoción">
+        <EstadoVacio titulo="Todavía no hay ninguna decisión de promoción registrada">
+          Aquí se registra la decisión sobre promover el cambio, con actor, fecha
+          y hash del contenido. La confirmación inicial de requisitos se muestra por separado.
         </EstadoVacio>
       </Panel>
     );
   }
   return (
-    <Panel titulo="Aprobaciones" nota="Registro de trazabilidad de las decisiones humanas.">
+    <Panel titulo="Aprobaciones de promoción" nota="Registro de trazabilidad de las decisiones sobre promover el cambio.">
       <ul className="aprobaciones">
         {aprobaciones.map((a, i) => (
           <li key={i}>

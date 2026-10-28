@@ -43,7 +43,7 @@ function check(value,label) {if(!value)throw Error(label);}
     passed.push('private data gated');
     button('Crear un perfil nuevo').click();
     await wait(()=>button('Crear perfil y entrar'));
-    fill('name','alice');fill('password','browser-test-password');
+    fill('name','alice');fill('password','browser-test-password');fill('password_confirmation','browser-test-password');
     authenticated=true;
     button('Crear perfil y entrar').click();
     await wait(()=>button('Configurar bóveda') && document.querySelector('#btn-crear'));
@@ -72,7 +72,7 @@ function check(value,label) {if(!value)throw Error(label);}
     check((await originalFetch('/runs')).status===401,'logout failed');
     passed.push('logout revocation');
     button('Crear un perfil nuevo').click();await wait(()=>button('Crear perfil y entrar'));
-    fill('name','bob');fill('password','browser-test-password');authenticated=true;
+    fill('name','bob');fill('password','browser-test-password');fill('password_confirmation','browser-test-password');authenticated=true;
     button('Crear perfil y entrar').click();await wait(()=>button('Configurar bóveda'));
     button('Configurar bóveda').click();await wait(()=>document.querySelector('[name="hf_token"]'));
     check(document.body.textContent.includes('Token: sin configurar'),'cross-user token');

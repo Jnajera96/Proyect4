@@ -10,6 +10,11 @@ from ai_swe.config import Settings
 from ai_swe.resources import frontend_dist
 
 
+@pytest.fixture(autouse=True)
+def isolated_profile_mode(monkeypatch):
+    monkeypatch.setenv("AI_SWE_PROFILE_MODE", "false")
+
+
 def test_listener_is_loopback_and_reserved():
     with launcher.reserve_listener(0) as listener:
         address = listener.getsockname()
@@ -75,6 +80,24 @@ def test_frozen_runner_uses_only_closed_worker_targets(monkeypatch):
 def test_worker_rejects_arbitrary_python_modules():
     with pytest.raises(SystemExit):
         launcher.main(["--run-test-target", "arbitrary.module"])
+
+
+@pytest.mark.parametrize(
+    "arguments,expected", [([], True), (["--profiles"], True), (["--no-profiles"], False)]
+)
+def test_launcher_defaults_to_user_registration_even_with_legacy_environment(
+    monkeypatch, arguments, expected
+):
+    monkeypatch.setenv("AI_SWE_PROFILE_MODE", "false")
+    observed = []
+
+    def serve(**kwargs):
+        observed.append(Settings(_env_file=None).profile_mode)
+        return 0
+
+    monkeypatch.setattr(launcher, "serve", serve)
+    assert launcher.main([*arguments, "--no-browser"]) == 0
+    assert observed == [expected]
 
 
 def test_browser_opens_actual_url_only_after_health(tmp_path, monkeypatch):

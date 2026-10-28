@@ -85,6 +85,8 @@ export function useEventosRun(runId: string | null): ResultadoSse {
 
   useEffect(() => {
     if (!runId) {
+      identidad.current = { runId: null, clave: null };
+      cursor.current = 0;
       setEventos([]);
       setConexion("inactivo");
       return;
@@ -104,9 +106,10 @@ export function useEventosRun(runId: string | null): ResultadoSse {
     if (cursor.current) parametros.set("after", String(cursor.current));
     const consulta = parametros.size ? `?${parametros}` : "";
     const fuente = new EventSource(`/runs/${encodeURIComponent(runId)}/events${consulta}`);
+    let vigente = true;
     fuenteRef.current = fuente;
 
-    fuente.onopen = () => setConexion("conectado");
+    fuente.onopen = () => { if (vigente) setConexion("conectado"); };
 
     // Un `listener` por tipo de la lista canonica. Se registran todos: un
     // `switch` sobre `kind` en el consumidor decide que hacer con cada uno, y un
@@ -114,6 +117,7 @@ export function useEventosRun(runId: string | null): ResultadoSse {
     // deliberado: la lista es el contrato).
     for (const tipo of EVENTOS_ESCUCHADOS) {
       fuente.addEventListener(tipo, (ev: MessageEvent) => {
+        if (!vigente) return;
         let evento: RunEvent;
         try {
           evento = JSON.parse(ev.data) as RunEvent;
@@ -138,6 +142,7 @@ export function useEventosRun(runId: string | null): ResultadoSse {
     }
 
     fuente.onerror = () => {
+      if (!vigente) return;
       // `EventSource` marca `readyState === CLOSED` cuando no va a reintentar
       // (p.ej. un 404). Si sigue abierto, el navegador reintentara solo y no es
       // un error para la interfaz: se mantiene "conectando".
@@ -149,6 +154,7 @@ export function useEventosRun(runId: string | null): ResultadoSse {
     };
 
     return () => {
+      vigente = false;
       fuente.close();
       fuenteRef.current = null;
     };

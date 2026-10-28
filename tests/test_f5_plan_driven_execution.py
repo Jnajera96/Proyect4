@@ -167,9 +167,14 @@ def test_route_after_execution_va_a_la_siguiente_subtarea() -> None:
     assert nodes.route_after_execution(estado) == "coder"
 
 
-def test_route_after_execution_finaliza_cuando_el_plan_se_agota() -> None:
-    """plan_index == len(subtasks) -> no queda nada por ejecutar."""
+def test_route_after_execution_modify_no_omite_coder_con_plan_agotado() -> None:
+    """Una solicitud modify no termina si el plan solo hizo investigacion."""
     estado = _estado(plan=_plan(AgentRole.RESEARCHER), plan_index=1)
+    assert nodes.route_after_execution(estado) == "coder"
+
+
+def test_route_after_execution_inspect_finaliza_con_plan_agotado() -> None:
+    estado = _estado(plan=_plan(AgentRole.RESEARCHER), plan_index=1, intencion=Intent.INSPECT)
     assert nodes.route_after_execution(estado) == "finalize"
 
 
@@ -210,7 +215,7 @@ def test_route_after_execution_no_buclea_con_plan_vacio() -> None:
 
 
 def test_dos_subtareas_researcher_se_ejecutan_en_secuencia() -> None:
-    """Flujo completo: researcher -> researcher (segunda) -> finalize."""
+    """Modify: dos investigaciones consecutivas todavia deben llegar al Coder."""
     estado = _estado(plan=_plan(AgentRole.RESEARCHER, AgentRole.RESEARCHER))
 
     # Primera subtarea
@@ -225,8 +230,8 @@ def test_dos_subtareas_researcher_se_ejecutan_en_secuencia() -> None:
     assert delta2["plan_index"] == 2
     estado = estado.model_copy(update=delta2)
 
-    # Plan agotado
-    assert nodes.route_after_execution(estado) == "finalize"
+    # Plan agotado, pero aun falta el Coder solicitado por modify.
+    assert nodes.route_after_execution(estado) == "coder"
 
 
 def test_researcher_luego_coder_luego_finalize() -> None:

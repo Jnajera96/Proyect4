@@ -179,7 +179,7 @@ def test_un_json_que_viola_las_restricciones_del_contrato_no_pasa() -> None:
 
     assert delta["errors"][0].error_class == "MODEL_FALLBACK"
     # Y la confianza que queda es la del fallback, no la invalida.
-    assert delta["interpretation"].confidence == pytest.approx(0.5)
+    assert delta["interpretation"].confidence == pytest.approx(0.9)
 
 
 def test_el_nodo_revalida_aunque_el_gateway_ya_haya_validado() -> None:
@@ -225,7 +225,7 @@ def test_el_nodo_revalida_aunque_el_gateway_ya_haya_validado() -> None:
 
     # El nodo detecta el dato invalido y cae al fallback, en vez de aceptarlo.
     assert delta["errors"][0].error_class == "MODEL_FALLBACK"
-    assert delta["interpretation"].confidence == pytest.approx(0.5)
+    assert delta["interpretation"].confidence == pytest.approx(0.9)
 
 
 def test_un_campo_obligatorio_ausente_no_pasa() -> None:

@@ -26,7 +26,7 @@ from ai_swe.resources import frontend_dist
 from ai_swe.runtime_logging import profile_log_context
 from ai_swe.security.vault import VaultError
 from ai_swe.state.budget_ledger import BudgetLedger, LedgerError
-from ai_swe.state.profiles import ProfileStore, UnlockedProfile
+from ai_swe.state.profiles import ProfileStore, UnlockedProfile, normalize_name
 
 COOKIE = "aiswe_session"
 SAFE = {"GET", "HEAD", "OPTIONS"}
@@ -35,6 +35,15 @@ SAFE = {"GET", "HEAD", "OPTIONS"}
 class Credentials(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=64)
+    password: SecretStr = Field(min_length=12, max_length=1024)
+
+
+class RecoveryRequest(Credentials):
+    recovery_code: SecretStr = Field(min_length=12, max_length=128)
+
+
+class RecoverySetup(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     password: SecretStr = Field(min_length=12, max_length=1024)
 
 
@@ -142,6 +151,9 @@ class ProfileManager:
 
     async def login(self, profile: UnlockedProfile):
         async with self.lock:
+            current = json.loads(profile.paths.vault.read_text(encoding="utf-8"))
+            if current.get("header") != profile.header:
+                raise HTTPException(401, "Las credenciales cambiaron. Vuelve a iniciar sesión.")
             if profile.user_id not in self.contexts:
                 await self.open_context(profile)
             session = Session(
@@ -301,10 +313,24 @@ def create_profile_app(settings: Settings) -> FastAPI:
             profile = await run_in_threadpool(
                 operation, credentials.name, credentials.password.get_secret_value()
             )
-        except (ValueError, OSError, VaultError):
+        except (ValueError, OSError, VaultError) as exc:
+            safe = {
+                "Nombre ya registrado": (
+                    "Ese nombre ya existe o está reservado. Inicia sesión o elige otro nombre."
+                ),
+                "Nombre invalido: usa letras, numeros, espacios o guiones": (
+                    "Nombre inválido: usa letras, números, espacios, guiones o guion bajo; "
+                    "sin @ ni puntos."
+                ),
+            }
             raise HTTPException(
                 400 if create else 401,
-                "No se pudo crear el perfil" if create else "Credenciales incorrectas",
+                safe.get(
+                    str(exc),
+                    "No se pudo guardar el perfil. Revisa los permisos de la carpeta de datos.",
+                )
+                if create
+                else "Credenciales incorrectas",
             ) from None
         session = await manager.login(profile)
         # Revoke the old session on account switch, without leaving old unlocked data behind.
@@ -332,9 +358,57 @@ def create_profile_app(settings: Settings) -> FastAPI:
     async def login(request: Request, credentials: Credentials):
         return await authenticate(request, credentials)
 
+    @app.post("/auth/recovery-key")
+    async def recovery_key(request: Request, body: RecoverySetup):
+        session = require_session(request)
+        manager.throttle(request.client.host if request.client else "local")
+        async with manager.lock:
+            session = require_session(request)
+            profile = manager.contexts[session.user_id].profile
+            try:
+                code = await run_in_threadpool(
+                    manager.store.generate_recovery, profile.name, body.password.get_secret_value()
+                )
+            except (ValueError, OSError):
+                raise HTTPException(
+                    400, "No se pudo generar la clave. Revisa tu contraseña actual."
+                ) from None
+        return JSONResponse({"recovery_code": code}, headers={"Cache-Control": "no-store"})
+
+    @app.post("/auth/recover")
+    async def recover(request: Request, body: RecoveryRequest):
+        manager.throttle(request.client.host if request.client else "local")
+        async with manager.lock:
+            try:
+                name = normalize_name(body.name)
+                context = next(
+                    (c for c in manager.contexts.values() if c.profile.name == name), None
+                )
+                if context and (context.requests or context.app.state.worker.active):
+                    raise HTTPException(
+                        409, "Cierra las sesiones activas y espera a que terminen las tareas."
+                    )
+                profile = await run_in_threadpool(
+                    manager.store.recover,
+                    name,
+                    body.recovery_code.get_secret_value(),
+                    body.password.get_secret_value(),
+                )
+            except (ValueError, OSError):
+                raise HTTPException(
+                    400, "No se pudo recuperar el perfil. Revisa nombre y clave de rescate."
+                ) from None
+            manager.sessions = {
+                k: s for k, s in manager.sessions.items() if s.user_id != profile.user_id
+            }
+            if profile.user_id in manager.contexts:
+                await manager.close_context(profile.user_id)
+        return JSONResponse({"recovered": True}, headers={"Cache-Control": "no-store"})
+
     @app.post("/auth/import-vault")
     async def import_vault_profile(request: Request):
         import base64
+
         from ai_swe.state.continuity import ContinuityError, import_vault_to_profile
 
         manager.throttle(request.client.host if request.client else "local")

@@ -298,11 +298,16 @@ def test_el_validador_rechaza_rol_desconocido_y_clave_vacia() -> None:
 #: pruebas de redaccion para que el resultado mida el codigo y no el entorno de
 #: la maquina: con `AI_SWE_MODEL_API_KEY` puesta, el recuento dejaria de ser el
 #: de las claves de API.
-SECRETOS_DEL_ENTORNO = ("AI_SWE_MODEL_API_KEY", "AI_SWE_LANGFUSE_SECRET_KEY", "AI_SWE_LANGFUSE_PUBLIC_KEY")
+SECRETOS_DEL_ENTORNO = (
+    "AI_SWE_MODEL_API_KEY", "AI_SWE_HF_TOKEN", "HF_TOKEN",
+    "AI_SWE_LANGFUSE_SECRET_KEY", "AI_SWE_LANGFUSE_PUBLIC_KEY",
+)
 
 
 @pytest.fixture
 def _sin_otros_secretos(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Removing environment variables alone still leaves the developer's dotenv.
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
     for variable in SECRETOS_DEL_ENTORNO:
         monkeypatch.delenv(variable, raising=False)
 

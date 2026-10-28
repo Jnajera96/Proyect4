@@ -601,6 +601,7 @@ export function App({ profile }: { profile?: {
           <VistaDetalle
             estado={estado}
             hitos={hitos}
+            eventos={eventos}
             conexion={conexion}
             proyectos={proyectos}
             alRefrescar={(id) => void refrescar(id)}
@@ -609,7 +610,7 @@ export function App({ profile }: { profile?: {
           />
         ) : null}
 
-        {vista === "flujo" ? <VistaFlujo estado={estado} /> : null}
+        {vista === "flujo" ? <VistaFlujo estado={estado} eventos={eventos} alPuerta={() => setVista("detalle")} /> : null}
         {vista === "actividad" ? <VistaActividad estado={estado} eventos={eventos} conexion={conexion} /> : null}
 
         {vista === "seguridad" ? (

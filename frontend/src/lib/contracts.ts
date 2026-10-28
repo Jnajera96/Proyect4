@@ -69,6 +69,13 @@ export const EVENTO_CIERRE: EventKind = "run.done";
 
 /** Todos los eventos que el cliente se suscribe a escuchar. */
 export const EVENTOS_ESCUCHADOS: EventKind[] = [
+  "node_started",
+  "model_request_started",
+  "model_response_received",
+  "test_target_started",
+  "test_target_completed",
+  "node_completed",
+  "node_skipped",
   ...EVENTOS_HITO,
   ...EVENTOS_PUERTA,
   EVENTO_CIERRE,
@@ -304,6 +311,7 @@ export interface RunState {
     text: string;
     source: string;
     confirmed_by_user: boolean;
+    capture_fidelity: number;
     transcript_meta: {
       provider: string;
       language: string;

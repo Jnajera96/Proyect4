@@ -29,6 +29,7 @@ from pydantic import BaseModel, ValidationError
 
 from ai_swe.config import Settings
 from ai_swe.contracts import Budget
+from ai_swe.graph.activity import emit
 from ai_swe.models.budget import (
     assert_budget_available,
     effective_timeout_s,
@@ -167,6 +168,7 @@ class ModelGateway:
         self._ledger = None
         if profile_settings is not None:
             from ai_swe.state.budget_ledger import BudgetLedger
+
             self._ledger = BudgetLedger(profile_settings.state_db_path)
 
     # ------------------------------------------------------------------ consulta
@@ -194,9 +196,7 @@ class ModelGateway:
 
     # ------------------------------------------------------------------ publico
 
-    def generate(
-        self, request: ModelRequest, *, budget: Budget | None = None
-    ) -> ModelResponse:
+    def generate(self, request: ModelRequest, *, budget: Budget | None = None) -> ModelResponse:
         """Llamada de texto libre."""
         return self._llamar(request, budget=budget, response_model=None)
 
@@ -279,28 +279,49 @@ class ModelGateway:
                 reservation = None
                 if self._ledger is not None:
                     from ai_swe.state.budget_ledger import LedgerError
+
                     settings = self._profile_settings
                     model = request.model or settings.model_name
                     if settings.max_cost_per_run is None or request.max_output_tokens is None:
                         raise ModelConfigurationError("El perfil requiere limite y salida acotada")
                     # UTF-8 bytes plus structural overhead are a conservative local estimate.
-                    inputs = len(request.model_dump_json().encode()) + 1024
-                    estimate = self._pricing.cost(model, ModelUsage(
-                        input_tokens=inputs, output_tokens=request.max_output_tokens))
+                    inputs = len(request.model_dump_json().encode()) // 3 + 256
+                    estimate = self._pricing.cost(
+                        model,
+                        ModelUsage(input_tokens=inputs, output_tokens=request.max_output_tokens),
+                    )
                     if estimate is None:
                         raise ModelConfigurationError("El perfil requiere una tarifa declarada")
                     try:
-                        reservation = self._ledger.reserve_call(request.run_id or '',
-                            run_limit=settings.max_cost_per_run, estimate=estimate)
+                        reservation = self._ledger.reserve_call(
+                            request.run_id or "",
+                            run_limit=settings.max_cost_per_run,
+                            estimate=estimate,
+                        )
                     except LedgerError as exc:
                         raise ModelConfigurationError(str(exc)) from None
+                emit(
+                    "model_request_started",
+                    mode="remote",
+                    model=request.model or getattr(adapter, "_model", None),
+                    provider=adapter.name,
+                    attempt=intento + 1,
+                )
                 bruto = adapter.generate(request)
+                emit(
+                    "model_response_received",
+                    mode="remote",
+                    model=bruto.model or request.model,
+                    provider=adapter.name,
+                    duration_ms=(time.perf_counter() - inicio) * 1000,
+                )
                 if reservation is not None:
                     declared = self._pricing.cost(bruto.model or model, bruto.usage)
                     self._ledger.settle(reservation, declared)
                     if declared is None:
                         raise ModelConfigurationError(
-                            "Consumo desconocido; se conserva la reserva y se detiene la ejecucion")
+                            "Consumo desconocido; se conserva la reserva y se detiene la ejecucion"
+                        )
             except ModelGatewayError as exc:
                 ultimo = exc
                 if not exc.recoverable or intento >= self._max_retries:
@@ -416,8 +437,12 @@ class ModelGateway:
                 bruto, latencia_ms, adapter, solicitado, pedido, response_model, ultimo_error
             )
 
-        raise ultimo_error if ultimo_error is not None else ModelGatewayError(  # pragma: no cover
-            "ningun adapter respondio"
+        raise (
+            ultimo_error
+            if ultimo_error is not None
+            else ModelGatewayError(  # pragma: no cover
+                "ningun adapter respondio"
+            )
         )
 
 
@@ -444,13 +469,16 @@ def gateway_from_settings(
     tabla = pricing_from_json(settings.model_pricing)
 
     if adapters is not None:
-        return ModelGateway(list(adapters), sleep=sleep, pricing=tabla,
-                            profile_settings=settings if settings.profile_id else None)
+        return ModelGateway(
+            list(adapters),
+            sleep=sleep,
+            pricing=tabla,
+            profile_settings=settings if settings.profile_id else None,
+        )
 
     config = provider_config_from_settings(settings)
     if (
-        requires_credentials(config.name)
-        or config.base_url == "https://router.huggingface.co/v1"
+        requires_credentials(config.name) or config.base_url == "https://router.huggingface.co/v1"
     ) and not config.has_credentials:
         raise ModelConfigurationError(
             f"el proveedor '{config.name}' exige una credencial y no hay ninguna configurada",

@@ -16,11 +16,12 @@
  * `run_tests`): el investigador y el revisor no. Por eso su avance se lee del
  * estado y no del flujo de eventos.
  */
-import type { RunState } from "../lib/contracts";
+import { ESTADOS_TERMINALES, type RunEvent, type RunState } from "../lib/contracts";
+import { actividadesPendientes } from "./ActividadPipeline";
 import { Chip } from "./ui";
 import { Icono } from "./Icono";
 
-type EstadoEtapa = "hecha" | "en-curso" | "esperando" | "fallida" | "pendiente";
+type EstadoEtapa = "hecha" | "en-curso" | "esperando" | "fallida" | "pendiente" | "omitida" | "bloqueada";
 
 export interface Etapa {
   id: string;
@@ -36,6 +37,8 @@ const ETIQUETA_ESTADO: Record<EstadoEtapa, string> = {
   esperando: "espera decisión humana",
   fallida: "fallida",
   pendiente: "pendiente",
+  omitida: "No aplica",
+  bloqueada: "bloqueada / no ejecutada",
 };
 
 const TONO: Record<EstadoEtapa, "" | "ok" | "aviso" | "error" | "acento"> = {
@@ -44,9 +47,11 @@ const TONO: Record<EstadoEtapa, "" | "ok" | "aviso" | "error" | "acento"> = {
   esperando: "aviso",
   fallida: "error",
   pendiente: "",
+  omitida: "",
+  bloqueada: "aviso",
 };
 
-export function calcular(estado: RunState): Etapa[] {
+export function calcular(estado: RunState, eventos: RunEvent[] = []): Etapa[] {
   const siguiente = (estado.next_step ?? "").toLowerCase();
   const plan = estado.plan;
   const pruebas = estado.evidence.test_runs ?? [];
@@ -77,6 +82,18 @@ export function calcular(estado: RunState): Etapa[] {
     else if (extra?.esperando) valor = "esperando";
     else if (hecha) valor = "hecha";
     else if (estado.status === "running" && siguiente === nodo) valor = "en-curso";
+    const omitida = [...eventos].reverse().find(e => e.data.node === nodo && String(e.kind) === "node_skipped");
+    const soloInspeccion = estado.options.mode === "INSPECT_ONLY" || (estado.interpretation && estado.interpretation.intent !== "modify");
+    const soloPlan = estado.options.mode === "PLAN_ONLY";
+    const sinCambios = ["coder", "run_tests", "reviewer", "approval_gate", "promote_changes"].includes(nodo);
+    if (valor === "pendiente" && (omitida || (sinCambios && (soloInspeccion || soloPlan)))) {
+      valor = "omitida";
+      detalle = typeof omitida?.data.reason === "string" ? omitida.data.reason : soloPlan ? "No aplica en modo solo plan." : "No aplica en modo inspección o consulta.";
+    } else if (valor === "pendiente" && (ESTADOS_TERMINALES.has(estado.status) || estado.status === "needs_human")) {
+      valor = "bloqueada";
+      detalle = "La ejecución se detuvo sin completar esta etapa. Revisa las incidencias y la decisión humana.";
+    }
+    if (estado.status === "running" && actividadesPendientes(eventos).some(e => e.data.node === nodo)) valor = "en-curso";
     return { id, nodo, nombre, detalle: hecha && extra?.detalleHecho ? extra.detalleHecho : detalle, estado: valor };
   };
 
@@ -123,8 +140,9 @@ export function calcular(estado: RunState): Etapa[] {
       "coder",
       "Coder",
       "Propone y aplica cambios en un worktree con confinamiento de escritura.",
-      estado.outputs.coder_output !== null,
+      Boolean((estado.artifacts.diff || estado.outputs.coder_output?.diff || "").trim()),
       {
+        fallida: estado.outputs.coder_output !== null && !(estado.artifacts.diff || estado.outputs.coder_output?.diff || "").trim(),
         detalleHecho: estado.artifacts.changed_files?.length
           ? `${estado.artifacts.changed_files.length} fichero(s) en el sandbox.`
           : undefined,

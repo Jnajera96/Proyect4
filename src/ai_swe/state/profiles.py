@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import threading
 import unicodedata
 import uuid
@@ -15,7 +16,14 @@ from pathlib import Path
 from pydantic import SecretStr
 
 from ai_swe.config import Settings
-from ai_swe.security.vault import VaultError, create_vault, save_vault, unlock_vault
+from ai_swe.security.vault import (
+    VaultError,
+    create_vault,
+    save_vault,
+    unlock_vault,
+    unwrap_key,
+    wrap_key,
+)
 
 
 def atomic_json(path: Path, data: dict):
@@ -100,7 +108,13 @@ class UnlockedProfile:
     data: dict = field(repr=False)
 
     def save(self, data: dict):
-        atomic_json(self.paths.vault, save_vault(self.user_id, self.key, self.header, data))
+        existing = json.loads(self.paths.vault.read_text(encoding="utf-8"))
+        if existing.get("header") != self.header:
+            raise VaultError("Las credenciales cambiaron. Vuelve a iniciar sesión.")
+        envelope = save_vault(self.user_id, self.key, self.header, data)
+        if "recovery" in existing:
+            envelope["recovery"] = existing["recovery"]
+        atomic_json(self.paths.vault, envelope)
         self.data = data
 
     def settings(self, base: Settings) -> Settings:
@@ -202,3 +216,36 @@ class ProfileStore:
             return UnlockedProfile(
                 identity["user_id"], identity["name"], paths, key, envelope["header"], data
             )
+
+    def generate_recovery(self, name: str, password: str) -> str:
+        """Reauthenticate and wrap the DEK with a new high-entropy rescue code."""
+        with self._lock:
+            profile = self.unlock(name, password)
+            envelope = json.loads(profile.paths.vault.read_text(encoding="utf-8"))
+            code = secrets.token_urlsafe(32)
+            envelope["recovery"] = wrap_key(profile.user_id, code, profile.key)
+            atomic_json(profile.paths.vault, envelope)
+            return code
+
+    def recover(self, name: str, code: str, new_password: str) -> UnlockedProfile:
+        """One-use rescue code rewraps the same DEK; never resets user data."""
+        with self._lock:
+            found = self._find(normalize_name(name))
+            if not found:
+                create_vault(str(uuid.uuid4()), code, {})
+                raise VaultError("No se pudo recuperar el perfil")
+            paths, identity = found
+            paths.prepare()
+            if paths.vault.stat().st_size > 2 * 1024 * 1024:
+                raise VaultError("No se pudo recuperar el perfil")
+            try:
+                envelope = json.loads(paths.vault.read_text(encoding="utf-8"))
+                key = unwrap_key(identity["user_id"], code, envelope["recovery"])
+                header = wrap_key(identity["user_id"], new_password, key)
+                # Authenticate the existing data before replacing any credential.
+                probe = {"header": header, "data": envelope["data"]}
+                _, data = unlock_vault(identity["user_id"], new_password, probe)
+            except (KeyError, TypeError, ValueError):
+                raise VaultError("No se pudo recuperar el perfil") from None
+            atomic_json(paths.vault, probe)  # recovery code consumed atomically
+            return UnlockedProfile(identity["user_id"], identity["name"], paths, key, header, data)

@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { App } from "../App";
 import { borrarClave } from "../lib/auth";
 import { profileRequest, setProfileCsrf } from "../lib/profile";
+import { ModelConfiguration } from "./ModelConfiguration";
+import { PasswordField } from "./PasswordField";
 import "../profiles.css";
 
 type Status = { profile_mode: boolean; authenticated: boolean;
@@ -15,6 +17,9 @@ export function ProfileRoot() {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState("");
   const [register, setRegister] = useState(false);
+  const [recover, setRecover] = useState(false);
+  const [recoverySetup, setRecoverySetup] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [vault, setVault] = useState<Vault | null>(null);
   const [notice, setNotice] = useState("");
@@ -28,6 +33,7 @@ export function ProfileRoot() {
     profileRequest<Status>("/auth/status").then(s => { if (current) apply(s); })
       .catch(e => { if (current) setError(String(e.message)); });
     const expired = () => {
+      setRecoveryCode(""); setRecoverySetup(false);
       setVault(null); setRegister(false);
       setStatus({ profile_mode: true, authenticated: false });
       setError("La sesión terminó. Vuelve a entrar a tu perfil.");
@@ -40,13 +46,30 @@ export function ProfileRoot() {
     event.preventDefault();
     const form = event.currentTarget;
     const fields = new FormData(form);
+    if ((register || recover) && fields.get("password") !== fields.get("password_confirmation")) {
+      setError("Las contraseñas no coinciden."); return;
+    }
+    if (Array.from(String(fields.get("password") ?? "")).length < 12) {
+      setError("La contraseña debe tener al menos 12 caracteres."); return;
+    }
     setBusy(true); setError("");
     try {
+      if (recover) {
+        await profileRequest("/auth/recover", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: fields.get("name"), password: fields.get("password"),
+            recovery_code: fields.get("recovery_code") }),
+        });
+        form.reset(); setRecover(false);
+        setNotice("Contraseña actualizada. Entra con la nueva contraseña y genera otra clave de rescate.");
+        return;
+      }
       const next = await profileRequest<Status>(register ? "/auth/register" : "/auth/login", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: fields.get("name"), password: fields.get("password") }),
       });
       form.reset(); apply(next);
+      if (register) setRecoverySetup(true);
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
@@ -55,8 +78,23 @@ export function ProfileRoot() {
     setBusy(true); setError("");
     try {
       await profileRequest("/auth/logout", { method: "POST" });
-      setVault(null); setNotice(""); setRegister(false);
+      setVault(null); setNotice(""); setRegister(false); setRecoveryCode(""); setRecoverySetup(false);
       apply({ profile_mode: true, authenticated: false });
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(false); }
+  }
+
+  async function generateRecovery(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const password = new FormData(form).get("password");
+    setBusy(true); setError(""); setRecoveryCode("");
+    try {
+      const result = await profileRequest<{ recovery_code: string }>("/auth/recovery-key", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      form.reset(); setRecoveryCode(result.recovery_code);
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
@@ -89,17 +127,34 @@ export function ProfileRoot() {
   if (!status.profile_mode) return <App />;
   if (!status.authenticated) return <main className="profile-access">
     <p className="profile-eyebrow">Tu espacio local</p>
-    <h1>{register ? "Crear perfil" : "Entrar a tu perfil"}</h1>
+    <h1>{recover ? "Recuperar acceso" : register ? "Crear perfil" : "Entrar a tu perfil"}</h1>
     <p>Proyectos, historial y credenciales separados para cada persona.</p>
-    <form onSubmit={authenticate}>
+    <form onSubmit={authenticate} onInvalid={event => {
+      event.preventDefault();
+      const input = event.target as HTMLInputElement;
+      const labels: Record<string, string> = { name: "Nombre de perfil", password: "Contraseña",
+        password_confirmation: "Repetir contraseña", recovery_code: "Clave de rescate" };
+      setError(input.validity.valueMissing
+        ? `${labels[input.name] ?? "Campo"}: completa este campo.`
+        : `${labels[input.name] ?? "Campo"}: revisa la longitud (mínimo 12 caracteres para contraseñas).`);
+    }}>
       <label>Nombre de perfil<input name="name" autoComplete="username" required maxLength={64} /></label>
-      <label>Contraseña<input name="password" type="password" required minLength={12} maxLength={1024}
-        autoComplete={register ? "new-password" : "current-password"} /></label>
-      {register && <p>Usa al menos 12 caracteres. Sin esta contraseña no se puede recuperar la bóveda.</p>}
+      <p>Nombre: letras, números, espacios, guiones o guion bajo. No uses un correo electrónico ni puntos.</p>
+      {recover && <PasswordField name="recovery_code" label="Clave de rescate" autoComplete="off" />}
+      <PasswordField key={recover ? "recover" : register ? "register" : "login"} name="password"
+        label={recover ? "Nueva contraseña" : "Contraseña"}
+        autoComplete={register || recover ? "new-password" : "current-password"} />
+      {(register || recover) && <PasswordField name="password_confirmation" label="Repetir contraseña" autoComplete="new-password" />}
+      {register && <p>Usa al menos 12 caracteres. Después de entrar, genera tu clave de rescate y guárdala fuera de este equipo.</p>}
+      {recover && <p>Necesitas la clave de rescate generada previamente. Sin contraseña ni clave,
+        no se puede descifrar la bóveda. Una pregunta de seguridad no sustituye esa clave.</p>}
       {error && <p role="alert">{error}</p>}
-      <button type="submit" disabled={busy}>{busy ? "Un momento…" : register ? "Crear perfil y entrar" : "Entrar"}</button>
-      <button type="button" disabled={busy} onClick={() => { setRegister(!register); setError(""); }}>
+      {notice && <p role="status">{notice}</p>}
+      <button type="submit" disabled={busy}>{busy ? "Un momento…" : recover ? "Restablecer contraseña" : register ? "Crear perfil y entrar" : "Entrar"}</button>
+      <button type="button" disabled={busy} onClick={() => { setRecover(false); setRegister(!register); setError(""); }}>
         {register ? "Ya tengo un perfil" : "Crear un perfil nuevo"}</button>
+      <button type="button" disabled={busy} onClick={() => { setRecover(!recover); setRegister(false); setError(""); }}>
+        {recover ? "Volver al inicio de sesión" : "Olvidé mi contraseña"}</button>
     </form>
   </main>;
   return <>
@@ -108,9 +163,22 @@ export function ProfileRoot() {
       <button onClick={() => { setError(""); profileRequest<Vault>("/auth/vault").then(setVault)
         .catch(e => setError(e.message)); }}>Configurar bóveda</button>
       <button onClick={logout} disabled={busy}>Cerrar sesión</button>
+      <button onClick={() => { setRecoverySetup(true); setRecoveryCode(""); setError(""); }}>Recuperación de acceso</button>
     </header>
     {error && <p className="profile-message" role="alert">{error}</p>}
     {notice && <p className="profile-message" role="status">{notice}</p>}
+    {recoverySetup && <section className="profile-vault" aria-label="Recuperación de acceso">
+      <h2>Generar clave de rescate</h2>
+      <p>Guárdala fuera de este equipo. Permite cambiar tu contraseña sin perder la bóveda;
+        no reemplaza un respaldo de tus archivos. Generar otra invalida la anterior.</p>
+      <form onSubmit={generateRecovery}>
+        <PasswordField name="password" label="Contraseña actual" />
+        <button type="submit" disabled={busy}>Generar clave de rescate</button>
+      </form>
+      {recoveryCode && <div role="status"><p>Se muestra solo ahora. No la compartas.</p>
+        <label>Clave de rescate generada<input readOnly value={recoveryCode} autoComplete="off" /></label></div>}
+      <button onClick={() => { setRecoverySetup(false); setRecoveryCode(""); }}>He guardado mi clave · cerrar</button>
+    </section>}
     {vault ? <section className="profile-vault" aria-label="Configuración de bóveda">
       <h1>Proveedor y presupuesto de tu perfil</h1>
       <p>Token: {vault.has_token ? "guardado" : "sin configurar"}. Nunca se muestra el valor guardado.</p>
@@ -121,15 +189,11 @@ export function ProfileRoot() {
         <label className="profile-check"><input type="checkbox" name="clear_token" />Eliminar el token guardado</label>
         <label>Endpoint HTTPS<input name="model_base_url" type="url" required
           defaultValue={vault.model_base_url ?? "https://router.huggingface.co/v1"} /></label>
-        <label>Modelo Coder<input name="model_name" defaultValue={vault.model_name ?? ""} /></label>
-        <label>Modelo Reviewer (vacío usa Coder)<input name="reviewer_model" defaultValue={vault.reviewer_model ?? ""} /></label>
+        <ModelConfiguration coder={vault.model_name} reviewer={vault.reviewer_model} pricing={vault.model_pricing} />
         <fieldset><legend>Activar llamadas remotas</legend>
           {["coder", "reviewer"].map(role => <label className="profile-check" key={role}>
             <input type="checkbox" name="roles" value={role} defaultChecked={vault.remote_model_roles?.includes(role)} />{role}</label>)}
         </fieldset>
-        <label>Tarifas declaradas en USD (JSON)<textarea name="model_pricing" rows={4}
-          defaultValue={vault.model_pricing ?? ""}
-          placeholder={'[{"model":"modelo","input_per_1k":0,"output_per_1k":0,"currency":"USD"}]'} /></label>
         <label>Límite acumulado del perfil (USD)<input name="budget_limit" type="number" required
           min="0" step="any" defaultValue={vault.budget_limit ?? 0} /></label>
         <label>Máximo por ejecución (USD)<input name="max_cost_per_run" type="number" required

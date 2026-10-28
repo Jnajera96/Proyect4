@@ -402,6 +402,12 @@ class RunEngine:
         return {"configurable": {"thread_id": run_id}}
 
     def _ejecutar(self, entrada, run_id: str) -> RunState:
+        from ai_swe.graph.activity import activity_sink
+
+        with activity_sink(lambda kind, data: self._store.append_event(run_id, EventKind(kind), data)):
+            return self._ejecutar_con_actividad(entrada, run_id)
+
+    def _ejecutar_con_actividad(self, entrada, run_id: str) -> RunState:
         config = self._config(run_id)
         self._store.append_event(run_id, EventKind.RUN_STARTED, {})
 

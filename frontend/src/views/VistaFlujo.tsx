@@ -6,16 +6,17 @@
  * como lo publica el motor, sin traducirlo a una promesa.
  */
 import { useState } from "react";
-import type { RunState } from "../lib/contracts";
+import type { RunEvent, RunState } from "../lib/contracts";
+import { ActividadPipeline } from "../components/ActividadPipeline";
 import { ETIQUETA_ESTADO } from "../lib/contracts";
 import { calcular, type Etapa } from "../components/DiagramaFlujo";
 import { SecuenciaAgentes } from "../components/SecuenciaAgentes";
 import { InspectorEtapa } from "../components/InspectorEtapa";
 import { Chip, EstadoVacio, Panel, Seccion } from "../components/ui";
 
-export function VistaFlujo({ estado }: { estado: RunState | null }) {
+export function VistaFlujo({ estado, eventos = [], alPuerta }: { estado: RunState | null; eventos?: RunEvent[]; alPuerta?: () => void }) {
   const [etapa, setEtapa] = useState<Etapa | null>(null);
-  const etapaActual = estado && etapa ? calcular(estado).find(e => e.id === etapa.id) : null;
+  const etapaActual = estado && etapa ? calcular(estado, eventos).find(e => e.id === etapa.id) : null;
   if (!estado) {
     return (
       <Panel>
@@ -35,17 +36,18 @@ export function VistaFlujo({ estado }: { estado: RunState | null }) {
 
   return (
     <>
+      <ActividadPipeline eventos={eventos} estado={estado} />
       <Seccion
         titulo="Etapas del flujo"
         nota="Los nodos reales del grafo, en su orden. El estado de cada etapa sale de la evidencia guardada, no de un temporizador."
         acciones={<Chip tono={espera ? "aviso" : ""}>{ETIQUETA_ESTADO[estado.status]}</Chip>}
       >
         <Panel>
-          <SecuenciaAgentes estado={estado} alEtapa={setEtapa} />
+          <SecuenciaAgentes estado={estado} alEtapa={setEtapa} eventos={eventos} />
         </Panel>
       </Seccion>
 
-      {etapaActual ? <InspectorEtapa key={estado.run_id + etapaActual.id} etapa={etapaActual} estado={estado} alCerrar={() => setEtapa(null)} /> : null}
+      {etapaActual ? <InspectorEtapa key={estado.run_id + etapaActual.id} etapa={etapaActual} estado={estado} eventos={eventos} alCerrar={() => setEtapa(null)} alPuerta={alPuerta} /> : null}
       <Seccion titulo="Posición declarada por el motor">
         <Panel>
           <dl className="datos">

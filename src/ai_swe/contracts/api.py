@@ -49,6 +49,14 @@ class EventKind(StrEnum):
     """
 
     # --- ciclo de vida de la ejecucion ---------------------------------------
+    NODE_STARTED = "node_started"
+    MODEL_REQUEST_STARTED = "model_request_started"
+    MODEL_RESPONSE_RECEIVED = "model_response_received"
+    TEST_TARGET_STARTED = "test_target_started"
+    TEST_TARGET_COMPLETED = "test_target_completed"
+    NODE_COMPLETED = "node_completed"
+    NODE_SKIPPED = "node_skipped"
+
     RUN_CREATED = "run.created"
     RUN_STARTED = "run.started"
     RUN_DONE = "run.done"  # cierra el flujo SSE (no es un alias)

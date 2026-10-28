@@ -70,7 +70,7 @@ TARGET_COMMANDS: dict[str, tuple[str, ...]] = {
         # externa no puede ser dependencia de una ejecucion offline.
         "-m",
         "not real_provider",
-        "tests",
+        ".",
     ),
     "pytest.integration": (
         sys.executable,
@@ -82,7 +82,7 @@ TARGET_COMMANDS: dict[str, tuple[str, ...]] = {
         "no:cacheprovider",
         "-m",
         "integration",
-        "tests",
+        ".",
     ),
     "ruff.check": (
         sys.executable,
@@ -212,6 +212,7 @@ def ejecutar(
         resultado = subprocess.run(
             orden,
             cwd=str(sandbox.raiz),
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -220,8 +221,14 @@ def ejecutar(
         )
     except subprocess.TimeoutExpired as exc:
         duracion = time.perf_counter() - inicio
-        salida = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
-        error = (exc.stderr or "") if isinstance(exc.stderr, str) else ""
+        salida = (
+            exc.stdout.decode(errors="replace")
+            if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+        )
+        error = (
+            exc.stderr.decode(errors="replace")
+            if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+        )
         log.warning("runner: '%s' supero %ss", target, timeout)
         return TestRun(
             target=target,

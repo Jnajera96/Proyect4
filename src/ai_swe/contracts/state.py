@@ -101,9 +101,17 @@ class Instruction(BaseModel):
     source: InstructionSource
     transcript_meta: TranscriptMeta | None = None
     confirmed_by_user: bool
+    capture_fidelity: float = Field(
+        default=1.0, ge=0.0, le=1.0,
+        description="Fidelidad de captura, no certeza semantica: texto=1; voz=confianza STT.",
+    )
 
     @model_validator(mode="after")
     def _voice_requires_confirmation(self) -> Instruction:
+        self.capture_fidelity = (
+            self.transcript_meta.confidence
+            if self.source is InstructionSource.VOICE and self.transcript_meta else 1.0
+        )
         if self.source is InstructionSource.VOICE:
             if self.transcript_meta is None:
                 raise ValueError(
