@@ -78,20 +78,51 @@ export function VistaGeneral({
       <div className="hero-formas" aria-hidden="true"><i /><i /><i /></div>
       <div className="hero-principal">
         <p className="hero-antetitulo">Convierte una idea en software</p>
-        <h1 id="hero-titulo">Describe qué quieres<br className="desktop-br" /> construir.</h1>
+        <h1 id="hero-titulo">Describe qué quieres<br className="desktop-br" /> <span className="hero-destacado">construir.</span><span className="hero-cursor" aria-hidden="true" /></h1>
         <p className="hero-texto">De la idea al cambio verificado. Analizamos los requisitos, planificamos y proponemos código. Tú decides antes de promoverlo.</p>
         {puedeOperar ? <Compositor estado={compositor} acciones={accionesCompositor}
           proyectos={proyectos} salud={salud} puedeAdministrar={puedeAdministrar} />
           : <Panel><p>Tu credencial es de solo lectura. Puedes consultar las ejecuciones.</p></Panel>}
       </div>
-      <ol className="hero-proceso" aria-label="Cómo funciona">
-        {[
-          ["Captura tu idea", "Texto o voz, siempre bajo tu control."],
-          ["Analiza y confirma", "Requisitos estructurados y validación humana."],
-          ["El equipo trabaja", "Investigación, código, pruebas y revisión."],
-          ["Tú apruebas el resultado", "Solo entonces se promueven los cambios."],
-        ].map(([t, d], i) => <li key={t}><span>{i + 1}</span><div><strong>{t}</strong><p>{d}</p></div></li>)}
-      </ol>
+      <div className="hero-proceso-contenedor">
+        <p className="hero-proceso-titulo">Tu idea en 3 pasos</p>
+        <ol className="hero-proceso" aria-label="Cómo funciona">
+          <li className="paso-violeta">
+            <span className="paso-numero">1</span>
+            <div className="paso-cuerpo">
+              <strong>Captura tu idea</strong>
+              <p>Texto o voz, siempre bajo tu control.</p>
+              <div className="paso-preview paso-preview-input" aria-hidden="true">
+                <span className="preview-prompt">&ldquo;Crear una API REST...&rdquo;</span>
+                <span className="preview-iconos"><Icono nombre="microfono" /><Icono nombre="audio" /></span>
+              </div>
+            </div>
+          </li>
+          <li className="paso-esmeralda">
+            <span className="paso-numero">2</span>
+            <div className="paso-cuerpo">
+              <strong>Analiza y confirma</strong>
+              <p>Requisitos estructurados y validación humana.</p>
+              <div className="paso-preview paso-preview-checks" aria-hidden="true">
+                <div><span className="check-ok">✓</span> Requisitos validados</div>
+                <div><span className="check-ok">✓</span> Plan aprobado</div>
+              </div>
+            </div>
+          </li>
+          <li className="paso-cian">
+            <span className="paso-numero">3</span>
+            <div className="paso-cuerpo">
+              <strong>El equipo trabaja</strong>
+              <p>Investigación, código, pruebas y revisión.</p>
+              <div className="paso-preview paso-preview-code" aria-hidden="true">
+                <div><span className="code-tag">&lt;/&gt;</span> Generando código...</div>
+                <div><span className="check-ok">✓</span> Tests pasados</div>
+              </div>
+              <p className="paso-nota-final">Tú apruebas el resultado antes de promover los cambios.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
     </section>
 
     <section className="franja" aria-label="Estado del sistema">

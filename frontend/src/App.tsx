@@ -103,7 +103,7 @@ export function App({ profile }: { profile?: {
   const [protectedPaths, setProtectedPaths] = useState<string[]>([]);
   const [mode, setMode] = useState<ExecutionMode>("FULL_PROPOSAL");
   const [menuAbierto, setMenuAbierto] = useState(false);
-  const [tema, setTema] = useState<"sistema" | "claro" | "oscuro">("sistema");
+  const [tema, setTema] = useState<"sistema" | "claro" | "oscuro">("oscuro");
   useEffect(() => {
     document.documentElement.dataset.tema = tema;
   }, [tema]);
@@ -460,8 +460,10 @@ export function App({ profile }: { profile?: {
         <label className="solo-lector" htmlFor="tema">Tema</label>
         <select id="tema" className="selector-tema" value={tema}
           onChange={e => setTema(e.target.value as typeof tema)}>
-          <option value="sistema">Tema del sistema</option><option value="claro">Claro</option><option value="oscuro">Oscuro</option>
+          <option value="oscuro">Oscuro</option><option value="claro">Claro</option><option value="sistema">Tema del sistema</option>
         </select>
+        <button type="button" className="topbar-icono-btn" aria-label="Actividad y notificaciones" title="Ver actividad" onClick={() => setVista(esperando ? "ejecuciones" : "actividad")}><Icono nombre="campana" />{esperando ? <span className="topbar-punto-alerta" aria-hidden="true" /> : null}</button>
+        <button type="button" className="topbar-avatar-btn" aria-label="Perfil y sesión" title={profile?.name ?? "Sesión"} onClick={() => setVista("sesion")} />
         {sesion === "autenticado" ? <button className="sutil salir-topbar" onClick={cerrarSesion}>Cerrar sesión</button> : null}
         {sesion === "sin-credencial" ||
         sesion === "clave-invalida" ||
@@ -529,7 +531,7 @@ export function App({ profile }: { profile?: {
           proyectos={proyectos} proyectoActual={projectId}
           runs={runs} runActual={runId} alRun={id => { seleccionarRun(id); setMenuAbierto(false); }}
           alProyecto={id => { setProjectId(id); setVista("general"); setMenuAbierto(false); }}
-          alCrearProyecto={() => { setVista("proyectos"); setMenuAbierto(false); }} />
+          alCrearProyecto={() => { setVista("proyectos"); setMenuAbierto(false); }} perfilNombre={profile?.name} />
       </aside>
       {cabecera}
       <main id="contenido" className="app contenido">

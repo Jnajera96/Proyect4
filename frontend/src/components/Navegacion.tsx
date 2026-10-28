@@ -36,6 +36,7 @@ export function Navegacion({
   runs = [],
   runActual,
   alRun,
+  perfilNombre,
 }: {
   vista: VistaId;
   items: ItemNav[];
@@ -47,10 +48,11 @@ export function Navegacion({
   runs?: RunSummary[];
   runActual?: string | null;
   alRun?: (id: string) => void;
+  perfilNombre?: string;
 }) {
   return (
     <div className="sidebar-contenido">
-    <div className="marca"><span className="marca-icono"><Icono nombre="flujo" /></span><span>AI Software<span>Engineering System</span></span></div>
+    <div className="marca"><span className="marca-icono"><Icono nombre="cubo" /></span><span>AI Software<span>Engineering System</span></span></div>
     <nav className="navegacion" aria-label="Secciones de la aplicación">
       {items.map((item) => {
         const activo = item.id === vista;
@@ -64,6 +66,7 @@ export function Navegacion({
             onClick={() => alCambiar(item.id)}
           >
             <Icono nombre={item.id} /><span>{item.etiqueta}</span>
+            {activo ? <span className="nav-punto-activo" aria-hidden="true" /> : null}
             {item.aviso ? (
               <span className="nav-aviso" title="Requiere tu decisión" aria-label="Requiere tu decisión" />
             ) : null}
@@ -72,13 +75,13 @@ export function Navegacion({
       })}
     </nav>
     <section className="sidebar-proyectos" aria-label="Proyectos recientes">
-      <div className="fila"><h2>Proyectos</h2><button className="sutil" aria-label="Crear proyecto" onClick={alCrearProyecto}>+</button></div>
+      <div className="fila"><h2>Proyectos</h2><button className="sutil boton-mas" aria-label="Crear proyecto" onClick={alCrearProyecto}>+</button></div>
       {proyectos.length ? proyectos.slice(0, 5).map(p => <button key={p.project_id}
         className={`sidebar-proyecto ${proyectoActual === p.project_id ? "seleccionado" : ""}`}
         onClick={() => alProyecto?.(p.project_id)} aria-pressed={proyectoActual === p.project_id}>
         <span className="punto" /><span>{p.name}</span>
-      </button>) : <p className="tenue">Sin proyectos</p>}
-      <button className="sutil" onClick={alCrearProyecto}>Ver proyectos</button>
+      </button>) : <p className="tenue sidebar-sin-items">Sin proyectos</p>}
+      <button className="sutil sidebar-ver-proyectos" onClick={alCrearProyecto}>+ Ver proyectos</button>
     </section>
     <section className="sidebar-corridas" aria-label="Ejecuciones recientes">
       <h2>Actividad reciente</h2>
@@ -92,7 +95,25 @@ export function Navegacion({
       </button>)}
       {!runs.length ? <p className="sidebar-vacio">Tus ejecuciones aparecerán aquí.</p> : null}
     </section>
-    <p className="sidebar-pie">Tu espacio de ingeniería.<br />Cada cambio, con evidencia.</p>
+    <div className="sidebar-footer">
+      <p className="sidebar-pie">Tu espacio de ingeniería.<br />Cada cambio, con evidencia.</p>
+      <div className="sidebar-usuario">
+        <span className="usuario-avatar" aria-hidden="true" />
+        <div className="usuario-info">
+          <strong>{perfilNombre || "Desarrollador"}</strong>
+          <span>{perfilNombre ? `${perfilNombre}@aiswe.local` : "admin@aiswe.io"}</span>
+        </div>
+        <button
+          type="button"
+          className="usuario-ajustes"
+          aria-label="Configuración de sesión"
+          title="Configuración de sesión"
+          onClick={() => alCambiar("sesion")}
+        >
+          <Icono nombre="ajustes" />
+        </button>
+      </div>
+    </div>
     </div>
   );
 }

@@ -96,11 +96,11 @@ export function Compositor({
           title="Abrir dictado por voz" onClick={() => abrirDictado()}><Icono nombre="microfono" /></button>
         <button className="boton-audio" aria-label="Elegir un fichero de audio"
           title="Elegir un fichero de audio en el estudio de voz" onClick={() => abrirDictado(true)}>
-          <Icono nombre="detalle" /><span>Audio</span></button>
+          <Icono nombre="audio" /><span>Audio</span></button>
         <span className="comando-ayuda">Texto o voz. Tú decides cuándo ejecutar.</span>
         <button id="btn-crear" className="primario enviar" disabled={estado.lanzando || !estado.instruccion.trim()}
           onClick={acciones.alLanzar} aria-label={estado.lanzando ? "Lanzando ejecución" : "Ejecutar"}>
-          <Icono nombre="flecha" /><span>{estado.lanzando ? "Lanzando…" : "Ejecutar"}</span>
+          <Icono nombre="play" /><span>{estado.lanzando ? "Lanzando…" : "Ejecutar"}</span>
         </button></div></div>
 
         {estado.origenVoz ? (
@@ -149,6 +149,57 @@ export function Compositor({
             <EditorRutas id="protected-paths" titulo="Rutas protegidas" rutas={estado.protectedPaths} alCambiar={acciones.alCambiarProtegidas} />
           </div>
         </details>
+        </div>
+
+        <div className="ejemplos-bloque" aria-label="Ejemplos para empezar">
+          <p className="ejemplos-titulo">Ejemplos para empezar</p>
+          <div className="ejemplos-rejilla">
+            {[
+              {
+                icono: "codigo",
+                tono: "violeta",
+                titulo: "Crear una API REST",
+                subtitulo: "con autenticación JWT y CRUD completo",
+                prompt: "Diseña e implementa una API REST con autenticación JWT, validación de esquemas y operaciones CRUD completas.",
+              },
+              {
+                icono: "basedatos",
+                tono: "cian",
+                titulo: "Diseñar base de datos",
+                subtitulo: "esquema relacional para e-commerce",
+                prompt: "Diseña el esquema relacional de base de datos, migraciones e índices para una plataforma de e-commerce.",
+              },
+              {
+                icono: "destello",
+                tono: "rosa",
+                titulo: "Implementar feature",
+                subtitulo: "sistema de notificaciones en tiempo real",
+                prompt: "Implementa un sistema de notificaciones en tiempo real con entrega verificable y pruebas automatizadas.",
+              },
+              {
+                icono: "seguridad",
+                tono: "ambar",
+                titulo: "Revisar y mejorar",
+                subtitulo: "rendimiento y seguridad del código",
+                prompt: "Analiza el proyecto e identifica mejoras de rendimiento, seguridad y cobertura de pruebas.",
+              },
+            ].map((ej) => (
+              <button
+                key={ej.titulo}
+                type="button"
+                className={`ejemplo-tarjeta ejemplo-${ej.tono}`}
+                onClick={() => acciones.alCambiarInstruccion(ej.prompt)}
+              >
+                <span className="ejemplo-icono" aria-hidden="true">
+                  <Icono nombre={ej.icono} />
+                </span>
+                <span className="ejemplo-texto">
+                  <strong>{ej.titulo}</strong>
+                  <span>{ej.subtitulo}</span>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {puedeAdministrar ? (
