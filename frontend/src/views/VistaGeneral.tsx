@@ -6,13 +6,15 @@
  * inventadas -ni "salud del sistema" calculada, ni porcentajes de exito que nadie
  * mide-: hay cifras contadas y estados derivados de respuestas.
  */
+import { useState } from "react";
 import type { EstadoConexion } from "../hooks/useEventosRun";
 import type { EstadoSesion } from "../lib/auth";
-import type { Health, Project, RunState, RunSummary } from "../lib/contracts";
+import type { Health, Project, RunEvent, RunState, RunSummary } from "../lib/contracts";
 import { fechaHora, numero } from "../lib/formato";
 import { ETIQUETA_ESTADO } from "../lib/contracts";
 import { AccionesCompositor, Compositor, EstadoCompositor } from "../components/Compositor";
-import { DiagramaFlujo } from "../components/DiagramaFlujo";
+import { calcular, DiagramaFlujo } from "../components/DiagramaFlujo";
+import { InspectorEtapa } from "../components/InspectorEtapa";
 import { HistorialAprobaciones, PanelPresupuesto } from "../components/evidencia";
 import { PuertaAprobacion } from "../components/PuertaAprobacion";
 import { PuertaRequisitos } from "../components/PuertaRequisitos";
@@ -40,6 +42,7 @@ export function VistaGeneral({
   proyectos,
   runs,
   estado,
+  eventos = [],
   hitos,
   cargando,
   compositor,
@@ -59,6 +62,7 @@ export function VistaGeneral({
   proyectos: Project[];
   runs: RunSummary[];
   estado: RunState | null;
+  eventos?: RunEvent[];
   hitos: { kind: string; seq: number; at: string }[];
   cargando: boolean;
   compositor: EstadoCompositor;
@@ -70,6 +74,9 @@ export function VistaGeneral({
   puedeAdministrar: boolean;
   puedeOperar: boolean;
 }) {
+  const [inspeccion, setInspeccion] = useState<{ runId: string; etapaId: string } | null>(null);
+  const etapa = estado && inspeccion?.runId === estado.run_id
+    ? calcular(estado, eventos).find(e => e.id === inspeccion.etapaId) : null;
   const esperando = runs.filter(r => r.awaiting_approval || r.status.startsWith("awaiting"));
   const proyecto = proyectos.find(p => p.project_id === compositor.projectId);
   return <>
@@ -163,7 +170,10 @@ export function VistaGeneral({
         <header className="panel-cabecera"><div><h2><Icono nombre="flujo" /> Workflow multiagente</h2>
           <p className="tenue">Roles especializados. Evidencia en cada etapa.</p></div>
           {estado ? <Chip tono={tonoDeEstado(estado.status)}>{ETIQUETA_ESTADO[estado.status]}</Chip> : null}</header>
-        <DiagramaFlujo estado={estado} />
+        <DiagramaFlujo estado={estado} eventos={eventos} alEtapa={e => estado && setInspeccion({ runId: estado.run_id, etapaId: e.id })} />
+        {estado && etapa ? <InspectorEtapa key={estado.run_id + etapa.id} etapa={etapa} estado={estado}
+          eventos={eventos} alCerrar={() => setInspeccion(null)}
+          alPuerta={() => { setInspeccion(null); alIrA("detalle"); }} /> : null}
         {estado ? <button className="sutil" onClick={() => alIrA("detalle")}>Abrir detalle de la ejecución</button> : null}
       </section>
       <section className="panel actividad-panel" aria-label="Actividad de ejecución">

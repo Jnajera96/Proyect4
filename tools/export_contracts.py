@@ -84,6 +84,13 @@ def construir() -> dict:
         "nota": NOTA,
         "esquema_estado": contratos.RunState.model_fields["schema_version"].default,
         "endpoints": {
+            "DELETE /projects/{project_id}": {
+                "codigo": 204,
+                "nota": (
+                    "Solo quita el registro del perfil; conserva archivos e historial. "
+                    "Requiere administrador."
+                ),
+            },
             "POST /projects": {
                 "cuerpo": "ProjectRequest", "respuesta": "Project", "codigo": 201,
                 "nota": "create_if_missing autoriza crear un nuevo repositorio local vacío.",

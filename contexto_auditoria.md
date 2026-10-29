@@ -1,5 +1,7 @@
 # Contexto para auditoría — AI Software Engineering System
 
+> Actualización posterior al corte original: la segunda entrega de la ruta 3 integra inspección del Workflow, feedback de relectura y baja de registros de proyectos. Consultar `docs/UI-WORKFLOW-VALIDATION.md` y `docs/PRODUCTIZATION-PROGRESS.md` para no tratar estos pendientes históricos como funciones aún ausentes. Sus límites y la validación remota pendiente siguen explícitos en esa acta.
+
 **Fecha de corte:** 28 de octubre de 2026.  
 **Código de referencia:** commit `0e29fe01e62816d1606a3a30bf8745a164b422b0`.  
 **Rama:** `feature/v0.2.0-madre-continuity`.  

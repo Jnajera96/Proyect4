@@ -1,5 +1,9 @@
 {
   "endpoints": {
+    "DELETE /projects/{project_id}": {
+      "codigo": 204,
+      "nota": "Solo quita el registro del perfil; conserva archivos e historial. Requiere administrador."
+    },
     "GET /health": {
       "codigo": 200,
       "nota": "Incluye provider_configuration sin secretos: presencia no acredita credencial ni inferencia.",

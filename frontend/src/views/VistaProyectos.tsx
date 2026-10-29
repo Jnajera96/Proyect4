@@ -40,7 +40,7 @@ export function VistaProyectos({
   alCambiarRuta: (v: string) => void;
   alRegistrar: (crear?: boolean) => void;
   alEjecutarContra: (projectId: string) => void;
-  alEliminar?: (projectId: string) => void;
+  alEliminar?: (projectId: string) => Promise<boolean>;
   alFallo: (causa: unknown) => string;
   puedeAdministrar: boolean;
   errorRegistro: string | null;
@@ -49,6 +49,24 @@ export function VistaProyectos({
   const [nuevo, setNuevo] = useState(false);
   const [detalle, setDetalle] = useState<Project | null>(null);
   const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
+  const [eliminando, setEliminando] = useState<string | null>(null);
+  const [mensajeBaja, setMensajeBaja] = useState("");
+
+  async function quitar(id: string) {
+    if (!alEliminar || eliminando) return;
+    setEliminando(id);
+    setMensajeBaja("");
+    try {
+      if (await alEliminar(id)) {
+        if (detalle?.project_id === id) setDetalle(null);
+        setMensajeBaja("Proyecto quitado de la lista. Sus archivos y el historial se conservan.");
+      }
+    } catch (causa) {
+      setErrorDetalle(alFallo(causa));
+    } finally {
+      setEliminando(null);
+    }
+  }
 
   async function verDetalle(id: string) {
     setErrorDetalle(null);
@@ -64,6 +82,7 @@ export function VistaProyectos({
     <>
       <header className="pagina-titulo"><h1>Proyectos</h1><p>Repositorios autorizados para tu próximo cambio.</p></header>
       {errorRegistro ? <p className="aviso" role="alert">{errorRegistro}</p> : null}
+      <p role="status">{mensajeBaja}</p>
       {puedeAdministrar ? (
         <Seccion
           titulo="Registrar un proyecto"
@@ -147,9 +166,10 @@ export function VistaProyectos({
                       className="sutil"
                       style={{ color: "var(--color-peligro, #ef4444)" }}
                       title="Quita el proyecto del registro sin borrar archivos del disco"
-                      onClick={() => alEliminar(p.project_id)}
+                      disabled={eliminando !== null}
+                      onClick={() => void quitar(p.project_id)}
                     >
-                      Quitar de la lista
+                      {eliminando === p.project_id ? "Quitando…" : "Quitar de la lista"}
                     </button>
                   ) : null}
                 </Fila>
@@ -166,7 +186,7 @@ export function VistaProyectos({
         )}
       </Seccion>
 
-      {detalle ? (
+      {detalle && proyectos.some(p => p.project_id === detalle.project_id) ? (
         <Seccion titulo="Detalle del proyecto" acciones={
           <button className="sutil" onClick={() => setDetalle(null)}>Cerrar</button>
         }>

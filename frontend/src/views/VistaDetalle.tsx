@@ -9,6 +9,7 @@
  */
 import { useState } from "react";
 import { api } from "../lib/api";
+import { ActualizarRun } from "../components/ActualizarRun";
 import type { EstadoConexion } from "../hooks/useEventosRun";
 import type { Project, RunEvent, RunState } from "../lib/contracts";
 import { ActividadPipeline } from "../components/ActividadPipeline";
@@ -56,7 +57,7 @@ export function VistaDetalle({
   hitos: { kind: string; seq: number; at: string }[];
   conexion: EstadoConexion;
   proyectos: Project[];
-  alRefrescar: (id: string) => void;
+  alRefrescar: (id: string) => Promise<string[]>;
   alReanudar: (id: string) => void;
   alFallo: (causa: unknown) => string;
 }) {
@@ -147,10 +148,8 @@ export function VistaDetalle({
               Reanudar ejecución
             </button>
           ) : null}
-          <button className="sutil" style={{ marginLeft: "auto" }} onClick={() => alRefrescar(estado.run_id)}>
-            Releer del servidor
-          </button>
         </div>
+        <ActualizarRun key={estado.run_id} runId={estado.run_id} alRefrescar={alRefrescar} />
         <p className="tenue">
           creada {fechaHora(estado.created_at)} · actualizada {fechaHora(estado.updated_at)}
         </p>

@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "fixture_only": true,
+  "paid_calls": 0,
+  "checks": [
+    "manual refresh performs HTTP read, loading and success feedback",
+    "server error visible without false success",
+    "refresh recovers after error without retrying model",
+    "overview stage opens inspector with actual selected-run error",
+    "Escape closes inspector and restores keyboard focus",
+    "cancelled deregistration sends no DELETE",
+    "confirmed deregistration updates list and closes obsolete detail",
+    "run history remains visible after removing project",
+    "no React runtime errors"
+  ]
+}

@@ -195,8 +195,8 @@ export function calcular(estado: RunState, eventos: RunEvent[] = []): Etapa[] {
   ];
 }
 
-export function DiagramaFlujo({ estado, alEtapa }: { estado: RunState | null; alEtapa?: (etapa: Etapa) => void }) {
-  const etapas: Etapa[] = estado ? calcular(estado) : [
+export function DiagramaFlujo({ estado, alEtapa, eventos = [] }: { estado: RunState | null; alEtapa?: (etapa: Etapa) => void; eventos?: RunEvent[] }) {
+  const etapas: Etapa[] = estado ? calcular(estado, eventos) : [
     ["requisitos", "interpret", "Analista de requisitos", "Interpreta la petición y espera tu confirmación."],
     ["supervisor", "plan", "Supervisor", "Organiza el trabajo en subtareas."],
     ["investigador", "researcher", "Investigador", "Reúne evidencia determinista del repositorio."],
@@ -220,7 +220,7 @@ export function DiagramaFlujo({ estado, alEtapa }: { estado: RunState | null; al
               <Chip tono={TONO[e.estado]}>{estado ? ETIQUETA_ESTADO[e.estado] : "Sin ejecución"}</Chip>
             </div>
             <p className="flujo-detalle">{e.detalle}</p>
-            {alEtapa ? <button className="sutil etapa-inspeccionar" onClick={() => alEtapa(e)} aria-label={`Inspeccionar etapa: ${e.nombre}`}>Ver evidencia</button> : null}
+            {estado && alEtapa ? <button type="button" className="sutil etapa-inspeccionar" onClick={() => alEtapa(e)} aria-label={`Inspeccionar etapa: ${e.nombre}`}>Ver evidencia</button> : null}
           </div>
         </li>
       ))}

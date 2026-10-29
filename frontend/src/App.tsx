@@ -178,17 +178,19 @@ export function App({ profile }: { profile?: {
 
   const refrescar = useCallback(
     async (id: string) => {
+      const errores: string[] = [];
       try {
         const leido = await api.obtenerRun(id);
         if (runSeleccionado.current === id) setEstado(leido);
       } catch (causa) {
-        anotarFallo(causa);
+        errores.push(anotarFallo(causa));
       }
       try {
         setRuns(await api.listarRuns());
       } catch (causa) {
-        anotarFallo(causa);
+        errores.push(anotarFallo(causa));
       }
+      return errores;
     },
     [anotarFallo],
   );
@@ -316,15 +318,17 @@ export function App({ profile }: { profile?: {
   }
 
   async function eliminarProyecto(id: string) {
-    if (!window.confirm("¿Quitar este proyecto de la lista? No borrará archivos ni el repositorio local.")) return;
+    if (!window.confirm("¿Quitar este proyecto de la lista? Se conservarán los archivos, el repositorio y el historial de ejecuciones.")) return false;
     try {
       await api.eliminarProyecto(id);
       setProyectos((previos) => previos.filter((p) => p.project_id !== id));
       if (projectId === id) {
         setProjectId("");
       }
+      return true;
     } catch (causa) {
       setErrorAccion(anotarFallo(causa));
+      return false;
     }
   }
 
@@ -564,6 +568,7 @@ export function App({ profile }: { profile?: {
             estado={estado}
             hitos={hitos}
             cargando={cargando}
+            eventos={eventos}
             compositor={compositor}
             accionesCompositor={accionesCompositor}
             alSeleccionarRun={seleccionarRun}
@@ -618,7 +623,7 @@ export function App({ profile }: { profile?: {
             eventos={eventos}
             conexion={conexion}
             proyectos={proyectos}
-            alRefrescar={(id) => void refrescar(id)}
+            alRefrescar={refrescar}
             alReanudar={(id) => { reanudar(); void refrescar(id); }}
             alFallo={anotarFallo}
           />
