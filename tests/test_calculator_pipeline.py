@@ -310,6 +310,8 @@ def test_coder_retry_receives_latest_actual_evidence_and_review(tmp_path, monkey
     prompt = fake.calls[0].messages[1].content
     assert "I001 Import block is un-sorted: calculadora.py:1" in prompt
     assert "Correccion de una propuesta previa" in prompt
+    assert "TODOS los archivos de la propuesta acumulada" in prompt
+    assert "relativas al repositorio base" in prompt
     assert "Implementacion inicial" not in prompt
     assert "exit_code=1" in prompt and "3 passed" in prompt
     assert "lint diagnostic" in prompt

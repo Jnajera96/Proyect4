@@ -110,8 +110,16 @@ def _clasificar(texto: str) -> Intent:
     (`RF-15`).
     """
     plano = texto.lower()
-    if any(pista in plano for pista in _FUERA_DE_ALCANCE):
-        return Intent.OUT_OF_SCOPE
+    acciones_remotas = "|".join(re.escape(pista.strip()) for pista in _FUERA_DE_ALCANCE)
+    for match in re.finditer(r"\b(?:" + acciones_remotas + r")\b", plano):
+        # Una restriccion («sin dependencias de produccion») no solicita un deploy.
+        # La negacion no cruza otra clausula ni una accion afirmativa coordinada.
+        prefix = re.split(
+            r"[,;.!?:\n]|\b(?:y|pero|luego|despues|después)\b",
+            plano[max(0, match.start() - 70):match.start()],
+        )[-1]
+        if not re.search(r"\b(?:no|nunca|sin|evita)\b[^.;!?]*$|\bni\s*$", prefix):
+            return Intent.OUT_OF_SCOPE
     for match in re.finditer(r"\b(?:" + "|".join(map(re.escape, _MODIFICAR)) + r")\b", plano):
         prefix = plano[max(0, match.start() - 70) : match.start()]
         if not re.search(r"\b(?:no|nunca|sin|evita)\b[^.;!?]*$|\bni\s*$", prefix):
@@ -902,7 +910,11 @@ Reglas obligatorias:
     HTML/JS no verifica interacciones web: declara ese limite sin navegador.
   - Entrega una implementacion pequena y completa dentro del alcance: no omitas
     pruebas ni funcionalidades solicitadas para fingir completitud.
-  - En archivos Python (.py), cumple Ruff (I001): agrupa los imports al inicio sin lineas en blanco entre imports del mismo bloque y deja exactamente dos lineas en blanco (dos saltos vacios) despues del bloque de imports antes de la primera funcion o clase.
+  - En Python, ordena alfabeticamente los imports dentro de cada grupo. Separa
+    biblioteca estandar, terceros e imports locales con una linea en blanco;
+    deja dos lineas en blanco antes de funciones/clases de nivel superior.
+  - Para pruebas de coma flotante usa tolerancias relativas y absolutas explicitas,
+    especialmente cerca de cero; no compares resultados aproximados por igualdad.
 """ + AVISO_NO_CONFIABLE
 
 
@@ -1165,6 +1177,11 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], C
         "Correccion de una propuesta previa: corrige los fallos verificados de la ultima "
         "ejecucion y las correcciones concretas del Reviewer o del usuario. "
         "Usa la evidencia adjunta; no inventes fallos.\n"
+        "La propuesta reemplaza por completo la anterior sobre el commit base: "
+        "devuelve TODOS los archivos de la propuesta acumulada, incluidos los que "
+        "siguen correctos. Omitir un archivo nuevo hace que desaparezca del sandbox. "
+        "Las operaciones create/modify son relativas al repositorio base, no a la "
+        "iteracion anterior.\n"
         if es_correccion else
         "Implementacion inicial de la peticion confirmada: no requiere fallos previos "
         "ni una revision anterior. Si se solicita crear una aplicacion, propone los "
