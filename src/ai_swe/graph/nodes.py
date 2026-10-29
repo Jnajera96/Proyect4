@@ -2718,6 +2718,8 @@ def route_after_coder(state: RunState) -> str:
     existir en un arbol de trabajo **antes** de que `run_tests` pueda ejercitarlo.
     Antes de F8 esta arista iba directo a `run_tests`, que no tenia donde correr.
     """
+    if state.status.is_terminal:
+        return "finalize"
     salida = state.outputs.coder_output
     return "apply_sandbox" if salida and salida.files_changed else "escalate_no_changes"
 

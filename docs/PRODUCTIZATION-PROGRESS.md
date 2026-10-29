@@ -439,3 +439,7 @@ Corrección del prompt que exigía reparaciones previas al generar un proyecto p
 ## Ruta 3, entrega 2 — Interacción y organización de proyectos
 
 Sobre la base limpia `91b3043`, que ya incorpora la baja de proyectos, se habilita el inspector de etapas en la vista general con eventos de la ejecución seleccionada. Releer muestra carga/éxito/error de sus lecturas reales y aclara que no reintenta. Quitar de la lista muestra confirmación y resultado, conserva historial/archivos y cierra detalles obsoletos. Contrato DELETE exportado. Verificación focalizada: 32 pruebas frontend, 8 API y 9 comprobaciones en navegador aprobadas; TypeScript/Vite y Ruff focalizado aprobados. Portable nuevo `windows-v0.2.0-workflow-rc1`; evidencia y límites en `UI-WORKFLOW-VALIDATION.md`. Sin nuevas llamadas pagadas ni certificación de generación remota/producción. Continuidad y validación en otra PC siguen pendientes.
+
+## Checkpoint — diagnóstico Git sin HEAD antes de Coder
+
+La última corrida local `run-86d60158f3e8` se detuvo sin invocar al modelo: la carpeta seleccionada tiene Git pero no commit inicial. Se comprobó que el clon anidado `Proyect_4` sí tiene HEAD. Se añade diagnóstico específico `SANDBOX_NO_BASE_COMMIT` y cierre directo del router terminal, sin error secundario de propuesta vacía. 54 pruebas focalizadas y 9 controles focalizados del paquete aprobados, sin llamadas pagadas ni cambios a repositorios/bóvedas del usuario. Acta de reanudación y pendientes: `RESUME-CODER-GIT-BASE.md`. Trabajo pausado por el usuario hasta mañana.

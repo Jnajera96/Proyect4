@@ -227,7 +227,14 @@ def test_fake_git_metadata_stops_before_remote_call(tmp_path, monkeypatch):
             )
             final = engine.resume(first.run_id, "approved")
             assert final.status == "needs_human"
-            assert any(error.error_class == "SANDBOX_NO_REPO" for error in final.errors)
+            expected = "SANDBOX_NO_BASE_COMMIT" if kind == "unborn" else "SANDBOX_NO_REPO"
+            assert [error.error_class for error in final.errors] == [expected]
+            if kind == "unborn":
+                assert "commit inicial" in final.errors[0].message
+                assert "No se ha llamado al modelo" in final.errors[0].message
+                assert not any(
+                    e.kind == "model_request_started" for e in store.events(first.run_id)
+                )
             assert final.budget.used_model_calls == 0
 
 

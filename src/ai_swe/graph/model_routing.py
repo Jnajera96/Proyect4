@@ -44,7 +44,7 @@ def bind_settings_node(node, settings):
     return invoke
 
 
-def _authorized_git_root(repo: str | None, scope_repo: str) -> bool:
+def _authorized_git_root(repo: str | None, scope_repo: str, *, require_head: bool = True) -> bool:
     """Verify the bound root with Git itself before any remote generation."""
     if not repo:
         return False
@@ -75,6 +75,8 @@ def _authorized_git_root(repo: str | None, scope_repo: str) -> bool:
         )
         if not valid_root:
             return False
+        if not require_head:
+            return True
         head = subprocess.run(
             ["git", "-C", str(root), "rev-parse", "--verify", "HEAD^{commit}"],
             stdin=subprocess.DEVNULL,
@@ -116,14 +118,23 @@ def bind_model_node(node, role: str, settings, disabled):
             repo = state.options.repo_path
             scope_repo = _alcance(state).repo_path
             if not _authorized_git_root(repo, scope_repo):
+                sin_base = _authorized_git_root(repo, scope_repo, require_head=False)
                 return _escalar(
                     state,
                     _error(
                         state,
-                        "SANDBOX_NO_REPO",
+                        "SANDBOX_NO_BASE_COMMIT" if sin_base else "SANDBOX_NO_REPO",
                         "coder",
-                        "Selecciona un proyecto Git autorizado antes de generar codigo; "
-                        "no hay repositorio valido para el sandbox.",
+                        (
+                            "El repositorio seleccionado existe, pero no tiene un commit inicial "
+                            "(HEAD). No se ha llamado al modelo: Git necesita esa base para crear "
+                            "el worktree. Selecciona la carpeta del clon que ya tiene commits o "
+                            "usa Nuevo proyecto Git para crear otra carpeta con su base inicial. "
+                            "El sistema no crea commits sobre tus archivos sin autorizacion."
+                            if sin_base else
+                            "Selecciona un proyecto Git autorizado antes de generar codigo; "
+                            "no hay repositorio valido para el sandbox."
+                        ),
                         recuperable=False,
                     ),
                 )

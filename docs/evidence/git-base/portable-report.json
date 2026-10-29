@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "paid_calls": 0,
+  "checks": [
+    "embedded Python imports corrected package",
+    "unborn Git root distinguished",
+    "no gateway or Coder invoked without HEAD",
+    "single precise preflight error",
+    "terminal route goes directly to finalize",
+    "committed Git root accepted",
+    "packaged modified modules match source hashes",
+    "all bundle manifest hashes match",
+    "ZIP integrity verified"
+  ]
+}
