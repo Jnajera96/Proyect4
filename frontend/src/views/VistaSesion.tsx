@@ -111,7 +111,7 @@ export function VistaSesion({
     const bytes = new Uint8Array(buffer);
     let binary = "";
     for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
-    const b64 = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const b64 = btoa(binary);
     setImportArchiveB64(b64);
     setImportFileName(file.name);
   }

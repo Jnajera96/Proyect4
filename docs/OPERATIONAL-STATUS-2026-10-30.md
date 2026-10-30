@@ -1,5 +1,30 @@
 # Cierre del portable operativo — 30 de octubre de 2026
 
+## Seguimiento rc4 — restauración desde la interfaz
+
+Nueva entrega: `dist/windows-v0.2.0-operational-rc4/AISWESystem-windows-x64.zip`.
+SHA-256: `512bd67c625fb004e6eddda07b746fe6db5ace2120984f8ee7537fa74b86ecec`.
+Tamaño: 118.793.386 bytes; manifiesto con 4.726 archivos. Conserva rc3 intacto.
+Base documental `3d20867` más la corrección de `VistaSesion.tsx` que conserva
+Base64 estándar al subir respaldos. Backend sin cambios respecto a rc3.
+
+El fallo fue reproducido antes de corregirlo. Tras la corrección: 4 controles
+de navegador, 32 pruebas frontend y compilación TypeScript/Vite aprobados.
+Además, 17 pruebas de continuidad/memoria pasan en desarrollo y otras 17 con
+CPython y módulos del portable rc3, incluida recuperación simulada sin repetir
+Coder/Runner/Reviewer. No se suman las repeticiones a la regresión de 973 casos.
+Integridad CRC del ZIP rc4 y sus hashes comprobados tras extraerlo, así como
+identidad del backend y presencia del frontend corregido.
+
+Smoke sobre el ZIP rc4 extraído: **14 controles PASS**, salida 0, cero llamadas
+pagadas. Registro, autenticación, API protegida, UI, puerta humana, reinicio y
+persistencia SQLite aprobados con PATH reducido y LOCALAPPDATA temporal.
+Informe: `dist/windows-v0.2.0-operational-rc4/portable-profiles-report.json`.
+
+Acta: `CONTINUITY-FOLLOWUP-2026-10-30.md`. Guía para el hito que requiere otro
+equipo: `PORTABLE-SECOND-PC-PILOT.md`. La recuperación completa por UI en otra
+PC y la producción pública no se dan por cerradas.
+
 ## Entrega
 
 Rama: `feature/v0.2.0-madre-continuity`.

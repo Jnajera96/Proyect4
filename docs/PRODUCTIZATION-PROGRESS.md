@@ -1,5 +1,16 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Continuidad y restauración rc4 — 30 de octubre de 2026
+
+Detectada y reproducida incompatibilidad Base64 de la subida de respaldos desde
+la UI frente al contrato estricto de importación. Corrección mínima del emisor,
+sin relajar validación o cifrado. 4 controles de navegador y 32 pruebas frontend
+aprobados, build aprobado. Las 17 pruebas de continuidad/memoria pasan tanto
+en desarrollo como con el runtime y módulos del portable rc3. Recuperación
+simulada de perfil/repo nuevos sin repetir agentes; no equivale a otra PC real.
+Nuevo rc4 conserva candidatos anteriores. Evidencia: `CONTINUITY-FOLLOWUP-2026-10-30.md`;
+hash en `OPERATIONAL-STATUS-2026-10-30.md`. Sin inferencias pagadas.
+
 ## Portable operativo rc3 — 30 de octubre de 2026
 
 Código `4703934` empaquetado en

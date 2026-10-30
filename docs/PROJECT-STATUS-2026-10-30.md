@@ -57,7 +57,9 @@ en AI SWE estos patrones coincidentes, algunos implementados antes de la compara
 Actualización operativa: ya se implementan preparación integral, reconciliación de
 huecos SSE por snapshot y cancelación cooperativa con recibo de parada, según
 `NOVA-OPERATIONAL-VALIDATION.md`. No se copian módulos de Nova ni se fuerza el corte
-de un HTTP activo. El paquete actualizado y la validación en destino siguen pendientes.
+de un HTTP activo. El paquete actualizado rc3 ya se verificó; la validación en
+destino sigue pendiente. El seguimiento de continuidad y el arreglo de carga de
+respaldos constan en `CONTINUITY-FOLLOWUP-2026-10-30.md`.
 
 ## Neuromapa se registra por separado
 
@@ -67,7 +69,7 @@ No se ha demostrado ahorro de 50–70 % de tokens facturados.
 
 ## Ruta restante
 
-1. Construir el paquete con los cambios actuales y validar desde su runtime firmado.
+1. Paquete rc3 construido y verificado; rc4 incorpora el arreglo de carga de respaldos.
 2. Probar otra PC, configuración de usuario, reinicio y ejecución/promoción.
 3. Cerrar recuperación y respaldo de principio a fin entre equipos.
 4. Evaluar más productos/modelos y publicación voluntaria con presupuesto explícito.

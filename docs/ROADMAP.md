@@ -30,7 +30,17 @@ pendiente de empaquetado y piloto en otra PC, sin declarar producción aprobada.
 - [x] Mostrar funciones con viñetas y enviar ajustes al contexto confirmado que recibe Coder.
 - [x] Añadir sugerencias que rellenan el compositor sin ejecutar automáticamente.
 - [x] Registrar cierre de la regresión completa en el acta y el progreso.
-- [ ] Incluir estos cambios en el siguiente paquete y validar en otra PC (filas 2 y 3).
+- [x] Incluir estos cambios en el portable rc3 y verificar perfiles/SQLite.
+- [ ] Validar en otra PC; guía: `PORTABLE-SECOND-PC-PILOT.md`.
+
+### Seguimiento de continuidad
+
+- [x] Revalidar 17 pruebas de memoria/recuperación en desarrollo y con módulos del portable.
+- [x] Reproducir y corregir Base64 incompatible al subir respaldos desde la UI.
+- [x] Verificar carga binaria en navegador: 4 controles offline aprobados.
+- [ ] Validar de extremo a extremo la recuperación desde la UI en una PC independiente.
+
+Evidencia y límites: `CONTINUITY-FOLLOWUP-2026-10-30.md`.
 
 ## Antecedentes y líneas posteriores
 
