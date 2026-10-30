@@ -105,7 +105,7 @@ export function PuertaAprobacion({
           </ul>
         ) : null}
         {diff.trim() ? (
-          <VisorDiff texto={diff} ficheros={ficheros} />
+          <details><summary>Ver cambios técnicos</summary><VisorDiff texto={diff} ficheros={ficheros} /></details>
         ) : (
           <EstadoVacio titulo="El cambio no incluye diff">
             {cambio?.rationale

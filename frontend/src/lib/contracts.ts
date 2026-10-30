@@ -185,6 +185,7 @@ export interface CodeProposal {
 }
 
 export interface RunOptions {
+  delivery_mode?: "local" | "github";
   mode?: ExecutionMode;
   repo_path: string | null;
   allowed_paths: string[];

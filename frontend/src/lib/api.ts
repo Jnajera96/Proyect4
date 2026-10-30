@@ -99,7 +99,7 @@ export function rolDelRechazo(causa: unknown): string | null {
   return coincidencia ? coincidencia[1] : null;
 }
 
-async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
+export async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
   // La clave se lee **en cada peticion**, no al cargar el modulo: guardarla
   // mientras la pagina esta abierta debe aplicarse a las siguientes llamadas sin
   // recargar. Con la autenticacion desactivada el servidor ignora la cabecera.
@@ -207,7 +207,7 @@ export const api = {
    * envia, que es lo que el contrato pide.
    */
   crearRun: (instruccion: string, projectId?: string, meta?: Transcript,
-    alcance?: { allowed_paths: string[]; protected_paths: string[]; mode?: ExecutionMode }) =>
+    alcance?: { allowed_paths: string[]; protected_paths: string[]; mode?: ExecutionMode; delivery_mode?: "local" | "github" }) =>
     pedir<RunState>("/runs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -215,6 +215,7 @@ export const api = {
         instruction: instruccion,
         ...(alcance ? { options: {
           ...(alcance.mode ? { mode: alcance.mode } : {}),
+          ...(alcance.delivery_mode ? { delivery_mode: alcance.delivery_mode } : {}),
           allowed_paths: [...new Set(alcance.allowed_paths.map(p => p.trim()).filter(Boolean))],
           protected_paths: [...new Set(alcance.protected_paths.map(p => p.trim()).filter(Boolean))],
         } } : {}),

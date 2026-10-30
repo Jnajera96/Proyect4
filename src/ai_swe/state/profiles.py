@@ -142,6 +142,7 @@ class UnlockedProfile:
             remote_model_roles=self.data.get("remote_model_roles", []),
             model_pricing=self.data.get("model_pricing", ""),
             max_cost_per_run=self.data.get("max_cost_per_run"),
+            max_cost_per_hour=self.data.get("max_cost_per_hour"),
         )
         result = ProfileSettings(**values)
         result.registrar_secretos()

@@ -192,13 +192,13 @@ export function VistaProyectos({
         }>
           <Panel nota="Leído de GET /projects/{id}, no de la fila de la lista.">
             <dl className="datos">
-              <dt>identificador</dt>
+              <dt>Identificador</dt>
               <dd className="mono">{detalle.project_id}</dd>
-              <dt>nombre</dt>
+              <dt>Nombre</dt>
               <dd>{detalle.name}</dd>
-              <dt>ruta</dt>
+              <dt>Ruta</dt>
               <dd className="mono">{detalle.repo_path}</dd>
-              <dt>registrado</dt>
+              <dt>Registrado</dt>
               <dd>{fechaHora(detalle.created_at)}</dd>
             </dl>
             <Chip tono="ok">el servidor devolvió el proyecto</Chip>

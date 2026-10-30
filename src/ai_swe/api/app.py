@@ -1277,4 +1277,8 @@ def crear_app(
             FRONTEND_DIST,
         )
 
+    from ai_swe.api.delivery import register_delivery_routes
+
+    register_delivery_routes(app, engine=motor, store=almacen, settings=ajustes,
+                             read=LEER, operate=OPERAR, admin=ADMINISTRAR)
     return app

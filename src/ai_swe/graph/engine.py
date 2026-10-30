@@ -94,6 +94,9 @@ class RunEngine:
         self, store: RunStore, *, constructor_grafo=None, settings: Settings | None = None
     ) -> None:
         self._store = store
+        if settings is not None:
+            # The supplied store is the persistence boundary, including file memory.
+            settings = settings.model_copy(update={"state_db_path": store._db_path})
         # F2: el presupuesto efectivo sale de la configuracion. Sin `settings` se
         # usan los valores por defecto del contrato, que son **los mismos** que los
         # de `Settings`; pasarlos explicitamente es lo que hace que

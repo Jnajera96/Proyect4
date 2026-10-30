@@ -11,6 +11,8 @@ lugar de por cerrojo. Ademas encaja con el estilo que ya usan los nodos
 
 from __future__ import annotations
 
+import math
+
 from ai_swe.contracts import Budget
 from ai_swe.models.contracts import ModelUsage
 from ai_swe.models.errors import BudgetExceededError
@@ -18,6 +20,19 @@ from ai_swe.models.errors import BudgetExceededError
 # Nombres de motivo de `Budget.exhausted_reasons()` que el gateway puede provocar.
 # `tool_calls` y `review_cycles` no los toca el modelo y no se comprueban aqui.
 MOTIVOS_DE_MODELO = frozenset({"tokens", "model_calls", "seconds", "cost"})
+
+
+def assert_hourly_cost(used: float, reservation: float, limit: float | None) -> None:
+    """Fail before transmission; unknown reservations are included by the ledger."""
+    if limit is None:
+        return
+    if not all(math.isfinite(x) and x >= 0 for x in (used, reservation, limit)):
+        raise ValueError("Limite horario invalido")
+    if used + reservation > limit:
+        raise BudgetExceededError(
+            "Limite de gasto horario alcanzado; espera o ajusta el limite en tu bóveda",
+            motivos=("hourly_cost",),
+        )
 
 
 def assert_budget_available(budget: Budget, *, provider: str | None = None) -> None:

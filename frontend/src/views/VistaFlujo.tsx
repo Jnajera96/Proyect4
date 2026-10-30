@@ -36,6 +36,8 @@ export function VistaFlujo({ estado, eventos = [], alPuerta }: { estado: RunStat
 
   return (
     <>
+      <Panel><p>{estado.options.delivery_mode === "github" ? "Modo GitHub" : "Modo local"}:
+        la aplicación se construye primero en tu computadora. Publicar en GitHub requiere tu decisión.</p></Panel>
       <ActividadPipeline eventos={eventos} estado={estado} />
       <Seccion
         titulo="Etapas del flujo"
@@ -51,13 +53,13 @@ export function VistaFlujo({ estado, eventos = [], alPuerta }: { estado: RunStat
       <Seccion titulo="Posición declarada por el motor">
         <Panel>
           <dl className="datos">
-            <dt>estado</dt>
+            <dt>Estado</dt>
             <dd>
               {ETIQUETA_ESTADO[estado.status]} <span className="tenue mono">({estado.status})</span>
             </dd>
-            <dt>siguiente paso</dt>
+            <dt>Siguiente paso</dt>
             <dd className="mono">{estado.next_step ?? "(ninguno: la ejecución terminó)"}</dd>
-            <dt>subtarea activa</dt>
+            <dt>Subtarea activa</dt>
             <dd>
               {subtareaActiva
                 ? `${estado.plan_index + 1} de ${estado.plan!.subtasks.length}`

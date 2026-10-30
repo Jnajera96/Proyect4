@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import sqlite3
+import time
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
@@ -31,6 +32,14 @@ class BudgetLedger:
                     run_id TEXT NOT NULL, reserved REAL NOT NULL, consumed REAL,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
             """)
+            db.execute("BEGIN IMMEDIATE")
+            columns = {row[1] for row in db.execute("PRAGMA table_info(budget_reservations)")}
+            for column in ("created_epoch", "settled_epoch"):
+                if column not in columns:
+                    db.execute(f"ALTER TABLE budget_reservations ADD COLUMN {column} REAL")
+            db.execute("UPDATE budget_reservations SET created_epoch="
+                       "COALESCE(CAST(strftime('%s',created_at) AS REAL),?) "
+                       "WHERE created_epoch IS NULL", (time.time(),))
 
     @contextmanager
     def _connect(self):
@@ -80,7 +89,8 @@ class BudgetLedger:
             )
             return reservation
 
-    def reserve_call(self, run_id: str, *, run_limit: float, estimate: float) -> str:
+    def reserve_call(self, run_id: str, *, run_limit: float, estimate: float,
+                     hourly_limit: float | None = None) -> str:
         """Reserve all remaining run allowance before each attempt, including retries.
 
         This is a local spending guard, not a promise about third-party billing.
@@ -109,9 +119,19 @@ class BudgetLedger:
             ):
                 raise LedgerError("Presupuesto insuficiente para reservar la llamada")
             reservation = str(uuid.uuid4())
+            from ai_swe.models.budget import assert_hourly_cost
+
+            now = time.time()
+            hourly = db.execute(
+                "SELECT COALESCE(SUM(CASE WHEN consumed IS NULL THEN reserved "
+                "ELSE consumed END),0) FROM budget_reservations "
+                "WHERE consumed IS NULL OR COALESCE(settled_epoch,created_epoch)>=?",
+                (now - 3600,),
+            ).fetchone()[0]
+            assert_hourly_cost(hourly, remaining, hourly_limit)
             db.execute(
-                "INSERT INTO budget_reservations(id,run_id,reserved) VALUES(?,?,?)",
-                (reservation, run_id, remaining),
+                "INSERT INTO budget_reservations(id,run_id,reserved,created_epoch) VALUES(?,?,?,?)",
+                (reservation, run_id, remaining, now),
             )
             return reservation
 
@@ -127,7 +147,8 @@ class BudgetLedger:
             if row is None or row[0] is not None:
                 raise LedgerError("Reserva inexistente o ya contabilizada")
             # Preserve actual declared usage even if a provider exceeded our estimate.
-            db.execute("UPDATE budget_reservations SET consumed=? WHERE id=?", (cost, reservation))
+            db.execute("UPDATE budget_reservations SET consumed=?,settled_epoch=? WHERE id=?",
+                       (cost, time.time(), reservation))
 
     def summary(self) -> dict:
         with self._connect() as db:

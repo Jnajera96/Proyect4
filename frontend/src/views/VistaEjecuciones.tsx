@@ -129,12 +129,12 @@ export function VistaEjecuciones({
             <div className="tabla-scroll"><table id="tabla-ejecuciones">
               <thead>
                 <tr>
-                  <th>run_id</th>
-                  <th>intención</th>
-                  <th>estado</th>
-                  <th>creada</th>
-                  <th>actualizada</th>
-                  <th>errores</th>
+                  <th>ID de ejecución</th>
+                  <th>Intención</th>
+                  <th>Estado</th>
+                  <th>Creada</th>
+                  <th>Actualizada</th>
+                  <th>Errores</th>
                 </tr>
               </thead>
               <tbody>

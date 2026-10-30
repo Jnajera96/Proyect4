@@ -10,6 +10,7 @@ y confirmacion explicita del usuario (RF-03).
 
 from __future__ import annotations
 
+
 from datetime import datetime
 from enum import StrEnum
 
@@ -150,6 +151,11 @@ class PromotionReceipt(BaseModel):
     status: str = "promoted"
 
 
+class DeliveryMode(StrEnum):
+    LOCAL = "local"
+    GITHUB = "github"
+
+
 class RunOptions(BaseModel):
     """Lo que el usuario **pidio**. Distinto de `TaskInterpretation`, que es lo que
     el Supervisor **entendio**.
@@ -159,6 +165,7 @@ class RunOptions(BaseModel):
     """
 
     mode: ExecutionMode = ExecutionMode.FULL_PROPOSAL
+    delivery_mode: DeliveryMode = DeliveryMode.LOCAL
 
     repo_path: str | None = Field(
         default=None, description="Repositorio autorizado sobre el que trabajar."

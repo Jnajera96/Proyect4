@@ -189,6 +189,7 @@ class Settings(BaseSettings):
     # Coste maximo en la moneda del proveedor. `None` = sin limite declarado, que
     # es distinto de cero: cero seria "no se permite gastar nada".
     max_cost_per_run: float | None = Field(default=None, ge=0)
+    max_cost_per_hour: float | None = Field(default=None, ge=0, allow_inf_nan=False)
 
     # --- Limites del borde (hardening local) ---------------------------------
     # Todo lo que entra por la API tiene un tope. Sin ellos, una peticion puede

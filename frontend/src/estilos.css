@@ -231,7 +231,7 @@ body {
 .seccion-titulo {
   font-size: 0.78rem;
   font-weight: 600;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.07em;
   color: var(--texto-tenue);
   margin: 0 0 0.2rem;
@@ -247,7 +247,7 @@ body {
 .rotulo {
   font-size: 0.78rem;
   font-weight: 600;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.06em;
   color: var(--texto-tenue);
   margin: 1rem 0 0.35rem;
@@ -274,7 +274,7 @@ body {
 .tarjeta-rotulo {
   font-size: 0.72rem;
   font-weight: 600;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.06em;
   color: var(--texto-tenue);
   margin: 0 0 0.3rem;
@@ -679,7 +679,7 @@ th {
   color: var(--texto-tenue);
   font-weight: 600;
   font-size: 0.76rem;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.05em;
 }
 
@@ -927,7 +927,7 @@ pre.salida {
 .sev {
   font-size: 0.68rem;
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.04em;
   min-width: 4.5rem;
 }
@@ -1123,7 +1123,7 @@ pre.salida {
 .puerta-aviso {
   font-size: 0.76rem;
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.07em;
   color: var(--aviso);
   margin: 0 0 0.3rem;

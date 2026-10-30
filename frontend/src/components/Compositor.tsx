@@ -39,6 +39,7 @@ export interface EstadoCompositor {
   allowedPaths: string[];
   protectedPaths: string[];
   mode?: ExecutionMode;
+  destino?: "local" | "github";
 }
 
 export interface AccionesCompositor {
@@ -51,6 +52,7 @@ export interface AccionesCompositor {
   alCambiarPermitidas: (rutas: string[]) => void;
   alCambiarProtegidas: (rutas: string[]) => void;
   alCambiarModo?: (modo: ExecutionMode) => void;
+  alCambiarDestino?: (modo: "local" | "github") => void;
   alFallo: (causa: unknown) => string;
   /** Copia el texto confirmado por voz, **con su procedencia**, al campo. */
   alUsarTranscripcion: (texto: string, meta: Transcript) => void;
@@ -69,7 +71,7 @@ export function Compositor({
   salud: Health | null;
   puedeAdministrar: boolean;
 }) {
-  const [nuevoProyecto, setNuevoProyecto] = useState(false);
+  const [nuevoProyecto, setNuevoProyecto] = useState(true);
   function abrirDictado(archivo = false) {
     const voz = document.getElementById("dictado");
     if (!(voz instanceof HTMLDetailsElement)) return;
@@ -81,6 +83,14 @@ export function Compositor({
 
   return (
     <>
+      <fieldset className="destino-proyecto"><legend>¿Dónde quieres guardar tu aplicación?</legend>
+        <label><input type="radio" name="destino-proyecto" checked={(estado.destino ?? "local") === "local"}
+          onChange={() => acciones.alCambiarDestino?.("local")} />Modo local</label>
+        <p>Guarda en una carpeta de tu computadora. No necesitas una cuenta de GitHub ni usar comandos.</p>
+        <label><input type="radio" name="destino-proyecto" checked={estado.destino === "github"}
+          onChange={() => acciones.alCambiarDestino?.("github")} />Modo GitHub</label>
+        <p>Primero construimos y revisamos en tu equipo. Después tú decides si lo envías a GitHub.</p>
+      </fieldset>
       <Panel
         titulo="Tu próxima ejecución"
       >
@@ -215,10 +225,10 @@ export function Compositor({
 
         {puedeAdministrar ? (
           <details className="plegable">
-            <summary>Registrar un proyecto</summary>
+            <summary>Elegir o crear una carpeta</summary>
             <div className="stack" style={{ marginTop: "0.75rem" }}>
-              <button type="button" disabled={estado.registrando} onClick={() => setNuevoProyecto(!nuevoProyecto)}>{nuevoProyecto ? "Usar repositorio existente" : "Nuevo proyecto Git"}</button>
-              {nuevoProyecto ? <p role="note">Al crear autorizas crear esta carpeta local vacía, inicializar Git y escribir README.md y un commit inicial. Indica una ruta local absoluta, no una URL.</p> : null}
+              <button type="button" disabled={estado.registrando} onClick={() => setNuevoProyecto(!nuevoProyecto)}>{nuevoProyecto ? "Usar una carpeta de proyecto existente" : "Crear una aplicación local"}</button>
+              {nuevoProyecto ? <p role="note">Elige una carpeta nueva o vacía. Crearemos ahí tu aplicación y guardaremos un historial interno para proteger tus cambios. No se publicará nada.</p> : <p>Esta opción avanzada requiere un proyecto con historial Git existente.</p>}
               <div>
                 <label htmlFor="p-nombre">Nombre</label>
                 <input
@@ -230,7 +240,7 @@ export function Compositor({
                 />
               </div>
               <div>
-                <label htmlFor="p-ruta">Ruta del repositorio</label>
+                <label htmlFor="p-ruta">Carpeta de tu aplicación</label>
                 <input
                   id="p-ruta"
                   type="text"
@@ -244,7 +254,7 @@ export function Compositor({
                   disabled={estado.registrando || !estado.nombreProyecto.trim() || !estado.rutaProyecto.trim()}
                   onClick={() => acciones.alRegistrarProyecto(nuevoProyecto)}
                 >
-                  {estado.registrando ? "Registrando…" : nuevoProyecto ? "Crear proyecto Git" : "Registrar"}
+                  {estado.registrando ? "Preparando…" : nuevoProyecto ? "Crear carpeta de aplicación" : "Usar esta carpeta"}
                 </button>
                 <span className="tenue">La ruta se valida al registrar, no al ejecutar</span>
               </Fila>

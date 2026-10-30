@@ -262,11 +262,11 @@ export function VistaSesion({
         <Seccion titulo="Sesión del perfil">
           <Panel nota="La sesión caduca y se revoca al cerrar sesión. Los trabajos ya aceptados terminan antes de cerrar su contexto.">
             <dl className="datos">
-              <dt>perfil</dt>
+              <dt>Perfil</dt>
               <dd>{profileName}</dd>
-              <dt>permisos</dt>
+              <dt>Permisos</dt>
               <dd>Administrador de su propio espacio</dd>
-              <dt>acceso</dt>
+              <dt>Acceso</dt>
               <dd>Cookie de sesión protegida; las escrituras requieren CSRF.</dd>
             </dl>
             <Fila sep>
@@ -288,14 +288,14 @@ export function VistaSesion({
           {autenticado && credencial ? (
             <>
               <dl className="datos">
-                <dt>credencial</dt>
+                <dt>Credencial</dt>
                 <dd>
                   <span className="mono" title="Credencial enmascarada">
                     {credencial}
                   </span>{" "}
                   <span className="tenue">(solo se muestran los dos últimos caracteres)</span>
                 </dd>
-                <dt>rol</dt>
+                <dt>Rol</dt>
                 <dd>
                   {rol ? (
                     <>
@@ -311,7 +311,7 @@ export function VistaSesion({
                     </span>
                   )}
                 </dd>
-                <dt>almacenamiento</dt>
+                <dt>Almacenamiento</dt>
                 <dd>en memoria, solo en esta pestaña</dd>
               </dl>
               <Fila sep>
@@ -350,7 +350,7 @@ export function VistaSesion({
       <Seccion titulo="Estado del servidor" nota="Leído de GET /health, que está abierto en los dos modos.">
         <Panel>
           <dl className="datos">
-            <dt>estado</dt>
+            <dt>Estado</dt>
             <dd>
               {saludError ? (
                 <Chip tono="error">sin respuesta</Chip>
@@ -360,9 +360,9 @@ export function VistaSesion({
                 "comprobando…"
               )}
             </dd>
-            <dt>fase</dt>
+            <dt>Fase</dt>
             <dd className="mono">{salud?.fase ?? "—"}</dd>
-            <dt>reconocimiento de voz</dt>
+            <dt>Reconocimiento de voz</dt>
             <dd>
               {salud ? (
                 <Chip tono={salud.stt ? "ok" : "aviso"}>
@@ -372,11 +372,11 @@ export function VistaSesion({
                 "—"
               )}
             </dd>
-            <dt>ejecuciones guardadas</dt>
+            <dt>Ejecuciones guardadas</dt>
             <dd>{salud ? numero(salud.ejecuciones) : "—"}</dd>
-            <dt>proyectos registrados</dt>
+            <dt>Proyectos registrados</dt>
             <dd>{salud ? numero(salud.proyectos) : "—"}</dd>
-            <dt>flujo de eventos</dt>
+            <dt>Flujo de eventos</dt>
             <dd>
               {conexion === "conectado" ? (
                 <Chip tono="ok">conectado</Chip>

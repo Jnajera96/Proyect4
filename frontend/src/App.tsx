@@ -50,6 +50,7 @@ import { VistaFlujo } from "./views/VistaFlujo";
 import { VistaActividad } from "./views/VistaActividad";
 import { VistaGeneral } from "./views/VistaGeneral";
 import { EstadoProveedor } from "./components/EstadoProveedor";
+import { GuiaEjecucion } from "./components/GuiaEjecucion";
 import { VistaProyectos } from "./views/VistaProyectos";
 import { VistaSeguridad } from "./views/VistaSeguridad";
 import { VistaSesion } from "./views/VistaSesion";
@@ -102,6 +103,7 @@ export function App({ profile }: { profile?: {
   const [allowedPaths, setAllowedPaths] = useState<string[]>([]);
   const [protectedPaths, setProtectedPaths] = useState<string[]>([]);
   const [mode, setMode] = useState<ExecutionMode>("FULL_PROPOSAL");
+  const [destino, setDestino] = useState<"local" | "github">("local");
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [tema, setTema] = useState<"sistema" | "claro" | "oscuro">("oscuro");
   useEffect(() => {
@@ -360,7 +362,7 @@ export function App({ profile }: { profile?: {
         texto,
         projectId || undefined,
         transcripcion ?? undefined,
-        { allowed_paths: allowedPaths, protected_paths: protectedPaths, mode },
+        { allowed_paths: allowedPaths, protected_paths: protectedPaths, mode, delivery_mode: destino },
       );
       runSeleccionado.current = creado.run_id;
       setRunId(creado.run_id);
@@ -385,6 +387,7 @@ export function App({ profile }: { profile?: {
   }
 
   const compositor: EstadoCompositor = {
+    destino,
     instruccion,
     origenVoz: transcripcion,
     projectId,
@@ -411,6 +414,7 @@ export function App({ profile }: { profile?: {
     alCambiarPermitidas: setAllowedPaths,
     alCambiarProtegidas: setProtectedPaths,
     alCambiarModo: setMode,
+    alCambiarDestino: setDestino,
     alFallo: anotarFallo,
     alUsarTranscripcion: (texto, meta) => {
       setInstruccion(texto);
@@ -554,6 +558,9 @@ export function App({ profile }: { profile?: {
       <main id="contenido" className="app contenido">
 
       <div className="vista" ref={contenido} tabIndex={-1} aria-label={`Vista: ${vista}`}>
+        {estado?.status === "completed" && estado.promotion_receipt?.status === "promoted" ?
+          <GuiaEjecucion key={estado.run_id} estado={estado} puedeOperar={puedeOperar}
+            projectId={proyectos.find(p => p.repo_path === estado.options.repo_path)?.project_id} /> : null}
         {!puedeOperar && errorAccion ? <p className="banner aviso" role="alert">{errorAccion}</p> : null}
         {runId && !estado ? <p role="status" className="carga-run">Cargando la ejecución seleccionada…</p> : null}
         {vista === "general" ? (

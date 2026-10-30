@@ -300,6 +300,7 @@ class ModelGateway:
                             request.run_id or "",
                             run_limit=settings.max_cost_per_run,
                             estimate=estimate,
+                            hourly_limit=settings.max_cost_per_hour,
                         )
                     except LedgerError as exc:
                         raise ModelConfigurationError(str(exc)) from None

@@ -358,6 +358,14 @@
     },
     "RunOptions": {
       "$defs": {
+        "DeliveryMode": {
+          "enum": [
+            "local",
+            "github"
+          ],
+          "title": "DeliveryMode",
+          "type": "string"
+        },
         "ExecutionMode": {
           "enum": [
             "FULL_PROPOSAL",
@@ -377,6 +385,10 @@
           },
           "title": "Allowed Paths",
           "type": "array"
+        },
+        "delivery_mode": {
+          "$ref": "#/$defs/DeliveryMode",
+          "default": "local"
         },
         "mode": {
           "$ref": "#/$defs/ExecutionMode",
@@ -409,6 +421,14 @@
     },
     "RunRequest": {
       "$defs": {
+        "DeliveryMode": {
+          "enum": [
+            "local",
+            "github"
+          ],
+          "title": "DeliveryMode",
+          "type": "string"
+        },
         "ExecutionMode": {
           "enum": [
             "FULL_PROPOSAL",
@@ -436,6 +456,10 @@
               },
               "title": "Allowed Paths",
               "type": "array"
+            },
+            "delivery_mode": {
+              "$ref": "#/$defs/DeliveryMode",
+              "default": "local"
             },
             "mode": {
               "$ref": "#/$defs/ExecutionMode",
@@ -835,6 +859,14 @@
           ],
           "title": "CodeProposal",
           "type": "object"
+        },
+        "DeliveryMode": {
+          "enum": [
+            "local",
+            "github"
+          ],
+          "title": "DeliveryMode",
+          "type": "string"
         },
         "Evidence": {
           "description": "Evidencia verificable: lo que permite decir 'esto se comprobo'.",
@@ -1370,6 +1402,10 @@
               },
               "title": "Allowed Paths",
               "type": "array"
+            },
+            "delivery_mode": {
+              "$ref": "#/$defs/DeliveryMode",
+              "default": "local"
             },
             "mode": {
               "$ref": "#/$defs/ExecutionMode",

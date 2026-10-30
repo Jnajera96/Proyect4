@@ -17,6 +17,7 @@ from __future__ import annotations
 import difflib
 import hashlib
 import logging
+import os
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -754,7 +755,30 @@ def researcher(state: RunState) -> dict:
         if not raiz.is_dir():
             incognitas.append(f"la ruta configurada no es un directorio: {raiz_texto}")
         else:
-            for ruta in sorted(raiz.rglob("*")):
+            from ai_swe.state.memory_graph import FileMemoryGraph, IGNORED_DIRECTORIES, usable_path
+
+            candidates = []
+            for directory, folders, files in os.walk(raiz, followlinks=False):
+                folders[:] = sorted(f for f in folders if f not in IGNORED_DIRECTORIES)
+                for name in sorted(files):
+                    candidate = Path(directory) / name
+                    relative = candidate.relative_to(raiz).as_posix()
+                    if (usable_path(relative) and candidate.is_file() and candidate.suffix.lower() in _EXTENSIONES
+                            and _dentro_de(raiz, candidate) and candidate.stat().st_size <= 131072):
+                        candidates.append(relative)
+                if len(candidates) >= 2000:
+                    incognitas.append("Inventario limitado a 2000 rutas; no se reviso el resto")
+                    break
+            graph = (FileMemoryGraph(configured.state_db_path, configured.profile_id or "legacy")
+                     if configured is not None else None)
+            chosen = (graph.select(str(raiz), state.instruction.text, candidates)
+                      if graph is not None and len(candidates) > _MAX_ARCHIVOS else sorted(candidates))
+            if graph is not None:
+                graph.observe(str(raiz), chosen[:_MAX_ARCHIVOS], observation=state.run_id + ":read")
+            if len(chosen) < len(candidates):
+                incognitas.append(f"Contexto seleccionado: {len(chosen)} de {len(candidates)} "
+                                  "archivos candidatos; no acredita ahorro de tokens facturados")
+            for ruta in (raiz / path for path in chosen):
                 if len(hallazgos) >= _MAX_ARCHIVOS:
                     incognitas.append(
                         f"listado truncado a {_MAX_ARCHIVOS} archivos; el resto no se reviso"
@@ -1495,6 +1519,16 @@ def apply_sandbox(state: RunState) -> dict:
                 f"no se pudo aplicar el cambio en el sandbox: {detalle}",
                 recuperable=False,
             ),
+        )
+
+    from ai_swe.graph.model_routing import settings_for_node
+    from ai_swe.state.memory_graph import FileMemoryGraph
+
+    configured = settings_for_node()
+    if configured is not None:
+        FileMemoryGraph(configured.state_db_path, configured.profile_id or "legacy").observe(
+            str(repo), [file.path for file in cambio.files_changed],
+            observation=state.run_id + ":changed",
         )
 
     return {

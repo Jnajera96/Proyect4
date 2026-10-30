@@ -34,7 +34,7 @@ export function VistaSeguridad({
       <Seccion titulo="Sesión" nota="El estado de acceso de esta pestaña.">
         <Panel>
           <dl className="datos">
-            <dt>autenticación</dt>
+            <dt>Autenticación</dt>
             <dd>
               {sesion === "autenticado"
                 ? "activa: el servidor exige credencial y esta pestaña la presenta"
@@ -42,13 +42,13 @@ export function VistaSeguridad({
                   ? "desactivada en el servidor: no hace falta credencial"
                   : "sin credencial utilizable"}
             </dd>
-            <dt>autorización por roles</dt>
+            <dt>Autorización por roles</dt>
             <dd>
               {sesion === "sin-autenticacion" ? "No se exige rol en el modo local sin autenticación." : rol
                 ? `activa · rol de la credencial: ${rol}`
                 : "activa en el servidor; el rol no se conoce hasta que una acción sea rechazada"}
             </dd>
-            <dt>credencial</dt>
+            <dt>Credencial</dt>
             <dd>en memoria, solo en esta pestaña; nunca se guarda ni se muestra</dd>
           </dl>
         </Panel>

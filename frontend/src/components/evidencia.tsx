@@ -257,11 +257,11 @@ export function PanelPresupuesto({ budget }: { budget: Budget }) {
   return (
     <Panel titulo="Presupuesto" nota="Consumo real frente a los límites con los que arrancó la ejecución.">
       <dl className="datos">
-        <dt>tokens de entrada</dt>
+        <dt>Tokens de entrada</dt>
         <dd>{numero(budget.used_input_tokens)}</dd>
-        <dt>tokens de salida</dt>
+        <dt>Tokens de salida</dt>
         <dd>{numero(budget.used_output_tokens)}</dd>
-        <dt>límite de tiempo</dt>
+        <dt>Límite de tiempo</dt>
         <dd>{duracion(budget.max_seconds)}</dd>
       </dl>
 
@@ -326,15 +326,15 @@ export function HistorialAprobaciones({ aprobaciones }: { aprobaciones: Approval
               </span>
             </div>
             <dl className="datos">
-              <dt>actor</dt>
+              <dt>Actor</dt>
               <dd>{a.actor}</dd>
-              <dt>contenido</dt>
+              <dt>Contenido</dt>
               <dd className="mono" title={a.content_sha256}>
                 sha256 {hashCorto(a.content_sha256)}
               </dd>
               {a.reason ? (
                 <>
-                  <dt>motivo</dt>
+                  <dt>Motivo</dt>
                   <dd>{a.reason}</dd>
                 </>
               ) : null}
@@ -373,27 +373,27 @@ export function PanelSeguridadRun({ estado }: { estado: RunState }) {
     <>
       <Panel nota="Lo que la ejecución declaró y el sandbox donde trabajó.">
         <dl className="datos">
-          <dt>repositorio autorizado</dt>
+          <dt>Repositorio autorizado</dt>
           <dd className="mono" title={estado.options.repo_path ?? ""}>
             {estado.options.repo_path ? rutaCorta(estado.options.repo_path) : "—"}
           </dd>
-          <dt>rutas permitidas</dt>
+          <dt>Rutas permitidas</dt>
           <dd className="mono">
             {estado.options.allowed_paths.length
               ? estado.options.allowed_paths.join(", ")
               : "(todo el repositorio)"}
           </dd>
-          <dt>rutas protegidas</dt>
+          <dt>Rutas protegidas</dt>
           <dd className="mono">
             {estado.options.protected_paths.length
               ? estado.options.protected_paths.join(", ")
               : "—"}
           </dd>
-          <dt>worktree del sandbox</dt>
+          <dt>Worktree del sandbox</dt>
           <dd className="mono" title={estado.artifacts.worktree_path ?? ""}>
             {estado.artifacts.worktree_path ? rutaCorta(estado.artifacts.worktree_path) : "—"}
           </dd>
-          <dt>commit base</dt>
+          <dt>Commit base</dt>
           <dd className="mono" title={estado.artifacts.base_commit ?? ""}>
             {estado.artifacts.base_commit ? hashCorto(estado.artifacts.base_commit) : "—"}
           </dd>

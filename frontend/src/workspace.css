@@ -102,7 +102,16 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .nav-item.activo { color: var(--acento); background: var(--acento-suave); }
 .nav-item:hover:not(.activo) { background: var(--superficie); }
 .sidebar-proyectos { margin-top: 24px; padding: 22px 5px 14px; }
-.sidebar-proyectos h2, .sidebar-corridas h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; color: var(--texto-suave); margin: 0 0 12px; }
+.sidebar-proyectos h2, .sidebar-corridas h2 { font-size: 12px; text-transform: none; letter-spacing: .04em; font-weight: 600; color: var(--texto-suave); margin: 0 0 12px; }
+.destino-proyecto { border: 1px solid var(--borde); border-radius: 14px; padding: 16px; margin: 0 0 18px; }
+.destino-proyecto label { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.destino-proyecto input[type="radio"] { width: auto; margin: 0; }
+.destino-proyecto p { margin: 6px 0 12px; color: var(--texto-suave); }
+.guia-ejecucion { margin-bottom: 24px; }
+.guia-ejecucion > .panel { border-color: #228d65; }
+.guia-ejecucion button { margin: 8px 8px 8px 0; }
+.guia-ejecucion details { margin-top: 12px; }
+.chip::first-letter { text-transform: uppercase; }
 .sidebar-proyectos .fila h2 { margin: 0; }
 .sidebar-proyecto { min-height: 37px; padding: 8px 9px; }
 .sidebar-proyecto.seleccionado, .sidebar-run.seleccionado { background: var(--acento-suave); }
@@ -131,7 +140,7 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .hero { padding: 32px; border-radius: 20px; gap: 32px; background: var(--superficie); box-shadow: var(--sombra); backdrop-filter: blur(20px) saturate(180%); }
 .hero:has(#dictado:not([open])) { padding-top: 32px; padding-bottom: 32px; }
 .hero-formas { display: none; }
-.hero-antetitulo { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 14px; }
+.hero-antetitulo { font-size: 12px; text-transform: none; letter-spacing: .04em; margin-bottom: 14px; }
 .hero h1 { font-size: clamp(32px,3vw,44px); letter-spacing: -.035em; line-height: 1.1; max-width: 19ch; font-weight: 600; }
 .hero-texto { line-height: 1.65; max-width: 58ch; margin-bottom: 26px; }
 .hero-proceso { border-left: 1px solid var(--borde); padding-left: 26px; }
@@ -189,7 +198,7 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .timeline .cuando { font-size: 12px; color: var(--texto-suave); }
 .puerta { padding: 30px; border-color: var(--borde-fuerte); }
 .puerta-titulo { font-size: 27px; }
-.puerta-aviso { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+.puerta-aviso { font-size: 12px; letter-spacing: .04em; text-transform: none; }
 .puerta-decision { border-top: 1px solid var(--borde); padding-top: 22px; margin-top: 22px; }
 .puerta-decision button { min-height: 40px; padding: 10px 17px; }
 button.peligro { background: transparent; color: var(--error); border-color: transparent; }
@@ -666,7 +675,7 @@ button.peligro:hover:not(:disabled) { background: var(--error-suave); border-col
   font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0.11em;
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--texto-suave);
   margin: 6px 0 14px;
 }
@@ -906,7 +915,7 @@ button.peligro:hover:not(:disabled) { background: var(--error-suave); border-col
 .ejemplos-titulo {
   font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.08em;
   color: var(--texto-suave);
   margin: 0 0 10px;
@@ -1012,7 +1021,7 @@ button.peligro:hover:not(:disabled) { background: var(--error-suave); border-col
 .hero-proceso-titulo {
   font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.1em;
   color: var(--texto-suave);
   margin: 0 0 20px;

@@ -10,7 +10,7 @@ type Status = { profile_mode: boolean; authenticated: boolean;
   user?: { id: string; name: string }; csrf_token?: string };
 type Vault = { has_token: boolean; model_name?: string; reviewer_model?: string;
   model_base_url?: string; remote_model_roles?: string[]; model_pricing?: string;
-  budget_limit?: number; max_cost_per_run?: number;
+  budget_limit?: number; max_cost_per_run?: number; max_cost_per_hour?: number | null;
   ledger: { limit: number | null; consumed: number; reserved: number; available: number | null } };
 
 export function ProfileRoot() {
@@ -115,6 +115,7 @@ export function ProfileRoot() {
           remote_model_roles: fields.getAll("roles"), model_pricing: fields.get("model_pricing"),
           budget_limit: Number(fields.get("budget_limit")),
           max_cost_per_run: Number(fields.get("max_cost_per_run")),
+          max_cost_per_hour: fields.get("max_cost_per_hour") === "" ? null : Number(fields.get("max_cost_per_hour")),
         }),
       });
       form.reset(); setVault(null); setConfigurationRevision(n => n + 1);
@@ -201,6 +202,11 @@ export function ProfileRoot() {
         <label>Máximo por ejecución (USD)<input name="max_cost_per_run" type="number" required
           min="0.000001" step="any" defaultValue={vault.max_cost_per_run ?? 1} /></label>
         <p>Las reservas son estimaciones locales, no cargos reales. Si falta el consumo del proveedor,
+          el límite horario también conserva las reservas desconocidas. Para admitir una corrida,
+          su máximo debe caber en el saldo horario disponible.</p>
+        <label>Máximo por hora (USD, opcional)<input name="max_cost_per_hour" type="number"
+          min="0" step="any" defaultValue={vault.max_cost_per_hour ?? ""} /></label>
+        <p>Si falta el consumo del proveedor,
           se conserva la reserva. Este control no garantiza la factura de un tercero.</p>
         <button type="submit" disabled={busy}>{busy ? "Guardando…" : "Guardar bóveda"}</button>
         <button type="button" disabled={busy} onClick={() => setVault(null)}>Volver al espacio</button>

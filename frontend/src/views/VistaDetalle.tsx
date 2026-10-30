@@ -176,9 +176,9 @@ export function VistaDetalle({
       <Seccion titulo="Resumen">
         <Panel>
           <dl className="datos">
-            <dt>petición</dt>
+            <dt>Petición</dt>
             <dd className="mono">{estado.instruction.text}</dd>
-            <dt>origen</dt>
+            <dt>Origen</dt>
             <dd>
               {estado.instruction.source}
               {estado.instruction.transcript_meta
@@ -187,11 +187,11 @@ export function VistaDetalle({
                   ).toFixed(0)}%)`
                 : ""}
             </dd>
-            <dt>confirmada</dt>
+            <dt>Confirmada</dt>
             <dd>{estado.instruction.confirmed_by_user ? "sí" : "todavía no"}</dd>
-            <dt>fidelidad de captura</dt>
+            <dt>Fidelidad de captura</dt>
             <dd>{estado.instruction.source === "text" ? "100% · texto escrito conservado literalmente; no mide comprensión de intención." : "Entrada de voz: consulta la confianza de transcripción; no mide comprensión de intención."}</dd>
-            <dt>intención</dt>
+            <dt>Intención</dt>
             <dd>
               {estado.interpretation?.intent ?? "—"}{" "}
               {estado.interpretation ? (
@@ -200,7 +200,7 @@ export function VistaDetalle({
                 </span>
               ) : null}
             </dd>
-            <dt>proyecto</dt>
+            <dt>Proyecto</dt>
             <dd>
               {proyecto ? (
                 <>
@@ -218,9 +218,9 @@ export function VistaDetalle({
                 "—"
               )}
             </dd>
-            <dt>modo</dt>
+            <dt>Modo</dt>
             <dd className="mono">{estado.options.mode ?? "FULL_PROPOSAL"}</dd>
-            <dt>trace</dt>
+            <dt>Trace</dt>
             <dd className="mono" title={estado.trace_id}>
               {hashCorto(estado.trace_id)}
             </dd>
@@ -313,7 +313,7 @@ export function VistaDetalle({
       {/* --------------------------------------- Auditoria Coder vs Reviewer */}
       {estado.outputs.coder_output || estado.outputs.code_proposal || estado.outputs.reviewer_output ? (
         <Seccion
-          titulo="Auditoría cruzada Coder vs Reviewer"
+          titulo="Auditoría de generación y revisión"
           nota="Propuesta del Coder frente al juicio del Reviewer. Aceptar una revisión no promueve cambios sin aprobación humana explícita."
         >
           <div className="rejilla rejilla-doble">
@@ -374,20 +374,20 @@ export function VistaDetalle({
       {/* ----------------------------------------- Recibo y Rollback 1-Clic */}
       {estado.promotion_receipt ? (
         <Seccion
-          titulo="Recibo de promoción y Rollback seguro"
+          titulo="Recibo de promoción y reversión segura"
           nota="Árboles Git capturados sobre las rutas promovidas sin alterar HEAD ni el índice del usuario."
         >
           <Panel>
             <dl className="datos">
-              <dt>estado</dt>
+              <dt>Estado</dt>
               <dd className="mono">{estado.promotion_receipt.status}</dd>
               <dt>HEAD base</dt>
               <dd className="mono">{hashCorto(estado.promotion_receipt.head)}</dd>
-              <dt>árbol previo</dt>
+              <dt>Árbol previo</dt>
               <dd className="mono">{hashCorto(estado.promotion_receipt.pre_promotion_sha)}</dd>
-              <dt>árbol promovido</dt>
+              <dt>Árbol promovido</dt>
               <dd className="mono">{hashCorto(estado.promotion_receipt.promoted_sha)}</dd>
-              <dt>rutas</dt>
+              <dt>Rutas</dt>
               <dd className="mono">{estado.promotion_receipt.paths.join(", ")}</dd>
             </dl>
             {estado.promotion_receipt.status === "promoted" ? (

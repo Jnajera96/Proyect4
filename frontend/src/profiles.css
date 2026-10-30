@@ -11,7 +11,7 @@
 .profile-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 24px; background: #edf5f0; border-bottom: 1px solid #bdcfc2; }
 .profile-bar strong { margin-right: auto; }
 .profile-message { padding: 10px 24px; background: #f4f5ed; }
-.profile-eyebrow { text-transform: uppercase; letter-spacing: .1em; font-size: 12px; }
+.profile-eyebrow { text-transform: none; letter-spacing: .1em; font-size: 12px; }
 .profile-vault select { padding: 11px; border: 1px solid #aebeb6; border-radius: 6px; background: #fff; color: #172c27; font: inherit; width: 100%; box-sizing: border-box; }
 .profile-model-selector { display: grid; gap: 8px; min-width: 0; }
 .profile-password-field { display: grid; gap: 6px; }

@@ -111,35 +111,35 @@ export function PuertaRequisitos({
         <>
           <Seccion titulo="Lo que el sistema entendió">
             <dl className="datos">
-              <dt>tu petición</dt>
+              <dt>Tu petición</dt>
               <dd className="mono">{estado.instruction.text}</dd>
-              <dt>intención</dt>
+              <dt>Intención</dt>
               <dd>
                 {ETIQUETA_INTENT[interp.intent]}{" "}
                 <span className="tenue mono">({interp.intent})</span>
               </dd>
-              <dt>puntuación de intención</dt>
+              <dt>Puntuación de intención</dt>
               <dd>
                 {(interp.confidence * 100).toFixed(0)}%
                 <span className="tenue"> · heurística declarada por el analista, no calibrada; no mide la fidelidad de captura ni la transcripción</span>
               </dd>
-              <dt>repositorio</dt>
+              <dt>Repositorio</dt>
               <dd className="mono" title={interp.scope.repo_path}>
                 {rutaCorta(interp.scope.repo_path)}
               </dd>
-              <dt>rutas libres</dt>
+              <dt>Rutas libres</dt>
               <dd className="mono">
                 {interp.scope.allowed_paths.length
                   ? interp.scope.allowed_paths.join(", ")
                   : "(todo el repositorio)"}
               </dd>
-              <dt>rutas protegidas</dt>
+              <dt>Rutas protegidas</dt>
               <dd className="mono">
                 {interp.scope.protected_paths.length
                   ? interp.scope.protected_paths.join(", ")
                   : "—"}
               </dd>
-              <dt>restricciones</dt>
+              <dt>Restricciones</dt>
               <dd>
                 {interp.constraints.length ? (
                   <ul className="limpia">
@@ -151,7 +151,7 @@ export function PuertaRequisitos({
                   "—"
                 )}
               </dd>
-              <dt>por qué</dt>
+              <dt>Por qué</dt>
               <dd>{interp.rationale}</dd>
             </dl>
           </Seccion>

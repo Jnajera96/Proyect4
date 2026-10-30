@@ -58,6 +58,7 @@ class VaultConfig(BaseModel):
     model_pricing: str = Field(default="", max_length=16000)
     budget_limit: float = Field(ge=0)
     max_cost_per_run: float = Field(gt=0)
+    max_cost_per_hour: float | None = Field(default=None, ge=0)
 
     def vault_data(self, previous: dict):
         from ai_swe.models.pricing import pricing_from_json

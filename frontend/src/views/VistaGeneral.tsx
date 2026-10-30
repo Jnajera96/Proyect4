@@ -166,8 +166,8 @@ export function VistaGeneral({
       <button className="sutil" onClick={() => alIrA("ejecuciones")}>Revisar ejecuciones</button></div> : null}
 
     <div className="overview-trabajo">
-      <section className="panel workflow-panel" aria-label="Workflow multiagente">
-        <header className="panel-cabecera"><div><h2><Icono nombre="flujo" /> Workflow multiagente</h2>
+      <section className="panel workflow-panel" aria-label="Flujo de trabajo multiagente">
+        <header className="panel-cabecera"><div><h2><Icono nombre="flujo" /> Flujo de trabajo multiagente</h2>
           <p className="tenue">Roles especializados. Evidencia en cada etapa.</p></div>
           {estado ? <Chip tono={tonoDeEstado(estado.status)}>{ETIQUETA_ESTADO[estado.status]}</Chip> : null}</header>
         <DiagramaFlujo estado={estado} eventos={eventos} alEtapa={e => estado && setInspeccion({ runId: estado.run_id, etapaId: e.id })} />
