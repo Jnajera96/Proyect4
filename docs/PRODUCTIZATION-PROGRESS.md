@@ -1,5 +1,18 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Portable operativo rc3 — 30 de octubre de 2026
+
+Código `4703934` empaquetado en
+`dist/windows-v0.2.0-operational-rc3/AISWESystem-windows-x64.zip`, conservando rc2.
+Compilación TypeScript/Vite aprobada, CPython oficial firmado, manifiesto de
+4.726 archivos y comparación de 74 módulos fuente con la extracción del ZIP.
+Verificador portable sobre esa extracción: 14 controles PASS, salida 0,
+perfiles/reinicio/SQLite aprobados con PATH reducido y datos aislados.
+Regresión fuente vigente: 973 PASS/4 SKIP, frontend32 PASS y navegador30 PASS.
+Hash, comando del verificador, evidencia y límites de esta entrega en
+`OPERATIONAL-STATUS-2026-10-30.md`. Sin nuevas inferencias pagadas ni sustitución
+del servidor abierto. El piloto en otra PC y continuidad integral siguen pendientes.
+
 ## Adaptación operativa selectiva de Nova — 30 de octubre de 2026
 
 Sobre `9fe10cb`: preparación autenticada por proyecto y commit base vacío explícito,

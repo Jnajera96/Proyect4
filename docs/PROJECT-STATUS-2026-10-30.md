@@ -19,11 +19,11 @@ avance adicional a distribución, voz en destino ni continuidad sin nuevas evide
 | --- | ---: | ---: | --- |
 | Perfiles y bóveda | 15 % | 95 | Recuperación/actualización en otro equipo. |
 | Agentes y promoción | 30 % | 88 | Otros productos con modelos reales y revisión independiente de calidad. |
-| UI, actividad y proyectos | 10 % | 95 | Empaquetar la UX actual y cerrar comprobación previa integral. |
+| UI, actividad y proyectos | 10 % | 95 | UX y comprobación previa incluidas en rc3; validar recorrido en equipo de destino. |
 | Voz | 5 % | 90 | Micrófono/audio en el equipo de destino. |
 | Memoria, modos y rollback | 10 % | 85 | Recuperación integral independiente y medición de contexto. |
 | Continuidad y respaldo | 15 % | 45 | Integración/validación completa de importación, auto-backup y recuperación. |
-| Distribución y operación segura | 15 % | 45 | Nuevo paquete, otra PC/VM, actualizaciones y aislamiento de ejecución. |
+| Distribución y operación segura | 15 % | 45 | rc3 generado; faltan otra PC/VM, actualizaciones y aislamiento de ejecución. |
 
 ## Qué se adoptó de MADRE
 
