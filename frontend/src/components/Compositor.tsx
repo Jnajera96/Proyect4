@@ -17,6 +17,7 @@ import { Fila, Panel } from "./ui";
 import { EditorRutas } from "./EditorRutas";
 import { Icono } from "./Icono";
 import { rutaCorta } from "../lib/formato";
+import type { ReadinessReport } from "../lib/readiness";
 
 export interface EstadoCompositor {
   instruccion: string;
@@ -40,6 +41,9 @@ export interface EstadoCompositor {
   protectedPaths: string[];
   mode?: ExecutionMode;
   destino?: "local" | "github";
+  preparacion?: ReadinessReport | null;
+  comprobandoPreparacion?: boolean;
+  errorPreparacion?: string;
 }
 
 export interface AccionesCompositor {
@@ -53,6 +57,9 @@ export interface AccionesCompositor {
   alCambiarProtegidas: (rutas: string[]) => void;
   alCambiarModo?: (modo: ExecutionMode) => void;
   alCambiarDestino?: (modo: "local" | "github") => void;
+  alRevisarPreparacion?: () => void;
+  alInicializarBase?: () => void;
+  alConfigurarProveedor?: () => void;
   alFallo: (causa: unknown) => string;
   /** Copia el texto confirmado por voz, **con su procedencia**, al campo. */
   alUsarTranscripcion: (texto: string, meta: Transcript) => void;
@@ -116,10 +123,25 @@ export function Compositor({
           title="Elegir un fichero de audio en el estudio de voz" onClick={() => abrirDictado(true)}>
           <Icono nombre="detalle" /><span>Audio</span></button>
         <span className="comando-ayuda">Texto o voz. Tú decides cuándo ejecutar.</span>
-        <button id="btn-crear" className="primario enviar" disabled={estado.lanzando}
+        <button id="btn-crear" className="primario enviar" disabled={estado.lanzando || estado.comprobandoPreparacion || estado.preparacion?.ready === false || Boolean(estado.errorPreparacion)}
           onClick={acciones.alLanzar} aria-label={estado.lanzando ? "Lanzando ejecución" : "Ejecutar"}>
           <Icono nombre="play" /><span>{estado.lanzando ? "Lanzando…" : "Ejecutar"}</span>
         </button></div></div>
+
+        <section aria-label="Preparación del proyecto" aria-live="polite">
+          {estado.comprobandoPreparacion && <p role="status">Comprobando la preparación del proyecto…</p>}
+          {estado.errorPreparacion && <p role="alert">No se pudo comprobar: {estado.errorPreparacion}</p>}
+          {estado.preparacion && <>
+            <p>{estado.preparacion.ready ? "Preparación local lista. Permisos y saldo remoto no verificados." : "Completa estos pasos antes de ejecutar:"}</p>
+            <ul>{estado.preparacion.checks.filter(check => !check.ready).map(check => <li key={check.code}>{check.message}</li>)}</ul>
+            {puedeAdministrar && estado.preparacion.checks.some(check => check.action === "initialize_head") && <>
+              <p>Se creará un commit vacío. No se incluirán tus archivos ni los cambios preparados.</p>
+              <button type="button" onClick={acciones.alInicializarBase}>Inicializar commit base en 1 clic</button>
+            </>}
+            {estado.preparacion.checks.some(check => check.action === "configure_vault") && <button type="button" onClick={acciones.alConfigurarProveedor}>Configurar bóveda y presupuesto</button>}
+          </>}
+          {acciones.alRevisarPreparacion && <button type="button" disabled={estado.comprobandoPreparacion} onClick={acciones.alRevisarPreparacion}>Volver a comprobar preparación</button>}
+        </section>
 
         <div className="fila" role="group" aria-label="Ideas para empezar">
           {[

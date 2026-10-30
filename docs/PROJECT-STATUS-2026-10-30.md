@@ -2,7 +2,7 @@
 
 Fecha: 30 de octubre de 2026. Evaluación del código fuente de
 `feature/v0.2.0-madre-continuity`, conservando la distribución anterior.
-Última validación fuente: backend962 PASS/4 SKIP, frontend32 PASS y compilación
+Última validación fuente: backend973 PASS/4 SKIP, frontend32 PASS y compilación
 TypeScript/Vite aprobada; sin nuevas inferencias pagadas.
 
 ## Avance estimado
@@ -54,9 +54,10 @@ en AI SWE estos patrones coincidentes, algunos implementados antes de la compara
 - Distinción entre nodo terminado, propuesta producida, prueba y promoción comprobada.
 - Timeout y reintentos acotados del gateway, sin agregar un bucle externo de gasto.
 
-La vista previa integral de preparación, reconciliación certificada de huecos SSE
-y cancelación cooperativa con confirmación de terminación continúan pendientes.
-No deben contarse como incorporaciones completas de Nova.
+Actualización operativa: ya se implementan preparación integral, reconciliación de
+huecos SSE por snapshot y cancelación cooperativa con recibo de parada, según
+`NOVA-OPERATIONAL-VALIDATION.md`. No se copian módulos de Nova ni se fuerza el corte
+de un HTTP activo. El paquete actualizado y la validación en destino siguen pendientes.
 
 ## Neuromapa se registra por separado
 

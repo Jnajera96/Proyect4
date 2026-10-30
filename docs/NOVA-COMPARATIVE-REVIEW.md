@@ -1,5 +1,12 @@
 # Nova Assistant: revisión comparativa para AI SWE
 
+**Actualización del 30 de octubre:** se adaptaron en código fuente los tres patrones
+priorizados: preparación integral, recuperación SSE por snapshot y cancelación
+cooperativa verificable. Acta vigente: `NOVA-OPERATIONAL-VALIDATION.md`. Los estados
+de la tabla siguiente reflejan la revisión inicial sobre `06a40bb`, no el cierre actual.
+No se copió el motor ni módulos de Nova. La cancelación actual espera fronteras de
+nodo; no promete cortar inmediatamente un HTTP activo ni su facturación.
+
 Fecha: 29 de octubre de 2026. Repositorio público: https://github.com/j-hernandez-dev/nova-assistant
 
 Referencia fijada: `0bc7e8851790167c13a1be39697f4b136150f73d`. Base local de AI SWE: `06a40bb`.

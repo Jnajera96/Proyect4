@@ -274,6 +274,11 @@ class ModelGateway:
         """
         ultimo: ModelGatewayError | None = None
         for intento in range(self._max_retries + 1):
+            from ai_swe.cancellation import current_cancellation
+
+            control = current_cancellation()
+            if control:
+                control.check()
             inicio = time.perf_counter()
             try:
                 reservation = None
@@ -304,6 +309,10 @@ class ModelGateway:
                         )
                     except LedgerError as exc:
                         raise ModelConfigurationError(str(exc)) from None
+                if control:
+                    control.check()
+                if reservation is not None:
+                    self._ledger.mark_dispatched(reservation)
                 emit(
                     "model_request_started",
                     mode="remote",

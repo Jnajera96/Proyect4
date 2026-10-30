@@ -18,9 +18,8 @@ Decisiones que se mantienen y conviene declarar:
   - **`POST /runs` no acepta audio.** El audio entra por `/transcriptions`, que
     devuelve texto y **no crea ejecucion**. La regla la impone el contrato
     `Instruction`, no un `if` en el manejador.
-  - **Cancelar no esta implementado** (501). Ahora que la ejecucion sale de la
-    peticion si seria posible, pero exige senalizar al trabajador para que abandone
-    la ejecucion en curso; llega cuando haya trabajo lento que interrumpir.
+  - Cancelar es cooperativo: 202 significa solicitud pendiente; el recibo y el
+    estado autoritativo confirman la parada. No acredita detener facturación remota.
 """
 
 from __future__ import annotations
@@ -1241,19 +1240,16 @@ def crear_app(
         )
         return resultado
 
-    @app.post("/runs/{run_id}/cancel", status_code=501, dependencies=[OPERAR])
-    def cancelar_run(run_id: str) -> dict:
-        """Cancelacion de una ejecucion en curso. Requiere senalizar al trabajador."""
-        if almacen.summary(run_id) is None:
-            raise HTTPException(status_code=404, detail=f"no existe la ejecucion {run_id}")
-        raise HTTPException(
-            status_code=501,
-            detail=(
-                "RF-16 no esta implementado: exige senalizar al trabajador para que abandone "
-                "la ejecucion en curso, y todavia no hay trabajo lento que interrumpir. "
-                "Llega con el modelo conectado (fase M2)."
-            ),
-        )
+    @app.post("/runs/{run_id}/cancel", response_model=RunState, dependencies=[OPERAR],
+              responses={202: {"model": RunState, "description": "Solicitud pendiente de parada"}})
+    def cancelar_run(run_id: str, response: Response,
+                     identidad: Identidad | None = Depends(_identidad)) -> RunState:
+        result = motor.request_cancel(run_id)
+        _auditar("ejecucion.cancelacion_solicitada", identidad,
+                 {"run_id": run_id, "status": result.cancellation.status if result.cancellation else result.status})
+        response.status_code = (202 if result.cancellation and
+                                result.cancellation.status == "requested" else 200)
+        return result
 
     # ------------------------------------------------------------------ frontend
     #
@@ -1281,4 +1277,9 @@ def crear_app(
 
     register_delivery_routes(app, engine=motor, store=almacen, settings=ajustes,
                              read=LEER, operate=OPERAR, admin=ADMINISTRAR)
+    from ai_swe.api.readiness import register_readiness_routes
+
+    register_readiness_routes(app, store=almacen,
+                              settings=ajustes.model_copy(update={"state_db_path": almacen._db_path}), worker=trabajador,
+                              read=LEER, admin=ADMINISTRAR, identity=_identidad, audit=_auditar)
     return app

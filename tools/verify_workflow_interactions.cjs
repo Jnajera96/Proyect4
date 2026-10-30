@@ -31,6 +31,7 @@ let projects = [{project_id:'fixture-project',name:'Fixture project',repo_path:'
     const json = (code,data) => {res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
     if(url.pathname==='/health')return json(200,{status:'ok',fase:'offline fixture'});
     if(url.pathname==='/projects')return json(200,projects);
+    if(url.pathname.endsWith('/readiness'))return json(200,{ready:true,checks:[]});
     if(url.pathname==='/projects/fixture-project'){
       if(req.method==='DELETE'){deletes++; projects=[]; res.writeHead(204);return res.end();}
       return json(200,projects[0]);

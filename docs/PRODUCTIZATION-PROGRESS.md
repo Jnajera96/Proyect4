@@ -1,5 +1,18 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Adaptación operativa selectiva de Nova — 30 de octubre de 2026
+
+Sobre `9fe10cb`: preparación autenticada por proyecto y commit base vacío explícito,
+SSE con detección de huecos/snapshot y cancelación cooperativa por ejecución con
+recibo solicitado/confirmado/demasiado tarde. Ledger libera solo reservas no
+despachadas y conserva incertidumbre; limpieza acotada y verificada de worktrees.
+Regresión backend final: 973 PASS/4 SKIP, frontend32 PASS, build aprobado y
+30 controles de navegador aprobados. La prueba obsoleta de 501 se actualizó al
+contrato real; la compatibilidad del rechazo 409 se conservó sin relajar su prueba.
+Se preservan las puertas humanas, HEAD y la promoción atómica. Acta y resultados:
+`NOVA-OPERATIONAL-VALIDATION.md`. La cancelación no fuerza corte HTTP/facturación.
+Sin inferencia pagada, nuevo ZIP ni actualización del servidor abierto.
+
 ## Síntesis generalizada y estado de adopción — 30 de octubre de 2026
 
 Sobre `d3b144c` se retira el catálogo cerrado de productos del Analyst local,

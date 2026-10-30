@@ -55,6 +55,8 @@ import { VistaProyectos } from "./views/VistaProyectos";
 import { VistaSeguridad } from "./views/VistaSeguridad";
 import { VistaSesion } from "./views/VistaSesion";
 import { Icono } from "./components/Icono";
+import { useReadiness } from "./hooks/useReadiness";
+import { readiness } from "./lib/readiness";
 
 /** Que respondio el servidor a las peticiones protegidas. */
 type ResultadoCarga = "ok" | "401" | "fallo";
@@ -104,6 +106,7 @@ export function App({ profile }: { profile?: {
   const [protectedPaths, setProtectedPaths] = useState<string[]>([]);
   const [mode, setMode] = useState<ExecutionMode>("FULL_PROPOSAL");
   const [destino, setDestino] = useState<"local" | "github">("local");
+  const preparacion = useReadiness(projectId, mode, profile?.configurationRevision);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [tema, setTema] = useState<"sistema" | "claro" | "oscuro">("oscuro");
   useEffect(() => {
@@ -123,7 +126,9 @@ export function App({ profile }: { profile?: {
   const [sidebarCompacta, setSidebarCompacta] = useState(false);
   const contenido = useRef<HTMLDivElement | null>(null);
 
-  const { eventos, conexion, reanudar } = useEventosRun(runId);
+  const { eventos, conexion, reanudar, errorReconciliacion } = useEventosRun(runId, snapshot => {
+    if (runSeleccionado.current === snapshot.run_id) setEstado(snapshot);
+  });
 
   // Puente de diagnostico para el verificador (`tools/verify_frontend.py`).
   //
@@ -358,6 +363,12 @@ export function App({ profile }: { profile?: {
     setErrorAccion(null);
     setEstado(null);
     try {
+      if (!projectId) throw new Error("Selecciona o crea una carpeta de proyecto antes de ejecutar.");
+      const checked = await readiness.check(projectId, mode);
+      if (!checked.ready) {
+        preparacion.recheck();
+        throw new Error(checked.checks.filter(check => !check.ready).map(check => check.message).join(" "));
+      }
       const creado = await api.crearRun(
         texto,
         projectId || undefined,
@@ -399,6 +410,9 @@ export function App({ profile }: { profile?: {
     allowedPaths,
     protectedPaths,
     mode,
+    preparacion: preparacion.report ?? (!projectId ? { ready: false, checks: [{ code: "PROJECT", ready: false, message: "Selecciona o crea una carpeta de proyecto.", action: "register_project" }] } : null),
+    comprobandoPreparacion: preparacion.loading,
+    errorPreparacion: preparacion.error,
   };
   const accionesCompositor: AccionesCompositor = {
     // Editar a mano **invalida la procedencia**: ver `transcripcion`.
@@ -410,6 +424,11 @@ export function App({ profile }: { profile?: {
     alCambiarNombre: setNombreProyecto,
     alCambiarRuta: setRutaProyecto,
     alLanzar: () => void lanzar(),
+    alRevisarPreparacion: preparacion.recheck,
+    alConfigurarProveedor: () => profile?.onVault ? profile.onVault() : setVista("sesion"),
+    alInicializarBase: () => {
+      void readiness.initialize(projectId).then(() => preparacion.recheck()).catch(cause => setErrorAccion(anotarFallo(cause)));
+    },
     alRegistrarProyecto: (crear = false) => void registrarProyecto(crear),
     alCambiarPermitidas: setAllowedPaths,
     alCambiarProtegidas: setProtectedPaths,
@@ -462,6 +481,7 @@ export function App({ profile }: { profile?: {
           <Chip pulsa>comprobando…</Chip>
         )}
         <EstadoProveedor configuracion={salud?.provider_configuration} />
+        {errorReconciliacion && <p role="alert">{errorReconciliacion} <button onClick={reanudar}>Reconciliar estado</button></p>}
         {profile || sesion === "autenticado" ? <Chip tono="ok">sesión autenticada</Chip> : null}
         {/* La credencial enmascarada se enseña **en la cabecera**, discreta y en
             todas las vistas: confirma cual esta en uso sin revelarla. Estuvo solo
@@ -625,6 +645,7 @@ export function App({ profile }: { profile?: {
 
         {vista === "detalle" ? (
           <VistaDetalle
+              puedeOperar={puedeOperar}
             estado={estado}
             hitos={hitos}
             eventos={eventos}

@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { api } from "../lib/api";
 import { ActualizarRun } from "../components/ActualizarRun";
+import { CancelarEjecucion } from "../components/CancelarEjecucion";
 import type { EstadoConexion } from "../hooks/useEventosRun";
 import type { Project, RunEvent, RunState } from "../lib/contracts";
 import { ActividadPipeline } from "../components/ActividadPipeline";
@@ -51,6 +52,7 @@ export function VistaDetalle({
   alRefrescar,
   alReanudar,
   alFallo,
+  puedeOperar = false,
 }: {
   estado: RunState | null;
   eventos?: RunEvent[];
@@ -60,6 +62,7 @@ export function VistaDetalle({
   alRefrescar: (id: string) => Promise<string[]>;
   alReanudar: (id: string) => void;
   alFallo: (causa: unknown) => string;
+  puedeOperar?: boolean;
 }) {
   const [revirtiendo, setRevirtiendo] = useState(false);
   const [errorRollback, setErrorRollback] = useState<string | null>(null);
@@ -150,6 +153,8 @@ export function VistaDetalle({
           ) : null}
         </div>
         <ActualizarRun key={estado.run_id} runId={estado.run_id} alRefrescar={alRefrescar} />
+        <CancelarEjecucion key={estado.run_id} estado={estado} puedeOperar={puedeOperar}
+          alActualizar={() => void alRefrescar(estado.run_id)} />
         <p className="tenue">
           creada {fechaHora(estado.created_at)} · actualizada {fechaHora(estado.updated_at)}
         </p>
@@ -522,11 +527,6 @@ export function VistaDetalle({
         </Seccion>
       ) : null}
 
-      <p className="tenue">
-        La cancelación de una ejecución en curso no está disponible: el endpoint
-        existe pero responde 501 (no implementado), así que no se ofrece un botón que
-        no puede funcionar.
-      </p>
     </>
   );
 }

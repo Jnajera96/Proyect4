@@ -9,6 +9,9 @@ La validación fuente no equivale a actualizar el portable instalado.
 El estado ponderado actual (77/100) y la adopción real de patrones están en
 `PROJECT-STATUS-2026-10-30.md`. La generalización del Analyst se verifica en
 `UNIVERSAL-REQUIREMENTS-VALIDATION.md`; mantiene las mismas puertas humanas.
+La preparación integral, recuperación SSE y cancelación cooperativa adaptadas de
+Nova se incorporan en fuente: `NOVA-OPERATIONAL-VALIDATION.md`. Se incluyen en el
+pendiente de empaquetado y piloto en otra PC, sin declarar producción aprobada.
 
 | Orden | Trabajo y estado | Criterio para avanzar |
 | --- | --- | --- |

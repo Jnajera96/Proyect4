@@ -5,6 +5,8 @@ from contextvars import ContextVar
 from functools import wraps
 from time import perf_counter
 
+from ai_swe.cancellation import cancellation_scope, current_cancellation
+
 _SINK = ContextVar("ai_swe_activity_sink", default=None)
 _NODE = ContextVar("ai_swe_activity_node", default=None)
 _ROLE = ContextVar("ai_swe_activity_role", default=None)
@@ -32,8 +34,13 @@ def activity_node(node, role=None, mode="deterministic"):
         role_token = _ROLE.set(role or node.__name__)
         start = perf_counter()
         try:
+            control = current_cancellation()
+            promoted = state.promotion_receipt and state.promotion_receipt.status == "promoted"
+            if control and not promoted:
+                control.check()
             emit("node_started", mode=mode)
-            result = node(state)
+            with cancellation_scope(control.child() if control else None):
+                result = node(state)
             emit("node_completed", duration_ms=(perf_counter() - start) * 1000)
             if (
                 node.__name__ == "finalize"

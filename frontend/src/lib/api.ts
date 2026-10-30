@@ -163,6 +163,7 @@ export const api = {
   },
 
   obtenerRun: (runId: string) => pedir<RunState>(`/runs/${encodeURIComponent(runId)}`),
+  cancelarRun: (runId: string) => pedir<RunState>(`/runs/${encodeURIComponent(runId)}/cancel`, { method: "POST" }),
 
   listarProyectos: () => pedir<Project[]>("/projects"),
 

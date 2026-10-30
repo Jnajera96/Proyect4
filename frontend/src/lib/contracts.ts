@@ -68,19 +68,7 @@ export const EVENTOS_PUERTA = [
 export const EVENTO_CIERRE: EventKind = "run.done";
 
 /** Todos los eventos que el cliente se suscribe a escuchar. */
-export const EVENTOS_ESCUCHADOS: EventKind[] = [
-  "node_started",
-  "model_request_started",
-  "model_response_received",
-  "proposal_imports_normalized",
-  "test_target_started",
-  "test_target_completed",
-  "node_completed",
-  "node_skipped",
-  ...EVENTOS_HITO,
-  ...EVENTOS_PUERTA,
-  EVENTO_CIERRE,
-];
+export const EVENTOS_ESCUCHADOS: EventKind[] = schemas.EventKind.enum;
 
 // ---------------------------------------------------------------------------
 // Formas de las respuestas.
@@ -310,6 +298,9 @@ export interface FinalReport {
 
 /** El estado completo de una ejecucion. */
 export interface RunState {
+  cancellation?: { status: "requested" | "confirmed" | "too_late"; requested_at: string;
+    finished_at: string | null; worktree_cleanup: string; released_reservations: number;
+    unresolved_reservations: number; remote_stop_confirmed: boolean } | null;
   run_id: string;
   trace_id: string;
   status: RunStatus;

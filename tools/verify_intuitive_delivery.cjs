@@ -28,6 +28,7 @@ let server,browser,projects=[],runs=[],prepared=0,launched=0,publications=[],cre
     const json=(data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
     if(url.pathname==='/health')return json({status:'ok',fase:'Fixture sin inferencia'});
     if(url.pathname==='/projects'){if(req.method==='POST'){createBody=body;projects=[project];return json(project,201);}return json(projects);}
+    if(url.pathname.endsWith('/readiness'))return json({ready:true,checks:[]});
     if(url.pathname==='/runs'){if(req.method==='POST'){runBody=body;runs=[{run_id:state.run_id,trace_id:'fixture',intent:'modify',status:'completed',created_at:now,updated_at:now,error_count:0,awaiting_approval:false}];return json(state,202);}return json(runs);}
     if(url.pathname==='/runs/fixture-run')return json(state);
     if(url.pathname==='/runs/fixture-run/launch-guide')return json(guide);

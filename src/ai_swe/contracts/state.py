@@ -156,6 +156,22 @@ class DeliveryMode(StrEnum):
     GITHUB = "github"
 
 
+class CancellationStatus(StrEnum):
+    REQUESTED = "requested"
+    CONFIRMED = "confirmed"
+    TOO_LATE = "too_late"
+
+
+class CancellationReceipt(BaseModel):
+    status: CancellationStatus = CancellationStatus.REQUESTED
+    requested_at: datetime
+    finished_at: datetime | None = None
+    worktree_cleanup: str = "pending"
+    released_reservations: int = 0
+    unresolved_reservations: int = 0
+    remote_stop_confirmed: bool = False
+
+
 class RunOptions(BaseModel):
     """Lo que el usuario **pidio**. Distinto de `TaskInterpretation`, que es lo que
     el Supervisor **entendio**.
@@ -333,6 +349,7 @@ class RunState(BaseModel):
 
     historical_context: list[HistoricalContext] = Field(default_factory=list, max_length=8)
     promotion_receipt: PromotionReceipt | None = None
+    cancellation: CancellationReceipt | None = None
     outputs: Outputs = Field(default_factory=Outputs)
     artifacts: Artifacts = Field(default_factory=Artifacts)
     evidence: Evidence = Field(default_factory=Evidence)

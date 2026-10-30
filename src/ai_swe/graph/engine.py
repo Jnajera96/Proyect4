@@ -113,6 +113,7 @@ class RunEngine:
         self.rollbacks = RollbackStore(store._db_path, owner)
         self.continuity = ContinuityStore(store._db_path, owner, worktrees_root=wt_root)
         self._pause_requested: set[str] = set()
+        self._cancel_tokens = {}
         # El grafo se compila **por hilo**, no una sola vez. El checkpointer lleva
         # una conexion SQLite, y compartir una conexion entre el hilo de la
         # peticion y los trabajadores producia fallos intermitentes en el `commit`.
@@ -149,11 +150,83 @@ class RunEngine:
         """
         instantanea = self._app.get_state(self._config(run_id))
         if instantanea.values:
-            return RunState.model_validate(instantanea.values)
-        try:
-            return self._store.initial_state(run_id)
-        except KeyError as exc:
-            raise RunNotFound(run_id) from exc
+            state = RunState.model_validate(instantanea.values)
+        else:
+            try:
+                state = self._store.initial_state(run_id)
+            except KeyError as exc:
+                raise RunNotFound(run_id) from exc
+        control = self._cancel_tokens.get(run_id)
+        if control and control.requested and state.cancellation is None:
+            from ai_swe.contracts.state import CancellationReceipt
+
+            state = state.model_copy(update={"cancellation": CancellationReceipt(
+                requested_at=control.requested_at,
+            )})
+        return state
+
+    def _cancel_control(self, run_id):
+        from ai_swe.cancellation import CancellationToken
+
+        with self._locks_guard:
+            return self._cancel_tokens.setdefault(run_id, CancellationToken())
+
+    def request_cancel(self, run_id: str) -> RunState:
+        state = self.get(run_id)
+        if state.status is RunStatus.CANCELLED:
+            return state
+        if state.status.is_terminal:
+            raise NothingToResume("La ejecución ya terminó; cancelar no revierte promociones.")
+        control = self._cancel_control(run_id)
+        with self._locks_guard:
+            control.request()
+        lock = self._lock_de(run_id)
+        if lock.acquire(blocking=False):
+            try:
+                actual = self.get(run_id)
+                if actual.status is RunStatus.CANCELLED:
+                    return actual
+                return self._confirm_cancel(run_id, actual)
+            finally:
+                lock.release()
+        return self.get(run_id)
+
+    def _confirm_cancel(self, run_id, state):
+        from pathlib import Path
+
+        from ai_swe.contracts.state import CancellationReceipt, CancellationStatus
+        from ai_swe.state.budget_ledger import BudgetLedger
+
+        control = self._cancel_control(run_id)
+        promoted = state.promotion_receipt and state.promotion_receipt.status == "promoted"
+        too_late = promoted or state.status is RunStatus.COMPLETED
+        cleanup = "preserved_promoted" if promoted else "not_needed"
+        if not too_late and state.artifacts.worktree_path:
+            path = Path(state.artifacts.worktree_path).resolve()
+            expected = ((self._settings.workspace_root / run_id).resolve()
+                        if self._settings is not None else None)
+            if path != expected or path == Path(_repositorio_de(state) or ".").resolve():
+                cleanup = "failed"
+            else:
+                limpiar_worktree(str(path), repo_original=_repositorio_de(state), run_id=run_id,
+                                 base_commit=state.artifacts.base_commit or "")
+                cleanup = "failed" if path.exists() else "removed"
+        budget = {"released": 0, "unresolved": 0}
+        if self._settings and self._settings.profile_id:
+            budget = BudgetLedger(self._store._db_path).reconcile_cancelled(run_id)
+        receipt = CancellationReceipt(
+            status=CancellationStatus.TOO_LATE if too_late else CancellationStatus.CONFIRMED,
+            requested_at=control.requested_at, finished_at=_ahora(), worktree_cleanup=cleanup,
+            released_reservations=budget["released"], unresolved_reservations=budget["unresolved"],
+        )
+        result = state.model_copy(update={"cancellation": receipt, "updated_at": _ahora(),
+                                         **({} if too_late else {"status": RunStatus.CANCELLED,
+                                                               "next_step": None})})
+        self._app.update_state(self._config(run_id), result.model_dump())
+        result = self._persistir(run_id, result)
+        with self._locks_guard:
+            self._cancel_tokens.pop(run_id, None)
+        return result
 
     def pendiente_de_aprobacion(self, run_id: str) -> bool:
         instantanea = self._app.get_state(self._config(run_id))
@@ -182,6 +255,8 @@ class RunEngine:
         with self._lock_de(run_id):
             if self._store.summary(run_id) is None:
                 raise RunNotFound(run_id)
+            if self.get(run_id).status.is_terminal:
+                raise NothingToResume("La ejecución no esta esperando aprobacion: ya terminó.")
             with self._locks_guard:
                 reclamada = run_id in self._reclamadas
             if reclamada:
@@ -282,6 +357,8 @@ class RunEngine:
     def execute(self, run_id: str) -> RunState:
         """Ejecuta una ejecucion ya creada, emitiendo progreso por nodo."""
         with self._lock_de(run_id):
+            if self.get(run_id).status.is_terminal:
+                return self.get(run_id)
             entrada = self._store.initial_state(run_id)
             return self._ejecutar(entrada, run_id)
 
@@ -318,6 +395,8 @@ class RunEngine:
             # La conversion solo tiene sentido para el enum, que es lo que el grafo
             # espera como texto.
             with self._lock_de(run_id):
+                if self.get(run_id).status.is_terminal:
+                    return self.get(run_id)
                 return self._ejecutar(Command(resume=valor), run_id)
         finally:
             self.olvidar_reclamacion(run_id)
@@ -406,9 +485,15 @@ class RunEngine:
 
     def _ejecutar(self, entrada, run_id: str) -> RunState:
         from ai_swe.graph.activity import activity_sink
+        from ai_swe.cancellation import RunCancelled, cancellation_scope
 
-        with activity_sink(lambda kind, data: self._store.append_event(run_id, EventKind(kind), data)):
-            return self._ejecutar_con_actividad(entrada, run_id)
+        control = self._cancel_control(run_id)
+        with activity_sink(lambda kind, data: self._store.append_event(run_id, EventKind(kind), data)), cancellation_scope(control):
+            try:
+                control.check()
+                return self._ejecutar_con_actividad(entrada, run_id)
+            except RunCancelled:
+                return self._confirm_cancel(run_id, self.get(run_id))
 
     def _ejecutar_con_actividad(self, entrada, run_id: str) -> RunState:
         config = self._config(run_id)
@@ -449,7 +534,10 @@ class RunEngine:
                     self.continuity.set_checkpoint_status(run_id, RunStatus.PAUSED)
                     break
 
-        return self._persistir(run_id, self._estado_actual(config, run_id))
+        state = self._estado_actual(config, run_id)
+        if self._cancel_tokens.get(run_id) and self._cancel_tokens[run_id].requested:
+            return self._confirm_cancel(run_id, state)
+        return self._persistir(run_id, state)
 
     def _estado_actual(self, config: dict, run_id: str) -> RunState:
         instantanea = self._app.get_state(config)

@@ -478,13 +478,15 @@ def test_los_origenes_permitidos_se_pueden_configurar(tmp_path) -> None:
 # ----------------------------------------------------------------- cancelar
 
 
-def test_cancelar_no_esta_implementado_y_lo_dice(cliente) -> None:
-    """Devolver 501 con el motivo es mejor que un endpoint a medias que parece
-    funcionar."""
+def test_cancelar_distingue_solicitud_y_parada_confirmada(cliente) -> None:
+    """Una solicitud cooperativa no se presenta como una parada ya confirmada."""
     creada = cliente.post("/runs", json={"instruction": "Analiza el módulo de auth"}).json()
     r = cliente.post(f"/runs/{creada['run_id']}/cancel")
-    assert r.status_code == 501
-    assert "RF-16" in r.json()["detail"]
+    assert r.status_code in {200, 202}
+    receipt = r.json()["cancellation"]
+    assert receipt["status"] in {"requested", "confirmed"}
+    if receipt["status"] == "confirmed":
+        assert r.json()["status"] == "cancelled"
 
 
 def test_cancelar_una_ejecucion_inexistente_da_404(cliente) -> None:

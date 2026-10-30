@@ -6,7 +6,7 @@ import math
 import sqlite3
 import time
 import uuid
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from pathlib import Path
 
 
@@ -21,6 +21,28 @@ def _amount(value: float) -> float:
 
 
 class BudgetLedger:
+    @staticmethod
+    def read_status(path: Path) -> dict:
+        """Read readiness without creating/migrating a database or reserving money."""
+        empty = {"available": 0.0, "hourly_used": 0.0}
+        if not path.is_file():
+            return empty
+        try:
+            with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)) as db:
+                limit = db.execute("SELECT limit_amount FROM profile_budget WHERE id=1").fetchone()
+                used = db.execute(
+                    "SELECT COALESCE(SUM(COALESCE(consumed,reserved)),0) FROM budget_reservations"
+                ).fetchone()[0]
+                hourly = db.execute(
+                    "SELECT COALESCE(SUM(COALESCE(consumed,reserved)),0) FROM budget_reservations "
+                    "WHERE consumed IS NULL OR COALESCE(settled_epoch,created_epoch)>=?",
+                    (time.time() - 3600,),
+                ).fetchone()[0]
+                return {"available": max(0.0, limit[0] - used) if limit else 0.0,
+                        "hourly_used": hourly}
+        except sqlite3.Error:
+            return empty
+
     def __init__(self, path: Path):
         self.path = path
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -37,6 +59,9 @@ class BudgetLedger:
             for column in ("created_epoch", "settled_epoch"):
                 if column not in columns:
                     db.execute(f"ALTER TABLE budget_reservations ADD COLUMN {column} REAL")
+            if "dispatched" not in columns:
+                # Legacy unknown reservations might already have reached a provider.
+                db.execute("ALTER TABLE budget_reservations ADD COLUMN dispatched INTEGER NOT NULL DEFAULT 1")
             db.execute("UPDATE budget_reservations SET created_epoch="
                        "COALESCE(CAST(strftime('%s',created_at) AS REAL),?) "
                        "WHERE created_epoch IS NULL", (time.time(),))
@@ -130,14 +155,39 @@ class BudgetLedger:
             ).fetchone()[0]
             assert_hourly_cost(hourly, remaining, hourly_limit)
             db.execute(
-                "INSERT INTO budget_reservations(id,run_id,reserved,created_epoch) VALUES(?,?,?,?)",
+                "INSERT INTO budget_reservations(id,run_id,reserved,created_epoch,dispatched) VALUES(?,?,?,?,0)",
                 (reservation, run_id, remaining, now),
             )
             return reservation
 
+    def mark_dispatched(self, reservation: str):
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            result = db.execute(
+                "UPDATE budget_reservations SET dispatched=1 WHERE id=? AND consumed IS NULL",
+                (reservation,),
+            )
+            if result.rowcount != 1:
+                raise LedgerError("La reserva ya se concilió; no se enviará la llamada")
+
+    def reconcile_cancelled(self, run_id: str) -> dict:
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            released = db.execute(
+                "UPDATE budget_reservations SET consumed=0,settled_epoch=? "
+                "WHERE run_id=? AND consumed IS NULL AND dispatched=0", (time.time(), run_id),
+            ).rowcount
+            unresolved = db.execute(
+                "SELECT COUNT(*) FROM budget_reservations WHERE run_id=? AND consumed IS NULL",
+                (run_id,),
+            ).fetchone()[0]
+            return {"released": released, "unresolved": unresolved}
+
     def settle(self, reservation: str, cost: float | None):
         if cost is None:
-            return  # Never interpret missing usage as zero.
+            # A settlement with missing usage cannot prove that no request was sent.
+            self.mark_dispatched(reservation)
+            return
         cost = _amount(cost)
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")

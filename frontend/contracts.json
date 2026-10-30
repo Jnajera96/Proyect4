@@ -796,6 +796,66 @@
           "title": "Budget",
           "type": "object"
         },
+        "CancellationReceipt": {
+          "properties": {
+            "finished_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Finished At"
+            },
+            "released_reservations": {
+              "default": 0,
+              "title": "Released Reservations",
+              "type": "integer"
+            },
+            "remote_stop_confirmed": {
+              "default": false,
+              "title": "Remote Stop Confirmed",
+              "type": "boolean"
+            },
+            "requested_at": {
+              "format": "date-time",
+              "title": "Requested At",
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/$defs/CancellationStatus",
+              "default": "requested"
+            },
+            "unresolved_reservations": {
+              "default": 0,
+              "title": "Unresolved Reservations",
+              "type": "integer"
+            },
+            "worktree_cleanup": {
+              "default": "pending",
+              "title": "Worktree Cleanup",
+              "type": "string"
+            }
+          },
+          "required": [
+            "requested_at"
+          ],
+          "title": "CancellationReceipt",
+          "type": "object"
+        },
+        "CancellationStatus": {
+          "enum": [
+            "requested",
+            "confirmed",
+            "too_late"
+          ],
+          "title": "CancellationStatus",
+          "type": "string"
+        },
         "CodeChange": {
           "description": "Salida del Coder. Aplica en worktree aislado, nunca en el repo del usuario.",
           "properties": {
@@ -1756,6 +1816,17 @@
         },
         "budget": {
           "$ref": "#/$defs/Budget"
+        },
+        "cancellation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CancellationReceipt"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "created_at": {
           "format": "date-time",

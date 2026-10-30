@@ -4,6 +4,7 @@
  * **Solo se consumen los eventos canonicos de F10.** Hasta F10 el frontend
  * escuchaba `run.status`, `run.step`, `run.awaiting_approval`, `run.report` y
  * `run.error` (los nombres heredados, AUD-11). Aqui se escuchan unicamente:
+ *   - arranque: `run.created`, `run.started`, para seguir toda la secuencia;
  *
  *   - los hitos por nodo: `requirements.completed`, `plan.completed`,
  *     `coder.completed`, `tests.completed`;
@@ -43,8 +44,10 @@ import {
   type EventKind,
   type RunEvent,
   type RunStatus,
+  type RunState,
 } from "../lib/contracts";
 import { useClaveApi } from "../lib/auth";
+import { api } from "../lib/api";
 
 export type EstadoConexion = "inactivo" | "conectando" | "conectado" | "cerrado" | "error";
 
@@ -54,22 +57,28 @@ interface ResultadoSse {
   /** Cierra el flujo manualmente (al cambiar de ejecucion o desmontar). */
   cerrar: () => void;
   reanudar: () => void;
+  errorReconciliacion: string;
 }
 
 /**
  * Escucha el flujo de una ejecucion.
  *
- * Devuelve los eventos recibidos **en orden**, sin deduplicar por `seq` en la
- * interfaz: el backend garantiza orden y unicidad, y deduplicar aqui esconderia
- * un error del servidor en lugar de dejarlo visible.
+ * Descarta repeticiones y reconcilia huecos contra el snapshot autoritativo.
+ * La recuperacion solo lee estado; nunca reanuda agentes ni decisiones humanas.
  */
-export function useEventosRun(runId: string | null): ResultadoSse {
+export function useEventosRun(runId: string | null, onSnapshot?: (state: RunState) => void): ResultadoSse {
   const [eventos, setEventos] = useState<RunEvent[]>([]);
   const [conexion, setConexion] = useState<EstadoConexion>("inactivo");
   const fuenteRef = useRef<EventSource | null>(null);
   const clave = useClaveApi();
+  const activeSelection = useRef({ runId, clave });
+  activeSelection.current = { runId, clave };
   const [revision, setRevision] = useState(0);
   const cursor = useRef(0);
+  const snapshotCallback = useRef(onSnapshot);
+  snapshotCallback.current = onSnapshot;
+  const needsSnapshot = useRef(false);
+  const [errorReconciliacion, setErrorReconciliacion] = useState("");
   const identidad = useRef<{ runId: string | null; clave: string | null }>({ runId: null, clave: null });
   const reanudar = useCallback(() => {
     setRevision(v => v + 1);
@@ -87,6 +96,8 @@ export function useEventosRun(runId: string | null): ResultadoSse {
     if (!runId) {
       identidad.current = { runId: null, clave: null };
       cursor.current = 0;
+      needsSnapshot.current = false;
+      setErrorReconciliacion("");
       setEventos([]);
       setConexion("inactivo");
       return;
@@ -95,6 +106,8 @@ export function useEventosRun(runId: string | null): ResultadoSse {
     if (identidad.current.runId !== runId || identidad.current.clave !== clave) {
       identidad.current = { runId, clave };
       cursor.current = 0;
+      needsSnapshot.current = false;
+      setErrorReconciliacion("");
       setEventos([]);
     }
     setConexion("conectando");
@@ -109,7 +122,27 @@ export function useEventosRun(runId: string | null): ResultadoSse {
     let vigente = true;
     fuenteRef.current = fuente;
 
-    fuente.onopen = () => { if (vigente) setConexion("conectado"); };
+    let recovering = false;
+    let gapVersion = 0;
+    async function reconcile() {
+      if (recovering || !vigente || !runId) return;
+      recovering = true;
+      const requestedVersion = gapVersion;
+      try {
+        const snapshot = await api.obtenerRun(runId);
+        if (!vigente || activeSelection.current.runId !== runId || activeSelection.current.clave !== clave) return;
+        snapshotCallback.current?.(snapshot);
+        needsSnapshot.current = requestedVersion !== gapVersion;
+        setErrorReconciliacion("");
+      } catch {
+        if (vigente) setErrorReconciliacion("No se pudo recuperar el estado tras perder eventos. Vuelve a reconciliar.");
+      } finally {
+        recovering = false;
+        if (vigente && needsSnapshot.current && requestedVersion !== gapVersion) void reconcile();
+      }
+    }
+
+    fuente.onopen = () => { if (vigente) { setConexion("conectado"); if (needsSnapshot.current) void reconcile(); } };
 
     // Un `listener` por tipo de la lista canonica. Se registran todos: un
     // `switch` sobre `kind` en el consumidor decide que hacer con cada uno, y un
@@ -124,6 +157,13 @@ export function useEventosRun(runId: string | null): ResultadoSse {
         } catch {
           // Un evento ilegible no debe tumbar el flujo. Se ignora y se sigue.
           return;
+        }
+        if (!Number.isSafeInteger(evento.seq) || evento.seq <= cursor.current) return;
+        if (evento.seq !== cursor.current + 1) {
+          gapVersion++;
+          needsSnapshot.current = true;
+          setEventos([]);
+          void reconcile();
         }
         cursor.current = evento.seq;
         setConexion("conectado");
@@ -163,7 +203,7 @@ export function useEventosRun(runId: string | null): ResultadoSse {
     // hasta recargar la pagina.
   }, [runId, clave, revision]);
 
-  return { eventos, conexion, cerrar, reanudar };
+  return { eventos, conexion, cerrar, reanudar, errorReconciliacion };
 }
 
 /**
