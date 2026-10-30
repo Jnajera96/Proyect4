@@ -45,6 +45,12 @@ let server,browser,projects=[],runs=[],prepared=0,launched=0,publications=[],cre
     const page=await browser.newPage({viewport:{width:1440,height:1100}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.goto('http://127.0.0.1:'+server.address().port);
     assert.equal(await page.getByRole('radio',{name:'Modo local',exact:true}).isChecked(),true);check('local mode is the beginner default');
+    const quickStart=page.getByRole('group',{name:'Ideas para empezar'});
+    for (const label of ['💡 Calculadora científica con funciones trigonométricas','📅 Calendario interactivo con gestión de eventos','🥗 Contador de calorías con registro de alimentos']) {
+      await quickStart.getByRole('button',{name:label,exact:true}).click();
+      assert.match(await page.getByLabel('Instrucción',{exact:true}).inputValue(),/^Crea /);
+    }
+    assert.equal(runs.length,0);check('three quick-start ideas fill the controlled instruction without starting a run');
     await page.locator('summary').filter({hasText:'Elegir o crear una carpeta'}).click();
     await page.getByLabel('Nombre',{exact:true}).fill('Mi aplicación');
     await page.getByLabel('Carpeta de tu aplicación',{exact:true}).fill('C:/fixture/myapp');

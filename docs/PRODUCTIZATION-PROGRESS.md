@@ -1,5 +1,17 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Requisitos de producto para instrucciones breves — 30 de octubre de 2026
+
+Prioridad incorporada al flujo de pendientes y al plan maestro de `ROADMAP.md`.
+Sobre `4b4c242` (descendiente de `ab079d3`) se implementan el rol Product Manager,
+propuestas base locales, confianza alta de intención clara, confirmación/edición
+visual y tres chips de inicio rápido. Se preserva la puerta humana y el alcance.
+Validación offline: backend940 PASS/4 SKIP, frontend32 PASS, build TypeScript/Vite
+y 23 controles de navegador aprobados. Las suites previas permanecen intactas.
+Evidencia y límites: `PRODUCT-REQUIREMENTS-VALIDATION.md`.
+Empaquetado actualizado, piloto en otra PC y despliegue siguen como pendientes
+separados; esta mejora no autoriza inferencia pagada ni publicación remota real.
+
 ## UX intuitiva y memoria asociativa — 30 de octubre de 2026
 
 Implementación fuente de los cinco puntos autorizados sobre `ab079d3`: capitalización

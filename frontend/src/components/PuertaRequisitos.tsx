@@ -40,6 +40,10 @@ export function PuertaRequisitos({
   alFallo: (causa: unknown) => string;
 }) {
   const interp = estado.interpretation;
+  const construye = (estado.options.mode ?? "FULL_PROPOSAL") === "FULL_PROPOSAL";
+  const caracteristicas = (interp?.rationale ?? "").split(/\r?\n/)
+    .filter(linea => /^\s*(?:[-*•]|\d+[.)])\s+/.test(linea))
+    .map(linea => linea.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, ""));
   const [modo, setModo] = useState<"revisar" | "corregir">("revisar");
   const [intent, setIntent] = useState<Intent>(interp?.intent ?? "inspect");
   const [constraints, setConstraints] = useState((interp?.constraints ?? []).join("\n"));
@@ -109,6 +113,10 @@ export function PuertaRequisitos({
         <p className="vacio">Aún no hay interpretación registrada.</p>
       ) : modo === "revisar" ? (
         <>
+          {caracteristicas.length > 0 && <Seccion titulo="Características planificadas para tu aplicación">
+            <p>Esta es una propuesta para que la revises. Puedes ajustar o quitar funciones antes de construir.</p>
+            <ul>{caracteristicas.map((texto, i) => <li key={i}>{texto}</li>)}</ul>
+          </Seccion>}
           <Seccion titulo="Lo que el sistema entendió">
             <dl className="datos">
               <dt>Tu petición</dt>
@@ -152,7 +160,8 @@ export function PuertaRequisitos({
                 )}
               </dd>
               <dt>Por qué</dt>
-              <dd>{interp.rationale}</dd>
+              <dd>{caracteristicas.length ? <details><summary>Ver interpretación completa</summary>
+                <p style={{ whiteSpace: "pre-wrap" }}>{interp.rationale}</p></details> : interp.rationale}</dd>
             </dl>
           </Seccion>
 
@@ -163,10 +172,13 @@ export function PuertaRequisitos({
               disabled={ocupado || requiereRepositorio}
               onClick={() => void enviar("approved")}
             >
-              Confirmar
+              {interp.intent === "modify" && construye ? "Confirmar y construir" : "Confirmar"}
             </button>
-            <button disabled={ocupado} onClick={() => setModo("corregir")}>
-              Modificar
+            <button disabled={ocupado} onClick={() => {
+              setIntent(interp.intent); setConstraints(interp.constraints.join("\n"));
+              setRationale(interp.rationale); setModo("corregir");
+            }}>
+              Ajustar propuesta
             </button>
             <button
               className="peligro"
@@ -208,10 +220,12 @@ export function PuertaRequisitos({
                 />
               </div>
               <div>
-                <label htmlFor="g1-rationale">Por qué (razonamiento)</label>
+                <label htmlFor="g1-rationale">Características y alcance propuestos</label>
                 <textarea
                   id="g1-rationale"
                   value={rationale}
+                  maxLength={2000}
+                  rows={10}
                   onChange={(e) => setRationale(e.target.value)}
                 />
               </div>
@@ -220,7 +234,7 @@ export function PuertaRequisitos({
 
           <Fila sep>
             <button className="primario" disabled={ocupado || requiereRepositorio} onClick={corregir}>
-              Enviar correcciones
+              {intent === "modify" && construye ? "Guardar ajustes y construir" : "Guardar ajustes y confirmar"}
             </button>
             <button disabled={ocupado} onClick={() => setModo("revisar")}>
               Volver

@@ -18,7 +18,7 @@ let browser, server;
   const run = {
     run_id: 'fixture-dynamic-only', status: 'running', next_step: null, plan: null, plan_index: 0,
     instruction: { text: 'Construye una calculadora con seno, coseno y tangente', source: 'text', capture_fidelity: 1, confirmed_by_user: false },
-    interpretation: { intent: 'modify', confidence: .5, constraints: [], rationale: 'Fixture explícita de UI', scope: { repo_path: 'C:/fixture', allowed_paths: [], protected_paths: [] } },
+    interpretation: { intent: 'modify', confidence: .9, constraints: [], rationale: 'Propuesta base para confirmar\n- Funcionalidades: Seno, coseno y tangente\n- Validaciones: Números finitos\n- Interfaz: Controles etiquetados\n- Pruebas: Casos matemáticos conocidos', scope: { repo_path: 'C:/fixture', allowed_paths: [], protected_paths: [] } },
     options: { repo_path: 'C:/fixture', mode: 'FULL_PROPOSAL' }, artifacts: { diff: '', changed_files: [] },
     outputs: { researcher_output: null, coder_output: null, reviewer_output: null }, evidence: { test_runs: [] }, approvals: [], errors: [], final_report: null,
   };
@@ -27,9 +27,10 @@ let browser, server;
     import {VistaFlujo} from './src/views/VistaFlujo';
     import {PuertaRequisitos} from './src/components/PuertaRequisitos';
     function App(){const {eventos}=useEventosRun('fixture-dynamic-only');const [gate,setGate]=React.useState(false);
-      const [confirmed,setConfirmed]=React.useState(false);const state=${JSON.stringify(run)};
+      const [confirmed,setConfirmed]=React.useState(false);const [planOnly,setPlanOnly]=React.useState(false);const state=${JSON.stringify(run)};
+      if(planOnly)state.options.mode='PLAN_ONLY';
       if(gate)state.status='awaiting_human_requirements_confirmation';
-      return <><p>TEST FIXTURE — no actual model inference</p><button onClick={()=>setGate(true)}>Fixture puerta</button>
+      return <><p>TEST FIXTURE — no actual model inference</p><button onClick={()=>setGate(true)}>Fixture puerta</button><button onClick={()=>setPlanOnly(!planOnly)}>Fixture cambiar modo</button>
         {gate?<PuertaRequisitos estado={state} alDecidir={()=>setConfirmed(true)} alFallo={e=>String(e)}/>:<VistaFlujo estado={state} eventos={eventos} alPuerta={()=>setGate(true)}/>}
         {confirmed?<p>Fixture confirmada</p>:null}</>}
     createRoot(document.getElementById('root')).render(<App/>);`;
@@ -77,11 +78,19 @@ let browser, server;
     await page.getByRole('button',{name:'Cerrar inspector de etapa'}).click();
     await page.getByRole('button',{name:'Fixture puerta'}).click();
     check(await page.getByText('100%',{exact:true}).isVisible(),'typed capture fidelity rendered as 100% separately');
-    await page.getByRole('button',{name:'Modificar',exact:true}).click();
+    check(await page.getByRole('heading',{name:'Características planificadas para tu aplicación',exact:true}).isVisible(),'baseline proposal has a friendly review heading');
+    check(await page.getByText('Funcionalidades: Seno, coseno y tangente',{exact:true}).isVisible(),'baseline features are rendered as visible list items');
+    await page.getByRole('button',{name:'Confirmar y construir',exact:true}).click();
+    await page.getByText('Fixture confirmada').waitFor();
+    check(correction.decision==='approved','single confirmation click posts approval without automatic generation');
+    await page.getByRole('button',{name:'Fixture cambiar modo',exact:true}).click();
+    check(await page.getByRole('button',{name:'Confirmar',exact:true}).isVisible(),'plan-only confirmation does not promise to build code');
+    await page.getByRole('button',{name:'Fixture cambiar modo',exact:true}).click();
+    await page.getByRole('button',{name:'Ajustar propuesta',exact:true}).click();
     await page.locator('#g1-intent').selectOption('inspect');
     await page.locator('#g1-constraints').fill('Conservar funciones trigonométricas');
     await page.locator('#g1-rationale').fill('Revisión humana de la intención');
-    await page.getByRole('button',{name:'Enviar correcciones'}).click();
+    await page.getByRole('button',{name:'Guardar ajustes y confirmar'}).click();
     await page.getByText('Fixture confirmada').waitFor();
     check(correction.intent==='inspect' && correction.constraints[0]==='Conservar funciones trigonométricas','intent and edited requirements reach real HTTP gate handler');
     check(errors.length===0,'no browser runtime errors');report.success=true;

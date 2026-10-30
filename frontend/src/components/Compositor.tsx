@@ -121,6 +121,15 @@ export function Compositor({
           <Icono nombre="play" /><span>{estado.lanzando ? "Lanzando…" : "Ejecutar"}</span>
         </button></div></div>
 
+        <div className="fila" role="group" aria-label="Ideas para empezar">
+          {[
+            ["💡 Calculadora científica con funciones trigonométricas", "Crea una calculadora científica con funciones trigonométricas, una pantalla fácil de usar, validaciones y pruebas automatizadas."],
+            ["📅 Calendario interactivo con gestión de eventos", "Crea un calendario interactivo con gestión de eventos, una pantalla fácil de usar, guardado local, validaciones y pruebas automatizadas."],
+            ["🥗 Contador de calorías con registro de alimentos", "Crea un contador de calorías con registro de alimentos y totales diarios, guardado local, una pantalla fácil de usar, validaciones y pruebas automatizadas."],
+          ].map(([titulo, texto]) => <button key={titulo} type="button"
+            disabled={estado.lanzando} onClick={() => acciones.alCambiarInstruccion(texto)}>{titulo}</button>)}
+        </div>
+
         {estado.origenVoz ? (
           <p className="tenue fila-sep">
             Instrucción dictada: <span className="mono">{estado.origenVoz.provider}</span>{" "}
