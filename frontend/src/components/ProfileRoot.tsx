@@ -23,6 +23,7 @@ export function ProfileRoot() {
   const [busy, setBusy] = useState(false);
   const [vault, setVault] = useState<Vault | null>(null);
   const [notice, setNotice] = useState("");
+  const [configurationRevision, setConfigurationRevision] = useState(0);
   const apply = (next: Status) => {
     setProfileCsrf(next.csrf_token ?? null);
     if (next.profile_mode) borrarClave();
@@ -116,7 +117,8 @@ export function ProfileRoot() {
           max_cost_per_run: Number(fields.get("max_cost_per_run")),
         }),
       });
-      form.reset(); setVault(null); setNotice("Bóveda guardada. Configuración aplicada a tu perfil.");
+      form.reset(); setVault(null); setConfigurationRevision(n => n + 1);
+      setNotice("Bóveda guardada. Configuración aplicada a tu perfil.");
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
@@ -203,11 +205,14 @@ export function ProfileRoot() {
         <button type="submit" disabled={busy}>{busy ? "Guardando…" : "Guardar bóveda"}</button>
         <button type="button" disabled={busy} onClick={() => setVault(null)}>Volver al espacio</button>
       </form>
-    </section> : <App key={status.user?.id} profile={{ name: status.user?.name ?? "",
+    </section> : null}
+    <div hidden={vault !== null}>
+    <App key={status.user?.id} profile={{ name: status.user?.name ?? "", configurationRevision,
       onLogout: () => void logout(), onVault: () => {
         setError(""); profileRequest<Vault>("/auth/vault").then(setVault)
           .catch(e => setError(e.message));
       },
-    }} />}
+    }} />
+    </div>
   </>;
 }

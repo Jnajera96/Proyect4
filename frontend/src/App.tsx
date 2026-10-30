@@ -59,7 +59,7 @@ import { Icono } from "./components/Icono";
 type ResultadoCarga = "ok" | "401" | "fallo";
 
 export function App({ profile }: { profile?: {
-  name: string; onLogout: () => void; onVault: () => void;
+  name: string; onLogout: () => void; onVault: () => void; configurationRevision?: number;
 } } = {}) {
   // --------------------------------------------------------------- datos
   const [salud, setSalud] = useState<Health | null>(null);
@@ -258,7 +258,7 @@ export function App({ profile }: { profile?: {
         setSesion("sin-servidor");
       }
     })();
-  }, [cargarInicial]);
+  }, [cargarInicial, profile?.configurationRevision]);
 
   // El foco se mueve al contenido al cambiar de vista: sin eso, quien navega con
   // el teclado se queda en el boton de la barra y tiene que tabular por toda la
@@ -458,7 +458,7 @@ export function App({ profile }: { profile?: {
           <Chip pulsa>comprobando…</Chip>
         )}
         <EstadoProveedor configuracion={salud?.provider_configuration} />
-        {sesion === "autenticado" ? <Chip tono="ok">sesión autenticada</Chip> : null}
+        {profile || sesion === "autenticado" ? <Chip tono="ok">sesión autenticada</Chip> : null}
         {/* La credencial enmascarada se enseña **en la cabecera**, discreta y en
             todas las vistas: confirma cual esta en uso sin revelarla. Estuvo solo
             en la vista de sesion y eso rompio una comprobacion -la de que la
@@ -472,7 +472,7 @@ export function App({ profile }: { profile?: {
             {enmascarar(claveApi)}
           </span>
         ) : null}
-        {sesion === "sin-autenticacion" ? <Chip>sin autenticación</Chip> : null}
+        {!profile && sesion === "sin-autenticacion" ? <Chip>sin autenticación</Chip> : null}
         {rol ? <Chip>{rol}</Chip> : null}
         <label className="solo-lector" htmlFor="tema">Tema</label>
         <select id="tema" className="selector-tema" value={tema}

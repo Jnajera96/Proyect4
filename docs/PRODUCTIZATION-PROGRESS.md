@@ -1,5 +1,15 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Punto seguro operativo — 29 de octubre de 2026
+
+Acta vigente: `OPERATIONAL-STATUS-2026-10-29.md`. Suite final 909 PASS/4 SKIP,
+32 pruebas frontend y E2E real `run-b70e76e5abd6` completado con Coder Qwen2.5-Coder
+y Reviewer GPT OSS 120B, pruebas reales, aprobación y promoción al repositorio
+descartable. 29 casos independientes aprobados antes/después de promover.
+Portable nuevo `windows-v0.2.0-operational-rc2`; entregas previas conservadas.
+Avance estimado 75/100 hacia v0.2.0 portable y recuperable. Continuidad, otra PC
+y aislamiento fuerte siguen pendientes; no es cierre de producción ni tag v0.2.0.
+
 ## Baseline
 
 - Rama de partida main, HEAD 2d35a59, árbol limpio y sin remotos, verificados.

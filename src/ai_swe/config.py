@@ -153,8 +153,9 @@ class Settings(BaseSettings):
         ),
     )
     allowed_test_targets: list[str] = Field(
-        default_factory=lambda: ["pytest.unit", "pytest.integration", "ruff.check"],
-        description="Enumeracion cerrada de objetivos de prueba ejecutables.",
+        default_factory=lambda: ["pytest.unit", "ruff.check"],
+        description=("Objetivos ejecutables. pytest.unit descubre todas las pruebas locales; "
+                     "pytest.integration es optativo y exige pruebas con marcador integration."),
     )
     allowed_packages: list[str] = Field(
         default_factory=list,

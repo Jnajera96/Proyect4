@@ -52,6 +52,7 @@ class EventKind(StrEnum):
     NODE_STARTED = "node_started"
     MODEL_REQUEST_STARTED = "model_request_started"
     MODEL_RESPONSE_RECEIVED = "model_response_received"
+    PROPOSAL_IMPORTS_NORMALIZED = "proposal_imports_normalized"
     TEST_TARGET_STARTED = "test_target_started"
     TEST_TARGET_COMPLETED = "test_target_completed"
     NODE_COMPLETED = "node_completed"

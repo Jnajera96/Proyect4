@@ -87,7 +87,7 @@ def main() -> int:
         log = (output / f"stderr-{len(children)}.log").open("w", encoding="utf-8")
         logs.append(log)
         child = subprocess.Popen(
-            [*launch_command, "--no-browser", "--exit-after", str(lifetime)],
+            [*launch_command, "--no-profiles", "--no-browser", "--exit-after", str(lifetime)],
             cwd=cwd,
             env=child_env,
             stdout=subprocess.PIPE,
@@ -133,6 +133,7 @@ def main() -> int:
             == {
                 "frozen": not exe.is_dir(),
                 "runtime_mode": "installed",
+                "profile_mode": True,
                 "frontend_present": True,
             },
         )

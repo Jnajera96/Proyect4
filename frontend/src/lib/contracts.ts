@@ -72,6 +72,7 @@ export const EVENTOS_ESCUCHADOS: EventKind[] = [
   "node_started",
   "model_request_started",
   "model_response_received",
+  "proposal_imports_normalized",
   "test_target_started",
   "test_target_completed",
   "node_completed",

@@ -1206,6 +1206,9 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], C
         f"{lineas_humano}\n\n"
         f"{instrucciones_iteracion}"
         "Conserva las pruebas y reglas de calidad autorizadas; no las omitas ni inventes exitos.\n"
+        f"Objetivos de verificacion que se ejecutaran: {_targets_permitidos()}.\n"
+        "Si se incluye pytest.integration, proporciona pruebas funcionales reales "
+        "marcadas pytest.mark.integration; ausencia de pruebas no se acepta como exito.\n"
         f"{_contexto_correccion_coder(state)}\n\n"
         f"Peticion original del usuario:\n{state.instruction.text}"
     )
@@ -1238,6 +1241,12 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], C
             detail=str(exc)[:600],
         ) from exc
 
+    if "ruff.check" in _targets_permitidos():
+        from ai_swe.tools.import_normalizer import normalize_imports
+
+        propuesta, normalizaciones = normalize_imports(propuesta)
+        for normalizacion in normalizaciones:
+            emit("proposal_imports_normalized", mode="deterministic", **normalizacion)
     propuesta, motivo = _respetar_limites(propuesta, _alcance(state))
     avisos = [motivo] if motivo else []
     cambio = _cambio_desde_propuesta(propuesta)
@@ -1643,6 +1652,10 @@ Reglas obligatorias:
     cambios por problemas concretos de seguridad, funcionalidad, integridad de
     datos o alcance, incluso con `exit 0`, aportando evidencia real y una
     correccion accionable. Acepta si cumple la peticion y no hay esos problemas.
+    El orden de imports y sus lineas vacias los decide Ruff: no solicites quitar
+    separaciones entre imports de terceros y locales cuando Ruff las exige.
+    Si ruff.check falla, usa su diagnostico literal; si pasa, no inventes fallos
+    de formato. Revisa tambien los limites de dominio y signos que exige la peticion.
   - Cada `finding` necesita `evidence` real: un fragmento de la salida de las
     pruebas, del diff o de la peticion. Sin evidencia, un hallazgo es una opinion.
   - `summary` resume el juicio en una o dos frases. No repitas la evidencia entera.
