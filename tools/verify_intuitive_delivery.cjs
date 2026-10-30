@@ -13,11 +13,11 @@ const state={run_id:'fixture-run',trace_id:'fixture',created_at:now,updated_at:n
   instruction:{text:'Crea una página',source:'text',confirmed_by_user:true,capture_fidelity:1},
   options:{repo_path:project.repo_path,mode:'FULL_PROPOSAL',delivery_mode:'github',allowed_paths:[],protected_paths:[]},
   interpretation:{intent:'modify',scope:{repo_path:project.repo_path},confidence:.9,constraints:[],rationale:'Fixture'},
-  plan:null,plan_index:0,outputs:{researcher_output:null,coder_output:{files_changed:[],diff:'',rationale:'Página de fixture'},reviewer_output:{decision:'accept',findings:[],required_fixes:[],summary:'Fixture'}},
-  artifacts:{diff:'',changed_files:[]},evidence:{test_runs:[],findings:[]},errors:[],approvals:[],
+  plan:{subtasks:[]},plan_index:0,outputs:{researcher_output:{findings:[],unknowns:[]},coder_output:{files_changed:[],diff:'fixture diff',rationale:'Página de fixture'},reviewer_output:{decision:'accept',findings:[],required_fixes:[],summary:'Fixture'}},
+  artifacts:{diff:'fixture diff',changed_files:[]},evidence:{test_runs:[{target:'pytest.unit',exit_code:0,stdout:'Fixture only',stderr:''}],findings:[]},errors:[],approvals:[{action:'promote_changes',decision:'approved',actor:'fixture',at:now,content_sha256:'fixture'}],
   promotion_receipt:{receipt_id:'fixture',pre_promotion_sha:'a',promoted_sha:'b',head:'a',paths:['index.html'],status:'promoted'},
   final_report:{summary:'Fixture',changes_applied:['index.html'],tests_executed:[],review:'Fixture',pending:[]},
-  budget:{max_tokens:100,used_tokens:0,max_model_calls:10,used_model_calls:0,max_tool_calls:10,used_tool_calls:0,max_review_cycles:2,review_cycles_used:0,max_seconds:90,elapsed_seconds:0,max_cost:1,used_cost:0}};
+  budget:{max_tokens:100,used_tokens:0,used_input_tokens:0,used_output_tokens:0,max_model_calls:10,used_model_calls:0,max_tool_calls:10,used_tool_calls:0,max_review_cycles:2,review_cycles_used:0,max_seconds:90,elapsed_seconds:0,max_cost:1,used_cost:0}};
 const guide={available:true,kind:'web_static',summary_es:'Tu aplicación está lista para usar.',launch_action:'open_browser',command:'start iniciar.bat',instructions:['Tu aplicación está guardada en C:/fixture/myapp.','Abre iniciar.bat con doble clic.'],repo_path:project.repo_path,entrypoint:'index.html',prepared:false,launcher_path:'C:/fixture/myapp/iniciar.bat'};
 let server,browser,projects=[],runs=[],prepared=0,launched=0,publications=[],createBody,runBody;
 (async()=>{
@@ -75,6 +75,7 @@ let server,browser,projects=[],runs=[],prepared=0,launched=0,publications=[],cre
     assert.equal(await modal.getByLabel('Token de GitHub (PAT)',{exact:true}).count(),0);check('mock publication success clears secret and provides verified GitHub link');
     await modal.getByRole('button',{name:'Cerrar',exact:true}).click();
     assert.deepEqual(errors,[]);check('no React runtime errors');
+    assert.equal(await page.getByText('NaN',{exact:true}).count(),0);check('fixture provides complete budget counters');
     assert.equal(await page.locator('.hero-antetitulo').evaluate(e=>getComputedStyle(e).textTransform),'none');check('visible heading styles preserve sentence case');
     await page.screenshot({path:path.join(output,'delivery-fixture.png'),fullPage:true});report.success=true;
   }finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(report,null,2));}

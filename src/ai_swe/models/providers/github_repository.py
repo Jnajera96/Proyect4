@@ -13,13 +13,17 @@ def create_repository(name: str, token: str, private: bool) -> str:
         with httpx.Client(timeout=20, follow_redirects=False) as client:
             response = client.post(
                 "https://api.github.com/user/repos",
-                headers={"Authorization": "Bearer " + token,
-                         "Accept": "application/vnd.github+json",
-                         "X-GitHub-Api-Version": "2026-03-10"},
+                headers={
+                    "Authorization": "Bearer " + token,
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2026-03-10",
+                },
                 json={"name": name, "private": private, "auto_init": False},
             )
     except httpx.HTTPError:
-        raise ValueError("No se pudo contactar con GitHub. Revisa la conexión e intenta otra vez.") from None
+        raise ValueError(
+            "No se pudo contactar con GitHub. Revisa la conexión e intenta otra vez."
+        ) from None
     if response.status_code != 201:
         raise ValueError("GitHub no creó el repositorio. Revisa permisos, nombre y conexión.")
     try:

@@ -1,4 +1,6 @@
 import hashlib
+import os
+import subprocess
 from datetime import UTC, datetime
 
 import pytest
@@ -70,6 +72,33 @@ def test_python_discovery_does_not_import_or_execute(tmp_path, text, kind):
     assert "python" in guide.command.lower()
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows batch launcher")
+def test_prepared_cli_batch_runs_on_windows(tmp_path):
+    state = promoted(
+        tmp_path,
+        "app.py",
+        """from pathlib import Path
+if __name__ == '__main__':
+    Path('result.txt').write_text('started', encoding='utf-8')
+""",
+    )
+    guide = prepare(state)
+    result = subprocess.run(
+        [os.environ["COMSPEC"], "/d", "/c", guide.launcher_path],
+        input=b"",
+        capture_output=True,
+        timeout=15,
+        cwd=guide.repo_path,
+        env={
+            key: value
+            for key, value in os.environ.items()
+            if key.upper() in {"SYSTEMROOT", "WINDIR", "PATH", "TEMP", "TMP"}
+        },
+    )
+    assert result.returncode == 0, result.stderr.decode(errors="replace")
+    assert (tmp_path / "application/result.txt").read_text() == "started"
+
+
 def test_library_is_not_falsely_presented_as_executable(tmp_path):
     guide = describe(promoted(tmp_path, "calculator.py", "def add(a,b):\n    return a+b\n"))
     assert not guide.available and guide.kind == "python_library"
@@ -85,6 +114,24 @@ def test_existing_launcher_and_changed_code_are_preserved(tmp_path):
     (tmp_path / "application/index.html").write_text("modified")
     with pytest.raises(ValueError, match="cambiaron"):
         describe(state)
+
+
+def test_modified_javascript_dependency_blocks_launch(tmp_path):
+    state = promoted(tmp_path)
+    script = tmp_path / "application/app.js"
+    script.write_text("console.log('reviewed')", encoding="utf-8")
+    state.artifacts.changed_files.append(
+        FileChange(
+            path="app.js",
+            added=1,
+            removed=0,
+            sha256=hashlib.sha256(script.read_bytes()).hexdigest(),
+        )
+    )
+    script.write_text("console.log('changed after review')", encoding="utf-8")
+    with pytest.raises(ValueError, match="cambiaron"):
+        prepare(state)
+    assert not (script.parent / "iniciar.bat").exists()
 
 
 def test_get_cannot_write_and_reader_cannot_prepare(tmp_path, monkeypatch):

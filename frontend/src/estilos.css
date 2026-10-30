@@ -1479,7 +1479,6 @@ body { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Tex
 .hero .compositor-extra { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:12px; }
 .hero .compositor-extra>.rejilla { flex:1 1 230px; margin:0; }
 .hero .compositor-extra>.plegable { flex:1 1 180px; margin:0; }
-.hero .panel>.plegable:has(#p-nombre) { display:none; }
 .hero .compositor-extra:has(details[open]) { display:block; }
 .hero .compositor-extra details[open] { margin-top:12px; }
 .hero .compositor-extra label[for="proyecto"] { position:absolute; clip-path:inset(50%); width:1px; height:1px; overflow:hidden; }

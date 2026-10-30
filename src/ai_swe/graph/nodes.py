@@ -755,7 +755,11 @@ def researcher(state: RunState) -> dict:
         if not raiz.is_dir():
             incognitas.append(f"la ruta configurada no es un directorio: {raiz_texto}")
         else:
-            from ai_swe.state.memory_graph import FileMemoryGraph, IGNORED_DIRECTORIES, usable_path
+            from ai_swe.state.memory_graph import (
+                IGNORED_DIRECTORIES,
+                FileMemoryGraph,
+                usable_path,
+            )
 
             candidates = []
             for directory, folders, files in os.walk(raiz, followlinks=False):
@@ -763,16 +767,23 @@ def researcher(state: RunState) -> dict:
                 for name in sorted(files):
                     candidate = Path(directory) / name
                     relative = candidate.relative_to(raiz).as_posix()
-                    if (usable_path(relative) and candidate.is_file() and candidate.suffix.lower() in _EXTENSIONES
-                            and _dentro_de(raiz, candidate) and candidate.stat().st_size <= 131072):
+                    if (
+                        usable_path(relative)
+                        and candidate.is_file()
+                        and candidate.suffix.lower() in _EXTENSIONES
+                        and _dentro_de(raiz, candidate)
+                        and candidate.stat().st_size <= 131072
+                    ):
                         candidates.append(relative)
                 if len(candidates) >= 2000:
                     incognitas.append("Inventario limitado a 2000 rutas; no se reviso el resto")
                     break
             graph = (FileMemoryGraph(configured.state_db_path, configured.profile_id or "legacy")
                      if configured is not None else None)
-            chosen = (graph.select(str(raiz), state.instruction.text, candidates)
-                      if graph is not None and len(candidates) > _MAX_ARCHIVOS else sorted(candidates))
+            chosen = (
+                graph.select(str(raiz), state.instruction.text, candidates)
+                if graph is not None and len(candidates) > _MAX_ARCHIVOS else sorted(candidates)
+            )
             if graph is not None:
                 graph.observe(str(raiz), chosen[:_MAX_ARCHIVOS], observation=state.run_id + ":read")
             if len(chosen) < len(candidates):

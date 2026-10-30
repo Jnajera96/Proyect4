@@ -470,6 +470,10 @@ def gateway_from_settings(
     escritos no deben degradarse en silencio a «no se sabe», porque entonces el
     presupuesto de coste dejaria de actuar sin que nadie se entere.
     """
+    if settings.max_cost_per_hour is not None and not settings.profile_id:
+        raise ModelConfigurationError(
+            "El límite horario requiere un perfil con ledger de presupuesto"
+        )
     tabla = pricing_from_json(settings.model_pricing)
 
     if adapters is not None:

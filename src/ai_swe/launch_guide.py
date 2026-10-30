@@ -40,7 +40,7 @@ def approved_repository(state: RunState) -> Path:
         path = root / change.path
         if path.is_symlink() or not path.resolve().is_relative_to(root):
             raise ValueError("La aplicación contiene una ruta no autorizada.")
-        if path.is_file() and path.suffix.lower() in {".html", ".py"}:
+        if path.is_file():
             text = path.read_text(encoding="utf-8")
             if hashlib.sha256(text.encode()).hexdigest() != change.sha256:
                 raise ValueError(

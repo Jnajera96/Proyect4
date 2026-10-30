@@ -49,19 +49,42 @@ def test_hourly_limit_stops_gateway_before_fake_adapter(tmp_path):
     from ai_swe.models import FakeModelAdapter, ModelMessage, ModelRequest
     from ai_swe.models.gateway import gateway_from_settings
 
-    settings = Settings(_env_file=None, profile_id="hourly-fixture",
-                        state_db_path=tmp_path / "gateway.sqlite3", model_name="fixture",
-                        max_cost_per_run=.4, max_cost_per_hour=.3,
-                        model_pricing='[{"model":"fixture","input_per_1k":0.001,"output_per_1k":0.001}]')
+    settings = Settings(
+        _env_file=None,
+        profile_id="hourly-fixture",
+        state_db_path=tmp_path / "gateway.sqlite3",
+        model_name="fixture",
+        max_cost_per_run=0.4,
+        max_cost_per_hour=0.3,
+        model_pricing='[{"model":"fixture","input_per_1k":0.001,"output_per_1k":0.001}]',
+    )
     ledger = BudgetLedger(settings.state_db_path)
     ledger.set_limit(5)
     adapter = FakeModelAdapter(model="fixture")
     gateway = gateway_from_settings(settings, adapters=[adapter])
     try:
         with pytest.raises(BudgetExceededError, match="horario"):
-            gateway.generate(ModelRequest(messages=[ModelMessage(role="user", content="Hello")],
-                                          model="fixture", max_output_tokens=10, run_id="hourly"))
+            gateway.generate(
+                ModelRequest(
+                    messages=[ModelMessage(role="user", content="Hello")],
+                    model="fixture",
+                    max_output_tokens=10,
+                    run_id="hourly",
+                )
+            )
         assert adapter.calls == []
         assert ledger.summary()["reserved"] == 0
     finally:
         gateway.close()
+
+
+def test_hourly_limit_cannot_be_ignored_without_profile():
+    from ai_swe.config import Settings
+    from ai_swe.models import FakeModelAdapter, ModelConfigurationError
+    from ai_swe.models.gateway import gateway_from_settings
+
+    with pytest.raises(ModelConfigurationError, match="perfil"):
+        gateway_from_settings(
+            Settings(_env_file=None, max_cost_per_hour=1, profile_id=None),
+            adapters=[FakeModelAdapter()],
+        )

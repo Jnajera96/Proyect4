@@ -1,5 +1,18 @@
 # Productización v0.1.0 — registro de continuidad
 
+## UX intuitiva y memoria asociativa — 30 de octubre de 2026
+
+Implementación fuente de los cinco puntos autorizados sobre `ab079d3`: capitalización
+tipo oración, modo local/GitHub, guía posterior a promoción con `iniciar.bat`, asistente
+de primera publicación privada, memoria de co-ocurrencias y freno horario por perfil.
+Se corrige CSS que ocultaba crear carpetas y se verifican los hashes de todos los
+archivos aprobados antes del inicio. Regresión completa 926 PASS/4 SKIP; después,
+19 pruebas focalizadas finales, frontend32 PASS, build TypeScript/Vite y 10 controles
+de navegador aprobados. Iniciador CLI probado en Windows. Sin llamadas pagadas,
+sin publicación real y sin nuevo ZIP/actualización del servidor abierto.
+Acta y límites: `INTUITIVE-UX-NEUROMAPA-VALIDATION.md`. No constituye cierre de
+producción ni prueba de ahorro de 50–70 % de tokens.
+
 ## Punto seguro operativo — 29 de octubre de 2026
 
 Acta vigente: `OPERATIONAL-STATUS-2026-10-29.md`. Suite final 909 PASS/4 SKIP,

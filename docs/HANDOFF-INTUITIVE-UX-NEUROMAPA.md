@@ -1,5 +1,11 @@
 # Punto seguro de reanudación — 29 de octubre de 2026
 
+**Actualización del 30 de octubre:** trabajo retomado. El formulario oculto por CSS
+se corrigió y el navegador pasa 10 comprobaciones. Regresión completa: 926 PASS y
+4 SKIP; verificación final focalizada: 19 PASS; frontend 32 PASS y build aprobado.
+El estado vigente y los límites están en `INTUITIVE-UX-NEUROMAPA-VALIDATION.md`.
+Las notas siguientes preservan el estado histórico de la pausa.
+
 Pausa solicitada por el usuario para trasladarse. Rama: `feature/v0.2.0-madre-continuity`; base: `ab079d3`. Este punto conserva implementación en progreso, no constituye una release validada. No se realizaron llamadas de pago ni publicaciones GitHub.
 
 ## Cambios conservados
