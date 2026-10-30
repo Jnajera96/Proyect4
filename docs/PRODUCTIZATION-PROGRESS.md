@@ -1,5 +1,17 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Síntesis generalizada y estado de adopción — 30 de octubre de 2026
+
+Sobre `d3b144c` se retira el catálogo cerrado de productos del Analyst local,
+sustituyéndolo por familias funcionales y núcleo nominal. El prompt remoto exige
+cuatro dimensiones para cualquier creación/modificación de software, manteniendo
+alcance, exclusiones y puerta humana. Acta: `UNIVERSAL-REQUIREMENTS-VALIDATION.md`.
+Validación final offline: backend962 PASS/4 SKIP (0 fallos), 34 casos de requisitos,
+frontend32 PASS y build TypeScript/Vite aprobado. Sin llamadas de pago.
+Estimación ponderada actual: 77/100 hacia entrega Windows confiable y recuperable,
+con método y adopción real de MADRE/Nova en `PROJECT-STATUS-2026-10-30.md`.
+No acredita producción pública, nuevo paquete ni cierre de continuidad entre equipos.
+
 ## Requisitos de producto para instrucciones breves — 30 de octubre de 2026
 
 Prioridad incorporada al flujo de pendientes y al plan maestro de `ROADMAP.md`.

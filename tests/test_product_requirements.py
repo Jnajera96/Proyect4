@@ -55,6 +55,8 @@ def test_model_receives_product_role_and_clear_intent_floor(monkeypatch):
     prompt = fake.calls[0].messages[0].content
     for fragment in ("Product Manager", "ARQUETIPO", "Validaciones", "Pruebas", "0.85"):
         assert fragment in prompt
+    for fragment in ("SÍNTESIS UNIVERSAL", "CUALQUIER", "3 a 5", "pytest"):
+        assert fragment in prompt
 
 
 def test_short_request_waits_for_human_and_coder_receives_adjustments(tmp_path, monkeypatch):
@@ -111,3 +113,86 @@ def test_short_request_waits_for_human_and_coder_receives_adjustments(tmp_path, 
         assert result.interpretation.rationale == adjusted
         assert adjusted in "\n".join(message.content for message in fake.calls[0].messages)
         assert not (repo / "index.html").exists()
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "un conversor de monedas",
+        "un temporizador pomodoro",
+        "un tablero de notas",
+        "un juego de tres en raya",
+        "un generador de contraseñas",
+        "un reloj pomodoro",
+        "una herramienta de clasificación de libros",
+        "crea un simulador de órbitas",
+        "un gestor de listas",
+    ],
+)
+def test_new_products_have_four_dimensions_and_wait_for_confirmation(tmp_path, monkeypatch, text):
+    from ai_swe.config import Settings
+    from ai_swe.contracts import RunOptions
+    from ai_swe.graph import RunEngine, model_routing
+    from ai_swe.state import RunStore
+
+    fake = FakeModelAdapter()
+    monkeypatch.setattr(model_routing, "gateway_from_settings", lambda _: ModelGateway([fake]))
+    settings = Settings(
+        _env_file=None,
+        profile_id="universal-fixture",
+        remote_model_roles=["coder", "reviewer"],
+        state_db_path=tmp_path / "state.sqlite3",
+        workspace_root=tmp_path / "worktrees",
+    )
+    with RunStore(settings.state_db_path) as store:
+        engine = RunEngine(store, settings=settings)
+        waiting = engine.start(
+            engine.crear_estado(text, options=RunOptions(repo_path=str(tmp_path)))
+        )
+        assert waiting.status == "awaiting_human_requirements_confirmation"
+        interpretation = waiting.interpretation
+        assert interpretation.intent == "modify" and interpretation.confidence >= 0.85
+        assert not interpretation.confirmed_by_user
+        bullets = [line for line in interpretation.rationale.splitlines() if line.startswith("- ")]
+        assert len(bullets) == 4
+        for heading, bullet in zip(
+            ("Funcionalidades", "Validaciones", "Interfaz", "Pruebas"), bullets, strict=True
+        ):
+            assert bullet.startswith("- " + heading)
+        assert fake.calls == []
+
+
+@pytest.mark.parametrize(
+    "text,intent",
+    [
+        ("¿Qué es un conversor de monedas?", "question"),
+        ("cómo crear un juego de tres en raya", "question"),
+        ("analiza un tablero de notas", "inspect"),
+        ("analiza cómo crear un juego", "inspect"),
+        ("analiza el tablero y corrige el error", "modify"),
+        ("no hagas un generador de contraseñas", "inspect"),
+        ("crea un conversor de divisas sin conexión a Internet", "modify"),
+    ],
+)
+def test_universal_synthesis_preserves_questions_and_exclusions(text, intent, monkeypatch):
+    monkeypatch.setattr(nodes, "_GATEWAY", nodes.SIN_GATEWAY)
+    interpretation = nodes.interpret(estado(text))["interpretation"]
+    assert interpretation.intent == intent
+    assert "Propuesta base" not in interpretation.rationale
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("un conversor de monedas", "unidades"),
+        ("un temporizador pomodoro", "pausa"),
+        ("un tablero de notas", "búsqueda"),
+        ("un juego de tres en raya", "victoria"),
+        ("un generador de contraseñas", "criptográfica"),
+        ("crea un simulador de órbitas", "simulador de órbitas"),
+    ],
+)
+def test_family_capabilities_and_unknown_nominal_core(text, expected, monkeypatch):
+    monkeypatch.setattr(nodes, "_GATEWAY", nodes.SIN_GATEWAY)
+    rationale = nodes.interpret(estado(text))["interpretation"].rationale
+    assert expected in rationale

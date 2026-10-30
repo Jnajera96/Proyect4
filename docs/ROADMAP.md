@@ -6,10 +6,13 @@ Meta inmediata: entrega Windows local que una persona no técnica pueda configur
 usar para construir una aplicación, revisar y abrir, con recuperación comprobada.
 La producción pública requiere además el último control de seguridad de esta lista.
 La validación fuente no equivale a actualizar el portable instalado.
+El estado ponderado actual (77/100) y la adopción real de patrones están en
+`PROJECT-STATUS-2026-10-30.md`. La generalización del Analyst se verifica en
+`UNIVERSAL-REQUIREMENTS-VALIDATION.md`; mantiene las mismas puertas humanas.
 
 | Orden | Trabajo y estado | Criterio para avanzar |
 | --- | --- | --- |
-| 1 | **Completado y validado en fuente:** Analyst como Product Manager, especificación base para peticiones breves, revisión editable y chips de inicio rápido. | Confirmación humana obligatoria, confianza de intención clara >=0,85, exclusiones preservadas; backend940 PASS/4 SKIP, frontend32 PASS, build y navegador aprobados. Acta: `PRODUCT-REQUIREMENTS-VALIDATION.md`. |
+| 1 | **Completado y validado en fuente:** Analyst como Product Manager, síntesis por familias/núcleo nominal para productos nuevos, revisión editable y chips de inicio rápido. | Confirmación humana obligatoria, confianza de intención clara >=0,85 y exclusiones preservadas; backend962 PASS/4 SKIP, frontend32 PASS y build aprobado. Actas: `PRODUCT-REQUIREMENTS-VALIDATION.md` y `UNIVERSAL-REQUIREMENTS-VALIDATION.md`. |
 | 2 | **Pendiente:** empaquetar las mejoras de UX/memoria/requisitos sobre la distribución Python firmada. | ZIP reproducible sin secretos; hashes, smoke, guía de inicio, SQLite, perfiles y promoción comprobados desde el paquete. |
 | 3 | **Pendiente:** piloto de instalación/portable en otra PC. | PATH limpio, política Windows activa, configuración de credenciales por el usuario, persistencia/reinicio y recorrido funcional con aprobaciones. Cualquier inferencia pagada exige presupuesto explícito; la entrega actual solo valida offline. |
 | 4 | **Pendiente:** cierre de continuidad K/L/M y recuperación. | Exportación/importación cifrada, contraseña/clave de rescate, separación entre usuarios y reconstrucción del trabajo pausado en otro equipo sin pérdida de datos. |

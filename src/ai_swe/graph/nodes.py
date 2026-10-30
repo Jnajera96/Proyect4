@@ -90,36 +90,32 @@ _INSPECCIONAR = (
     "lista", "listar", "enumera", "enumerar", "describe", "describir",
 )
 
-_PRODUCTOS_BASE = (
-    (
-        r"calculadora(?:\s+cient[ií]fica)?", "Calculadora científica",
-        "Operaciones básicas, potencias, raíces, logaritmos, seno, coseno y tangente; "
-        "selección explícita de grados o radianes y limpieza del resultado.",
-        "Números finitos, división por cero y dominios de raíces, logaritmos y tangente.",
-        "Casos matemáticos conocidos, ambos modos angulares y entradas inválidas.",
-    ),
-    (
-        r"calendario(?:\s+interactivo)?", "Calendario interactivo",
-        "Vista mensual, navegación entre meses y creación, edición y eliminación de eventos "
-        "con título, fecha y hora; conservación local de los eventos.",
-        "Fechas y horas válidas, títulos obligatorios y confirmación antes de eliminar.",
-        "Cambios de mes y año, años bisiestos, eventos y conservación al volver a abrir.",
-    ),
-    (
-        r"contador\s+de\s+calor[ií]as", "Contador de calorías",
-        "Registro de alimentos, cantidades y calorías por porción indicadas por la persona; "
-        "totales diarios, edición, eliminación y conservación local del registro.",
-        "Nombres obligatorios y cantidades y calorías numéricas, finitas y no negativas.",
-        "Totales por día, porciones, edición, eliminación, persistencia y entradas inválidas.",
-    ),
-)
+def _nucleo_producto(texto: str) -> str:
+    plano = " ".join(texto.split()).strip(" .!")
+    solicitud = re.match(
+        r"^(?:por favor[, ]+)?(?:"
+        r"(?:crea|crear|haz|hazme|construye|construir|desarrolla|desarrollar|genera|generar|"
+        r"programa|programar|implementa|implementar)\s+(?:(?:un|una|el|la)\s+)?|"
+        r"(?:quiero|necesito)\s+(?:un|una)\s+|(?:un|una)\s+)(.+)$",
+        plano, re.IGNORECASE,
+    )
+    if solicitud:
+        nombre = solicitud[1]
+    elif re.match(
+        r"^(?:calculadora|conversor|convertidor|gestor|temporizador|reloj|calendario|agenda|"
+        r"juego|tablero|dashboard|tracker|contador|generador|herramienta|simulador|editor|visor)\b",
+        plano, re.IGNORECASE,
+    ):
+        nombre = plano
+    else:
+        return ""
+    # Keep the nominal core, not implementation clauses or an unbounded prompt.
+    return re.split(r"[,;.!?]|\b(?:con|que|para)\b", nombre, maxsplit=1,
+                    flags=re.IGNORECASE)[0].strip()[:160]
 
 
 def _peticion_producto(texto: str) -> bool:
-    return any(re.fullmatch(
-        r"\s*(?:(?:un|una|quiero un|quiero una|necesito un|necesito una)\s+)?"
-        + pattern + r"[.!\s]*", texto, flags=re.IGNORECASE,
-    ) for pattern, *_ in _PRODUCTOS_BASE)
+    return bool(_nucleo_producto(texto))
 
 
 def _propuesta_producto(texto: str) -> str:
@@ -127,22 +123,76 @@ def _propuesta_producto(texto: str) -> str:
     if re.search(r"\b(?:no|sin|solo|sólo|solamente|únicamente|unicamente|excepto|evita|nunca|ni)\b",
                  texto, re.IGNORECASE):
         return ""
-    if not (_peticion_producto(texto) or re.search(
-        r"\b(?:crea|crear|haz|hazme|construye|construir|desarrolla|desarrollar|"
-        r"genera|generar|programa|programar|implementa|implementar)\b", texto, re.IGNORECASE,
-    )):
+    nombre = _nucleo_producto(texto)
+    if not nombre:
         return ""
-    for pattern, nombre, funciones, validaciones, pruebas in _PRODUCTOS_BASE:
-        if re.search(r"\b" + pattern + r"\b", texto, re.IGNORECASE):
-            return (
-                f"Propuesta base para confirmar: {nombre}. Puedes ajustar o quitar funciones.\n"
-                f"- Funcionalidades: {funciones}\n"
-                f"- Validaciones y errores: {validaciones} Mensajes claros sin perder datos.\n"
-                "- Interfaz: Pantalla intuitiva, autocontenida y accesible con teclado, "
-                "controles etiquetados y resultados visibles; sin cuentas externas.\n"
-                f"- Pruebas automatizadas: {pruebas} Verificar también la interfaz."
+    clave = nombre.casefold()
+    nucleo = clave.split()[0]
+    validaciones = "Datos obligatorios, formatos válidos y casos límite del producto."
+    pruebas = "Acción principal, resultados esperados, reinicio y entradas inválidas con pytest."
+    if re.search(r"calcul|convers|convert", nucleo):
+        funciones = (
+            "Operaciones y transformación de entradas; selección de parámetros o unidades; "
+            "visualización del resultado; limpieza y repetición del cálculo."
+        )
+        validaciones = "Valores finitos, división por cero, dominios y parámetros válidos."
+        if "científica" in clave or "cientifica" in clave:
+            funciones += (
+                " Incluir potencias, raíces, logaritmos, seno, coseno y tangente "
+                "en grados/radianes."
             )
-    return ""
+            pruebas += " Casos matemáticos conocidos y ambos modos angulares."
+    elif re.search(r"calendario|agenda|planifica", nucleo):
+        funciones = (
+            "Navegación por fechas; creación y edición de eventos; eliminación confirmada; "
+            "conservación local de los eventos."
+        )
+        validaciones = "Fechas y horas válidas, títulos obligatorios y cambios de mes/año."
+        pruebas += " Años bisiestos y persistencia de eventos."
+    elif re.search(r"temporiz|pomodoro|reloj|cron[oó]metro", nucleo):
+        funciones = (
+            "Configuración de intervalos; inicio y pausa; reinicio; visualización del tiempo "
+            "restante y aviso al completar el intervalo."
+        )
+        validaciones = "Duraciones válidas, pausa consistente y finalización sin tiempos negativos."
+        pruebas += " Usar un reloj simulado para transiciones y límites de tiempo."
+    elif re.search(r"juego|rompecabezas", nucleo):
+        funciones = (
+            "Inicio de partida; interacción y turnos según las reglas propuestas; "
+            "visualización de victoria o empate; reinicio de la partida."
+        )
+        validaciones = "Acciones legales, turnos válidos y bloqueo de movimientos tras finalizar."
+        pruebas += " Movimientos, victoria, empate y reinicio."
+    elif re.search(r"gestor|tablero|notas|inventario|registro|tracker|contador|dashboard", nucleo):
+        funciones = (
+            f"Registro de elementos de {nombre}; consulta y búsqueda; edición y eliminación "
+            "confirmada; conservación local de los datos."
+        )
+        pruebas += " Altas, consultas, cambios, borrado y persistencia."
+        if re.search(r"calor[ií]as", clave):
+            funciones += (
+                " Registrar alimentos y porciones con calorías aportadas por la persona "
+                "y totales diarios."
+            )
+    else:
+        funciones = (
+            f"Introducir datos y opciones para {nombre}; realizar su operación principal; "
+            "mostrar y copiar el resultado; reiniciar la operación."
+        )
+        if "contraseñ" in clave:
+            validaciones += (
+                " Longitud y opciones válidas, aleatoriedad criptográfica "
+                "y no guardar contraseñas."
+            )
+    titulo = nombre[:1].upper() + nombre[1:]
+    return (
+        f"Propuesta base para confirmar: {titulo}. Puedes ajustar o quitar funciones.\n"
+        f"- Funcionalidades: {funciones}\n"
+        f"- Validaciones y errores: {validaciones} Mensajes claros sin pérdida de datos.\n"
+        "- Interfaz: Pantalla limpia, autocontenida y accesible con teclado, controles "
+        "etiquetados y resultados visibles; sin cuentas ni servicios externos por defecto.\n"
+        f"- Pruebas automatizadas: {pruebas} Verificar también la interfaz."
+    )
 
 _EXTENSIONES = {
     ".py", ".md", ".toml", ".cfg", ".txt", ".json", ".yaml", ".yml",
@@ -175,16 +225,26 @@ def _clasificar(texto: str) -> Intent:
         )[-1]
         if not re.search(r"\b(?:no|nunca|sin|evita)\b[^.;!?]*$|\bni\s*$", prefix):
             return Intent.OUT_OF_SCOPE
-    for match in re.finditer(r"\b(?:" + "|".join(map(re.escape, _MODIFICAR)) + r")\b", plano):
+    if re.match(
+        r"^\s*¿?\s*(?:qu[eé]\s+(?:es|son|hace)|c[oó]mo|por\s+qu[eé]|d[oó]nde|cu[aá]l)\b",
+        plano,
+    ):
+        return Intent.QUESTION
+    acciones_locales = "|".join(map(re.escape, _MODIFICAR))
+    if re.match(r"^\s*(?:" + "|".join(_INSPECCIONAR) + r")\b", plano) and not re.search(
+        r"(?:[,;]|\b(?:y|luego|después|despues))\s*(?:" + acciones_locales + r")\b", plano
+    ):
+        return Intent.INSPECT
+    for match in re.finditer(r"\b(?:" + acciones_locales + r")\b", plano):
         prefix = plano[max(0, match.start() - 70) : match.start()]
         if not re.search(r"\b(?:no|nunca|sin|evita)\b[^.;!?]*$|\bni\s*$", prefix):
             return Intent.MODIFY
+    if _peticion_producto(texto):
+        return Intent.MODIFY
     if any(pista in plano for pista in _PREGUNTA):
         return Intent.QUESTION
     if any(pista in plano for pista in _INSPECCIONAR):
         return Intent.INSPECT
-    if _peticion_producto(texto):
-        return Intent.MODIFY
     return Intent.INSPECT  # por defecto, la opcion sin efectos
 
 
@@ -343,15 +403,18 @@ En "constraints", lista las prohibiciones o condiciones EXPLICITAS del usuario
 Si el propósito de crear o modificar es claro, usa confidence >= 0.85 aunque la
 petición sea breve. No confundas falta de detalles con ambigüedad de intención;
 no uses 1.0 por defecto ni eleves la confianza de peticiones realmente ambiguas.
-Si pide un producto de alto nivel, identifica el ARQUETIPO DE PRODUCTO (por ejemplo,
-calculadora, calendario o contador de calorías) y redacta en rationale una
-ESPECIFICACIÓN BASE COMPLETA, concisa y en lenguaje cotidiano (máximo 2000 caracteres).
+Aplica SÍNTESIS UNIVERSAL DE REQUISITOS ante CUALQUIER petición de creación o
+modificación de software: juegos, conversores, gestores, dashboards, herramientas,
+trackers o productos nuevos. Identifica su ARQUETIPO DE PRODUCTO sin limitarte a
+un catálogo cerrado y redacta en rationale una ESPECIFICACIÓN BASE COMPLETA,
+concisa y en lenguaje cotidiano (máximo 2000 caracteres).
 Comienza con "Propuesta base para confirmar" y usa viñetas separadas por saltos de línea:
-- Funcionalidades: principales funciones habituales incluidas por defecto.
+- Funcionalidades: de 3 a 5 capacidades esenciales esperables del producto.
 - Validaciones y errores: entradas válidas y mensajes esperados sin perder datos.
 - Interfaz: intuitiva, autocontenida, accesible y con resultados visibles.
-- Pruebas automatizadas: casos funcionales, límites, errores e interfaz.
-Respeta exclusiones y prioridades explícitas; no amplíes una reparación puntual.
+- Pruebas automatizadas: casos funcionales clave, límites y errores verificables por pytest.
+Respeta exclusiones y prioridades explícitas. Estructura también las reparaciones
+en las cuatro dimensiones sin ampliar el cambio puntual solicitado.
 No añadas cuentas, servicios de pago, recomendaciones médicas ni publicación remota
 por defecto. Para preguntas o inspecciones explica la intención sin proponer construir.
 La confirmación final SIEMPRE corresponde a la puerta humana.

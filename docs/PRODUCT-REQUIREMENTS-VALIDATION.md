@@ -1,5 +1,9 @@
 # Requisitos base para peticiones breves
 
+**Ampliación posterior:** `UNIVERSAL-REQUIREMENTS-VALIDATION.md` generaliza la ruta
+local a familias y núcleo nominal. Los resultados y la limitación a tres arquetipos
+descritos aquí corresponden al cierre original `d3b144c`.
+
 Fecha: 30 de octubre de 2026. Rama: `feature/v0.2.0-madre-continuity`.
 Base solicitada `ab079d3`; se continúa desde su descendiente `4b4c242` para conservar
 las mejoras de UX, guía y memoria ya integradas. Sin llamadas de pago ni publicación.
