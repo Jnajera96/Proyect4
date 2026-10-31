@@ -1,5 +1,44 @@
 # Cierre del portable operativo — 30 de octubre de 2026
 
+## Seguimiento rc8 — contexto conservador y cierre SQLite
+
+**NO APROBADO PARA ENTREGA. Se mantiene rc7 como portable verificado.**
+
+ZIP: `dist/windows-v0.2.0-operational-rc8/AISWESystem-windows-x64.zip`.
+SHA-256: `9d33e1aa6edcc1df237440e85c6c1a9fba0926cf4f701d9ebd834678f49ddea6`.
+Tamaño: 118.796.348 bytes; 4.726 archivos en manifiesto. Base `e299ed6` más
+selección conservadora sin anclas, guardia de más de 20 archivos explícitos del
+inventario y cierre determinista de conexiones SQLite. rc7 se conserva intacto.
+
+Regresión completa **986 PASS, 4 SKIP, 0 fallos**, 353,91 s. Focalizada: 48 PASS.
+Frontend: 34 PASS; compilación TypeScript/Vite aprobada. Las cinco pruebas de
+memoria pasan también con módulos y CPython del rc8 (`_tmp/memory-rc8.xml`).
+Se comprobaron CRC del ZIP, hashes y correspondencia de todos los módulos con
+fuente antes de empaquetar. Métricas sintéticas agregadas sin secretos:
+`dist/windows-v0.2.0-operational-rc8/context-memory-report.json`.
+
+El resultado de ~16 % menos bytes en tres fixtures con anclas no se presenta
+como ahorro de tokens facturados. Sin anclas no hubo reducción ni recuperación
+suficiente de archivos relevantes. Historial FTS5 en prompt Coder sigue pendiente.
+Acta: `CONTEXT-MEMORY-MEASUREMENT.md`. Sin inferencias pagadas ni publicación.
+
+El smoke estándar falló dos veces por TimeoutExpired al esperar un cierre
+automático (105 s para procesos con `--exit-after 90`). Informes preservados:
+`_tmp/operational-rc8-profiles/report.json` y
+`_tmp/operational-rc8-profiles-recheck/report.json`. El primero llegó a comprobar
+persistencia e integridad tras reinicio; el segundo agotó el plazo en el primer
+cierre. Se observó además WinError 10054 en el log del segundo intento, sin causa
+raíz confirmada ni atribución demostrada a las correcciones de memoria.
+
+Dos repeticiones instrumentadas completaron 14 controles: temporizador de 15 s
+y traceback de 30 s; luego temporizador estándar de 90 s con traceback periódico.
+Informes: `_tmp/operational-rc8-shutdown-diagnostic/` y
+`_tmp/operational-rc8-shutdown-traced-90/`. El paquete y el verificador fuente no se
+modificaron. Estas repeticiones no sustituyen un smoke estándar reproducible.
+No se ocultó el fallo, no se aumentaron los plazos estándar y no se parcheó el
+launcher sin evidencia suficiente. Pendiente prioritario: aislar el cierre y
+reverificar antes de recomendar rc8.
+
 ## Seguimiento rc7 — flujo accionable y progreso visible
 
 ZIP: `dist/windows-v0.2.0-operational-rc7/AISWESystem-windows-x64.zip`.

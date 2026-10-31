@@ -899,6 +899,7 @@ def researcher(state: RunState) -> dict:
             from ai_swe.state.memory_graph import (
                 IGNORED_DIRECTORIES,
                 FileMemoryGraph,
+                explicit_paths,
                 usable_path,
             )
 
@@ -919,6 +920,13 @@ def researcher(state: RunState) -> dict:
                 if len(candidates) >= 2000:
                     incognitas.append("Inventario limitado a 2000 rutas; no se reviso el resto")
                     break
+            if len(explicit_paths(state.instruction.text, candidates)) > _MAX_ARCHIVOS:
+                return _escalar(state, _error(
+                    state, "CONTEXT_SCOPE_TOO_LARGE", AgentRole.RESEARCHER.value,
+                    f"La petición menciona más de {_MAX_ARCHIVOS} archivos. "
+                    "Divide la tarea para no descartar archivos solicitados del contexto.",
+                    recuperable=False,
+                ))
             graph = (FileMemoryGraph(configured.state_db_path, configured.profile_id or "legacy")
                      if configured is not None else None)
             chosen = (

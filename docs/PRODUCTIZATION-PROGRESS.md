@@ -1,5 +1,19 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Contexto medido y límites de recuperación — 30 de octubre de 2026
+
+Benchmark reproducible con solicitudes reales y FakeModelAdapter: ~16 % menos
+bytes de mensajes en tres fixtures con archivos identificables, cobertura 100 %
+de su oráculo sintético; sin coincidencias, 0 % de reducción y cobertura insuficiente.
+No es ahorro de tokens facturados. Corregidos recorte arbitrario sin anclas,
+descarte de archivos explícitos que excedían 20 y conexiones SQLite no cerradas
+(WinError 32 reproducido). 48 pruebas focalizadas PASS; suite completa 986 PASS/4 SKIP,
+0 fallos; Ruff aprobado. rc8 NO aprobado: dos timeouts del smoke estándar al cerrar;
+dos repeticiones instrumentadas aprobadas, sin causa raíz confirmada. rc7 sigue
+como portable verificado; no se sustituye ni se publica el candidato.
+Pendiente confirmado: conectar historical_context FTS5 al prompt Coder con límites
+y redacción. Acta: `CONTEXT-MEMORY-MEASUREMENT.md`. Sin llamadas pagadas.
+
 ## Flujo accionable y progreso visible — 30 de octubre de 2026
 
 Ejecución navega/enfoca Flujo; ambas puertas humanas operan directamente allí.

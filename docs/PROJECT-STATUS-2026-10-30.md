@@ -2,7 +2,7 @@
 
 Fecha: 30 de octubre de 2026. Evaluación del código fuente de
 `feature/v0.2.0-madre-continuity`, conservando la distribución anterior.
-Última validación fuente: backend982 PASS/4 SKIP, frontend34 PASS y compilación
+Última validación fuente: backend986 PASS/4 SKIP, frontend34 PASS y compilación
 TypeScript/Vite aprobada; sin nuevas inferencias pagadas.
 
 ## Avance estimado
@@ -34,6 +34,8 @@ Conceptos adaptados a nuestra arquitectura, no sustitución de LangGraph:
 - Modos `INSPECT_ONLY`, `PLAN_ONLY` y `FULL_PROPOSAL` impuestos en el grafo.
 - Memoria contextual SQLite FTS5 por usuario/repositorio (`state/memory.py`) y
   consulta histórica en el contexto de trabajo.
+  Auditoría posterior: llena `historical_context` del estado, pero todavía no se
+  incorpora al prompt del Coder. Integración pendiente, separada de coocurrencia.
 - Recibos y reversión de promoción acotada a los archivos aprobados
   (`tools/rollback.py`), con acción en la UI, sin reset destructivo global.
 - Auditoría de propuesta de Coder frente a veredicto de Reviewer y pruebas.
@@ -66,6 +68,8 @@ respaldos constan en `CONTINUITY-FOLLOWUP-2026-10-30.md`.
 La co-ocurrencia de archivos (`state/memory_graph.py`), selección de contexto y
 `max_cost_per_hour` se inspiran en Neuromapa. No se atribuyen a MADRE ni a Nova.
 No se ha demostrado ahorro de 50–70 % de tokens facturados.
+La medición `CONTEXT-MEMORY-MEASUREMENT.md` obtiene ~16 % menos bytes de mensajes
+en tres fixtures con anclas y 0 % sin ellas, sin tokenizer ni cargos reales.
 
 ## Ruta restante
 

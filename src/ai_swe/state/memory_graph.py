@@ -6,6 +6,7 @@ import hashlib
 import itertools
 import re
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 IGNORED_DIRECTORIES = {
@@ -40,11 +41,16 @@ def usable_path(path: str) -> bool:
     )
 
 
+def explicit_paths(query: str, candidates: list[str]) -> set[str]:
+    text = query.lower()
+    return {p for p in candidates if p.lower() in text or Path(p).name.lower() in text}
+
+
 class FileMemoryGraph:
     def __init__(self, database: Path, owner: str = "legacy"):
         self.database, self.owner = Path(database), owner
         self.database.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.database, timeout=30) as db:
+        with closing(sqlite3.connect(self.database, timeout=30)) as db, db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS file_cooccurrence(
                     owner TEXT NOT NULL, repository TEXT NOT NULL,
@@ -60,7 +66,7 @@ class FileMemoryGraph:
         paths = sorted({p.replace("\\", "/") for p in paths if usable_path(p)})[:50]
         repo = str(Path(repository).resolve())
         fingerprint = hashlib.sha256("\n".join(paths).encode()).hexdigest()
-        with sqlite3.connect(self.database, timeout=30) as db:
+        with closing(sqlite3.connect(self.database, timeout=30)) as db, db:
             db.execute("BEGIN IMMEDIATE")
             inserted = db.execute(
                 "INSERT OR IGNORE INTO file_observations VALUES(?,?,?)",
@@ -80,16 +86,17 @@ class FileMemoryGraph:
         candidates = sorted({p for p in candidates if usable_path(p)})
         top_k = max(1, min(50, top_k))
         terms = set(re.findall(r"[\w-]+", query.lower()[:20000]))
-        scores, explicit = {}, set()
+        scores, explicit = {}, explicit_paths(query, candidates)
         for path in candidates:
             parts = set(re.findall(r"[\w-]+", str(Path(path).with_suffix("")).lower()))
             scores[path] = float(len(terms & parts))
-            if path.lower() in query.lower() or Path(path).name.lower() in query.lower():
+            if path in explicit:
                 scores[path] += 100
-                explicit.add(path)
         seeds = sorted((p for p in candidates if scores[p]), key=lambda p: (-scores[p], p))[:8]
+        if not seeds:
+            return candidates
         if seeds:
-            with sqlite3.connect(self.database, timeout=30) as db:
+            with closing(sqlite3.connect(self.database, timeout=30)) as db, db:
                 rows = db.execute(
                     "SELECT source,target,weight FROM file_cooccurrence "
                     "WHERE owner=? AND repository=?",

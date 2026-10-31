@@ -32,3 +32,52 @@ def test_context_bound_excludes_noise_without_dropping_explicit_files(tmp_path):
     assert graph.select("repo", "", noise) == []
     query = " ".join(candidates)
     assert len(graph.select("repo", query, candidates, top_k=2)) == 24
+
+
+def test_unmatched_query_does_not_claim_a_relevant_neighborhood(tmp_path):
+    graph = FileMemoryGraph(tmp_path / "m.sqlite3")
+    candidates = [f"module_{i:02}.py" for i in range(24)]
+    assert graph.select("repo", "Reorganiza mi agenda", candidates) == candidates
+
+
+def test_researcher_stops_before_silently_dropping_explicit_files(tmp_path):
+    from test_f3_interpret_analyst import estado
+
+    from ai_swe.config import Settings
+    from ai_swe.graph import nodes
+    from ai_swe.graph.model_routing import bind_settings_node
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    paths = [f"module_{i:02}.py" for i in range(24)]
+    for path in paths:
+        (repo / path).write_text("value = 1\n", encoding="utf-8")
+    settings = Settings(_env_file=None, state_db_path=tmp_path / "state.sqlite3")
+    result = bind_settings_node(nodes.researcher, settings)(
+        estado("Modifica " + " ".join(paths), repo=str(repo))
+    )
+    assert result["status"] == "needs_human"
+    assert result["errors"][-1].error_class == "CONTEXT_SCOPE_TOO_LARGE"
+
+
+def test_graph_closes_every_sqlite_connection(tmp_path, monkeypatch):
+    import sqlite3
+
+    import pytest
+
+    connect = sqlite3.connect
+    connections = []
+
+    def track(*args, **kwargs):
+        connection = connect(*args, **kwargs)
+        connections.append(connection)
+        return connection
+
+    monkeypatch.setattr(sqlite3, "connect", track)
+    graph = FileMemoryGraph(tmp_path / "m.sqlite3")
+    graph.observe("repo", ["app.py", "test_app.py"], observation="test")
+    graph.select("repo", "app.py", ["app.py", "test_app.py"])
+    assert len(connections) == 3
+    for connection in connections:
+        with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+            connection.execute("SELECT 1")
