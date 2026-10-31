@@ -23,7 +23,7 @@ avance adicional a distribución, voz en destino ni continuidad sin nuevas evide
 | Voz | 5 % | 90 | Micrófono/audio en el equipo de destino. |
 | Memoria, modos y rollback | 10 % | 85 | Recuperación integral independiente y medición de contexto. |
 | Continuidad y respaldo | 15 % | 45 | Integración/validación completa de importación, auto-backup y recuperación. |
-| Distribución y operación segura | 15 % | 45 | rc3 generado; faltan otra PC/VM, actualizaciones y aislamiento de ejecución. |
+| Distribución y operación segura | 15 % | 45 | Usuario confirma uso en otra PC; falta matriz detallada, recuperación, actualizaciones y aislamiento. |
 
 ## Qué se adoptó de MADRE
 
@@ -70,8 +70,8 @@ No se ha demostrado ahorro de 50–70 % de tokens facturados.
 ## Ruta restante
 
 1. Paquete rc3 construido y verificado; rc4 incorpora el arreglo de carga de respaldos.
-2. Probar otra PC, configuración de usuario, reinicio y ejecución/promoción.
-3. Cerrar recuperación y respaldo de principio a fin entre equipos.
+2. Completar la matriz de otra PC tras la confirmación de funcionamiento del usuario: versión, reinicio, voz y promoción.
+3. Cerrar recuperación y respaldo de principio a fin entre equipos; acceso de restauración implementado, múltiples rutas pendientes.
 4. Evaluar más productos/modelos y publicación voluntaria con presupuesto explícito.
 5. Resolver aislamiento de procesos/red y controles operativos antes de producción pública.
 

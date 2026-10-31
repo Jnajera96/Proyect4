@@ -17,7 +17,7 @@ pendiente de empaquetado y piloto en otra PC, sin declarar producción aprobada.
 | --- | --- | --- |
 | 1 | **Completado y validado en fuente:** Analyst como Product Manager, síntesis por familias/núcleo nominal para productos nuevos, revisión editable y chips de inicio rápido. | Confirmación humana obligatoria, confianza de intención clara >=0,85 y exclusiones preservadas; backend962 PASS/4 SKIP, frontend32 PASS y build aprobado. Actas: `PRODUCT-REQUIREMENTS-VALIDATION.md` y `UNIVERSAL-REQUIREMENTS-VALIDATION.md`. |
 | 2 | **Empaquetado rc3:** UX, memoria, requisitos y mejoras operativas sobre CPython firmado. | Acta `OPERATIONAL-STATUS-2026-10-30.md`: ZIP, manifiesto, perfiles y SQLite. La promoción remota histórica de rc2 no se repitió en rc3; piloto independiente en fila 3. |
-| 3 | **Pendiente:** piloto de instalación/portable en otra PC. | PATH limpio, política Windows activa, configuración de credenciales por el usuario, persistencia/reinicio y recorrido funcional con aprobaciones. Cualquier inferencia pagada exige presupuesto explícito; la entrega actual solo valida offline. |
+| 3 | **Uso en otra PC confirmado por el usuario; matriz detallada pendiente.** | Falta identificar versión/hash, Windows y recorrido: protecciones activas, reinicio, voz y promoción. No se infiere recuperación entre equipos. Cualquier inferencia pagada exige presupuesto explícito. |
 | 4 | **Pendiente:** cierre de continuidad K/L/M y recuperación. | Exportación/importación cifrada, contraseña/clave de rescate, separación entre usuarios y reconstrucción del trabajo pausado en otro equipo sin pérdida de datos. |
 | 5 | **Pendiente:** certificar publicación y medir contexto. | Publicación voluntaria en cuenta de prueba; permisos/errores reales. Comparación reproducible de contexto con/sin memoria, sin presentar reducción de archivos como ahorro de tokens facturados. |
 | 6 | **Pendiente antes de producción pública:** aislamiento y operación. | Aislamiento de ejecución/red/recursos, secretos, TLS, límites operativos, auditoría, copias/restauración y política de datos; matriz de release aprobada y límites documentados. |
@@ -36,7 +36,7 @@ pendiente de empaquetado y piloto en otra PC, sin declarar producción aprobada.
 ### Seguimiento de continuidad
 
 - [x] Prueba local para bibliotecas Python y ficha de decisión postgeneración.
-- [ ] Incluir la mejora de lanzador en el siguiente portable (rc4 se conserva).
+- [x] Incluir la mejora de lanzador en rc5; 14 controles portable aprobados (rc4 se conserva).
 
 Acta de esta mejora: `UNIVERSAL-LOCAL-LAUNCH-VALIDATION.md`.
 
@@ -44,8 +44,11 @@ Acta de esta mejora: `UNIVERSAL-LOCAL-LAUNCH-VALIDATION.md`.
 - [x] Reproducir y corregir Base64 incompatible al subir respaldos desde la UI.
 - [x] Verificar carga binaria en navegador: 4 controles offline aprobados.
 - [ ] Validar de extremo a extremo la recuperación desde la UI en una PC independiente.
+- [x] Exponer restauración de perfil desde la pantalla de acceso y validar API/ UI offline.
+- [ ] Añadir asignación guiada de múltiples repositorios al restaurar un perfil.
 
 Evidencia y límites: `CONTINUITY-FOLLOWUP-2026-10-30.md`.
+Recuperación desde acceso y reporte de otra PC: `PROFILE-IMPORT-UI-VALIDATION.md`.
 
 ## Antecedentes y líneas posteriores
 

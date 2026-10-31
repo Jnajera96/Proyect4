@@ -4,6 +4,7 @@ import { borrarClave } from "../lib/auth";
 import { profileRequest, setProfileCsrf } from "../lib/profile";
 import { ModelConfiguration } from "./ModelConfiguration";
 import { PasswordField } from "./PasswordField";
+import { RestaurarPerfil } from "./RestaurarPerfil";
 import "../profiles.css";
 
 type Status = { profile_mode: boolean; authenticated: boolean;
@@ -17,6 +18,7 @@ export function ProfileRoot() {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState("");
   const [register, setRegister] = useState(false);
+  const [restore, setRestore] = useState(false);
   const [recover, setRecover] = useState(false);
   const [recoverySetup, setRecoverySetup] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState("");
@@ -128,6 +130,12 @@ export function ProfileRoot() {
     <p role={error ? "alert" : "status"}>{error || "Comprobando acceso…"}</p>
     {error && <button onClick={() => window.location.reload()}>Reintentar</button>}</main>;
   if (!status.profile_mode) return <App />;
+  if (!status.authenticated && restore) return <RestaurarPerfil
+    alVolver={() => setRestore(false)}
+    alRestaurar={async () => {
+      apply(await profileRequest<Status>("/auth/status")); setRestore(false);
+      setNotice("Perfil restaurado. Revisa tu historial antes de reanudar. Genera una nueva clave de rescate.");
+    }} />;
   if (!status.authenticated) return <main className="profile-access">
     <p className="profile-eyebrow">Tu espacio local</p>
     <h1>{recover ? "Recuperar acceso" : register ? "Crear perfil" : "Entrar a tu perfil"}</h1>
@@ -158,6 +166,7 @@ export function ProfileRoot() {
         {register ? "Ya tengo un perfil" : "Crear un perfil nuevo"}</button>
       <button type="button" disabled={busy} onClick={() => { setRecover(!recover); setRegister(false); setError(""); }}>
         {recover ? "Volver al inicio de sesión" : "Olvidé mi contraseña"}</button>
+      <button type="button" disabled={busy} onClick={() => setRestore(true)}>Restaurar desde un respaldo</button>
     </form>
   </main>;
   return <>

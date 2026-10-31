@@ -1,5 +1,23 @@
 # Cierre del portable operativo — 30 de octubre de 2026
 
+## Seguimiento rc5 — recuperar perfil sin registro previo
+
+ZIP: `dist/windows-v0.2.0-operational-rc5/AISWESystem-windows-x64.zip`.
+SHA-256: `d1247f75c2201cc997ec4a00a8dcecfe7b5272fad594c2cb782fa3b0f014729b`.
+Tamaño: 118.794.712 bytes; manifiesto de 4.726 archivos, CRC del ZIP comprobado.
+Base `33fc64c` más `ProfileRoot.tsx`/`RestaurarPerfil.tsx`: recuperar desde acceso.
+Incluye el lanzador y decisiones postgeneración; rc4 y rc3 quedan intactos.
+
+Validación fuente focalizada: 36 backend PASS, 32 frontend PASS y 5 controles
+de navegador PASS; TypeScript/Vite y Ruff aprobados. No se declara una nueva
+regresión completa. Acta: `PROFILE-IMPORT-UI-VALIDATION.md`.
+Portable rc5 extraído: **14 controles PASS**, salida 0 y cero llamadas pagadas,
+con PATH reducido, perfil aislado, dos arranques y SQLite íntegro/persistente.
+La prueba HTTP nueva pasó también con CPython y módulos empaquetados del rc5.
+Informe: `dist/windows-v0.2.0-operational-rc5/portable-profiles-report.json`.
+El reporte del usuario de funcionamiento en otra PC se conserva con sus límites;
+no sustituye el recorrido de recuperación por UI en destino ni acredita producción.
+
 ## Seguimiento rc4 — restauración desde la interfaz
 
 Nueva entrega: `dist/windows-v0.2.0-operational-rc4/AISWESystem-windows-x64.zip`.

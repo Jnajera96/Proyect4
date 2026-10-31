@@ -1,5 +1,14 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Restauración desde acceso — 30 de octubre de 2026
+
+Usuario confirma funcionamiento en otra PC, sin matriz detallada ni versión
+identificada. Se expone recuperación de perfil sin registro previo en la UI,
+con asignación sencilla de un repositorio y sin ejecución automática al importar.
+36 pruebas backend focalizadas, 32 frontend, 5 controles de navegador y build
+aprobados. Nuevo rc5 incorpora además el lanzador de `33fc64c`, preservando rc4.
+Sin inferencias pagadas. Acta y límites: `PROFILE-IMPORT-UI-VALIDATION.md`.
+
 ## Prueba local y decisión posterior — 30 de octubre de 2026
 
 Lanzador interactivo para bibliotecas Python, pausa y UTF-8 en todos los BAT
