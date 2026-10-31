@@ -2,28 +2,32 @@
 
 Fecha: 30 de octubre de 2026. Evaluación del código fuente de
 `feature/v0.2.0-madre-continuity`, conservando la distribución anterior.
-Última validación fuente: backend986 PASS/4 SKIP, frontend34 PASS y compilación
+Última validación fuente: backend990 PASS/4 SKIP, frontend34 PASS y compilación
 TypeScript/Vite aprobada; sin nuevas inferencias pagadas.
 
 ## Avance estimado
 
-**77/100 hacia v0.2.0 Windows local, confiable y recuperable.** Es una estimación
-técnica ponderada (76,65 redondeado), no una métrica derivada del número de pruebas.
-No significa que una plataforma pública de producción esté aprobada al 77 %.
+**81/100 hacia v0.2.0 Windows local, confiable y recuperable.** Es una estimación
+técnica ponderada (80,90 redondeado), no una métrica derivada del número de pruebas.
+No significa que una plataforma pública de producción esté aprobada al 81 %.
 
 Se conserva el método del acta `OPERATIONAL-STATUS-2026-10-29.md` (74,75, redondeado
-a 75). Las mejoras de requisitos, UX y memoria aumentan su estimación; no se otorga
-avance adicional a distribución, voz en destino ni continuidad sin nuevas evidencias.
+a 75), y la evaluación anterior de 76,65 (77/100). Se actualizan memoria 85→90
+por FTS5 efectivamente incluido en Coder y verificación de contexto/cierre SQLite;
+continuidad 45→55 por importación desde acceso, múltiples rutas y reintentos
+verificados por API; distribución 45→60 por paquete actual y dos smokes estándar
+limpios, además del uso en otra PC reportado por el usuario. Siguen pendientes
+el piloto integral entre equipos y operación de producción; voz en destino no sube.
 
 | Objetivo | Peso | Estimación actual | Cierre pendiente |
 | --- | ---: | ---: | --- |
 | Perfiles y bóveda | 15 % | 95 | Recuperación/actualización en otro equipo. |
 | Agentes y promoción | 30 % | 88 | Otros productos con modelos reales y revisión independiente de calidad. |
-| UI, actividad y proyectos | 10 % | 95 | UX y comprobación previa incluidas en rc3; validar recorrido en equipo de destino. |
+| UI, actividad y proyectos | 10 % | 95 | UX y puertas accionables incluidas en rc8 corregido; validar recorrido en destino. |
 | Voz | 5 % | 90 | Micrófono/audio en el equipo de destino. |
-| Memoria, modos y rollback | 10 % | 85 | Recuperación integral independiente y medición de contexto. |
-| Continuidad y respaldo | 15 % | 45 | Integración/validación completa de importación, auto-backup y recuperación. |
-| Distribución y operación segura | 15 % | 45 | Usuario confirma uso en otra PC; falta matriz detallada, recuperación, actualizaciones y aislamiento. |
+| Memoria, modos y rollback | 10 % | 90 | Calidad del historial, consultas sin anclas y tokens reales; no hay ahorro facturado certificado. |
+| Continuidad y respaldo | 15 % | 55 | Recuperación por UI entre dos equipos, auto-backup, conflictos y pérdida de equipo. |
+| Distribución y operación segura | 15 % | 60 | Matriz independiente Windows/SAC, actualización/migración e aislamiento fuerte. |
 
 ## Qué se adoptó de MADRE
 
@@ -34,8 +38,9 @@ Conceptos adaptados a nuestra arquitectura, no sustitución de LangGraph:
 - Modos `INSPECT_ONLY`, `PLAN_ONLY` y `FULL_PROPOSAL` impuestos en el grafo.
 - Memoria contextual SQLite FTS5 por usuario/repositorio (`state/memory.py`) y
   consulta histórica en el contexto de trabajo.
-  Auditoría posterior: llena `historical_context` del estado, pero todavía no se
-  incorpora al prompt del Coder. Integración pendiente, separada de coocurrencia.
+  Ya llega al prompt del Coder: máximo tres entradas, 800 caracteres totales,
+  redacción de secretos y bloque no confiable. Aislamiento comprobado con FTS5
+  real y solicitud capturada por FakeModelAdapter; calidad con modelo real pendiente.
 - Recibos y reversión de promoción acotada a los archivos aprobados
   (`tools/rollback.py`), con acción en la UI, sin reset destructivo global.
 - Auditoría de propuesta de Coder frente a veredicto de Reviewer y pruebas.

@@ -6,7 +6,7 @@ Meta inmediata: entrega Windows local que una persona no técnica pueda configur
 usar para construir una aplicación, revisar y abrir, con recuperación comprobada.
 La producción pública requiere además el último control de seguridad de esta lista.
 La validación fuente no equivale a actualizar el portable instalado.
-El estado ponderado actual (77/100) y la adopción real de patrones están en
+El estado ponderado actual (81/100) y la adopción real de patrones están en
 `PROJECT-STATUS-2026-10-30.md`. La generalización del Analyst se verifica en
 `UNIVERSAL-REQUIREMENTS-VALIDATION.md`; mantiene las mismas puertas humanas.
 La preparación integral, recuperación SSE y cancelación cooperativa adaptadas de
@@ -16,10 +16,10 @@ pendiente de empaquetado y piloto en otra PC, sin declarar producción aprobada.
 | Orden | Trabajo y estado | Criterio para avanzar |
 | --- | --- | --- |
 | 1 | **Completado y validado en fuente:** Analyst como Product Manager, síntesis por familias/núcleo nominal para productos nuevos, revisión editable y chips de inicio rápido. | Confirmación humana obligatoria, confianza de intención clara >=0,85 y exclusiones preservadas; backend962 PASS/4 SKIP, frontend32 PASS y build aprobado. Actas: `PRODUCT-REQUIREMENTS-VALIDATION.md` y `UNIVERSAL-REQUIREMENTS-VALIDATION.md`. |
-| 2 | **rc7 verificado; rc8 retenido por cierre.** | Acta `OPERATIONAL-STATUS-2026-10-30.md`: rc8 agota plazo de cierre en dos smokes estándar; repeticiones instrumentadas pasan. Aislar causa y repetir sin instrumentación antes de recomendarlo. |
+| 2 | **RC8 corregido aprobado localmente.** | `windows-v0.2.0-operational-rc8-fixed`, dos smokes estándar de 14/14 y cuatro cierres código 0. Se conserva el candidato original retenido. Acta: `RC8-SHUTDOWN-FTS-CLOSURE.md`. |
 | 3 | **Uso en otra PC confirmado por el usuario; matriz detallada pendiente.** | Falta identificar versión/hash, Windows y recorrido: protecciones activas, reinicio, voz y promoción. No se infiere recuperación entre equipos. Cualquier inferencia pagada exige presupuesto explícito. |
 | 4 | **Pendiente:** cierre de continuidad K/L/M y recuperación. | Exportación/importación cifrada, contraseña/clave de rescate, separación entre usuarios y reconstrucción del trabajo pausado en otro equipo sin pérdida de datos. |
-| 5 | **Contexto medido offline; publicación y tokens reales pendientes.** | Acta `CONTEXT-MEMORY-MEASUREMENT.md`: ~16 % menos bytes en tres fixtures con ancla y 0 % sin ella; no ahorro facturado. Falta historial FTS5 en Coder, calidad, tokenizer correcto y publicación voluntaria real. |
+| 5 | **Contexto medido e historial FTS5 integrado; publicación/tokens reales pendientes.** | ~16 % menos bytes en fixtures sin historial, sin ahorro facturado demostrado. Coder recibe historial acotado. Falta calidad, consultas sin anclas, tokenizer correcto y publicación voluntaria real. |
 | 6 | **Pendiente antes de producción pública:** aislamiento y operación. | Aislamiento de ejecución/red/recursos, secretos, TLS, límites operativos, auditoría, copias/restauración y política de datos; matriz de release aprobada y límites documentados. |
 
 ### Flujo de pendientes de la mejora de requisitos
@@ -37,8 +37,8 @@ pendiente de empaquetado y piloto en otra PC, sin declarar producción aprobada.
 
 - [x] Medir solicitudes reales con FakeModelAdapter y controles sin poda/léxico/asociativo.
 - [x] Corregir selección arbitraria sin anclas, exceso de archivos explícitos y cierre SQLite.
-- [ ] Resolver el timeout de cierre observado en el smoke estándar de rc8 y aprobar distribución sin instrumentación.
-- [ ] Incorporar historical_context FTS5 al Coder con redacción, límites y separación de usuarios.
+- [x] Cerrar rc8 corregido con dos smokes estándar aprobados sin instrumentación.
+- [x] Incorporar historical_context FTS5 al Coder con redacción, límites y separación de usuarios/repositorios verificada.
 
 Evidencia: `CONTEXT-MEMORY-MEASUREMENT.md`.
 

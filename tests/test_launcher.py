@@ -1,6 +1,5 @@
 import socket
 import sys
-import time
 from types import SimpleNamespace
 
 import pytest
@@ -113,13 +112,17 @@ def test_browser_opens_actual_url_only_after_health(tmp_path, monkeypatch):
 
     class Server:
         def __init__(self, config):
+            assert config.timeout_keep_alive == 3
+            assert config.timeout_graceful_shutdown == 5
             self.started = False
             self.should_exit = False
 
-        def run(self, **kwargs):
+        async def serve(self, **kwargs):
+            import asyncio
+
             self.started = True
             while not self.should_exit:
-                time.sleep(0.001)
+                await asyncio.sleep(0.001)
             events.append("shutdown")
 
     monkeypatch.setattr(uvicorn, "Server", Server)
@@ -129,3 +132,38 @@ def test_browser_opens_actual_url_only_after_health(tmp_path, monkeypatch):
     assert events[0] == "healthy"
     assert events[1].startswith("http://127.0.0.1:") and events[1].endswith("/app/")
     assert events[2] == "shutdown"
+
+
+def test_shutdown_timeout_is_bounded_and_never_reported_as_success(tmp_path, monkeypatch):
+    import uvicorn
+
+    import ai_swe.api
+
+    (tmp_path / "index.html").write_text("fixture", encoding="utf-8")
+    monkeypatch.setattr(launcher, "frontend_dist", lambda: tmp_path)
+    monkeypatch.setattr(launcher, "load_settings", lambda: SimpleNamespace(port=0))
+    monkeypatch.setattr(ai_swe.api, "crear_app", lambda: object())
+    listener = launcher.reserve_listener(0)
+    monkeypatch.setattr(launcher, "reserve_listener", lambda port: listener)
+    monkeypatch.setattr(launcher, "wait_for_health", lambda *args: None)
+    joins = []
+
+    class StuckThread:
+        def __init__(self, **kwargs):
+            pass
+
+        def start(self):
+            pass
+
+        def is_alive(self):
+            return True
+
+        def join(self, timeout=None):
+            joins.append(timeout)
+
+    monkeypatch.setattr(uvicorn, "Server", lambda config: SimpleNamespace(started=True))
+    monkeypatch.setattr(launcher.threading, "Thread", StuckThread)
+    with pytest.raises(RuntimeError, match="10 segundos"):
+        launcher.serve(open_browser=False, exit_after=0)
+    assert joins == [10]
+    assert listener.fileno() == -1

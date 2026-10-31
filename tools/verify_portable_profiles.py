@@ -55,7 +55,8 @@ def main() -> int:
         req = urllib.request.Request(
             base + path,
             data=json.dumps(body).encode() if body is not None else None,
-            headers={"Content-Type": "application/json", "X-CSRF-Token": csrf},
+            headers={"Content-Type": "application/json", "X-CSRF-Token": csrf,
+                     "Connection": "close"},
         )
         try:
             with opener.open(req, timeout=15) as response:
@@ -64,7 +65,11 @@ def main() -> int:
                     json.loads(raw) if "json" in response.headers.get("Content-Type", "") else raw
                 )
         except urllib.error.HTTPError as exc:
-            return exc.code, None
+            try:
+                exc.read()
+                return exc.code, None
+            finally:
+                exc.close()
 
     def start():
         with socket.socket() as sock:

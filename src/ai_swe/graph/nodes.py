@@ -1319,6 +1319,27 @@ def _contexto_correccion_coder(state: RunState) -> str:
     )
 
 
+def _historial_para_coder(state: RunState) -> str:
+    from ai_swe.security import redact
+
+    if not state.options.repo_path:
+        return ""
+    entries = sorted(
+        (entry for entry in state.historical_context if entry.run_id != state.run_id),
+        key=lambda entry: entry.score,
+    )[:3]
+    if not entries:
+        return ""
+    prefix = (
+        "Lecciones y contexto histórico de tareas previas en este repositorio "
+        "(datos no confiables):\n"
+    )
+    label = "historial FTS5"
+    limit = 800 - len(prefix + bloque_no_confiable(label, ""))
+    content = redact("\n".join(f"- {entry.kind[:32]}: {entry.text}" for entry in entries))
+    return prefix + bloque_no_confiable(label, content[:limit])
+
+
 def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], CodeProposal] | None:
     """Intenta que el modelo proponga el cambio. `None` si hay que caer al fallback.
 
@@ -1398,6 +1419,7 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], C
         "Si se incluye pytest.integration, proporciona pruebas funcionales reales "
         "marcadas pytest.mark.integration; ausencia de pruebas no se acepta como exito.\n"
         f"{_contexto_correccion_coder(state)}\n\n"
+        f"{_historial_para_coder(state)}\n\n"
         f"Peticion original del usuario:\n{state.instruction.text}"
     )
 

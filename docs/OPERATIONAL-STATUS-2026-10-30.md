@@ -1,8 +1,28 @@
 # Cierre del portable operativo — 30 de octubre de 2026
 
+## RC8 corregido — aprobado
+
+Entrega canónica local: `dist/windows-v0.2.0-operational-rc8-fixed/AISWESystem-windows-x64.zip`.
+SHA-256: `f27bf21c14cb8c47f8c75be52592e70deada90632713c4069cc369300183429b`.
+Tamaño: 118.796.881 bytes; manifiesto de 4.726 archivos; CRC y hashes aprobados.
+Fuente base `8adcb0e` más cierre Uvicorn acotado, conexión cliente cerrada y
+historial FTS5 redactado en Coder (3 entradas / 800 caracteres totales).
+
+Regresión completa: **990 PASS, 4 SKIP, 0 fallos**, 741,654 s. Frontend: **34 PASS**,
+TypeScript/Vite aprobado. Pruebas launcher/historial con runtime empaquetado:
+**18 PASS**. Dos ejecuciones estándar sin instrumentación del verificador sobre
+el ZIP extraído: **14/14 PASS cada una**, con plazos originales y cuatro cierres
+código 0. SQLite y checkpoint persisten tras reiniciar; logs sin WinError 10054
+ni traceback. Evidencia y alcance: `RC8-SHUTDOWN-FTS-CLOSURE.md`.
+
+Se aprueba este candidato corregido para el host local validado, sin inferencia
+pagada ni publicación. rc7 y el rc8 original retenido se conservan. La aprobación
+no sustituye piloto en destino, calidad con modelos reales ni producción pública.
+
 ## Seguimiento rc8 — contexto conservador y cierre SQLite
 
-**NO APROBADO PARA ENTREGA. Se mantiene rc7 como portable verificado.**
+**CANDIDATO ORIGINAL NO APROBADO (histórico).** En este checkpoint se mantuvo rc7;
+el cierre corregido posterior y su ZIP distinto se documentan arriba.
 
 ZIP: `dist/windows-v0.2.0-operational-rc8/AISWESystem-windows-x64.zip`.
 SHA-256: `9d33e1aa6edcc1df237440e85c6c1a9fba0926cf4f701d9ebd834678f49ddea6`.

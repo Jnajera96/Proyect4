@@ -1,5 +1,15 @@
 # Productización v0.1.0 — registro de continuidad
 
+## RC8 corregido: cierre e historial FTS5 — 30 de octubre de 2026
+
+Aprobado el ZIP `windows-v0.2.0-operational-rc8-fixed`: dos smokes estándar de
+14/14 controles, sin instrumentación, tiempos originales y cuatro cierres código 0.
+Uvicorn keep-alive 3 s, graceful 5 s y join 10 s con error si no termina; cliente
+consume/cierra respuestas. Coder recibe historial redactado como datos no confiables,
+3 entradas y 800 caracteres totales. Regresión 990 PASS/4 SKIP, frontend34 PASS,
+build y Ruff focalizado aprobados; 18 pruebas desde runtime empaquetado PASS.
+Hash, evidencia y límites en `RC8-SHUTDOWN-FTS-CLOSURE.md`. Sin llamadas pagadas.
+
 ## Contexto medido y límites de recuperación — 30 de octubre de 2026
 
 Benchmark reproducible con solicitudes reales y FakeModelAdapter: ~16 % menos

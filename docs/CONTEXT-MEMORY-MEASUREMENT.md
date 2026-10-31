@@ -73,11 +73,12 @@ benchmark y pruebas aprobado. Regresión completa: **986 PASS, 4 SKIP, 0 fallos*
 353,91 s, `_tmp/context-memory-full.xml`.
 No cambian API, interfaz, dependencias ni esquemas SQLite.
 
-Pendiente confirmado por lectura del código: FTS5 llena RunState.historical_context,
-pero este campo todavía no se incorpora al prompt del Coder. La medición anterior
+Pendiente detectado en esta medición original: FTS5 llenaba RunState.historical_context,
+pero este campo no se incorporaba al prompt del Coder. La medición anterior
 solo acredita coocurrencia de archivos, no consumo de historial por el modelo.
-El siguiente cierre debe integrar ese historial con redacción, separación por
-usuario/repositorio, límites de contexto y tratamiento como datos no confiables.
+Actualización posterior: integración cerrada con redacción y bloque total de
+800 caracteres / tres entradas; `RC8-SHUTDOWN-FTS-CLOSURE.md`. La medición de bytes
+anterior no acredita ahorro al añadir ese historial.
 Después se deben evaluar consultas sin rutas, más repositorios, tokenizer del
 modelo correcto y calidad de propuestas. La publicación real sigue pendiente.
 

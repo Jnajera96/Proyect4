@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import errno
 import json
 import os
@@ -47,7 +48,8 @@ def wait_for_health(url: str, thread: threading.Thread, timeout: float) -> None:
         if not thread.is_alive():
             raise RuntimeError("El servidor termino antes de iniciar")
         try:
-            with opener.open(url + "/health", timeout=0.5) as response:
+            request = urllib.request.Request(url + "/health", headers={"Connection": "close"})
+            with opener.open(request, timeout=0.5) as response:
                 if response.status == 200 and json.load(response).get("status") == "ok":
                     return
         except (OSError, ValueError):
@@ -79,9 +81,21 @@ def serve(*, open_browser: bool = True, startup_timeout: float = 30, exit_after=
             lifespan="on",
             access_log=False,
             log_level="warning",
+            timeout_keep_alive=3,
+            timeout_graceful_shutdown=5,
         )
     )
-    thread = threading.Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
+    server_loop = None
+
+    def run_server():
+        async def serve_on_loop():
+            nonlocal server_loop
+            server_loop = asyncio.get_running_loop()
+            await server.serve(sockets=[listener])
+
+        asyncio.run(serve_on_loop())
+
+    thread = threading.Thread(target=run_server, daemon=True)
     try:
         thread.start()
         wait_for_health(url, thread, startup_timeout)
@@ -104,8 +118,20 @@ def serve(*, open_browser: bool = True, startup_timeout: float = 30, exit_after=
         return 0
     finally:
         server.should_exit = True
-        thread.join()
-        listener.close()
+        try:
+            if server_loop is not None and not server_loop.is_closed():
+                try:
+                    server_loop.call_soon_threadsafe(lambda: None)
+                except RuntimeError:
+                    if not server_loop.is_closed():
+                        raise
+            thread.join(timeout=10)
+            if thread.is_alive():
+                raise RuntimeError(
+                    "El servidor no terminó el cierre ordenado dentro de 10 segundos"
+                )
+        finally:
+            listener.close()
 
 
 def positive_seconds(value: str) -> float:
