@@ -114,6 +114,7 @@ def assemble(root: Path, frontend: Path, bundle: Path, archive: Path, uv: Path) 
     (bundle / "tools").mkdir()
     shutil.copy2(Path(sys.executable).parent / "ruff.exe", bundle / "tools/ruff.exe")
     shutil.copy2(root / "packaging/signed_start.py", bundle / "start.py")
+    shutil.copy2(root / "tools/upgrade_portable.py", bundle / "tools/upgrade_portable.py")
     (runtime / "python313._pth").write_text(
         "python313.zip\n.\n../packages\n../app\nimport site\n", encoding="utf-8"
     )

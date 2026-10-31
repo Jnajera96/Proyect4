@@ -37,11 +37,9 @@ from pydantic import BaseModel
 from ai_swe.contracts import Project, RunEvent, RunState, RunStatus, RunSummary
 from ai_swe.contracts.api import EventKind
 from ai_swe.security import redact_deep
+from ai_swe.state.migrations import LATEST_VERSION, SchemaMigrator
 
-# Version del esquema. Al cambiarla se recrean las tablas: es un prototipo y no
-# hay datos que preservar. Se declara en lugar de intentar migraciones silenciosas
-# que dejarian el esquema a medias.
-ESQUEMA_VERSION = 2
+ESQUEMA_VERSION = LATEST_VERSION
 
 
 @lru_cache(maxsize=1)
@@ -68,38 +66,6 @@ def msgpack_allowlist() -> tuple[tuple[str, str], ...]:
                 pares.add((obj.__module__, obj.__name__))
     return tuple(sorted(pares))
 
-
-_ESQUEMA = """
-CREATE TABLE IF NOT EXISTS meta (
-    clave TEXT PRIMARY KEY,
-    valor TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS runs (
-    run_id      TEXT PRIMARY KEY,
-    trace_id    TEXT NOT NULL,
-    status      TEXT NOT NULL,
-    intent      TEXT,
-    created_at  TEXT NOT NULL,
-    updated_at  TEXT NOT NULL,
-    error_count INTEGER NOT NULL DEFAULT 0,
-    state_json  TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS run_events (
-    run_id TEXT NOT NULL,
-    seq    INTEGER NOT NULL,
-    at     TEXT NOT NULL,
-    kind   TEXT NOT NULL,
-    data   TEXT NOT NULL DEFAULT '{}',
-    PRIMARY KEY (run_id, seq)
-);
-CREATE TABLE IF NOT EXISTS projects (
-    project_id TEXT PRIMARY KEY,
-    name       TEXT NOT NULL,
-    repo_path  TEXT NOT NULL,
-    created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_runs_updated ON runs(updated_at DESC);
-"""
 
 
 def _iso(momento: datetime) -> str:
@@ -140,31 +106,12 @@ class RunStore:
     def __init__(self, db_path: Path | str) -> None:
         self._db_path = Path(db_path)
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        SchemaMigrator().migrate_database(self._db_path)
         self._conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         _aplicar_pragmas(self._conn, fijar_modo=True)
         self._lock = threading.RLock()
         self._conexiones_extra: list[sqlite3.Connection] = []
-        self._inicializar()
-
-    def _inicializar(self) -> None:
-        with self._lock:
-            self._conn.executescript(_ESQUEMA)
-            fila = self._conn.execute(
-                "SELECT valor FROM meta WHERE clave = 'esquema_version'"
-            ).fetchone()
-            actual = int(fila["valor"]) if fila else None
-            if actual != ESQUEMA_VERSION:
-                # Recrear es mas honesto que migrar a medias en un prototipo.
-                self._conn.executescript(
-                    "DROP TABLE IF EXISTS run_events; DROP TABLE IF EXISTS runs;"
-                )
-                self._conn.executescript(_ESQUEMA)
-                self._conn.execute(
-                    "INSERT OR REPLACE INTO meta (clave, valor) VALUES ('esquema_version', ?)",
-                    (str(ESQUEMA_VERSION),),
-                )
-            self._conn.commit()
 
     # ------------------------------------------------------------ ciclo de vida
     def close(self) -> None:

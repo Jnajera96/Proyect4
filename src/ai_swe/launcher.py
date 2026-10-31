@@ -59,11 +59,31 @@ def wait_for_health(url: str, thread: threading.Thread, timeout: float) -> None:
 
 
 def serve(*, open_browser: bool = True, startup_timeout: float = 30, exit_after=None) -> int:
+    import logging
+    from contextlib import nullcontext
+
+    from ai_swe.runtime_paths import user_paths
+    from ai_swe.state.operation_lock import operation_lock
+    from ai_swe.state.upgrade_recovery import recover_upgrade
+
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    settings = load_settings(prepare=False)
+    root = user_paths().root
+    lease = (operation_lock(root.parent / f".{root.name}.server.lock")
+             if getattr(settings, "runtime_mode", "development") == "installed" else nullcontext())
+    with lease:
+        if getattr(settings, "runtime_mode", "development") == "installed":
+            recover_upgrade(root)
+            settings = load_settings()
+        return _serve(settings, open_browser=open_browser,
+                      startup_timeout=startup_timeout, exit_after=exit_after)
+
+
+def _serve(settings, *, open_browser=True, startup_timeout=30, exit_after=None) -> int:
     import uvicorn
 
     from ai_swe.api import crear_app
 
-    settings = load_settings()
     if not (frontend_dist() / "index.html").is_file():
         raise FileNotFoundError("Falta la interfaz construida del paquete")
     # App and STT read exactly the same installed settings sources. No credential probe.
@@ -162,7 +182,7 @@ def main(argv=None) -> int:
         return embedded_test_target(args.run_test_target)
     try:
         if args.runtime_info:
-            settings = load_settings()
+            settings = load_settings(prepare=False)
             print(
                 json.dumps(
                     {

@@ -2,14 +2,14 @@
 
 Fecha: 30 de octubre de 2026. Evaluación del código fuente de
 `feature/v0.2.0-madre-continuity`, actualizada con rc9 y conservando las distribuciones anteriores.
-Última validación fuente: backend994 PASS/4 SKIP, frontend34 PASS y compilación
+Última validación fuente: backend1022 PASS/4 SKIP, frontend34 PASS y compilación
 TypeScript/Vite aprobada; sin nuevas inferencias pagadas.
 
 ## Avance estimado
 
-**81/100 hacia v0.2.0 Windows local, confiable y recuperable.** Es una estimación
-técnica ponderada (80,90 redondeado), no una métrica derivada del número de pruebas.
-No significa que una plataforma pública de producción esté aprobada al 81 %.
+**84/100 hacia v0.2.0 Windows local, confiable y recuperable.** Es una estimación
+técnica ponderada (83,90 redondeado), no una métrica derivada del número de pruebas.
+La aprobación de una plataforma pública de producción sigue pendiente.
 
 Se conserva el método del acta `OPERATIONAL-STATUS-2026-10-29.md` (74,75, redondeado
 a 75), y la evaluación anterior de 76,65 (77/100). Se actualizan memoria 85→90
@@ -26,8 +26,8 @@ el piloto integral entre equipos y operación de producción; voz en destino no 
 | UI, actividad y proyectos | 10 % | 95 | UX y puertas accionables incluidas en rc9; validar recorrido en destino. |
 | Voz | 5 % | 90 | Micrófono/audio en el equipo de destino. |
 | Memoria, modos y rollback | 10 % | 90 | Calidad con modelos reales y tokens facturados. Consultas sin rutas e historial multilenguaje ya medidos offline. |
-| Continuidad y respaldo | 15 % | 55 | Recuperación por UI entre dos equipos, auto-backup, conflictos y pérdida de equipo. |
-| Distribución y operación segura | 15 % | 60 | Matriz independiente Windows/SAC, actualización/migración e aislamiento fuerte. |
+| Continuidad y respaldo | 15 % | 60 | Recuperación por UI entre dos equipos, auto-backup, conflictos y pérdida de equipo. |
+| Distribución y operación segura | 15 % | 75 | Matriz independiente Windows/SAC y aislamiento fuerte; migración/retorno local verificados. |
 
 ## Qué se adoptó de MADRE
 
@@ -93,3 +93,11 @@ solos el ZIP ni el servidor que el usuario tenga abierto.
 Actualización rc9: portable nuevo aprobado localmente, con 14/14 controles y 11
 pruebas de memoria desde el ZIP. Acta `RC9-CONTEXT-HISTORY-CLOSURE.md`.
 Se mantiene 81/100: las nuevas pruebas no sustituyen los cierres externos pendientes.
+
+
+Actualización del 31 de octubre: estimación 83,90 → **84/100**. Continuidad 55→60
+por respaldo y retorno de los datos instalados; distribución 60→75 por actualizador
+portable, transacciones, recuperación tras interrupciones y prueba rc9→rc10 con
+runtimes reales. Los valores 81/100 anteriores son históricos. Las demás áreas
+no cambian; no se incrementa calidad de modelos ni recuperación entre PC sin piloto.
+Evidencia: `SAFE-UPGRADE-MIGRATIONS.md`. La producción pública continúa pendiente.

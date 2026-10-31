@@ -1,12 +1,12 @@
 # Roadmap vigente de cierre y experimentación
 
-## Plan maestro hasta la entrega funcional — actualización del 30 de octubre de 2026
+## Plan maestro hasta la entrega funcional — actualización del 31 de octubre de 2026
 
 Meta inmediata: entrega Windows local que una persona no técnica pueda configurar,
 usar para construir una aplicación, revisar y abrir, con recuperación comprobada.
 La producción pública requiere además el último control de seguridad de esta lista.
 La validación fuente no equivale a actualizar el portable instalado.
-El estado ponderado actual (81/100) y la adopción real de patrones están en
+El estado ponderado actual (84/100) y la adopción real de patrones están en
 `PROJECT-STATUS-2026-10-30.md`. La generalización del Analyst se verifica en
 `UNIVERSAL-REQUIREMENTS-VALIDATION.md`; mantiene las mismas puertas humanas.
 La preparación integral, recuperación SSE y cancelación cooperativa adaptadas de
@@ -90,3 +90,16 @@ de `docs/history/` son referencias históricas.
 El laboratorio no requiere un HuggingFaceAdapter de antemano: primero se comprobará
 el adapter OpenAI-compatible existente. No se descargan modelos ni se consume un
 proveedor real en la fase de frontend.
+
+## Cierre del pendiente de actualización operativa — 31 de octubre
+
+- [x] Versionado SQLite v1/v2/v3 y eliminación de recreación destructiva.
+- [x] Snapshot previo, rollback, reservas conservadas y auditoría de migraciones.
+- [x] Actualizador portable con datos de preparación y respaldo ZIP privado.
+- [x] Recuperación tras terminación abrupta antes de preparar rutas o crear API.
+- [x] Actualización real rc9→rc10, compatibilidad de lectura de rc9 y retorno al snapshot.
+- [x] Regresión 1.022 PASS/4 SKIP, comando solicitado 28 PASS y smoke 14/14.
+
+Acta: `SAFE-UPGRADE-MIGRATIONS.md`. El cierre es local. Continúan recuperación
+por UI entre PC, matriz independiente, calidad/tokenizer/modelos reales, publicación
+autorizada y aislamiento/operación de producción pública.

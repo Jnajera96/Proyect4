@@ -1,19 +1,19 @@
-# Handoff para Antigravity — cierre de rc9 y pendientes
+# Handoff para Antigravity — actualización segura y pendientes
 
 Fecha: 30 de octubre de 2026. Rama `feature/v0.2.0-madre-continuity`.
-Fuente del portable actual: `8b1ff87`; el commit documental posterior registra
-los resultados de verificación. Comprobar HEAD y árbol antes de modificar, sin retroceder
+Base del cierre de actualización segura: `203bc70`; el commit de cierre posterior
+contiene migraciones, herramientas y resultados. La aprobación se limita al host validado. Comprobar HEAD y árbol antes de modificar, sin retroceder
 a una base antigua ni descartar avances.
 
 ## Estado que conservar
 
-- Avance estimado: **81/100** hacia Windows local confiable y recuperable,
-  ponderación 80,90 en `PROJECT-STATUS-2026-10-30.md`. No es aprobación de producción.
-- Entrega canónica: `dist/windows-v0.2.0-operational-rc9/AISWESystem-windows-x64.zip`.
-- SHA-256: `56f1fd866d079eb5d29714c6cea739aa5ceaf3e3f7c8e9f64f65946391d25c99`.
-- **994 backend PASS / 4 SKIP**, **34 frontend PASS**, build aprobado,
-  **30 focalizadas PASS**, **11 de memoria con runtime empaquetado PASS**.
-- Smoke rc9 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
+- Avance estimado: **84/100** hacia Windows local confiable y recuperable,
+  ponderación 83,90 en `PROJECT-STATUS-2026-10-30.md`. No es aprobación de producción.
+- Entrega canónica: `dist/windows-v0.2.0-safe-upgrade-rc10-verified/AISWESystem-windows-x64.zip`.
+- SHA-256: `01d0fe77d4f75fc866f92798b26f549cd34191d2742bda6a58f23397c96c1854`.
+- **1.022 backend PASS / 4 SKIP**, **34 frontend PASS**, build aprobado,
+  **28 pruebas de migración/actualización PASS**, actualización y retorno nativos verificados.
+- Smoke rc10 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
   ambos cierres código 0, SQLite/checkpoint persistentes, logs limpios. Los dos
   smokes anteriores de rc8 corregido siguen documentados en su acta.
 - No hubo llamadas pagadas ni publicación. Los candidatos anteriores se conservan;
@@ -35,7 +35,7 @@ validación pendiente con funcionalidad ausente.
 | 3 | Evaluar utilidad del historial FTS5 y ahorro real de contexto | `_historial_para_coder`, `tests/test_coder_historical_context.py`, benchmark | Casos nuevos/multilenguaje con y sin historial, sin contaminación entre usuario/repositorio ni instrucciones maliciosas. Tokenizer verificado del modelo correcto y mensajes completos; bytes/archivos no son tokens facturados. La medición actual ronda 16 % en fixtures con anclas y 0 % sin ellas; no demuestra 50–70 % de ahorro. |
 | 4 | Validar publicación real GitHub | `github_publish.py`, `api/delivery.py`, `PublicarGitHubModal.tsx` | Cuenta y repo de prueba elegidos explícitamente por el usuario; permisos/PAT, commit/push, privacidad, errores y limpieza del secreto. El asistente ya existe y está probado con mocks. No publicar sin autorización concreta. |
 | 5 | Validar más productos con modelos reales | `graph/nodes.py`, `models/`, worktrees y guías | Proyectos fuera de calculadora, oráculos funcionales independientes, Reviewer sin aceptación forzada, tests reales y promoción aprobada. FakeModelAdapter acredita flujo/contrato, no calidad de generación. Requiere presupuesto explícito disponible en ledger. |
-| 6 | Actualización/migración y recuperación operativa | `tools/build_windows.py`, `packaging/`, `state/`, `config.py` | Actualizar entre versiones preservando bóvedas/SQLite/ledger; respaldo previo, migraciones probadas, fallo recuperable y retorno de versión sin borrar datos. Matriz Windows/SAC independiente y guía para usuario no técnico. |
+| 6 | **Cerrado localmente:** actualización/migración y recuperación operativa | `tools/build_windows.py`, `packaging/`, `state/`, `config.py` | Actualizar entre versiones preservando bóvedas/SQLite/ledger; respaldo previo, migraciones probadas, fallo recuperable y retorno de versión sin borrar datos. Matriz Windows/SAC independiente y guía para usuario no técnico. |
 | 7 | Implementar aislamiento fuerte antes de producción pública | `tools/runner.py`, `sandbox.py`, políticas y despliegue | Worktree no es aislamiento de procesos/red. Diseñar Runner aislado con límites de recursos/red/archivos y validar ataques; después TLS, secretos, límites operativos, auditoría, backup/restauración y política de datos. No convertir el prototipo local en servicio público sin este cierre. |
 
 Los dos PC y las cuentas externas no se simulan como evidencia real. Se puede
@@ -101,3 +101,14 @@ Fuente `8b1ff87`, 994 backend PASS/4 SKIP, 34 frontend PASS y build,
 30 focalizadas, 11 con módulos del ZIP y 14/14 smoke estándar aprobados.
 Ambos candidatos se conservan.
 Acta vigente: `RC9-CONTEXT-HISTORY-CLOSURE.md`. Avance global estimado: 81/100.
+
+### Prioridad 6 cerrada — actualización segura (31 de octubre)
+
+SchemaMigrator v1/v2/v3, respaldo obligatorio, rollback, CLI portable, reserva
+de ejecución y diario de recuperación implementados. 28 pruebas solicitadas PASS;
+regresión completa 1.022 PASS/4 SKIP. Actualización real rc9→rc10 y retorno al
+snapshot v0 con runtimes firmados, perfil sintético, checkpoint y reserva intactos.
+Acta y comandos: `SAFE-UPGRADE-MIGRATIONS.md`. Paquete de esta entrega:
+`dist/windows-v0.2.0-safe-upgrade-rc10-verified/AISWESystem-windows-x64.zip`.
+Los estados y conteos de rc9 anteriores son históricos; se conserva ese candidato.
+La matriz Windows independiente y recuperación por UI entre PC siguen pendientes.

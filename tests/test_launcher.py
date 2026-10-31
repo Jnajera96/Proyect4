@@ -106,7 +106,7 @@ def test_browser_opens_actual_url_only_after_health(tmp_path, monkeypatch):
 
     (tmp_path / "index.html").write_text("fixture", encoding="utf-8")
     monkeypatch.setattr(launcher, "frontend_dist", lambda: tmp_path)
-    monkeypatch.setattr(launcher, "load_settings", lambda: SimpleNamespace(port=0))
+    monkeypatch.setattr(launcher, "load_settings", lambda **kwargs: SimpleNamespace(port=0))
     monkeypatch.setattr(ai_swe.api, "crear_app", lambda: object())
     events = []
 
@@ -141,7 +141,7 @@ def test_shutdown_timeout_is_bounded_and_never_reported_as_success(tmp_path, mon
 
     (tmp_path / "index.html").write_text("fixture", encoding="utf-8")
     monkeypatch.setattr(launcher, "frontend_dist", lambda: tmp_path)
-    monkeypatch.setattr(launcher, "load_settings", lambda: SimpleNamespace(port=0))
+    monkeypatch.setattr(launcher, "load_settings", lambda **kwargs: SimpleNamespace(port=0))
     monkeypatch.setattr(ai_swe.api, "crear_app", lambda: object())
     listener = launcher.reserve_listener(0)
     monkeypatch.setattr(launcher, "reserve_listener", lambda port: listener)

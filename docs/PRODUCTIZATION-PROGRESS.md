@@ -623,3 +623,16 @@ SHA-256: `56f1fd866d079eb5d29714c6cea739aa5ceaf3e3f7c8e9f64f65946391d25c99`.
 el ZIP y 14/14 smoke estándar aprobados. Se conserva rc8. Fuente `8b1ff87`;
 acta vigente `RC9-CONTEXT-HISTORY-CLOSURE.md`. Sin llamadas pagadas ni publicación.
 Aprobación para el host validado; piloto entre equipos y producción pendientes.
+
+
+## Prioridad 6 — cierre de actualización segura
+
+Migraciones PRAGMA user_version=3 con snapshots y rollback automático, CLI
+empaquetado, protección contra servidor activo y diario de recuperación.
+1.022 backend PASS/4 SKIP, 28 pruebas solicitadas PASS, 34 frontend PASS/build
+y 14 controles estándar del portable aprobados. Actualización rc9→rc10 y retorno
+al snapshot verificados con datos sintéticos y CPython firmado, sin gastos de API.
+Paquete: `dist/windows-v0.2.0-safe-upgrade-rc10-verified/AISWESystem-windows-x64.zip`.
+SHA-256: `01d0fe77d4f75fc866f92798b26f549cd34191d2742bda6a58f23397c96c1854`.
+Acta vigente del área: `SAFE-UPGRADE-MIGRATIONS.md`. Validación local; no acredita
+cortes físicos de energía ni matriz independiente de Windows/SAC. Se conserva rc9.

@@ -397,7 +397,7 @@ class Settings(BaseSettings):
         return registrados
 
 
-def load_settings() -> Settings:
+def load_settings(*, prepare: bool = True) -> Settings:
     """Carga la configuracion y deja sus secretos protegidos por el redactor.
 
     **No exige una clave de API.** M1 debe arrancar sin proveedor: el grafo se
@@ -407,7 +407,7 @@ def load_settings() -> Settings:
     """
     settings = Settings()
     settings.registrar_secretos()
-    if settings.runtime_mode == "installed":
+    if prepare and settings.runtime_mode == "installed":
         prepare_user_directories()
     return settings
 

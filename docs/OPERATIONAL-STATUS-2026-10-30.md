@@ -1,6 +1,23 @@
 # Cierre del portable operativo — 30 de octubre de 2026
 
-## RC9 — candidato local aprobado
+## RC10 — actualización segura verificada localmente
+
+Entrega del área: `dist/windows-v0.2.0-safe-upgrade-rc10-verified/AISWESystem-windows-x64.zip`.
+SHA-256: `01d0fe77d4f75fc866f92798b26f549cd34191d2742bda6a58f23397c96c1854`.
+118.808.072 bytes; 4.730 archivos de manifiesto y CRC verificados. Incluye migrador
+v1/v2/v3 y CLI ejecutable con el runtime firmado del paquete nuevo.
+
+**1.022 backend PASS/4 SKIP**, **28 pruebas solicitadas PASS**, **34 frontend PASS**,
+build aprobado y **14/14 controles estándar del portable PASS**, ambos cierres 0.
+Actualización real rc9→rc10, checkpoint/bóveda/reserva conservados y retorno al
+snapshot original con rc9 comprobados, usando datos sintéticos y PATH=System32.
+Firmas CPython válidas. Cero gasto de API y sin cambios al tag v0.1.0 (b158d9b).
+
+Acta: `SAFE-UPGRADE-MIGRATIONS.md`. Se conserva rc9. Los directorios rc10 y
+rc10-final son candidatos intermedios no aprobados. Aprobación local, sin certificar
+cortes físicos de energía, matriz independiente ni producción pública.
+
+## RC9 — candidato local aprobado anterior
 
 Entrega canónica: `dist/windows-v0.2.0-operational-rc9/AISWESystem-windows-x64.zip`.
 SHA-256: `56f1fd866d079eb5d29714c6cea739aa5ceaf3e3f7c8e9f64f65946391d25c99`.
