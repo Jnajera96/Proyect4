@@ -1118,12 +1118,18 @@ Reglas obligatorias:
     autocontenidos, sin npm, CDN, descargas ni compilacion en red. Si hace falta
     servidor usa Python stdlib (http.server); FastAPI solo si ya esta disponible,
     sin anadir dependencias. Documenta como arrancarlo.
+  - Para aplicaciones web de frontend (HTML/CSS/JS): NUNCA importes paquetes de
+    emulacion de JS en Python como 'js2py', 'jsdom' o 'selenium' (no estan instalados
+    en el entorno). Si generas pruebas pytest para proyectos web, prueba unicamente
+    la estructura de los archivos o valida el contenido HTML/JS como texto estatico
+    (por ejemplo, comprobando que index.html contiene los botones, inputs y scripts
+    requeridos). Nunca intentes ejecutar JavaScript dentro de pytest.
   - Calendario: implementa navegacion entre meses y CRUD persistente de eventos.
     Calorias: implementa CRUD de alimentos/registros, calculos de calorias y
     persistencia SQLite o JSON, validando entradas y errores.
   - Incluye pruebas pytest reales de CRUD, persistencia y calculos, ademas de
-    estructura. No escribas pruebas solo para obtener exit 0. La existencia de
-    HTML/JS no verifica interacciones web: declara ese limite sin navegador.
+    estructura para componentes en Python. No escribas pruebas solo para obtener exit 0.
+    La existencia de HTML/JS no verifica interacciones web: declara ese limite sin navegador.
   - Entrega una implementacion pequena y completa dentro del alcance: no omitas
     pruebas ni funcionalidades solicitadas para fingir completitud.
   - En Python, ordena alfabeticamente los imports dentro de cada grupo. Separa
@@ -1339,6 +1345,13 @@ def _contexto_correccion_coder(state: RunState) -> str:
         parts.append("Diff de la propuesta anterior:\n" + bounded(
             state.outputs.coder_output.diff, 12_000
         ))
+    if any("js2py" in p.lower() for p in parts):
+        parts.append(
+            "AVISO OBLIGATORIO: Las pruebas fallaron por intentar importar 'js2py'. "
+            "El entorno no cuenta con emuladores de JavaScript en Python. "
+            "Para proyectos web estáticos (HTML/CSS/JS), elimina 'import js2py' y "
+            "usa únicamente verificaciones estáticas de texto sobre 'index.html' sin ejecutar código JS."
+        )
     if not parts:
         return "(sin ejecuciones ni revision previa; no se afirma que las pruebas pasen)"
     return bloque_no_confiable(

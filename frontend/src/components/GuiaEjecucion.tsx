@@ -36,6 +36,11 @@ export function GuiaEjecucion({ estado, projectId, puedeOperar, alPedirCambios }
   }
   return <section className="guia-ejecucion" aria-label="Qué hacer con tu código">
     <Panel titulo="Qué hacer con tu código">
+      {estado.status === "needs_human" && (
+        <p className="aviso" role="status" style={{ marginBottom: "1rem" }}>
+          ⚠️ Las validaciones automáticas se detuvieron, pero el borrador de tu aplicación está disponible en tu equipo para probarlo directamente.
+        </p>
+      )}
       {!guide && !error && <p role="status">Preparando las instrucciones de tu aplicación…</p>}
       <h3>Probar en local</h3>
       {guide && <><p>{guide.summary_es}</p><ol>{guide.instructions.map(text => <li key={text}>{text}</li>)}</ol>

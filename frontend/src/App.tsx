@@ -599,7 +599,7 @@ export function App({ profile }: { profile?: {
             <p>{mensajeEstado(estado)}</p>
             <button className="primario" onClick={irAlProgreso}>👉 Continuar aquí</button>
           </div>}
-        {estado?.status === "completed" && estado.promotion_receipt?.status === "promoted" ?
+        {(estado?.status === "completed" && estado.promotion_receipt?.status === "promoted") || (estado?.status === "needs_human" && Boolean(estado.artifacts.worktree_path || (estado.artifacts.changed_files && estado.artifacts.changed_files.length > 0))) ?
           <GuiaEjecucion key={estado.run_id} estado={estado} puedeOperar={puedeOperar}
             alPedirCambios={() => {
               const project = proyectos.find(p => p.repo_path === estado.options.repo_path);

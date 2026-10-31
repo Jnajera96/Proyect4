@@ -194,3 +194,36 @@ def test_get_cannot_write_and_reader_cannot_prepare(tmp_path, monkeypatch):
             ).status_code
             == 200
         )
+
+
+def test_launch_guide_supports_unpromoted_draft_worktree(tmp_path):
+    worktree = tmp_path / "worktree"
+    worktree.mkdir(exist_ok=True)
+    (worktree / "index.html").write_text("<h1>Pomodoro</h1>", encoding="utf-8")
+    now = datetime.now(UTC)
+    state = RunState(
+        run_id="draft-launch-test",
+        trace_id="draft-launch-test",
+        created_at=now,
+        updated_at=now,
+        status="needs_human",
+        instruction=Instruction(text="Crea un pomodoro", source="text", confirmed_by_user=True),
+        options=RunOptions(repo_path=str(tmp_path / "repo")),
+        artifacts=Artifacts(
+            worktree_path=str(worktree),
+            changed_files=[
+                FileChange(
+                    path="index.html",
+                    added=1,
+                    removed=0,
+                    sha256=hashlib.sha256(b"<h1>Pomodoro</h1>").hexdigest(),
+                )
+            ],
+        ),
+    )
+    guide = describe(state)
+    assert guide.available
+    assert guide.kind == "web_static"
+    assert "Borrador" in guide.summary_es
+    assert prepare(state).prepared
+    assert (worktree / "iniciar.bat").exists()

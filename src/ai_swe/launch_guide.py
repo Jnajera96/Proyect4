@@ -32,22 +32,26 @@ class LaunchGuide(BaseModel):
 
 def approved_repository(state: RunState) -> Path:
     receipt = state.promotion_receipt
-    if state.status != "completed" or not receipt or receipt.status != "promoted":
-        raise ValueError("Primero termina y aprueba una aplicación con archivos guardados.")
-    root = Path(state.options.repo_path or "").resolve()
-    if not state.options.repo_path or not root.is_dir():
-        raise ValueError("La carpeta de la aplicación ya no está disponible.")
-    for change in state.artifacts.changed_files:
-        path = root / change.path
-        if path.is_symlink() or not path.resolve().is_relative_to(root):
-            raise ValueError("La aplicación contiene una ruta no autorizada.")
-        if path.is_file():
-            text = path.read_text(encoding="utf-8")
-            if hashlib.sha256(text.encode()).hexdigest() != change.sha256:
-                raise ValueError(
-                    "Los archivos cambiaron después de la revisión. Revisa antes de abrir."
-                )
-    return root
+    if state.status == "completed" and receipt and receipt.status == "promoted":
+        root = Path(state.options.repo_path or "").resolve()
+        if not state.options.repo_path or not root.is_dir():
+            raise ValueError("La carpeta de la aplicación ya no está disponible.")
+        for change in state.artifacts.changed_files:
+            path = root / change.path
+            if path.is_symlink() or not path.resolve().is_relative_to(root):
+                raise ValueError("La aplicación contiene una ruta no autorizada.")
+            if path.is_file():
+                text = path.read_text(encoding="utf-8")
+                if hashlib.sha256(text.encode()).hexdigest() != change.sha256:
+                    raise ValueError(
+                        "Los archivos cambiaron después de la revisión. Revisa antes de abrir."
+                    )
+        return root
+    if state.artifacts.worktree_path:
+        worktree = Path(state.artifacts.worktree_path).resolve()
+        if worktree.is_dir():
+            return worktree
+    raise ValueError("Primero termina y aprueba una aplicación con archivos guardados.")
 
 
 def _python_kind(path: Path):
@@ -130,17 +134,32 @@ def describe(state: RunState) -> LaunchGuide:
     else:
         command = 'start "" "%~dp0"'
     launcher = root / "iniciar.bat"
+    is_promoted = bool(
+        state.status == "completed"
+        and state.promotion_receipt
+        and state.promotion_receipt.status == "promoted"
+    )
+    summary_text = (
+        "Tu aplicación está lista para usar."
+        if is_promoted
+        else "Borrador de tu aplicación listo para probar en tu computadora."
+    )
+    first_instruction = (
+        f"Tu aplicación está guardada en {root}."
+        if is_promoted
+        else f"Borrador generado en el entorno de pruebas ({root})."
+    )
     guide = LaunchGuide(
         available=True,
         kind=kind,
-        summary_es="Tu aplicación está lista para usar.",
+        summary_es=summary_text,
         launch_action="open_browser" if kind == "web_static" else "run_command",
         command=command,
         repo_path=str(root),
         entrypoint=entry,
         launcher_path=str(launcher),
         instructions=[
-            f"Tu aplicación está guardada en {root}.",
+            first_instruction,
             "Abre iniciar.bat con doble clic para usarla otra vez.",
             "Conserva la carpeta completa y esta instalación del sistema.",
         ],
