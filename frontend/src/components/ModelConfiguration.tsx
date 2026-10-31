@@ -39,9 +39,9 @@ export function ModelSelector({ name, label, value, onChange }: {
         {catalog.models.filter(m => m.projectValidated).map(m =>
           <option key={m.id} value={m.id}>{m.label} · {m.provider}</option>)}
       </optgroup>
-      <optgroup label="Candidatos del catálogo HF · pendientes de prueba en este proyecto">
+      <optgroup label="Contratos comprobados · aplicaciones E2E pendientes de prueba">
         {catalog.models.filter(m => !m.projectValidated).map(m =>
-          <option key={m.id} value={m.id}>{m.label} · {m.purpose} · {m.provider}</option>)}
+          <option key={m.id} value={m.id}>{m.label} · {m.provider} · Coder {m.probe.coderPassed}/{m.probe.coderTotal} · Reviewer {m.probe.reviewerPassed}/{m.probe.reviewerTotal}</option>)}
       </optgroup>
       <option value={CUSTOM}>Otro modelo — escribir identificador HF</option>
     </select>
@@ -53,8 +53,10 @@ export function ModelSelector({ name, label, value, onChange }: {
     </label>}
     {selected && <p className="profile-model-note">
       {selected.purpose}. {selected.projectValidated
-        ? "Funcionó en la validación E2E registrada; no se ha repetido una llamada ahora."
-        : "Disponible en el catálogo consultado; compatibilidad E2E todavía no probada aquí."}
+        ? "Funcionó en la validación E2E histórica y sus pruebas de contrato se actualizaron."
+        : "Respondió en pruebas reales de contrato; todavía falta construir y verificar una aplicación completa con esta ruta."}
+      <br />Pruebas del {selected.probe.checkedAt}: Coder {selected.probe.coderPassed}/{selected.probe.coderTotal}, Reviewer {selected.probe.reviewerPassed}/{selected.probe.reviewerTotal}. Una ejecución por caso; no es una garantía de calidad general.
+      {!selected.supportsStructuredOutput && <><br />El proveedor no declara esquema nativo, pero respondió correctamente en las sondas de modo JSON con validación local.</>}
       {" "}<a href={selected.source} target="_blank" rel="noreferrer">Ficha en Hugging Face</a>
       <br />{selected.inputPerMillion} USD / millón de entrada · {selected.outputPerMillion} USD / millón de salida.
     </p>}

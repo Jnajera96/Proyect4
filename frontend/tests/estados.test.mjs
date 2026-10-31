@@ -311,3 +311,12 @@ test("un borrador puede revisarse pero no publicarse antes de la promoción", ()
   assert.match(html,/aún no está aprobado ni verificado/);
   assert.match(html,/<button disabled="">🚀 Subir a GitHub<\/button>/);
 });
+
+test("selector muestra evidencia real por rol sin confundir JSON-mode con esquema nativo o E2E", () => {
+  const html=renderToStaticMarkup(React.createElement(ModelSelector,{name:"model_name",label:"Modelo Coder",value:"deepseek-ai/DeepSeek-V3.2:deepinfra",onChange(){}}));
+  assert.match(html,/Coder 1\/1/); assert.match(html,/Reviewer 1\/1/);
+  assert.match(html,/modo JSON con validación local/);
+  assert.match(html,/todavía falta construir/);
+  assert.match(html,/aplicaciones E2E pendientes de prueba/);
+  assert.doesNotMatch(html,/<option[^>]*disabled/);
+});

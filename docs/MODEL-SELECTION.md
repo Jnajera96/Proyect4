@@ -50,3 +50,14 @@ Los bloqueadores de `PORTABLE-v0.2.0-TEST-REPORT.md` siguen vigentes; no es prod
 ZIP entregado: `AISWESystem-v0.2.0-SELECTOR-MODELOS.zip`, 118756219 bytes.
 SHA256: `6dd2fcce6f19be6c08f259686c74cfe5b893d60d66f44ac37320af7d302a8e2d`.
 Manifiesto:4715 archivos verificados. CRC ZIP aprobado. No reemplaza ZIP anteriores.
+
+
+## Actualización del 31 de octubre
+
+Las diez rutas ahora tienen sondas de contrato reales documentadas en
+`MODEL-ROUTE-VALIDATION-2026-10-31.md`: ocho con Coder 2/2 + Reviewer 2/2,
+y DeepSeek V3.2/Qwen3 Next con Coder 1/1 + Reviewer 1/1. El selector muestra
+esa evidencia y la fecha sin cambiar la bandera histórica projectValidated.
+Las dos últimas no declaran esquema nativo pero aprobaron modo JSON/Pydantic;
+no se presentan como fallidas sólo por sus metadatos. Falta E2E de aplicaciones
+para los nueve modelos alternativos. No se recomienda un ranking por estas sondas.

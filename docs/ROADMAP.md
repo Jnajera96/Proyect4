@@ -134,3 +134,26 @@ Acta y límites: `RC11-GITHUB-PUBLISH-AND-UNLOCKED-DELIVERY.md`. Se preservan rc
 y las distribuciones previas. No se declara producción pública ni se consumen APIs
 pagadas; no cambia la evidencia pendiente de recuperación entre equipos y calidad
 remota.
+
+
+## Evaluación real de modelos y prioridades activas — 31 de octubre
+
+Por instrucción del usuario se mantienen en pausa recuperación entre PC y piloto
+GitHub. Se completaron 36 sondas reales de contrato sobre las diez rutas del
+selector: ocho con 4/4 y dos sin esquema nativo con 2/2 en modo JSON. Todas
+aprobaron los casos asignados, sin ejecutar código generado. No son diez E2E ni
+una clasificación universal. El selector muestra evidencia por rol; sólo Qwen2.5
+Coder 32B conserva la validación histórica de aplicación completa.
+
+Acta: `MODEL-ROUTE-VALIDATION-2026-10-31.md`; métricas en el JSON adjunto.
+Autorización nueva hasta 2 USD dentro de 5 acumulados, respaldada por captura
+4,96 USD de créditos/0,04 USD de uso. Ledger histórico intacto, sesión separada
+con 1,967842 USD reservados. Estimación por uso/tarifas: 0,01962210 USD, no factura;
+no liberar reservas ni repetir llamadas basándose sólo en ese cálculo.
+
+Siguen activos calidad E2E con otros productos/modelos, optimización global del
+contexto, tokenizer específico y diseño de aislamiento fuerte. Las sondas no
+cierran esos trabajos. Rc11 se conserva; este cambio no genera otro portable.
+
+Verificación de este cierre: 1.059 backend PASS/4 SKIP, 31 focalizadas offline
+PASS y 39 frontend PASS/build. Los pilotos pausados permanecen sin ejecutar.

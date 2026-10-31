@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-27",
+  "checkedAt": "2026-10-31",
   "source": "https://router.huggingface.co/v1/models",
   "models": [
     {
@@ -7,110 +7,200 @@
       "baseModel": "Qwen/Qwen2.5-Coder-32B-Instruct",
       "label": "Qwen2.5 Coder 32B",
       "provider": "nscale",
-      "purpose": "Código · E2E registrado",
+      "purpose": "CÃƒÂ³digo Ã‚Â· E2E registrado",
       "projectValidated": true,
       "inputPerMillion": 0.06,
       "outputPerMillion": 0.2,
-      "source": "https://huggingface.co/Qwen/Qwen2.5-Coder-32B-Instruct"
+      "source": "https://huggingface.co/Qwen/Qwen2.5-Coder-32B-Instruct",
+      "supportsStructuredOutput": true,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-10-31",
+        "coderPassed": 2,
+        "coderTotal": 2,
+        "reviewerPassed": 2,
+        "reviewerTotal": 2
+      }
     },
     {
       "id": "Qwen/Qwen2.5-Coder-7B-Instruct:nscale",
       "baseModel": "Qwen/Qwen2.5-Coder-7B-Instruct",
       "label": "Qwen2.5 Coder 7B",
       "provider": "nscale",
-      "purpose": "Código · opción compacta",
+      "purpose": "CÃƒÂ³digo Ã‚Â· opciÃƒÂ³n compacta",
       "projectValidated": false,
       "inputPerMillion": 0.01,
       "outputPerMillion": 0.03,
-      "source": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct"
+      "source": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct",
+      "supportsStructuredOutput": true,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-10-31",
+        "coderPassed": 2,
+        "coderTotal": 2,
+        "reviewerPassed": 2,
+        "reviewerTotal": 2
+      }
     },
     {
       "id": "Qwen/Qwen3-32B:nscale",
       "baseModel": "Qwen/Qwen3-32B",
       "label": "Qwen3 32B",
       "provider": "nscale",
-      "purpose": "Código y revisión general",
+      "purpose": "CÃƒÂ³digo y revisiÃƒÂ³n general",
       "projectValidated": false,
       "inputPerMillion": 0.08,
       "outputPerMillion": 0.25,
-      "source": "https://huggingface.co/Qwen/Qwen3-32B"
+      "source": "https://huggingface.co/Qwen/Qwen3-32B",
+      "supportsStructuredOutput": true,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-10-31",
+        "coderPassed": 2,
+        "coderTotal": 2,
+        "reviewerPassed": 2,
+        "reviewerTotal": 2
+      }
     },
     {
       "id": "Qwen/Qwen3-235B-A22B-Instruct-2507:nscale",
       "baseModel": "Qwen/Qwen3-235B-A22B-Instruct-2507",
       "label": "Qwen3 235B Instruct",
       "provider": "nscale",
-      "purpose": "Revisión y razonamiento general",
+      "purpose": "RevisiÃƒÂ³n y razonamiento general",
       "projectValidated": false,
       "inputPerMillion": 0.2,
       "outputPerMillion": 0.6,
-      "source": "https://huggingface.co/Qwen/Qwen3-235B-A22B-Instruct-2507"
+      "source": "https://huggingface.co/Qwen/Qwen3-235B-A22B-Instruct-2507",
+      "supportsStructuredOutput": true,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-10-31",
+        "coderPassed": 2,
+        "coderTotal": 2,
+        "reviewerPassed": 2,
+        "reviewerTotal": 2
+      }
     },
     {
       "id": "deepseek-ai/DeepSeek-V3.2:deepinfra",
       "baseModel": "deepseek-ai/DeepSeek-V3.2",
       "label": "DeepSeek V3.2",
       "provider": "deepinfra",
-      "purpose": "Código y revisión",
+      "purpose": "CÃƒÂ³digo y revisiÃƒÂ³n",
       "projectValidated": false,
       "inputPerMillion": 0.26,
       "outputPerMillion": 0.38,
-      "source": "https://huggingface.co/deepseek-ai/DeepSeek-V3.2"
+      "source": "https://huggingface.co/deepseek-ai/DeepSeek-V3.2",
+      "supportsStructuredOutput": false,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-10-31",
+        "coderPassed": 1,
+        "coderTotal": 1,
+        "reviewerPassed": 1,
+        "reviewerTotal": 1
+      }
     },
     {
       "id": "zai-org/GLM-4.7:deepinfra",
       "baseModel": "zai-org/GLM-4.7",
       "label": "GLM 4.7",
       "provider": "deepinfra",
-      "purpose": "Código y revisión",
+      "purpose": "CÃƒÂ³digo y revisiÃƒÂ³n",
       "projectValidated": false,
       "inputPerMillion": 0.4,
       "outputPerMillion": 1.75,
-      "source": "https://huggingface.co/zai-org/GLM-4.7"
+      "source": "https://huggingface.co/zai-org/GLM-4.7",
+      "supportsStructuredOutput": true,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-10-31",
+        "coderPassed": 2,
+        "coderTotal": 2,
+        "reviewerPassed": 2,
+        "reviewerTotal": 2
+      }
     },
     {
       "id": "moonshotai/Kimi-K2-Instruct-0905:novita",
       "baseModel": "moonshotai/Kimi-K2-Instruct-0905",
       "label": "Kimi K2 Instruct",
       "provider": "novita",
-      "purpose": "Código y revisión",
+      "purpose": "CÃƒÂ³digo y revisiÃƒÂ³n",
       "projectValidated": false,
       "inputPerMillion": 0.6,
       "outputPerMillion": 2.5,
-      "source": "https://huggingface.co/moonshotai/Kimi-K2-Instruct-0905"
+      "source": "https://huggingface.co/moonshotai/Kimi-K2-Instruct-0905",
+      "supportsStructuredOutput": true,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-10-31",
+        "coderPassed": 2,
+        "coderTotal": 2,
+        "reviewerPassed": 2,
+        "reviewerTotal": 2
+      }
     },
     {
       "id": "openai/gpt-oss-120b:nscale",
       "baseModel": "openai/gpt-oss-120b",
       "label": "GPT OSS 120B",
       "provider": "nscale",
-      "purpose": "Revisión y razonamiento general",
+      "purpose": "RevisiÃƒÂ³n y razonamiento general",
       "projectValidated": false,
       "inputPerMillion": 0.1,
       "outputPerMillion": 0.4,
-      "source": "https://huggingface.co/openai/gpt-oss-120b"
+      "source": "https://huggingface.co/openai/gpt-oss-120b",
+      "supportsStructuredOutput": true,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-10-31",
+        "coderPassed": 2,
+        "coderTotal": 2,
+        "reviewerPassed": 2,
+        "reviewerTotal": 2
+      }
     },
     {
       "id": "Qwen/Qwen3-Next-80B-A3B-Instruct:deepinfra",
       "baseModel": "Qwen/Qwen3-Next-80B-A3B-Instruct",
       "label": "Qwen3 Next 80B",
       "provider": "deepinfra",
-      "purpose": "Código y revisión general",
+      "purpose": "CÃƒÂ³digo y revisiÃƒÂ³n general",
       "projectValidated": false,
       "inputPerMillion": 0.09,
       "outputPerMillion": 1.1,
-      "source": "https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct"
+      "source": "https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct",
+      "supportsStructuredOutput": false,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-10-31",
+        "coderPassed": 1,
+        "coderTotal": 1,
+        "reviewerPassed": 1,
+        "reviewerTotal": 1
+      }
     },
     {
       "id": "moonshotai/Kimi-K2.7-Code:deepinfra",
       "baseModel": "moonshotai/Kimi-K2.7-Code",
       "label": "Kimi K2.7 Code",
       "provider": "deepinfra",
-      "purpose": "Código",
+      "purpose": "CÃƒÂ³digo",
       "projectValidated": false,
-      "inputPerMillion": 0.6799999999999999,
+      "inputPerMillion": 0.68,
       "outputPerMillion": 3.4,
-      "source": "https://huggingface.co/moonshotai/Kimi-K2.7-Code"
+      "source": "https://huggingface.co/moonshotai/Kimi-K2.7-Code",
+      "supportsStructuredOutput": true,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-10-31",
+        "coderPassed": 2,
+        "coderTotal": 2,
+        "reviewerPassed": 2,
+        "reviewerTotal": 2
+      }
     }
   ]
 }

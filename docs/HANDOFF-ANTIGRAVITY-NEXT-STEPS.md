@@ -30,10 +30,10 @@ validación pendiente con funcionalidad ausente.
 
 | Orden | Tipo y trabajo | Referencias | Criterio de cierre |
 | --- | --- | --- | --- |
-| 1 | Validar recuperación integral por UI entre dos PC | `state/continuity.py`, `api/profiles.py`, `RestaurarPerfil.tsx`, `VistaSesion.tsx`; `PORTABLE-SECOND-PC-PILOT.md` | Exportar perfil de prueba pausado antes de aprobación, importar/reasignar varios repositorios en otra PC y reanudar sin repetir Coder/Reviewer, perder gasto/historial/archivos ni aprobar automáticamente. Probar contraseña errónea, destino ocupado, reinicio, auto-backup y clave de rescate. Registrar versión/hash y Windows/SAC. |
+| 1 | **En pausa por el usuario:** recuperación integral por UI entre dos PC | `state/continuity.py`, `api/profiles.py`, `RestaurarPerfil.tsx`, `VistaSesion.tsx`; `PORTABLE-SECOND-PC-PILOT.md` | Exportar perfil de prueba pausado antes de aprobación, importar/reasignar varios repositorios en otra PC y reanudar sin repetir Coder/Reviewer, perder gasto/historial/archivos ni aprobar automáticamente. Probar contraseña errónea, destino ocupado, reinicio, auto-backup y clave de rescate. Registrar versión/hash y Windows/SAC. |
 | 2 | Mejorar recuperación de contexto sin coincidencias y suficiencia del código enviado | `state/memory_graph.py`, `state/memory.py`, `graph/nodes.py`; `CONTEXT-MEMORY-MEASUREMENT.md`, `tools/benchmark_context_memory.py` | El fixture ambiguo tiene cobertura 0 %. Hoy Coder recibe extractos del Researcher, no necesariamente el cuerpo de funciones necesario. Reproducir con proyectos nuevos y existentes; mejorar selección/contenido acotado sin diccionario cerrado de tres productos, sin pérdida silenciosa de archivos ni quitar límites/políticas. Medir cobertura y calidad antes de reclamar optimización. |
 | 3 | Evaluar utilidad del historial FTS5 y ahorro real de contexto | `_historial_para_coder`, `tests/test_coder_historical_context.py`, benchmark | Casos nuevos/multilenguaje con y sin historial, sin contaminación entre usuario/repositorio ni instrucciones maliciosas. Tokenizer verificado del modelo correcto y mensajes completos; bytes/archivos no son tokens facturados. La medición actual ronda 16 % en fixtures con anclas y 0 % sin ellas; no demuestra 50–70 % de ahorro. |
-| 4 | Validar publicación real GitHub | `github_publish.py`, `api/delivery.py`, `PublicarGitHubModal.tsx` | Cuenta y repo de prueba elegidos explícitamente por el usuario; permisos/PAT, commit/push, privacidad, errores y limpieza del secreto. El asistente ya existe y está probado con mocks. No publicar sin autorización concreta. |
+| 4 | **En pausa por el usuario:** publicación real GitHub | `github_publish.py`, `api/delivery.py`, `PublicarGitHubModal.tsx` | Cuenta y repo de prueba elegidos explícitamente por el usuario; permisos/PAT, commit/push, privacidad, errores y limpieza del secreto. El asistente ya existe y está probado con mocks. No publicar sin autorización concreta. |
 | 5 | Validar más productos con modelos reales | `graph/nodes.py`, `models/`, worktrees y guías | Proyectos fuera de calculadora, oráculos funcionales independientes, Reviewer sin aceptación forzada, tests reales y promoción aprobada. FakeModelAdapter acredita flujo/contrato, no calidad de generación. Requiere presupuesto explícito disponible en ledger. |
 | 6 | **Cerrado localmente:** actualización/migración y recuperación operativa | `tools/build_windows.py`, `packaging/`, `state/`, `config.py` | Actualizar entre versiones preservando bóvedas/SQLite/ledger; respaldo previo, migraciones probadas, fallo recuperable y retorno de versión sin borrar datos. Matriz Windows/SAC independiente y guía para usuario no técnico. |
 | 7 | Implementar aislamiento fuerte antes de producción pública | `tools/runner.py`, `sandbox.py`, políticas y despliegue | Worktree no es aislamiento de procesos/red. Diseñar Runner aislado con límites de recursos/red/archivos y validar ataques; después TLS, secretos, límites operativos, auditoría, backup/restauración y política de datos. No convertir el prototipo local en servicio público sin este cierre. |
@@ -143,3 +143,26 @@ piloto real GitHub: identidad/creación HTTPS simuladas y push real sólo a bare
 local descartable. No hubo inferencia pagada ni push al remoto del proyecto.
 Quedan publicación real autorizada, continuidad UI entre PC, matriz Windows/SAC,
 calidad con modelos reales, meta global 40–70% de tokens y aislamiento fuerte.
+
+
+## Evaluación real de modelos y prioridades activas — 31 de octubre
+
+Por instrucción del usuario se mantienen en pausa recuperación entre PC y piloto
+GitHub. Se completaron 36 sondas reales de contrato sobre las diez rutas del
+selector: ocho con 4/4 y dos sin esquema nativo con 2/2 en modo JSON. Todas
+aprobaron los casos asignados, sin ejecutar código generado. No son diez E2E ni
+una clasificación universal. El selector muestra evidencia por rol; sólo Qwen2.5
+Coder 32B conserva la validación histórica de aplicación completa.
+
+Acta: `MODEL-ROUTE-VALIDATION-2026-10-31.md`; métricas en el JSON adjunto.
+Autorización nueva hasta 2 USD dentro de 5 acumulados, respaldada por captura
+4,96 USD de créditos/0,04 USD de uso. Ledger histórico intacto, sesión separada
+con 1,967842 USD reservados. Estimación por uso/tarifas: 0,01962210 USD, no factura;
+no liberar reservas ni repetir llamadas basándose sólo en ese cálculo.
+
+Siguen activos calidad E2E con otros productos/modelos, optimización global del
+contexto, tokenizer específico y diseño de aislamiento fuerte. Las sondas no
+cierran esos trabajos. Rc11 se conserva; este cambio no genera otro portable.
+
+Verificación de este cierre: 1.059 backend PASS/4 SKIP, 31 focalizadas offline
+PASS y 39 frontend PASS/build. Los pilotos pausados permanecen sin ejecutar.
