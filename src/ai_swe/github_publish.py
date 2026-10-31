@@ -14,12 +14,18 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from ai_swe.launch_guide import approved_repository
 from ai_swe.security import register_secret
 
+SECRET_PATTERN = re.compile(
+    rb"hf_[A-Za-z0-9]{12,}|ghp_[A-Za-z0-9]+|github_pat_[A-Za-z0-9_]+|"
+    rb"-----BEGIN .*PRIVATE KEY-----"
+)
+
 
 class GitHubPublishRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     repo_name: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$")
     pat_token: SecretStr = Field(min_length=10, max_length=512)
     private: bool = True
+    organization: str = Field(default="", pattern=r"^(?:[A-Za-z0-9][A-Za-z0-9-]{0,38})?$")
 
 
 def git_environment():
@@ -62,14 +68,19 @@ def git_environment():
 
 
 def git(root: Path, *args: str, input: bytes | None = None, env=None) -> str:
-    result = subprocess.run(
-        ["git", "-C", str(root), *args],
-        input=input,
-        capture_output=True,
-        timeout=60,
-        shell=False,
-        env=env or git_environment(),
-    )
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), *args],
+            input=input,
+            capture_output=True,
+            timeout=60,
+            shell=False,
+            env=env or git_environment(),
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise ValueError(
+            "Git no pudo completar la publicación. Revisa la conexión y Git."
+        ) from None
     if result.returncode:
         raise ValueError("Git no pudo completar la publicación. No se hizo push forzado.")
     return result.stdout.decode("utf-8", errors="replace").strip()
@@ -78,7 +89,12 @@ def git(root: Path, *args: str, input: bytes | None = None, env=None) -> str:
 def create_repository(request: GitHubPublishRequest) -> str:
     from ai_swe.models.providers.github_repository import create_repository as create
 
-    return create(request.repo_name, request.pat_token.get_secret_value(), request.private)
+    return create(
+        request.repo_name,
+        request.pat_token.get_secret_value(),
+        request.private,
+        request.organization,
+    )
 
 
 def push(root: Path, url: str, token: str):
@@ -89,10 +105,19 @@ def push(root: Path, url: str, token: str):
     environment["GIT_CONFIG_COUNT"] = str(index + 1)
     environment[f"GIT_CONFIG_KEY_{index}"] = "http.https://github.com/.extraHeader"
     environment[f"GIT_CONFIG_VALUE_{index}"] = "Authorization: Basic " + encoded
-    git(root, "push", "--no-verify", url, "HEAD:refs/heads/main", env=environment)
+    branch = git(root, "symbolic-ref", "--short", "HEAD")
+    git(root, "push", "--no-verify", "-u", "origin", branch, env=environment)
 
 
 def publish(state, request: GitHubPublishRequest) -> dict:
+    return list(publication_steps(state, request))[-1]
+
+
+def publication_steps(state, request: GitHubPublishRequest):
+    """Progress is emitted only at real phase boundaries; the PAT is never an event."""
+    from ai_swe.models.providers.github_repository import validate_token
+
+    register_secret(request.pat_token.get_secret_value())
     root = approved_repository(state)
     local_keys = git(root, "config", "--no-includes", "--local", "--name-only", "--list")
     if any(
@@ -108,6 +133,10 @@ def publish(state, request: GitHubPublishRequest) -> dict:
     tracked = set(git(root, "ls-tree", "-r", "--name-only", "HEAD").splitlines())
     if not tracked.issubset(allowed) or git(root, "rev-list", "--count", "HEAD") != "1":
         raise ValueError("La publicación sencilla requiere un proyecto nuevo sin historial ajeno.")
+    git(root, "symbolic-ref", "--short", "HEAD")
+    for relative in tracked:
+        if SECRET_PATTERN.search(git(root, "show", f"HEAD:{relative}").encode()):
+            raise ValueError("El historial contiene una posible credencial. No se publicará.")
     files = {}
     for relative in sorted(allowed):
         path = root / relative
@@ -121,11 +150,7 @@ def publish(state, request: GitHubPublishRequest) -> dict:
         if not path.is_file():
             continue
         data = path.read_bytes()
-        if re.search(
-            rb"hf_[A-Za-z0-9]{12,}|ghp_[A-Za-z0-9]+|github_pat_[A-Za-z0-9_]+|"
-            rb"-----BEGIN .*PRIVATE KEY-----",
-            data,
-        ):
+        if SECRET_PATTERN.search(data) or request.pat_token.get_secret_value().encode() in data:
             raise ValueError(
                 "Un archivo parece contener una credencial. Revísalo antes de publicar."
             )
@@ -138,7 +163,11 @@ def publish(state, request: GitHubPublishRequest) -> dict:
             raise ValueError("Hay archivos modificados después de la aprobación.")
         files[relative] = data
     # No network until all local preconditions have passed.
+    yield {"stage": "validating"}
+    validate_token(request.pat_token.get_secret_value())
+    yield {"stage": "creating"}
     url = create_repository(request)
+    yield {"stage": "uploading"}
     try:
         for relative, data in files.items():
             blob = git(root, "hash-object", "-w", "--no-filters", "--stdin", input=data)
@@ -153,15 +182,15 @@ def publish(state, request: GitHubPublishRequest) -> dict:
             "-m",
             "Mi aplicación inicial construida con AI-SWE",
         )
-        push(root, url, request.pat_token.get_secret_value())
         git(root, "remote", "add", "origin", url)
+        push(root, url, request.pat_token.get_secret_value())
     except (ValueError, OSError, subprocess.TimeoutExpired):
         raise ValueError(
             "El repositorio fue creado en "
             + url.removesuffix(".git")
             + ", pero la publicación no terminó. Los archivos locales se conservaron."
         ) from None
-    return {
+    yield {
         "published": True,
         "url": url.removesuffix(".git"),
         "private": request.private,

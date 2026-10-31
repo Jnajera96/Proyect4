@@ -266,3 +266,48 @@ test("tarifas del catálogo convierten millón a mil y conservan alias de respue
   assert.throws(() => pricingForSelection(["modelo-no-catalogado"], ""), /propias tarifas/);
   assert.throws(() => pricingForSelection([id], "{}"), /lista JSON/);
 });
+
+const { delivery } = await cargar("../src/lib/delivery.ts");
+const { PublicarGitHubModal } = await cargar("../src/components/PublicarGitHubModal.tsx");
+const { GuiaEjecucion } = await cargar("../src/components/GuiaEjecucion.tsx");
+test("publicación procesa progreso real dividido entre bloques UTF-8", async () => {
+  const original = globalThis.fetch;
+  const stages = [];
+  globalThis.fetch = async (url, init) => {
+    assert.match(url, /publish-github\?stream=true$/);
+    assert.equal(JSON.parse(init.body).organization, "fixture-org");
+    const bytes = new TextEncoder().encode([
+      JSON.stringify({stage:"validating"}), JSON.stringify({stage:"creating"}),
+      JSON.stringify({stage:"uploading"}),
+      JSON.stringify({published:true,url:"https://github.com/fixture/app",note:"éxito"}),
+    ].join("\n") + "\n");
+    return new Response(new ReadableStream({start(controller) {
+      for (let i=0;i<bytes.length;i+=3) controller.enqueue(bytes.slice(i,i+3));
+      controller.close();
+    }}), {headers:{"Content-Type":"application/x-ndjson"}});
+  };
+  try {
+    const result = await delivery.publish("fixture", {repo_name:"app",pat_token:"offline",private:true,organization:"fixture-org"}, stage => stages.push(stage));
+    assert.deepEqual(stages,["validating","creating","uploading"]);
+    assert.equal(result.published,true);
+  } finally { globalThis.fetch = original; }
+});
+test("publicación no presenta éxito si falla o se corta el stream", async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const body of ['{"stage":"creating"}\n{"error":"Nombre existente"}\n', '{"stage":"uploading"}\n']) {
+      globalThis.fetch = async () => new Response(body,{headers:{"Content-Type":"application/x-ndjson"}});
+      await assert.rejects(delivery.publish("fixture",{repo_name:"app",pat_token:"offline",private:true},()=>{}), /Nombre existente|sin confirmación/);
+    }
+  } finally { globalThis.fetch = original; }
+});
+test("modal pide PAT clásico y mantiene oculta la entrada de credenciales", () => {
+  const html=renderToStaticMarkup(React.createElement(PublicarGitHubModal,{projectId:"fixture",alCerrar(){}}));
+  assert.match(html,/PAT clásico/); assert.match(html,/type="password"/);
+  assert.match(html,/Organización \(opcional\)/); assert.match(html,/scopes=repo/);
+});
+test("un borrador puede revisarse pero no publicarse antes de la promoción", () => {
+  const html=renderToStaticMarkup(React.createElement(GuiaEjecucion,{estado:estado({status:"needs_human"}),projectId:"fixture",puedeOperar:true,alPedirCambios(){}}));
+  assert.match(html,/aún no está aprobado ni verificado/);
+  assert.match(html,/<button disabled="">🚀 Subir a GitHub<\/button>/);
+});

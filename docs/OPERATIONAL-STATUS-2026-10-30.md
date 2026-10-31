@@ -250,3 +250,20 @@ su facturación. Un worktree no proporciona aislamiento fuerte de procesos/red.
 El host de compilación reportó Node 24.13.0 afectado por CVE-2026-111497; la
 herramienta recomienda actualizar a 24.22.1 o posterior. Node no se incluye ni
 se necesita para ejecutar este portable.
+
+
+## Rc11 — publicación guiada y entrega de borradores (31 de octubre)
+
+Implementados validación de identidad/scopes de PAT clásico, creación pública o
+privada en cuenta/organización, origin seguro y push con upstream, y progreso real
+en el modal. Se conserva la vista previa sin aprobar una publicación de borrador.
+Regresión: 1.050 backend PASS/4 SKIP, 38 frontend PASS/build, 38 focalizadas usando
+el ZIP y 14/14 smoke estándar. Se verifica push Git sólo a bare local descartable;
+la API de GitHub permanece simulada. El piloto remoto real sigue pendiente.
+
+Candidato local: `dist/windows-v0.2.0-rc11/AISWESystem-windows-x64.zip`.
+SHA-256: `e57a3e87e37059f52691e644d0ed741215cd5e50165e019982439739204fee60`.
+Acta y límites: `RC11-GITHUB-PUBLISH-AND-UNLOCKED-DELIVERY.md`. Se preservan rc10
+y las distribuciones previas. No se declara producción pública ni se consumen APIs
+pagadas; no cambia la evidencia pendiente de recuperación entre equipos y calidad
+remota.

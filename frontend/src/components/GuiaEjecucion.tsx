@@ -25,7 +25,7 @@ export function GuiaEjecucion({ estado, projectId, puedeOperar, alPedirCambios }
       } catch (cause) { if (active) setError((cause as Error).message); }
     })();
     return () => { active = false; };
-  }, [estado.run_id, puedeOperar]);
+  }, [estado.run_id, estado.status, puedeOperar]);
   async function launch() {
     setBusy(true); setError(""); setMessage("");
     try {
@@ -38,7 +38,7 @@ export function GuiaEjecucion({ estado, projectId, puedeOperar, alPedirCambios }
     <Panel titulo="Qué hacer con tu código">
       {estado.status === "needs_human" && (
         <p className="aviso" role="status" style={{ marginBottom: "1rem" }}>
-          ⚠️ Las validaciones automáticas se detuvieron, pero el borrador de tu aplicación está disponible en tu equipo para probarlo directamente.
+          ⚠️ Las validaciones automáticas se detuvieron. Puedes probar el borrador bajo tu responsabilidad; aún no está aprobado ni verificado y se ejecuta en tu equipo.
         </p>
       )}
       {!guide && !error && <p role="status">Preparando las instrucciones de tu aplicación…</p>}
@@ -54,8 +54,9 @@ export function GuiaEjecucion({ estado, projectId, puedeOperar, alPedirCambios }
       <p>Revisa el resultado y elige si quieres ajustarlo o compartirlo.</p>
       <div className="fila">
         <button disabled={!puedeOperar || !projectId || busy} onClick={alPedirCambios}>✏️ Modificar o pedir cambios</button>
-        <button disabled={!puedeOperar || !projectId || busy} onClick={() => setPublish(true)}>🚀 Subir a GitHub</button>
+        <button disabled={!puedeOperar || !projectId || busy || estado.status !== "completed" || estado.promotion_receipt?.status !== "promoted"} onClick={() => setPublish(true)}>🚀 Subir a GitHub</button>
       </div>
+      {estado.status !== "completed" && <p>Para publicar, primero completa la revisión y aprueba los cambios.</p>}
       {!projectId && <p>Registra o selecciona este proyecto para pedir cambios o publicarlo.</p>}
       {publish && projectId && <PublicarGitHubModal projectId={projectId} alCerrar={() => setPublish(false)} />}
     </Panel>

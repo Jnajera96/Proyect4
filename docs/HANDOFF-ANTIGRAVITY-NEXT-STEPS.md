@@ -1,6 +1,6 @@
 # Handoff para Antigravity — actualización segura y pendientes
 
-Fecha: 30 de octubre de 2026. Rama `feature/v0.2.0-madre-continuity`.
+Fecha: 31 de octubre de 2026. Rama `feature/v0.2.0-madre-continuity`.
 Base del cierre de actualización segura: `203bc70`; el commit de cierre posterior
 contiene migraciones, herramientas y resultados. La aprobación se limita al host validado. Comprobar HEAD y árbol antes de modificar, sin retroceder
 a una base antigua ni descartar avances.
@@ -9,11 +9,11 @@ a una base antigua ni descartar avances.
 
 - Avance estimado: **84/100** hacia Windows local confiable y recuperable,
   ponderación 83,90 en `PROJECT-STATUS-2026-10-30.md`. No es aprobación de producción.
-- Entrega canónica: `dist/windows-v0.2.0-safe-upgrade-rc10-verified/AISWESystem-windows-x64.zip`.
-- SHA-256: `01d0fe77d4f75fc866f92798b26f549cd34191d2742bda6a58f23397c96c1854`.
-- **1.022 backend PASS / 4 SKIP**, **34 frontend PASS**, build aprobado,
+- Entrega canónica: `dist/windows-v0.2.0-rc11/AISWESystem-windows-x64.zip`.
+- SHA-256: `e57a3e87e37059f52691e644d0ed741215cd5e50165e019982439739204fee60`.
+- **1.050 backend PASS / 4 SKIP**, **38 frontend PASS**, build aprobado,
   **28 pruebas de migración/actualización PASS**, actualización y retorno nativos verificados.
-- Smoke rc10 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
+- Smoke rc11 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
   ambos cierres código 0, SQLite/checkpoint persistentes, logs limpios. Los dos
   smokes anteriores de rc8 corregido siguen documentados en su acta.
 - No hubo llamadas pagadas ni publicación. Los candidatos anteriores se conservan;
@@ -125,3 +125,21 @@ Quedan optimización global 40–70%, tokenizer específico del proveedor y cali
 No conectar estas referencias/fallback al ledger como si fueran facturación Qwen.
 Para reproducir, instalar el extra token-metrics; no se incluye en el runtime
 por defecto ni se regenera el portable en esta tarea.
+
+
+### Rc11 — publicación y borradores
+
+Implementación GitHub reforzada: GET /user, PAT clásico con scope repo, creación
+privada/pública en cuenta u organización, commit de archivos permitidos, origin
+sin credenciales y push con upstream. Progreso NDJSON real en el modal. La vista
+previa de borradores se conserva con hashes y rutas verificados; no autoriza
+publicación antes de completar promoción. 1.050 backend PASS/4 SKIP, 38 frontend
+PASS/build, 38 focalizadas desde ZIP y smoke estándar 14/14 PASS. Acta:
+`RC11-GITHUB-PUBLISH-AND-UNLOCKED-DELIVERY.md`. Rc10 y anteriores se conservan.
+
+La tarea solicitada como Prioridad 3 corresponde a la publicación del pendiente
+4 de la tabla histórica. Se cierra implementación/verificación offline, no el
+piloto real GitHub: identidad/creación HTTPS simuladas y push real sólo a bare
+local descartable. No hubo inferencia pagada ni push al remoto del proyecto.
+Quedan publicación real autorizada, continuidad UI entre PC, matriz Windows/SAC,
+calidad con modelos reales, meta global 40–70% de tokens y aislamiento fuerte.

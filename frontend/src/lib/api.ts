@@ -99,7 +99,7 @@ export function rolDelRechazo(causa: unknown): string | null {
   return coincidencia ? coincidencia[1] : null;
 }
 
-export async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
+export async function pedir<T>(ruta: string, init?: RequestInit, progreso?: (stage: string) => void): Promise<T> {
   // La clave se lee **en cada peticion**, no al cargar el modulo: guardarla
   // mientras la pagina esta abierta debe aplicarse a las siguientes llamadas sin
   // recargar. Con la autenticacion desactivada el servidor ignora la cabecera.
@@ -117,6 +117,31 @@ export async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
     throw new ErrorApi(0, `no se pudo contactar con el servidor: ${String(causa)}`, null);
   }
 
+  if (respuesta.ok && progreso && respuesta.headers.get("Content-Type")?.includes("application/x-ndjson")) {
+    const reader = respuesta.body?.getReader();
+    if (!reader) throw new Error("No se recibió el progreso de publicación.");
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let result: T | undefined;
+    function line(text: string) {
+      if (!text.trim()) return;
+      const event = JSON.parse(text);
+      if (typeof event.error === "string") throw new Error(event.error);
+      if (typeof event.stage === "string") progreso!(event.stage);
+      if (event.published === true) result = event as T;
+    }
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        const lines = buffer.split("\n"); buffer = lines.pop() ?? "";
+        lines.forEach(line);
+        if (done) { line(buffer); break; }
+      }
+    } finally { reader.releaseLock(); }
+    if (!result) throw new Error("La publicación terminó sin confirmación. Revisa GitHub antes de repetirla.");
+    return result;
+  }
   const texto = await respuesta.text();
   let cuerpo: unknown = null;
   if (texto) {

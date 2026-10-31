@@ -31,27 +31,37 @@ class LaunchGuide(BaseModel):
 
 
 def approved_repository(state: RunState) -> Path:
+    """Publication requires a promotion; preview permission must not weaken this gate."""
     receipt = state.promotion_receipt
     if state.status == "completed" and receipt and receipt.status == "promoted":
         root = Path(state.options.repo_path or "").resolve()
         if not state.options.repo_path or not root.is_dir():
             raise ValueError("La carpeta de la aplicación ya no está disponible.")
-        for change in state.artifacts.changed_files:
-            path = root / change.path
-            if path.is_symlink() or not path.resolve().is_relative_to(root):
-                raise ValueError("La aplicación contiene una ruta no autorizada.")
-            if path.is_file():
-                text = path.read_text(encoding="utf-8")
-                if hashlib.sha256(text.encode()).hexdigest() != change.sha256:
-                    raise ValueError(
-                        "Los archivos cambiaron después de la revisión. Revisa antes de abrir."
-                    )
+        _verify_files(state, root)
         return root
-    if state.artifacts.worktree_path:
-        worktree = Path(state.artifacts.worktree_path).resolve()
-        if worktree.is_dir():
-            return worktree
     raise ValueError("Primero termina y aprueba una aplicación con archivos guardados.")
+
+
+def _verify_files(state: RunState, root: Path) -> None:
+    for change in state.artifacts.changed_files:
+        path = root / change.path
+        if path.is_symlink() or not path.resolve().is_relative_to(root):
+            raise ValueError("La aplicación contiene una ruta no autorizada.")
+        if path.is_file():
+            text = path.read_text(encoding="utf-8")
+            if hashlib.sha256(text.encode()).hexdigest() != change.sha256:
+                raise ValueError(
+                    "Los archivos cambiaron después de la revisión. Revisa antes de abrir."
+                )
+
+
+def _preview_repository(state: RunState) -> Path:
+    if state.status in {"needs_human", "awaiting_approval"} and state.artifacts.worktree_path:
+        root = Path(state.artifacts.worktree_path).resolve()
+        if root.is_dir() and state.artifacts.changed_files:
+            _verify_files(state, root)
+            return root
+    return approved_repository(state)
 
 
 def _python_kind(path: Path):
@@ -76,7 +86,7 @@ def _python_kind(path: Path):
 
 
 def describe(state: RunState) -> LaunchGuide:
-    root = approved_repository(state)
+    root = _preview_repository(state)
     paths = [f.path for f in state.artifacts.changed_files if (root / f.path).is_file()]
     html = sorted(p for p in paths if p.endswith(".html"))
     python = sorted(p for p in paths if p.endswith(".py") and not Path(p).name.startswith("test_"))
@@ -108,7 +118,8 @@ def describe(state: RunState) -> LaunchGuide:
         module = entry[:-3].replace("/", ".")
         importable = all(p.isidentifier() and not keyword.iskeyword(p) for p in module.split("."))
         load = (
-            f"from {module} import *" if importable
+            f"from {module} import *"
+            if importable
             else f"import runpy;globals().update(runpy.run_path('{entry}'))"
         )
         code = (
@@ -191,10 +202,7 @@ def launcher_bytes(guide: LaunchGuide) -> bytes:
     return (
         "@echo off\r\nsetlocal DisableDelayedExpansion\r\nchcp 65001 >nul\r\n"
         "rem AI SWE - iniciador revisable; no contiene credenciales\r\n"
-        'cd /d "%~dp0"\r\n'
-        + guide.command
-        + "\r\n"
-        + "pause\r\n"
+        'cd /d "%~dp0"\r\n' + guide.command + "\r\n" + "pause\r\n"
     ).encode("utf-8")
 
 

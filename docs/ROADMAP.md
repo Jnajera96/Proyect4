@@ -117,3 +117,20 @@ autorizada y aislamiento/operación de producción pública.
 Acta: `MEMORY-TOKEN-SAVINGS-EVIDENCE.md`. Se cierra la instrumentación y medición
 de referencia; la meta global 40–70% no se declara alcanzada. El pendiente de
 publicación GitHub se conserva: esta tarea no lo implementa ni lo valida.
+
+
+## Rc11 — publicación guiada y entrega de borradores (31 de octubre)
+
+Implementados validación de identidad/scopes de PAT clásico, creación pública o
+privada en cuenta/organización, origin seguro y push con upstream, y progreso real
+en el modal. Se conserva la vista previa sin aprobar una publicación de borrador.
+Regresión: 1.050 backend PASS/4 SKIP, 38 frontend PASS/build, 38 focalizadas usando
+el ZIP y 14/14 smoke estándar. Se verifica push Git sólo a bare local descartable;
+la API de GitHub permanece simulada. El piloto remoto real sigue pendiente.
+
+Candidato local: `dist/windows-v0.2.0-rc11/AISWESystem-windows-x64.zip`.
+SHA-256: `e57a3e87e37059f52691e644d0ed741215cd5e50165e019982439739204fee60`.
+Acta y límites: `RC11-GITHUB-PUBLISH-AND-UNLOCKED-DELIVERY.md`. Se preservan rc10
+y las distribuciones previas. No se declara producción pública ni se consumen APIs
+pagadas; no cambia la evidencia pendiente de recuperación entre equipos y calidad
+remota.

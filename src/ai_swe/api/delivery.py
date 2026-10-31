@@ -1,17 +1,33 @@
 """Authenticated delivery actions; GET is read-only, mutations require operator/admin."""
 
+import json
 from pathlib import Path
 from threading import Lock
 
 from fastapi import HTTPException
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from ai_swe.config import repositorio_autorizado
-from ai_swe.github_publish import GitHubPublishRequest, publish
+from ai_swe.github_publish import GitHubPublishRequest, publication_steps, publish
 from ai_swe.launch_guide import LaunchGuide, describe, launch, prepare
 
 
 def register_delivery_routes(app, *, engine, store, settings, read, operate, admin):
     lock = Lock()
+    previous_validation = app.exception_handlers.get(
+        RequestValidationError, request_validation_exception_handler
+    )
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_publication(request, exc):
+        if request.url.path.endswith("/publish-github"):
+            return JSONResponse(
+                status_code=422,
+                content={"detail": "Revisa el nombre del repositorio, la organización y el PAT."},
+            )
+        return await previous_validation(request, exc)
 
     def state_for(run_id):
         state = engine.get(run_id)
@@ -43,7 +59,7 @@ def register_delivery_routes(app, *, engine, store, settings, read, operate, adm
         return action(launch, run_id)
 
     @app.post("/projects/{project_id}/publish-github", dependencies=[admin])
-    def publish_github(project_id: str, request: GitHubPublishRequest):
+    def publish_github(project_id: str, request: GitHubPublishRequest, stream: bool = False):
         project = store.proyecto(project_id)
         if project is None:
             raise HTTPException(404, "No existe ese proyecto.")
@@ -58,6 +74,23 @@ def register_delivery_routes(app, *, engine, store, settings, read, operate, adm
                 ):
                     try:
                         state_for(state.run_id)
+                        if stream:
+
+                            def events(state=state):
+                                try:
+                                    with lock:
+                                        for event in publication_steps(state, request):
+                                            yield json.dumps(event, ensure_ascii=False) + "\n"
+                                except (ValueError, OSError) as error:
+                                    from ai_swe.security import redact
+
+                                    yield json.dumps({"error": redact(str(error))}) + "\n"
+
+                            return StreamingResponse(
+                                events(),
+                                media_type="application/x-ndjson",
+                                headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+                            )
                         return publish(state, request)
                     except (ValueError, OSError) as error:
                         raise HTTPException(409, str(error)) from None

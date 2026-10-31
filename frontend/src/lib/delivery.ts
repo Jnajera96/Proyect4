@@ -11,6 +11,6 @@ export const delivery = {
   guide: (id: string) => pedir<LaunchGuide>(`/runs/${encodeURIComponent(id)}/launch-guide`),
   prepare: (id: string) => pedir<LaunchGuide>(`/runs/${encodeURIComponent(id)}/launch-guide/prepare`, post()),
   launch: (id: string) => pedir<LaunchGuide>(`/runs/${encodeURIComponent(id)}/launch`, post()),
-  publish: (id: string, body: { repo_name: string; pat_token: string; private: boolean }) =>
-    pedir<{ published: boolean; url: string }>(`/projects/${encodeURIComponent(id)}/publish-github`, post(body)),
+  publish: (id: string, body: { repo_name: string; pat_token: string; private: boolean; organization?: string }, progreso?: (stage: string) => void) =>
+    pedir<{ published: boolean; url: string }>(`/projects/${encodeURIComponent(id)}/publish-github${progreso ? "?stream=true" : ""}`, post(body), progreso),
 };
