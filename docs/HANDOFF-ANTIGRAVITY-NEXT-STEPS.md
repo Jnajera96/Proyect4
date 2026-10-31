@@ -9,14 +9,15 @@ a una base antigua ni descartar avances.
 
 - Avance estimado: **84/100** hacia Windows local confiable y recuperable,
   ponderación 83,90 en `PROJECT-STATUS-2026-10-30.md`. No es aprobación de producción.
-- Entrega canónica: `dist/windows-v0.2.0-rc11/AISWESystem-windows-x64.zip`.
-- SHA-256: `e57a3e87e37059f52691e644d0ed741215cd5e50165e019982439739204fee60`.
-- **1.050 backend PASS / 4 SKIP**, **38 frontend PASS**, build aprobado,
+- Entrega canónica: `dist/windows-v0.2.0-rc12-security/AISWESystem-windows-x64.zip`.
+- SHA-256: `0b6c1e2d77eefa79c6d39f26f896a5989db03c13184aa044df62127a65e837cd`.
+- **1.065 backend PASS / 4 SKIP**, **39 frontend PASS**, build aprobado,
   **28 pruebas de migración/actualización PASS**, actualización y retorno nativos verificados.
-- Smoke rc11 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
+- Smoke rc12 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
   ambos cierres código 0, SQLite/checkpoint persistentes, logs limpios. Los dos
   smokes anteriores de rc8 corregido siguen documentados en su acta.
-- No hubo llamadas pagadas ni publicación. Los candidatos anteriores se conservan;
+- Este cierre no añade inferencias ni publicación. Las 36 sondas reales previas
+  se conservan documentadas con su autorización. Los candidatos anteriores se conservan;
   el rc8 original continúa como evidencia histórica de fallo, no como entrega.
 
 Ya implementado: requisitos universales editables y puertas humanas, readiness,
@@ -181,3 +182,19 @@ pendiente sin introducir un refactor global. No se reconstruye rc11.
 
 Cierre de compactación: 1.062 backend PASS/4 SKIP, 39 frontend PASS y build;
 cero inferencias nuevas. Detalles y límites en `CODER-CONTEXT-COMPACTION.md`.
+
+
+## Rc12 — entorno mínimo del ejecutor
+
+Corregida herencia de credenciales y configuración del servidor por el proceso
+de pruebas: lista mínima de entorno y PYTHONPATH del worktree. 1.065 backend
+PASS/4 SKIP, 33 focalizadas PASS, 39 frontend PASS/build, 3 pruebas del worker
+embebido PASS desde el ZIP y 14/14 smoke estándar. No hay inferencias nuevas.
+
+Portable local verificado: `dist/windows-v0.2.0-rc12-security/AISWESystem-windows-x64.zip`.
+SHA-256: `0b6c1e2d77eefa79c6d39f26f896a5989db03c13184aa044df62127a65e837cd`.
+Acta y plan de aislamiento: `RUNNER-ENVIRONMENT-HARDENING.md`. Incluye también
+compactación de contexto y evidencia real por modelo del selector. Rc11 y los
+paquetes anteriores se conservan. No existe todavía aislamiento fuerte de archivos,
+red y descendientes: no se declara producción pública. Los pilotos entre PC y
+GitHub siguen pausados. No se detectó motor Docker/Podman en este host.

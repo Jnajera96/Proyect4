@@ -129,3 +129,15 @@ argumento después de `start.py`. Ante errores de configuración,
 ejecutar desde terminal para leer el campo señalado y revisar el archivo externo.
 Los logs están en el directorio del usuario. Conservarlos sin publicar tokens ni
 contenido privado de los repositorios.
+
+
+## Portable vigente rc12
+
+Usa `dist/windows-v0.2.0-rc12-security/AISWESystem-windows-x64.zip`
+y verifica SHA-256 `0b6c1e2d77eefa79c6d39f26f896a5989db03c13184aa044df62127a65e837cd`.
+Cierra la instancia anterior, extrae la carpeta completa en un destino nuevo y
+abre AISWESystem.cmd. Conserva runtime, app, packages y frontend juntos. No copies
+ni borres los datos de LOCALAPPDATA para esta actualización; conserva respaldos.
+Rc11 no recibe la corrección de entorno por actualizar sólo el código fuente.
+Acta y límites: `RUNNER-ENVIRONMENT-HARDENING.md`. Validación en este host local,
+no en otro equipo ni como servicio público.

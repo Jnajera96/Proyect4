@@ -13,6 +13,9 @@ repositorio del usuario significaria probar un arbol distinto del que se va a
 aprobar, y ademas dejaria artefactos (`.pytest_cache`, `__pycache__`) en el arbol
 real. El sandbox es el unico sitio donde el parche existe.
 
+El hijo sigue siendo un proceso local con permisos del usuario. El entorno mínimo
+no aísla archivos, red ni procesos; un worktree no es una barrera de ejecución.
+
 **Por que la evidencia es un `TestRun` y no un booleano.** Un sistema cuyo valor es
 la evidencia no puede reducir "se probo" a `True`. Se registra el *target*, el
 codigo de salida real, la salida capturada, la duracion y **el comando exacto**
@@ -44,6 +47,12 @@ EXIT_TIMEOUT = 124
 
 # Limite de los campos de salida del contrato `TestRun`.
 _MAX_SALIDA = 200_000
+
+# The test child needs the runtime environment, never the server's credentials/configuration.
+_ENV_PERMITIDAS = frozenset({
+    "PATH", "SYSTEMROOT", "WINDIR", "COMSPEC", "SYSTEMDRIVE", "PATHEXT",
+    "TEMP", "TMP", "LANG", "LC_ALL", "LC_CTYPE", "TZ",
+})
 
 # ------------------------------------------------------------------- catalogo
 #
@@ -158,7 +167,7 @@ def _entorno(sandbox: Sandbox) -> dict[str, str]:
     Se fija al `src` del sandbox cuando existe. Es determinista y no depende de
     como este configurado el entorno de quien lanza.
     """
-    entorno = dict(os.environ)
+    entorno = {k: v for k, v in os.environ.items() if k.upper() in _ENV_PERMITIDAS}
     # pytest's assertion rewriting otherwise writes new .pyc files into a
     # repository without ignore rules, invalidating the already reviewed diff.
     entorno["PYTHONDONTWRITEBYTECODE"] = "1"

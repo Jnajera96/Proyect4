@@ -699,3 +699,19 @@ pagadas; pilotos entre PC/GitHub pausados y rc11 sin reconstruir.
 
 Cierre de compactación: 1.062 backend PASS/4 SKIP, 39 frontend PASS y build;
 cero inferencias nuevas. Detalles y límites en `CODER-CONTEXT-COMPACTION.md`.
+
+
+## Rc12 — entorno mínimo del ejecutor
+
+Corregida herencia de credenciales y configuración del servidor por el proceso
+de pruebas: lista mínima de entorno y PYTHONPATH del worktree. 1.065 backend
+PASS/4 SKIP, 33 focalizadas PASS, 39 frontend PASS/build, 3 pruebas del worker
+embebido PASS desde el ZIP y 14/14 smoke estándar. No hay inferencias nuevas.
+
+Portable local verificado: `dist/windows-v0.2.0-rc12-security/AISWESystem-windows-x64.zip`.
+SHA-256: `0b6c1e2d77eefa79c6d39f26f896a5989db03c13184aa044df62127a65e837cd`.
+Acta y plan de aislamiento: `RUNNER-ENVIRONMENT-HARDENING.md`. Incluye también
+compactación de contexto y evidencia real por modelo del selector. Rc11 y los
+paquetes anteriores se conservan. No existe todavía aislamiento fuerte de archivos,
+red y descendientes: no se declara producción pública. Los pilotos entre PC y
+GitHub siguen pausados. No se detectó motor Docker/Podman en este host.
