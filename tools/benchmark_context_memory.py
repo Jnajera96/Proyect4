@@ -25,6 +25,8 @@ def measure(directory: Path) -> dict:
         ("calendar", "Modifica src/calendar.py"),
         ("calories", "Modifica src/calories.py"),
         ("agenda", "Mejora la organización de mis citas"),
+        ("operations", "El cálculo de la tangente da error"),
+        ("actions", "El botón guardar no responde"),
     ]:
         repo = directory / product
         repo.mkdir()
@@ -37,8 +39,17 @@ def measure(directory: Path) -> dict:
                 f"# Synthetic module {index}: local fixture, no dependencies.\nvalue = 1\n",
                 encoding="utf-8",
             )
+        fragment = {
+            "agenda": "def registrar(citas, evento):\n    citas.append(evento)",
+            "operations": "def tangente(angle):\n    return math.tan(angle)",
+            "actions": "def guardar(documento):\n    return documento.copy()",
+        }.get(product, "def calculate(value):\n    return value + 1")
+        (repo / relevant[0]).write_text(fragment + "\n", encoding="utf-8")
+        (repo / relevant[1]).write_text(
+            "def test_result():\n    assert 1 + 1 == 2\n", encoding="utf-8"
+        )
         arms = {}
-        for arm in ("bounded_baseline", "lexical_only", "associative"):
+        for arm in ("bounded_baseline", "content_only", "associative"):
             settings = Settings(
                 _env_file=None,
                 state_db_path=directory / f"{product}-{arm}.sqlite3",
@@ -81,6 +92,7 @@ def measure(directory: Path) -> dict:
             selected = state.outputs.researcher_output.files_read
             arms[arm] = {
                 "selected_files": selected,
+                "code_body_received": fragment in "\n".join(m.content for m in request.messages),
                 "required_file_recall": len(set(selected) & set(relevant)) / len(relevant),
                 "message_utf8_bytes": sum(len(m.content.encode()) for m in request.messages),
                 "request_utf8_bytes": len(encoded),

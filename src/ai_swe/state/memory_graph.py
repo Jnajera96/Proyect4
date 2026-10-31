@@ -6,6 +6,7 @@ import hashlib
 import itertools
 import re
 import sqlite3
+import unicodedata
 from contextlib import closing
 from pathlib import Path
 
@@ -28,6 +29,54 @@ IGNORED_FILES = {
     "poetry.lock",
     "pdm.lock",
 }
+
+_STOP_WORDS = {
+    "el",
+    "la",
+    "los",
+    "las",
+    "de",
+    "del",
+    "un",
+    "una",
+    "que",
+    "por",
+    "para",
+    "con",
+    "sin",
+    "no",
+    "en",
+    "es",
+    "se",
+    "mi",
+    "mis",
+    "the",
+    "and",
+}
+
+
+def search_terms(text: str) -> set[str]:
+    text = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", text)
+    text = "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c))
+    return {
+        t for t in re.findall(r"[^\W_]+", text.casefold()) if len(t) > 1 and t not in _STOP_WORDS
+    }
+
+
+def read_candidate_text(repository: str | Path, relative: str) -> str:
+    """Read at most 32 KiB of text; never follow a candidate outside its repository."""
+    if not usable_path(relative):
+        return ""
+    try:
+        root = Path(repository).resolve()
+        path = (root / relative).resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            return ""
+        with path.open("rb") as stream:
+            raw = stream.read(32768)
+        return "" if b"\x00" in raw else raw.decode("utf-8-sig", errors="replace")
+    except (OSError, ValueError, RuntimeError):
+        return ""
 
 
 def usable_path(path: str) -> bool:
@@ -85,11 +134,13 @@ class FileMemoryGraph:
     def select(self, repository: str, query: str, candidates: list[str], *, top_k: int = 8):
         candidates = sorted({p for p in candidates if usable_path(p)})
         top_k = max(1, min(50, top_k))
-        terms = set(re.findall(r"[\w-]+", query.lower()[:20000]))
+        terms = search_terms(query[:20000])
         scores, explicit = {}, explicit_paths(query, candidates)
-        for path in candidates:
-            parts = set(re.findall(r"[\w-]+", str(Path(path).with_suffix("")).lower()))
+        for index, path in enumerate(candidates):
+            parts = search_terms(str(Path(path).with_suffix("")))
             scores[path] = float(len(terms & parts))
+            if terms and index < 2000:
+                scores[path] += len(terms & search_terms(read_candidate_text(repository, path)))
             if path in explicit:
                 scores[path] += 100
         seeds = sorted((p for p in candidates if scores[p]), key=lambda p: (-scores[p], p))[:8]
@@ -106,7 +157,7 @@ class FileMemoryGraph:
                     if source in seeds and target in scores:
                         scores[target] += min(float(weight), 50) / 10
         # Explicitly requested files are never dropped just to meet a reduction target.
-        selected = sorted(explicit)
+        selected = sorted(explicit, key=lambda p: (-scores[p], p))
         selected.extend(
             p
             for p in sorted(candidates, key=lambda p: (-scores[p], p))

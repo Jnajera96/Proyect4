@@ -71,3 +71,16 @@ concreta de gasto y saldo disponible antes de cualquier inferencia pagada.
 
 No añadir Jupyter/MCP/Graphify/TTS ni grandes refactors como atajos de estos cierres.
 La prioridad es calidad, continuidad y seguridad verificables del sistema actual.
+
+### Actualización del pendiente 2 (2026-10-30)
+
+Implementadas búsqueda por contenido y entrega de cuerpos de código al Coder;
+consultas sin rutas: cobertura sintética 50% en frío / 100% con asociaciones.
+Consultar `CONTEXT-MEMORY-MEASUREMENT.md`. El pendiente restante es evaluar
+suficiencia y calidad en repositorios reales diversos; no volver a implementar
+la búsqueda ya incorporada ni atribuir a bytes un ahorro de tokens facturados.
+Esta actualización es de fuente, no una nueva compilación del portable rc8.
+
+Validación final del punto 2: 993 backend PASS, 4 SKIP, 34 frontend PASS y build
+aprobado. Regresión completa en `_tmp/content-context-project-confirmed.xml`;
+incidencias y límites documentados en el acta de medición.

@@ -502,5 +502,5 @@ def test_researcher_reads_web_and_database_sources(tmp_path):
             "Analiza los archivos", options=RunOptions(repo_path=str(tmp_path)))
     delta = nodes.researcher(state)
     assert set(delta["outputs"].researcher_output.files_read) == set(paths)
-    assert all(finding.evidence.startswith("evidence for")
+    assert all(f"evidence for {finding.path}" in finding.evidence
                for finding in delta["evidence"].findings)

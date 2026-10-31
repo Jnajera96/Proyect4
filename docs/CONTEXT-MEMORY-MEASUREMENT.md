@@ -89,3 +89,72 @@ aprueba**: el smoke estándar agotó dos veces el plazo de cierre. Las repeticio
 con instrumentación pasaron, incluida una con temporizador de 90 s, sin identificar
 la causa de la diferencia. Informes y trazas en el acta operativa. Se mantiene rc7
 como entrega verificada; no se presenta el timeout como corregido por cerrar SQLite.
+
+## Punto 2 — Búsqueda por contenido y código existente (2026-10-30)
+
+`select()` suma coincidencias de contenido a las de ruta y usa ambas como semillas
+para las asociaciones del mismo usuario/repositorio. Normaliza acentos y separa
+identificadores; no usa un diccionario cerrado de productos. Lee hasta 32 KiB por
+archivo y hasta 2.000 candidatos, rechazando rutas externas, traversal, archivos
+ignorados y contenido con NUL. Conserva la selección explícita y el fallback
+conservador cuando no encuentra anclas. No cambia esquemas ni dependencias.
+
+Researcher ordena también los repositorios pequeños y entrega bloques de los cinco
+primeros archivos: ventana de hasta 100 líneas alrededor de la coincidencia más
+fuerte y hasta 1.800 caracteres incluyendo delimitadores. Esta cota respeta el
+contrato Finding.evidence (2.000). Coder recibe hasta cinco bloques únicos bajo
+«Código y estructura actual de los archivos relevantes en el repositorio:», con
+cota agregada de 10.000 caracteres. Los fragmentos se redactan antes de persistir y
+se envuelven como datos no confiables; no amplían permisos ni autorizan ejecución.
+
+### Medición offline actual
+
+Comando: `python tools/benchmark_context_memory.py --output _tmp/content-context-benchmark/report.json`
+con `src` y raíz del proyecto en sys.path. FakeModelAdapter, cero llamadas pagadas.
+Cada fixture tiene 24 archivos. El baseline conserva las primeras 20 rutas; el
+brazo `content_only` usa rutas/contenido sin asociaciones previas; `associative`
+añade una observación sintética de coedición entre implementación y prueba.
+
+| Caso | Cobertura sin asociaciones | Cobertura con asociaciones | Bytes de mensajes con asociaciones | Código recibido |
+| --- | ---: | ---: | ---: | --- |
+| Calculadora | 100% | 100% | 9.187 | Sí |
+| Calendario | 100% | 100% | 9.171 | Sí |
+| Calorías | 100% | 100% | 9.171 | Sí |
+| Citas, sin ruta | 50% | 100% | 9.193 | Sí |
+| Tangente, sin ruta | 50% | 100% | 9.206 | Sí |
+| Guardar, sin ruta | 50% | 100% | 9.187 | Sí |
+
+La reducción de bytes frente al baseline actual ronda 15,0–15,2%. No equivale a
+tokens facturados ni acredita el objetivo de 50–70%. Los mensajes contienen ahora
+más código útil; no son comparables directamente con el antiguo extracto de 120
+caracteres. La prueba comprueba el cuerpo de función en la solicitud capturada,
+no solo presencia de nombres de archivo.
+
+El fixture ambiguo anterior contenía únicamente `value = 1` en todos sus archivos:
+no tenía señal semántica recuperable. Se sustituye por funciones sintéticas de
+registro de citas, tangente y guardado. Por eso el paso histórico de 0% a 100% no
+es una comparación sobre archivos idénticos. La cobertura actual es verificable
+sobre este nuevo fixture; falta medir calidad en repositorios reales diversos.
+La búsqueda sigue siendo léxica: no infiere sinónimos y no ve coincidencias después
+de los primeros 32 KiB. Los bloques son parciales y no garantizan reunir todas las
+dependencias necesarias para cualquier tarea.
+
+Distribución: esta mejora corresponde al código fuente; no modifica el ZIP rc8
+verificado. La aprobación posterior de rc8 corregido está en
+`RC8-SHUTDOWN-FTS-CLOSURE.md`; el apartado histórico anterior describe el rc8 original.
+
+### Cierre de verificación
+
+Regresión final: **993 PASS, 4 SKIP, 0 fallos y 0 errores**, 350,797 s;
+informe `_tmp/content-context-project-confirmed.xml` (997 casos). Entorno del
+proyecto con CPython oficial 3.13.14; firma del intérprete base verificada como
+`Valid`. Frontend: **34 PASS**, `npm run build` aprobado. Ruff focalizado y
+`git diff --check` aprobados. Sin llamadas pagadas ni nuevas dependencias.
+
+Se adaptó una aserción antigua que exigía evidencia sin delimitadores para exigir
+que el contenido de cada archivo siga presente en los nuevos bloques. Una corrida
+intermedia tuvo un fallo de creación de worktree Git en aislamiento de perfiles:
+no se reprodujo en el reintento de 18 pruebas ni en la regresión final completa.
+No se cambió el sandbox ni se atribuye una causa no demostrada a esa incidencia.
+El intento inicial con el runtime portable invocado sin inicializador no encontraba
+Ruff; el resultado final corresponde al entorno reproducible del proyecto.

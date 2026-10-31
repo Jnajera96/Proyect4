@@ -6,16 +6,22 @@ def test_offline_benchmark_measures_requests_without_claiming_billed_tokens(tmp_
     assert report["paid_calls"] == 0
     assert report["adapter"] == "FakeModelAdapter"
     assert report["tokenizer"] is None and not report["billed_token_savings_measured"]
-    for case in report["cases"][:3]:
+    for case in report["cases"]:
         baseline = case["arms"]["bounded_baseline"]
-        lexical = case["arms"]["lexical_only"]
+        lexical = case["arms"]["content_only"]
         associative = case["arms"]["associative"]
         assert associative["required_file_recall"] == 1
-        assert associative["required_file_recall"] > lexical["required_file_recall"]
+        assert associative["required_file_recall"] >= lexical["required_file_recall"]
         assert associative["message_utf8_bytes"] < baseline["message_utf8_bytes"]
         assert (
             associative["conservative_reservation_units"]
             == associative["request_utf8_bytes"] + 1024
         )
-    unmatched = report["cases"][-1]
-    assert unmatched["arms"]["associative"]["message_byte_reduction"] == 0
+    for case in report["cases"][3:]:
+        assert (
+            0
+            < case["arms"]["content_only"]["required_file_recall"]
+            < case["arms"]["associative"]["required_file_recall"]
+        )
+        assert case["arms"]["content_only"]["code_body_received"]
+        assert case["arms"]["associative"]["code_body_received"]

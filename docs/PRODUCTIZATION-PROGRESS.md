@@ -588,3 +588,17 @@ Sobre la base limpia `91b3043`, que ya incorpora la baja de proyectos, se habili
 ## Checkpoint — diagnóstico Git sin HEAD antes de Coder
 
 La última corrida local `run-86d60158f3e8` se detuvo sin invocar al modelo: la carpeta seleccionada tiene Git pero no commit inicial. Se comprobó que el clon anidado `Proyect_4` sí tiene HEAD. Se añade diagnóstico específico `SANDBOX_NO_BASE_COMMIT` y cierre directo del router terminal, sin error secundario de propuesta vacía. 54 pruebas focalizadas y 9 controles focalizados del paquete aprobados, sin llamadas pagadas ni cambios a repositorios/bóvedas del usuario. Acta de reanudación y pendientes: `RESUME-CODER-GIT-BASE.md`. Trabajo pausado por el usuario hasta mañana.
+
+## Punto 2 — Contexto relevante para el Coder (2026-10-30)
+
+Implementada selección por contenido acotado (32 KiB/archivo), semillas asociativas
+y bloques útiles de hasta cinco archivos, con redacción y envoltura no confiable.
+Benchmark offline: consultas sin rutas alcanzan 50% sin asociaciones y 100% con
+coedición sintética; el cuerpo de código llega efectivamente a FakeModelAdapter.
+Evidencia y límites en `CONTEXT-MEMORY-MEASUREMENT.md`. No se afirma ahorro de
+50–70% ni calidad de generación remota. El portable rc8 permanece intacto.
+
+Cierre del punto 2: **993 backend PASS / 4 SKIP / 0 fallos**, 34 frontend PASS,
+TypeScript/Vite y Ruff focalizado aprobados. Informe final
+`_tmp/content-context-project-confirmed.xml`; CPython oficial firmado 3.13.14.
+No se han realizado llamadas pagadas ni actualizado el ZIP rc8.

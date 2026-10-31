@@ -917,6 +917,8 @@ def researcher(state: RunState) -> dict:
                         and candidate.stat().st_size <= 131072
                     ):
                         candidates.append(relative)
+                        if len(candidates) >= 2000:
+                            break
                 if len(candidates) >= 2000:
                     incognitas.append("Inventario limitado a 2000 rutas; no se reviso el resto")
                     break
@@ -931,7 +933,7 @@ def researcher(state: RunState) -> dict:
                      if configured is not None else None)
             chosen = (
                 graph.select(str(raiz), state.instruction.text, candidates)
-                if graph is not None and len(candidates) > _MAX_ARCHIVOS else sorted(candidates)
+                if graph is not None else sorted(candidates)
             )
             if graph is not None:
                 graph.observe(str(raiz), chosen[:_MAX_ARCHIVOS], observation=state.run_id + ":read")
@@ -956,7 +958,10 @@ def researcher(state: RunState) -> dict:
                         severity=Severity.INFO,
                         path=relativa,
                         explanation=f"archivo presente en el repositorio ({resuelta.suffix})",
-                        evidence=_primera_linea(resuelta),
+                        evidence=(
+                            _fragmento_relevante(raiz, relativa, state.instruction.text)
+                            if len(hallazgos) < 5 else _evidencia_resumida(resuelta)
+                        ),
                     )
                 )
 
@@ -998,6 +1003,29 @@ def _dentro_de(raiz: Path, candidata: Path) -> bool:
         return candidata.resolve().is_relative_to(raiz.resolve())
     except (OSError, ValueError):
         return False
+
+
+def _evidencia_resumida(ruta: Path) -> str:
+    from ai_swe.security import redact
+
+    return redact(_primera_linea(ruta))[:2000]
+
+
+def _fragmento_relevante(root: Path, relative: str, query: str) -> str:
+    from ai_swe.security import redact
+    from ai_swe.state.memory_graph import read_candidate_text, search_terms
+
+    text = redact(read_candidate_text(root, relative))
+    if not text:
+        return _evidencia_resumida(root / relative)
+    lines = text.splitlines()
+    terms = search_terms(query[:20000])
+    best = max(range(len(lines)), key=lambda i: len(terms & search_terms(lines[i])))
+    start = max(0, best - 5)
+    header = f"--- inicio {redact(relative)[:160]} ---\n[fragmento parcial]\n"
+    footer = "\n--- fin ---"
+    body = "\n".join(lines[start:start + 100])
+    return header + body[:1800 - len(header + footer)] + footer
 
 
 def _primera_linea(ruta: Path) -> str:
@@ -1364,11 +1392,21 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], C
     interpretacion = state.interpretation
     subtarea = _subtarea_actual(state)
     hallazgos = state.evidence.findings[-20:] if state.evidence.findings else []
+    from ai_swe.security import redact
+
+    code_blocks = {}
+    for finding in reversed(hallazgos):
+        if finding.evidence.startswith("--- inicio ") and finding.path not in code_blocks:
+            code_blocks[finding.path] = redact(finding.evidence)[:2000]
+            if len(code_blocks) == 5:
+                break
+    current_code = "\n\n".join(reversed(list(code_blocks.values())))[:10000]
 
     lineas_evidencia = "\n".join(
         f"- [{f.severity.value}] {f.path}: {f.explanation} (evidencia: {f.evidence[:120]})"
         for f in hallazgos
     ) or "(sin hallazgos previos)"
+    lineas_evidencia = redact(lineas_evidencia)[:6000]
 
     # F12: los comentarios que el humano dejo al **pedir cambios** en la puerta de
     # aprobacion. Sin esto, volver al Coder no cambiaria nada: propondria el mismo
@@ -1411,6 +1449,8 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], C
         # hemos escrito. Se marca como **dato**, no como orden (inyeccion indirecta).
         f"Evidencia acumulada por el Researcher:\n"
         f"{bloque_no_confiable('evidencia del repositorio (extractos de ficheros)', lineas_evidencia)}\n\n"
+        "Código y estructura actual de los archivos relevantes en el repositorio:\n"
+        f"{bloque_no_confiable('código existente parcial', current_code or '(sin bloques disponibles)')}\n\n"
         f"Comentarios del usuario para esta iteracion:\n"
         f"{lineas_humano}\n\n"
         f"{instrucciones_iteracion}"

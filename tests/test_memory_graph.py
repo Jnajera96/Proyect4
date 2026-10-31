@@ -1,6 +1,44 @@
 from ai_swe.state.memory_graph import FileMemoryGraph
 
 
+def test_content_matches_seed_associated_files(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "operations.py").write_text("def tangente(angle): return math.tan(angle)")
+    candidates = ["aaa.py", "operations.py", "test_operations.py"]
+    graph = FileMemoryGraph(tmp_path / "m.sqlite3")
+    graph.observe(str(repo), candidates[1:], observation="coedit")
+    assert (
+        graph.select(str(repo), "El cálculo de la tangente da error", candidates, top_k=2)
+        == candidates[1:]
+    )
+
+
+def test_content_reader_is_bounded_and_confined(tmp_path):
+    from ai_swe.state.memory_graph import read_candidate_text
+
+    (tmp_path / "large.py").write_bytes(b"a" * 32768 + b"outside_limit")
+    (tmp_path / "binary.py").write_bytes(b"a\x00b")
+    (tmp_path / ".env").write_text("secret")
+    assert len(read_candidate_text(tmp_path, "large.py")) == 32768
+    for path in ("../secret", ".env", "binary.py", str(tmp_path / "large.py")):
+        assert read_candidate_text(tmp_path, path) == ""
+
+
+def test_researcher_supplies_bounded_code_body(tmp_path):
+    from ai_swe.graph.nodes import _fragmento_relevante
+
+    secret = "hf_" + "a" * 32
+    body = "# unrelated\n" * 130 + f"# {secret}\ndef tangente(angle):\n    return math.tan(angle)\n"
+    (tmp_path / "operations.py").write_text(body, encoding="utf-8")
+    snippet = _fragmento_relevante(tmp_path, "operations.py", "corrige tangente")
+    assert "return math.tan(angle)" in snippet
+    assert secret not in snippet and "[REDACTED]" in snippet
+    assert snippet.startswith("--- inicio operations.py ---")
+    assert snippet.endswith("--- fin ---") and len(snippet) <= 1800
+    assert len(snippet.splitlines()) <= 103
+
+
 def test_associations_grow_idempotently_and_are_isolated(tmp_path):
     database = tmp_path / "memory.sqlite3"
     graph = FileMemoryGraph(database, "alice")
