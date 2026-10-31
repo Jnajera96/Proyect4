@@ -898,8 +898,8 @@ MUTACIONES: list[Mutation] = [
         # valido de subprocess sin `command=`.
         "F8: el runner lanza el comando con shell=True",
         SRC / "tools" / "runner.py",
-        "            timeout=timeout,\n            shell=False,",
-        "            timeout=timeout,\n            shell=True,",
+        "        bufsize=0,\n        shell=False,",
+        "        bufsize=0,\n        shell=True,",
         "test_f8_test_runner.py",
     ),
     Mutation(

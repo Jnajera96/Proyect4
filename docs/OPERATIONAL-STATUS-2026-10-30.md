@@ -283,3 +283,20 @@ compactación de contexto y evidencia real por modelo del selector. Rc11 y los
 paquetes anteriores se conservan. No existe todavía aislamiento fuerte de archivos,
 red y descendientes: no se declara producción pública. Los pilotos entre PC y
 GitHub siguen pausados. No se detectó motor Docker/Podman en este host.
+
+
+## Rc13 — captura de salida acotada
+
+Corregida la acumulación completa de stdout/stderr antes del recorte. Captura
+no bloqueante con colas de 200.000 bytes por canal, UTF-8 tolerante a bytes
+inválidos, timeout no suprimible por salida continua y cierre del proceso directo.
+Caso sintético de 32 MiB: pico de asignaciones Python del padre ~67,1 MB antes
+y ~1,4 MB después; no es un límite de memoria del hijo ni del RSS total.
+
+1.073 backend PASS/4 SKIP, 41 focalizadas PASS, 39 frontend PASS/build, 11 pruebas
+desde el ZIP y 14/14 smoke estándar. Cero inferencias nuevas.
+Entrega local: `dist/windows-v0.2.0-rc13-output-limits/AISWESystem-windows-x64.zip`.
+SHA-256: `865c67e27d45a1d7d93f7cf79cec1ca29ecf6e919febc6cc2327ffcff79e36ad`.
+Acta: `RUNNER-OUTPUT-BOUNDS.md`. Rc12 y anteriores se conservan. Siguen pendientes
+cuotas de CPU/RAM del hijo, control verificable de descendientes y aislamiento
+de archivos/red; los pilotos entre PC y GitHub permanecen pausados.

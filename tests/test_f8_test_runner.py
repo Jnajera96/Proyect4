@@ -327,7 +327,7 @@ def test_el_runner_llama_a_subprocess_sin_shell(sandbox: Sandbox, monkeypatch) -
     **Por que no basta con mirar la tabla.** `TARGET_COMMANDS` guarda tuplas, pero eso
     no prueba como se **invoca** `subprocess`: alguien podria unir la tupla en una
     cadena y pasar `shell=True`, y la tabla seguiria siendo correcta mientras el
-    fallo estaria en la llamada. Aqui se intercepta `subprocess.run` y se afirma
+    fallo estaria en la llamada. Aqui se intercepta `subprocess.Popen` y se afirma
     sobre los argumentos que **de verdad** se pasan.
 
     Esta prueba existe porque la mutacion que cambia `shell=False` por `shell=True`
@@ -335,21 +335,21 @@ def test_el_runner_llama_a_subprocess_sin_shell(sandbox: Sandbox, monkeypatch) -
     """
     import subprocess as sp
 
-    # `sandbox` ya existe (fixture), asi que el unico `subprocess.run` que se
+    # `sandbox` ya existe (fixture), asi que el unico `subprocess.Popen` que se
     # observa aqui es el del runner. Aun asi se filtra por `shell`/`env` para no
     # depender de que ningun otro componente llame a subprocess en el intervalo.
     capturado: dict[str, object] = {}
-    original = sp.run
+    original = sp.Popen
 
     def espia(*args, **kwargs):
         capturado["args"] = args
         capturado["kwargs"] = kwargs
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(sp, "run", espia)
+    monkeypatch.setattr(sp, "Popen", espia)
     ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",))
 
-    assert capturado, "no se llamo a subprocess.run"
+    assert capturado, "no se llamo a subprocess.Popen"
     assert capturado["kwargs"].get("shell") is False, "el runner invoca con shell habilitada"
     # El primer argumento es la lista de argumentos, no una cadena.
     orden = capturado["args"][0]
@@ -376,16 +376,16 @@ def test_el_runner_inyecta_el_src_del_sandbox_en_el_pythonpath(
     b = crear(repo, "run-py", workspace_root=tmp_path / "workspaces")
 
     # Se registran **todas** las llamadas: `crear` tambien invoca git por
-    # `subprocess.run`, y quedarse con la ultima capturaria una llamada de git en
+    # `subprocess.Popen`, y quedarse con la ultima capturaria una llamada de git en
     # lugar de la de pytest. Se busca la que lleva `env`, que es la del runner.
     llamadas: list[dict] = []
-    original = sp.run
+    original = sp.Popen
 
     def espia(*args, **kwargs):
         llamadas.append(kwargs)
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(sp, "run", espia)
+    monkeypatch.setattr(sp, "Popen", espia)
     try:
         ejecutar(b, "pytest.unit", permitidos=("pytest.unit",))
     finally:

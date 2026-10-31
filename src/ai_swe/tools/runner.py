@@ -26,6 +26,7 @@ un exito inventado.
 from __future__ import annotations
 
 import logging
+import math
 import os
 import subprocess
 import sys
@@ -171,6 +172,7 @@ def _entorno(sandbox: Sandbox) -> dict[str, str]:
     # pytest's assertion rewriting otherwise writes new .pyc files into a
     # repository without ignore rules, invalidating the already reviewed diff.
     entorno["PYTHONDONTWRITEBYTECODE"] = "1"
+    entorno["PYTHONIOENCODING"] = "utf-8"
     raiz_src = sandbox.raiz / "src"
     if raiz_src.is_dir():
         entorno["PYTHONPATH"] = str(raiz_src)
@@ -182,6 +184,75 @@ def _recortar(texto: str) -> str:
     if len(texto) <= _MAX_SALIDA:
         return texto
     return "...[recortado]...\n" + texto[-(_MAX_SALIDA - 20) :]
+
+
+def _capturar(orden: list[str], sandbox: Sandbox, timeout: float) -> subprocess.CompletedProcess:
+    """Drain both pipes fairly with a bounded byte tail and a deadline, without threads/files."""
+    deadline = time.monotonic() + timeout
+    process = subprocess.Popen(
+        orden,
+        cwd=str(sandbox.raiz),
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        bufsize=0,
+        shell=False,
+        env=_entorno(sandbox),
+    )
+    pipes = {"stdout": process.stdout, "stderr": process.stderr}
+    active = dict(pipes)
+    tails = {name: bytearray() for name in pipes}
+    truncated = set()
+    timed_out = False
+    try:
+        for pipe in pipes.values():
+            os.set_blocking(pipe.fileno(), False)
+        while active or process.poll() is None:
+            if time.monotonic() >= deadline:
+                timed_out = True
+                break
+            received = False
+            for name, pipe in list(active.items()):
+                try:
+                    data = os.read(pipe.fileno(), 65536)
+                except BlockingIOError:
+                    continue
+                except BrokenPipeError:
+                    data = b""
+                if not data:
+                    del active[name]
+                    continue
+                received = True
+                tail = tails[name]
+                tail.extend(data)
+                if len(tail) > _MAX_SALIDA:
+                    del tail[:-_MAX_SALIDA]
+                    truncated.add(name)
+            if not received:
+                time.sleep(0.01)
+    except OSError as exc:
+        raise RunnerError("capturar", "no se pudo leer la salida de forma acotada") from exc
+    finally:
+        try:
+            if process.poll() is None:
+                process.kill()
+            process.wait(timeout=5)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise RunnerError("cerrar", "no se confirmó el cierre del proceso directo") from exc
+        finally:
+            for pipe in pipes.values():
+                pipe.close()
+    output = {}
+    for name, tail in tails.items():
+        text = tail.decode("utf-8", errors="replace")
+        if name in truncated:
+            text = "...[recortado]...\n" + text
+        output[name] = _recortar(text)
+    if timed_out:
+        raise subprocess.TimeoutExpired(
+            orden, timeout, output=output["stdout"], stderr=output["stderr"]
+        )
+    return subprocess.CompletedProcess(orden, process.returncode, **output)
 
 
 def ejecutar(
@@ -213,21 +284,15 @@ def ejecutar(
             f"'{target}' esta permitido pero no tiene comando definido en TARGET_COMMANDS",
         )
 
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise RunnerError("timeout", "el plazo debe ser positivo y finito")
+
     orden = list(argv)  # lista, nunca una cadena; `shell=False` siempre
     log.info("runner: ejecutando %s en %s", target, sandbox.raiz)
 
     inicio = time.perf_counter()
     try:
-        resultado = subprocess.run(
-            orden,
-            cwd=str(sandbox.raiz),
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            shell=False,
-            env=_entorno(sandbox),
-        )
+        resultado = _capturar(orden, sandbox, timeout)
     except subprocess.TimeoutExpired as exc:
         duracion = time.perf_counter() - inicio
         salida = (
@@ -243,7 +308,7 @@ def ejecutar(
             target=target,
             exit_code=EXIT_TIMEOUT,
             stdout=_recortar(salida),
-            stderr=_recortar(f"la ejecucion supero {timeout}s y se interrumpio\n{error}"),
+            stderr=_recortar(f"{error}\nla ejecucion supero {timeout}s y se interrumpio"),
             duration_s=duracion,
             argv=orden,
         )

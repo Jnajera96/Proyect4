@@ -141,3 +141,13 @@ ni borres los datos de LOCALAPPDATA para esta actualización; conserva respaldos
 Rc11 no recibe la corrección de entorno por actualizar sólo el código fuente.
 Acta y límites: `RUNNER-ENVIRONMENT-HARDENING.md`. Validación en este host local,
 no en otro equipo ni como servicio público.
+
+
+## Portable vigente rc13
+
+Usa `dist/windows-v0.2.0-rc13-output-limits/AISWESystem-windows-x64.zip`,
+SHA-256 `865c67e27d45a1d7d93f7cf79cec1ca29ecf6e919febc6cc2327ffcff79e36ad`.
+Cierra la instancia anterior, extrae la carpeta completa en un destino nuevo y
+abre AISWESystem.cmd. No borres ni mezcles los datos de LOCALAPPDATA. Rc13 añade
+la captura acotada del runner; rc12 y anteriores se conservan. Acta y límites:
+`RUNNER-OUTPUT-BOUNDS.md`. Validación en el host local, no producción pública.

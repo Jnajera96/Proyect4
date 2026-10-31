@@ -125,3 +125,11 @@ no acredita aislamiento fuerte ni una VM o PC independiente.
 previas. Informe: `_tmp/runner-environment-full.xml`. Frontend: 39 PASS y
 compilación TypeScript/Vite aprobada; Ruff de runner y tests aprobado.
 Cero inferencias nuevas, sin push y sin alteración del tag histórico v0.1.0.
+
+
+## Estado posterior: rc13
+
+La limitación de captura pendiente en la base de esta acta se implementó y
+verificó en rc13: buffers acotados sin spool, deadline bajo salida continua y
+conservación del aviso de timeout. Ver `RUNNER-OUTPUT-BOUNDS.md`. Esto no cierra
+el control del árbol de procesos ni las cuotas del hijo/aislamiento fuerte.

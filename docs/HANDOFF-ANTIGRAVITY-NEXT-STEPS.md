@@ -9,11 +9,11 @@ a una base antigua ni descartar avances.
 
 - Avance estimado: **84/100** hacia Windows local confiable y recuperable,
   ponderación 83,90 en `PROJECT-STATUS-2026-10-30.md`. No es aprobación de producción.
-- Entrega canónica: `dist/windows-v0.2.0-rc12-security/AISWESystem-windows-x64.zip`.
-- SHA-256: `0b6c1e2d77eefa79c6d39f26f896a5989db03c13184aa044df62127a65e837cd`.
-- **1.065 backend PASS / 4 SKIP**, **39 frontend PASS**, build aprobado,
+- Entrega canónica: `dist/windows-v0.2.0-rc13-output-limits/AISWESystem-windows-x64.zip`.
+- SHA-256: `865c67e27d45a1d7d93f7cf79cec1ca29ecf6e919febc6cc2327ffcff79e36ad`.
+- **1.073 backend PASS / 4 SKIP**, **39 frontend PASS**, build aprobado,
   **28 pruebas de migración/actualización PASS**, actualización y retorno nativos verificados.
-- Smoke rc12 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
+- Smoke rc13 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
   ambos cierres código 0, SQLite/checkpoint persistentes, logs limpios. Los dos
   smokes anteriores de rc8 corregido siguen documentados en su acta.
 - Este cierre no añade inferencias ni publicación. Las 36 sondas reales previas
@@ -198,3 +198,20 @@ compactación de contexto y evidencia real por modelo del selector. Rc11 y los
 paquetes anteriores se conservan. No existe todavía aislamiento fuerte de archivos,
 red y descendientes: no se declara producción pública. Los pilotos entre PC y
 GitHub siguen pausados. No se detectó motor Docker/Podman en este host.
+
+
+## Rc13 — captura de salida acotada
+
+Corregida la acumulación completa de stdout/stderr antes del recorte. Captura
+no bloqueante con colas de 200.000 bytes por canal, UTF-8 tolerante a bytes
+inválidos, timeout no suprimible por salida continua y cierre del proceso directo.
+Caso sintético de 32 MiB: pico de asignaciones Python del padre ~67,1 MB antes
+y ~1,4 MB después; no es un límite de memoria del hijo ni del RSS total.
+
+1.073 backend PASS/4 SKIP, 41 focalizadas PASS, 39 frontend PASS/build, 11 pruebas
+desde el ZIP y 14/14 smoke estándar. Cero inferencias nuevas.
+Entrega local: `dist/windows-v0.2.0-rc13-output-limits/AISWESystem-windows-x64.zip`.
+SHA-256: `865c67e27d45a1d7d93f7cf79cec1ca29ecf6e919febc6cc2327ffcff79e36ad`.
+Acta: `RUNNER-OUTPUT-BOUNDS.md`. Rc12 y anteriores se conservan. Siguen pendientes
+cuotas de CPU/RAM del hijo, control verificable de descendientes y aislamiento
+de archivos/red; los pilotos entre PC y GitHub permanecen pausados.
