@@ -18,6 +18,7 @@
 *.woff binary
 *.woff2 binary
 *.sqlite3 binary
+*.tiktoken binary
 
 # Ficheros que deben conservar CRLF por convencion de plataforma.
 *.bat text eol=crlf

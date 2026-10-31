@@ -103,3 +103,17 @@ proveedor real en la fase de frontend.
 Acta: `SAFE-UPGRADE-MIGRATIONS.md`. El cierre es local. Continúan recuperación
 por UI entre PC, matriz independiente, calidad/tokenizer/modelos reales, publicación
 autorizada y aislamiento/operación de producción pública.
+
+## Medición exacta de tokens — tarea de prioridad 4 solicitada
+
+- [x] Contador local cl100k_base/o200k_base con hashes, fallback marcado y sin red.
+- [x] Benchmark de 15 archivos y tres tareas, con historia fija previa y oráculos
+  de rutas/funciones comprobados en los bloques de código.
+- [x] Evidencia reproducible: ahorro total 28,293361% / 30,075671%; solo código
+  66,208948% / 66,428003%, según encoding. 1.030 backend PASS/4 SKIP y 34 frontend PASS.
+- [ ] Alcanzar 40–70% en todos los mensajes, conservando garantías y suficiencia.
+- [ ] Verificar el tokenizer del modelo servido y ahorro facturado/efecto en calidad.
+
+Acta: `MEMORY-TOKEN-SAVINGS-EVIDENCE.md`. Se cierra la instrumentación y medición
+de referencia; la meta global 40–70% no se declara alcanzada. El pendiente de
+publicación GitHub se conserva: esta tarea no lo implementa ni lo valida.

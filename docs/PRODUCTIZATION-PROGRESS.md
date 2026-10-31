@@ -636,3 +636,13 @@ Paquete: `dist/windows-v0.2.0-safe-upgrade-rc10-verified/AISWESystem-windows-x64
 SHA-256: `01d0fe77d4f75fc866f92798b26f549cd34191d2742bda6a58f23397c96c1854`.
 Acta vigente del área: `SAFE-UPGRADE-MIGRATIONS.md`. Validación local; no acredita
 cortes físicos de energía ni matriz independiente de Windows/SAC. Se conserva rc9.
+
+
+## Tokenización exacta de referencia — 31 de octubre
+
+Nuevo benchmark de 15 archivos: cl100k_base 28,293361% y o200k_base 30,075671%
+de reducción de mensajes; solo código 66,208948% y 66,428003%. Se conserva el
+código crítico de las tres tareas. Es un fixture nuevo, no una conversión de
+las mediciones históricas de bytes a tokens. 1.030 backend PASS/4 SKIP y 34 frontend
+PASS/build. Acta y JSON: `MEMORY-TOKEN-SAVINGS-EVIDENCE.md`. Cero llamadas pagadas.
+La meta 40–70% global y la facturación de modelos reales continúan sin acreditarse.

@@ -112,3 +112,16 @@ Acta y comandos: `SAFE-UPGRADE-MIGRATIONS.md`. Paquete de esta entrega:
 `dist/windows-v0.2.0-safe-upgrade-rc10-verified/AISWESystem-windows-x64.zip`.
 Los estados y conteos de rc9 anteriores son históricos; se conserva ese candidato.
 La matriz Windows independiente y recuperación por UI entre PC siguen pendientes.
+
+### Medición de tokens con referencias exactas
+
+Tarea denominada Prioridad 4 por el usuario: corresponde al área de memoria/contexto,
+no sustituye la publicación real GitHub de la tabla histórica. Contador y benchmark
+implementados con tiktoken opcional y vocabularios locales versionados. Ahorro total
+cl100k_base 28,293361%, o200k_base 30,075671%; solo código ~66%. Cobertura crítica
+100% en tres fixtures, con funciones presentes en sus bloques. 1.030 backend PASS,
+4 SKIP, 34 frontend PASS/build. Ver `MEMORY-TOKEN-SAVINGS-EVIDENCE.md`.
+Quedan optimización global 40–70%, tokenizer específico del proveedor y calidad real.
+No conectar estas referencias/fallback al ledger como si fueran facturación Qwen.
+Para reproducir, instalar el extra token-metrics; no se incluye en el runtime
+por defecto ni se regenera el portable en esta tarea.

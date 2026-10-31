@@ -1,0 +1,374 @@
+{
+  "offline": true,
+  "paid_calls": 0,
+  "adapter": "FakeModelAdapter",
+  "cases": [
+    {
+      "case": "explicito",
+      "query": "Modifica la ruta de healthcheck en app.py",
+      "required": [
+        "api/app.py",
+        "api/responses.py",
+        "tests/test_routes.py"
+      ],
+      "arms": {
+        "naive": {
+          "bytes": 20189,
+          "counts": {
+            "cl100k_base": {
+              "tokens": 4794,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 2913
+            },
+            "o200k_base": {
+              "tokens": 4671,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 2933
+            }
+          },
+          "selected_files": [
+            "api/app.py",
+            "api/inventory.py",
+            "api/responses.py",
+            "api/tasks.py",
+            "frontend/client.ts",
+            "frontend/history.ts",
+            "frontend/view.ts",
+            "models/catalog.py",
+            "models/events.py",
+            "models/ledger.py",
+            "tests/test_ledger.py",
+            "tests/test_responses.py",
+            "tests/test_routes.py",
+            "utils/arithmetic.py",
+            "utils/dates.py"
+          ],
+          "missing_required": [],
+          "missing_code": [],
+          "history_chars": 0,
+          "code_blocks": 15,
+          "message_sha256": "320eae6dc340668eed7f66e293c775242061699395fe1c67e42bd249de3efc99"
+        },
+        "asociativa": {
+          "bytes": 13697,
+          "counts": {
+            "cl100k_base": {
+              "tokens": 3471,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 978
+            },
+            "o200k_base": {
+              "tokens": 3298,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 977
+            }
+          },
+          "selected_files": [
+            "api/app.py",
+            "tests/test_routes.py",
+            "api/responses.py",
+            "api/inventory.py",
+            "api/tasks.py",
+            "frontend/client.ts",
+            "frontend/history.ts",
+            "frontend/view.ts"
+          ],
+          "missing_required": [],
+          "missing_code": [],
+          "history_chars": 800,
+          "code_blocks": 5,
+          "message_sha256": "51a6ff49d9cfc8b37be8fa17523942c582dc40a5be48fcaf70d9b797f5b9ef60"
+        }
+      },
+      "reductions": {
+        "cl100k_base": {
+          "fraction": "441/1598",
+          "percent": 27.596996245306634,
+          "exact": true,
+          "code_percent": 66.42636457260556,
+          "full_prompt_target_met": false
+        },
+        "o200k_base": {
+          "fraction": "1373/4671",
+          "percent": 29.394134018411474,
+          "exact": true,
+          "code_percent": 66.68939652233209,
+          "full_prompt_target_met": false
+        }
+      }
+    },
+    {
+      "case": "contenido",
+      "query": "Ajusta la fórmula del cálculo del balance",
+      "required": [
+        "models/ledger.py",
+        "utils/arithmetic.py",
+        "tests/test_ledger.py"
+      ],
+      "arms": {
+        "naive": {
+          "bytes": 20191,
+          "counts": {
+            "cl100k_base": {
+              "tokens": 4796,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 2913
+            },
+            "o200k_base": {
+              "tokens": 4667,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 2933
+            }
+          },
+          "selected_files": [
+            "api/app.py",
+            "api/inventory.py",
+            "api/responses.py",
+            "api/tasks.py",
+            "frontend/client.ts",
+            "frontend/history.ts",
+            "frontend/view.ts",
+            "models/catalog.py",
+            "models/events.py",
+            "models/ledger.py",
+            "tests/test_ledger.py",
+            "tests/test_responses.py",
+            "tests/test_routes.py",
+            "utils/arithmetic.py",
+            "utils/dates.py"
+          ],
+          "missing_required": [],
+          "missing_code": [],
+          "history_chars": 0,
+          "code_blocks": 15,
+          "message_sha256": "9a8db1bcc0c8bcb6bc67cc95a2359cb56ff70715e3c70c9b75830447fe2cc2c0"
+        },
+        "asociativa": {
+          "bytes": 13361,
+          "counts": {
+            "cl100k_base": {
+              "tokens": 3363,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 926
+            },
+            "o200k_base": {
+              "tokens": 3193,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 932
+            }
+          },
+          "selected_files": [
+            "models/ledger.py",
+            "tests/test_ledger.py",
+            "utils/arithmetic.py",
+            "frontend/view.ts",
+            "api/app.py",
+            "api/inventory.py",
+            "api/responses.py",
+            "api/tasks.py"
+          ],
+          "missing_required": [],
+          "missing_code": [],
+          "history_chars": 560,
+          "code_blocks": 5,
+          "message_sha256": "a79daa0bc8ee09c095847d69034edf0a8401930513764797ed34d5e32619791b"
+        }
+      },
+      "reductions": {
+        "cl100k_base": {
+          "fraction": "1433/4796",
+          "percent": 29.8790658882402,
+          "exact": true,
+          "code_percent": 68.21146584277378,
+          "full_prompt_target_met": false
+        },
+        "o200k_base": {
+          "fraction": "1474/4667",
+          "percent": 31.5834583244054,
+          "exact": true,
+          "code_percent": 68.2236617797477,
+          "full_prompt_target_met": false
+        }
+      }
+    },
+    {
+      "case": "transversal",
+      "query": "Agrega un validador de formato a todas las respuestas",
+      "required": [
+        "api/app.py",
+        "api/inventory.py",
+        "api/responses.py",
+        "api/tasks.py",
+        "tests/test_responses.py"
+      ],
+      "arms": {
+        "naive": {
+          "bytes": 20201,
+          "counts": {
+            "cl100k_base": {
+              "tokens": 4795,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 2913
+            },
+            "o200k_base": {
+              "tokens": 4670,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 2933
+            }
+          },
+          "selected_files": [
+            "api/app.py",
+            "api/inventory.py",
+            "api/responses.py",
+            "api/tasks.py",
+            "frontend/client.ts",
+            "frontend/history.ts",
+            "frontend/view.ts",
+            "models/catalog.py",
+            "models/events.py",
+            "models/ledger.py",
+            "tests/test_ledger.py",
+            "tests/test_responses.py",
+            "tests/test_routes.py",
+            "utils/arithmetic.py",
+            "utils/dates.py"
+          ],
+          "missing_required": [],
+          "missing_code": [],
+          "history_chars": 0,
+          "code_blocks": 15,
+          "message_sha256": "7e8b38bcc577f83d375b253fb67585dba507fbe468f78deed7e6af776579b11b"
+        },
+        "asociativa": {
+          "bytes": 13749,
+          "counts": {
+            "cl100k_base": {
+              "tokens": 3481,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 1049
+            },
+            "o200k_base": {
+              "tokens": 3304,
+              "exact": true,
+              "method": "tiktoken-0.14.0",
+              "code_tokens": 1045
+            }
+          },
+          "selected_files": [
+            "api/responses.py",
+            "tests/test_responses.py",
+            "api/inventory.py",
+            "api/tasks.py",
+            "api/app.py",
+            "tests/test_routes.py",
+            "frontend/client.ts",
+            "frontend/history.ts"
+          ],
+          "missing_required": [],
+          "missing_code": [],
+          "history_chars": 561,
+          "code_blocks": 5,
+          "message_sha256": "38f5549633dc3acc59dda700fb4bedea3b092ea3621c8797cbf9ecc904869962"
+        }
+      },
+      "reductions": {
+        "cl100k_base": {
+          "fraction": "1314/4795",
+          "percent": 27.40354535974974,
+          "exact": true,
+          "code_percent": 63.98901476141435,
+          "full_prompt_target_met": false
+        },
+        "o200k_base": {
+          "fraction": "683/2335",
+          "percent": 29.25053533190578,
+          "exact": true,
+          "code_percent": 64.3709512444596,
+          "full_prompt_target_met": false
+        }
+      }
+    }
+  ],
+  "totals": {
+    "cl100k_base": {
+      "naive_tokens": 14385,
+      "memory_tokens": 10315,
+      "fraction": "814/2877",
+      "percent": 28.293361140076467,
+      "exact": true,
+      "naive_code_tokens": 8739,
+      "memory_code_tokens": 2953,
+      "code_percent": 66.20894839226456
+    },
+    "o200k_base": {
+      "naive_tokens": 14008,
+      "memory_tokens": 9795,
+      "fraction": "4213/14008",
+      "percent": 30.075671045117076,
+      "exact": true,
+      "naive_code_tokens": 8799,
+      "memory_code_tokens": 2954,
+      "code_percent": 66.4280031821798
+    }
+  },
+  "vocabularies": {
+    "tiktoken_version": "0.14.0",
+    "source": "https://github.com/openai/tiktoken",
+    "encodings": {
+      "cl100k_base": {
+        "name": "cl100k_base",
+        "pat_str": "'(?i:[sdmt]|ll|ve|re)|[^\\r\\n\\p{L}\\p{N}]?+\\p{L}++|\\p{N}{1,3}+| ?[^\\s\\p{L}\\p{N}]++[\\r\\n]*+|\\s++$|\\s*[\\r\\n]|\\s+(?!\\S)|\\s",
+        "special_tokens": {
+          "<|endoftext|>": 100257,
+          "<|fim_prefix|>": 100258,
+          "<|fim_middle|>": 100259,
+          "<|fim_suffix|>": 100260,
+          "<|endofprompt|>": 100276
+        },
+        "sha256": "223921b76ee99bde995b7ff738513eef100fb51d18c93597a113bcffe865b2a7",
+        "source": "https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken",
+        "ranks": 100256
+      },
+      "o200k_base": {
+        "name": "o200k_base",
+        "pat_str": "[^\\r\\n\\p{L}\\p{N}]?[\\p{Lu}\\p{Lt}\\p{Lm}\\p{Lo}\\p{M}]*[\\p{Ll}\\p{Lm}\\p{Lo}\\p{M}]+(?i:'s|'t|'re|'ve|'m|'ll|'d)?|[^\\r\\n\\p{L}\\p{N}]?[\\p{Lu}\\p{Lt}\\p{Lm}\\p{Lo}\\p{M}]+[\\p{Ll}\\p{Lm}\\p{Lo}\\p{M}]*(?i:'s|'t|'re|'ve|'m|'ll|'d)?|\\p{N}{1,3}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n/]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+",
+        "special_tokens": {
+          "<|endoftext|>": 199999,
+          "<|endofprompt|>": 200018
+        },
+        "sha256": "446a9538cb6c348e3516120d7c08b09f57c36495e2acfffe59a5bf8b0cfb1a2d",
+        "source": "https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken",
+        "ranks": 199998
+      }
+    }
+  },
+  "fixture_sha256": {
+    "api/app.py": "22743f6fdcdce0c5da7ee38c51dc48e00f7ed91f7481fb07d230f24961a9e960",
+    "api/inventory.py": "83fa4ce4a33d35a3f887340afb11d0d09dd8b89e6dcd3420c7d736bbfd32707d",
+    "api/responses.py": "67b3b2a4ade81f181bc76a3b1fa27b67edd8bdba92499a0d414af80acd7d6598",
+    "api/tasks.py": "c7477626866988e236a6f59f0ddb0f7d58c0bdc8ad2e115ea6a545a12bc7c730",
+    "frontend/client.ts": "8dc791fa001f1ef73e8de3b7b4b3a58d8d13874868dfd1169e6182a9cd3aebb8",
+    "frontend/history.ts": "a03d0cf5b17c86c2c525e885c7d1a3a22afa5265730a53937f4476fcf7e41e51",
+    "frontend/view.ts": "948ab7e592cd0037c3855f6134d9c0b4950dec3fbd714e64e4083cd763262d85",
+    "models/catalog.py": "5dd4bcef18a59fd8a18ffdfe4634cb34d510df7cb79256e6c6ee8a9181e7697b",
+    "models/events.py": "858fddec58d4db04c6363c054bc6927e770559240a4bbe83432c6176cc7adb4b",
+    "models/ledger.py": "44a293c46ffa3a9675a199144f2d6df311145b5141a711f18df39cf56c1bce20",
+    "tests/test_ledger.py": "9eac868f59335cf864d8775059960d2427f71333256e8b1f7586b7fe1178d2e5",
+    "tests/test_responses.py": "20e164cccfdd5af5700d01a9d6a356eabcb27a5e780bec6390b94daea4fa5096",
+    "tests/test_routes.py": "ca70b2c74e26490b7747f9099f5a73e2797ee87b68f86c4c9a7783e74d78b303",
+    "utils/arithmetic.py": "ce17a49628f7ab9aa085359e75d7c5722c7c846cdb698763ac6d2ee3100a037f",
+    "utils/dates.py": "b538a07f0285179be702ed3fbb15cbc91b7eca27407bd19ad45fab79081bd84f"
+  },
+  "scope": "Sum of ordinary text tokens per message; excludes chat framing, schema and provider billing"
+}
