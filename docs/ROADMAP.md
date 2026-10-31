@@ -35,6 +35,10 @@ pendiente de empaquetado y piloto en otra PC, sin declarar producción aprobada.
 
 ### Seguimiento de continuidad
 
+- [x] Mostrar decisiones humanas en Flujo, enfocar progreso tras Ejecutar y ofrecer continuar desde las demás vistas.
+
+Acta UX: `HUMAN-GATES-INTUITIVE-UX-VALIDATION.md`.
+
 - [x] Prueba local para bibliotecas Python y ficha de decisión postgeneración.
 - [x] Incluir la mejora de lanzador en rc5; 14 controles portable aprobados (rc4 se conserva).
 

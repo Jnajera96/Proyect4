@@ -22,6 +22,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ErrorApi, mensajeVisible, rolDelRechazo } from "./lib/api";
+import { mensajeEstado } from "./lib/contracts";
 import {
   borrarClave,
   enmascarar,
@@ -271,6 +272,12 @@ export function App({ profile }: { profile?: {
   // el teclado se queda en el boton de la barra y tiene que tabular por toda la
   // pagina anterior para llegar a la nueva.
   useEffect(() => {
+    if (vista === "flujo") {
+      const progreso = document.getElementById("progreso-ejecucion");
+      progreso?.focus({ preventScroll: true });
+      progreso?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     contenido.current?.focus({ preventScroll: true });
     window.scrollTo(0, 0);
   }, [vista, sesion]);
@@ -356,6 +363,15 @@ export function App({ profile }: { profile?: {
     }
   }
 
+  function irAlProgreso() {
+    setVista("flujo"); setMenuAbierto(false);
+    window.requestAnimationFrame(() => {
+      const progreso = document.getElementById("progreso-ejecucion");
+      progreso?.focus({ preventScroll: true });
+      progreso?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   async function lanzar() {
     const texto = instruccion.trim() || "Analiza el proyecto e identifica los errores principales.";
     if (!texto) return;
@@ -381,7 +397,7 @@ export function App({ profile }: { profile?: {
       // La ejecucion ya lleva el origen: la procedencia no se arrastra a la
       // siguiente, que se teclea a mano salvo que se vuelva a dictar.
       setTranscripcion(null);
-      setVista("general");
+      irAlProgreso();
     } catch (causa) {
       setErrorAccion(anotarFallo(causa));
     } finally {
@@ -568,7 +584,7 @@ export function App({ profile }: { profile?: {
         <button className="cerrar-menu sutil" aria-label="Cerrar navegación" onClick={() => {
           setMenuAbierto(false); document.getElementById("abrir-menu")?.focus();
         }}><Icono nombre="cerrar" /></button>
-        <Navegacion vista={vista} items={items} alCambiar={v => { setVista(v); setMenuAbierto(false); window.requestAnimationFrame(() => { contenido.current?.focus({ preventScroll: true }); window.scrollTo(0, 0); }); }}
+        <Navegacion vista={vista} items={items} alCambiar={v => { if (v === "flujo") { irAlProgreso(); return; } setVista(v); setMenuAbierto(false); window.requestAnimationFrame(() => { contenido.current?.focus({ preventScroll: true }); window.scrollTo(0, 0); }); }}
           proyectos={proyectos} proyectoActual={projectId}
           runs={runs} runActual={runId} alRun={id => { seleccionarRun(id); setMenuAbierto(false); }}
           alProyecto={id => { setProjectId(id); setVista("general"); setMenuAbierto(false); }}
@@ -578,6 +594,11 @@ export function App({ profile }: { profile?: {
       <main id="contenido" className="app contenido">
 
       <div className="vista" ref={contenido} tabIndex={-1} aria-label={`Vista: ${vista}`}>
+        {estado && (estado.status === "running" || estado.status === "planned" || estado.status.startsWith("awaiting")) &&
+          <div className="banner aviso" role="status">
+            <p>{mensajeEstado(estado)}</p>
+            <button className="primario" onClick={irAlProgreso}>👉 Continuar aquí</button>
+          </div>}
         {estado?.status === "completed" && estado.promotion_receipt?.status === "promoted" ?
           <GuiaEjecucion key={estado.run_id} estado={estado} puedeOperar={puedeOperar}
             alPedirCambios={() => {
@@ -666,7 +687,10 @@ export function App({ profile }: { profile?: {
           />
         ) : null}
 
-        {vista === "flujo" ? <VistaFlujo estado={estado} eventos={eventos} alPuerta={() => setVista("detalle")} /> : null}
+        {vista === "flujo" ? <section id="progreso-ejecucion" tabIndex={-1} aria-label="Progreso de tu solicitud">
+          <VistaFlujo estado={estado} eventos={eventos} alPuerta={() => setVista("detalle")}
+            alDecidir={() => { reanudar(); if (estado) void refrescar(estado.run_id); }} alFallo={anotarFallo} />
+        </section> : null}
         {vista === "actividad" ? <VistaActividad estado={estado} eventos={eventos} conexion={conexion} /> : null}
 
         {vista === "seguridad" ? (

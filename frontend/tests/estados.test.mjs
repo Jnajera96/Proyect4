@@ -29,6 +29,22 @@ const { VisorDiff } = await cargar("../src/components/VisorDiff.tsx");
 const { calcular } = await cargar("../src/components/DiagramaFlujo.tsx");
 const { actividadesPendientes, ActividadPipeline } = await cargar("../src/components/ActividadPipeline.tsx");
 const { PuertaRequisitos } = await cargar("../src/components/PuertaRequisitos.tsx");
+const { mensajeEstado } = await cargar("../src/lib/contracts.ts");
+
+test("mensajes humanos distinguen actividad de una promoción realmente completada", () => {
+  for (const [step, message] of Object.entries({researcher:"Analizando", coder:"Escribiendo", run_tests:"Verificando", reviewer:"Revisando"})) {
+    assert.match(mensajeEstado(estado({status:"running",next_step:step})),new RegExp(message));
+  }
+  assert.doesNotMatch(mensajeEstado(estado({status:"completed"})),/Aplicación construida/);
+  assert.match(mensajeEstado(estado({status:"completed",promotion_receipt:{status:"promoted"}})),/Aplicación construida/);
+});
+
+test("flujo presenta las dos puertas humanas directamente en pantalla", () => {
+  const requirements=estado({status:"awaiting_human_requirements_confirmation",
+    interpretation:{intent:"modify",confidence:.9,rationale:"Propuesta",constraints:[],scope:{repo_path:"C:/fixture",allowed_paths:[],protected_paths:[]}}});
+  assert.match(renderToStaticMarkup(React.createElement(VistaFlujo,{estado:requirements})),/Confirmar y construir/);
+  assert.match(renderToStaticMarkup(React.createElement(VistaFlujo,{estado:estado({status:"awaiting_approval"})})),/id="btn-aprobar"/);
+});
 
 const decision = (valor) => ({
   action: "promote_changes", actor: "usuario", decided_at: "2026-10-14T12:00:00Z",

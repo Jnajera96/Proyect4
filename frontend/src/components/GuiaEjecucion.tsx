@@ -40,7 +40,7 @@ export function GuiaEjecucion({ estado, projectId, puedeOperar, alPedirCambios }
       <h3>Probar en local</h3>
       {guide && <><p>{guide.summary_es}</p><ol>{guide.instructions.map(text => <li key={text}>{text}</li>)}</ol>
         {guide.available && <button className="primario" onClick={() => void launch()} disabled={busy || !puedeOperar}>
-          {busy ? "Abriendo…" : guide.launch_action === "open_browser" ? "Abrir en el navegador" : guide.kind === "unknown" ? "Abrir carpeta del proyecto" : "▶️ Probar en local ahora"}</button>}
+          {busy ? "Abriendo…" : guide.kind === "unknown" ? "Abrir carpeta del proyecto" : "▶️ Probar en local ahora"}</button>}
         {guide.command && <details><summary>Ver el comando de inicio</summary><pre>{guide.command}</pre>
           <button onClick={() => void navigator.clipboard.writeText(guide.command).then(() => setMessage("Comando copiado.")).catch(() => setError("No se pudo copiar. Selecciona el comando manualmente."))}>Copiar comando</button></details>}
       </>}

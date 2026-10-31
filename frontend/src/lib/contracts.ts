@@ -380,11 +380,27 @@ export const ESTADOS_TERMINALES: ReadonlySet<RunStatus> = new Set<RunStatus>([
 export const ETIQUETA_ESTADO: Record<RunStatus, string> = {
   planned: "en cola",
   running: "ejecutando",
-  awaiting_human_requirements_confirmation: "esperando confirmación de requisitos",
-  awaiting_approval: "esperando aprobación",
+  awaiting_human_requirements_confirmation: "📋 Propuesta lista: confirma los requisitos para empezar",
+  awaiting_approval: "🎉 Código listo: revisa y decide si quieres guardarlo",
   paused: "pausada",
   completed: "completada",
   failed: "fallida",
   needs_human: "requiere intervención",
   cancelled: "cancelada",
 };
+
+export function mensajeEstado(estado: RunState): string {
+  if (estado.status === "running") {
+    const actividad: Record<string, string> = {
+      researcher: "🔍 Analizando la estructura del proyecto…",
+      coder: "💻 Escribiendo el código de tu aplicación…",
+      run_tests: "🧪 Verificando que todo funcione sin errores…",
+      reviewer: "🧐 Revisando la calidad y seguridad del código…",
+    };
+    return actividad[estado.next_step ?? ""] ?? "Tu solicitud está en proceso…";
+  }
+  if (estado.status === "completed" && estado.promotion_receipt?.status === "promoted") {
+    return "✅ ¡Aplicación construida y lista para usar!";
+  }
+  return ETIQUETA_ESTADO[estado.status];
+}

@@ -2,19 +2,25 @@
  * Flujo: por donde va la ejecucion seleccionada.
  *
  * Solo representa lo que el estado declara. Cuando no hay ejecucion elegida lo dice
- * en lugar de dibujar un diagrama vacio, y cuando la hay ensena el `next_step` tal
- * como lo publica el motor, sin traducirlo a una promesa.
+ * en lugar de dibujar un diagrama vacio. Las decisiones se resuelven en esta vista;
+ * los identificadores del motor quedan disponibles en los detalles tecnicos.
  */
 import { useState } from "react";
 import type { RunEvent, RunState } from "../lib/contracts";
 import { ActividadPipeline } from "../components/ActividadPipeline";
-import { ETIQUETA_ESTADO } from "../lib/contracts";
+import { mensajeEstado } from "../lib/contracts";
+import { mensajeVisible } from "../lib/api";
+import { PuertaRequisitos } from "../components/PuertaRequisitos";
+import { PuertaAprobacion } from "../components/PuertaAprobacion";
 import { calcular, type Etapa } from "../components/DiagramaFlujo";
 import { SecuenciaAgentes } from "../components/SecuenciaAgentes";
 import { InspectorEtapa } from "../components/InspectorEtapa";
 import { Chip, EstadoVacio, Panel, Seccion } from "../components/ui";
 
-export function VistaFlujo({ estado, eventos = [], alPuerta }: { estado: RunState | null; eventos?: RunEvent[]; alPuerta?: () => void }) {
+export function VistaFlujo({ estado, eventos = [], alPuerta, alDecidir = () => {}, alFallo = cause => mensajeVisible(cause, false) }: {
+  estado: RunState | null; eventos?: RunEvent[]; alPuerta?: () => void;
+  alDecidir?: () => void; alFallo?: (cause: unknown) => string;
+}) {
   const [etapa, setEtapa] = useState<Etapa | null>(null);
   const etapaActual = estado && etapa ? calcular(estado, eventos).find(e => e.id === etapa.id) : null;
   if (!estado) {
@@ -36,13 +42,17 @@ export function VistaFlujo({ estado, eventos = [], alPuerta }: { estado: RunStat
 
   return (
     <>
+      {estado.status === "awaiting_human_requirements_confirmation" && <PuertaRequisitos
+        key={estado.run_id} estado={estado} alDecidir={alDecidir} alFallo={alFallo} />}
+      {estado.status === "awaiting_approval" && <PuertaAprobacion
+        key={estado.run_id} estado={estado} alDecidir={alDecidir} alFallo={alFallo} />}
       <Panel><p>{estado.options.delivery_mode === "github" ? "Modo GitHub" : "Modo local"}:
         la aplicación se construye primero en tu computadora. Publicar en GitHub requiere tu decisión.</p></Panel>
       <ActividadPipeline eventos={eventos} estado={estado} />
       <Seccion
         titulo="Etapas del flujo"
         nota="Los nodos reales del grafo, en su orden. El estado de cada etapa sale de la evidencia guardada, no de un temporizador."
-        acciones={<Chip tono={espera ? "aviso" : ""}>{ETIQUETA_ESTADO[estado.status]}</Chip>}
+        acciones={<Chip tono={espera ? "aviso" : ""}>{mensajeEstado(estado)}</Chip>}
       >
         <Panel>
           <SecuenciaAgentes estado={estado} alEtapa={setEtapa} eventos={eventos} />
@@ -50,12 +60,13 @@ export function VistaFlujo({ estado, eventos = [], alPuerta }: { estado: RunStat
       </Seccion>
 
       {etapaActual ? <InspectorEtapa key={estado.run_id + etapaActual.id} etapa={etapaActual} estado={estado} eventos={eventos} alCerrar={() => setEtapa(null)} alPuerta={alPuerta} /> : null}
+      <details><summary>Ver detalles técnicos del motor</summary>
       <Seccion titulo="Posición declarada por el motor">
         <Panel>
           <dl className="datos">
             <dt>Estado</dt>
             <dd>
-              {ETIQUETA_ESTADO[estado.status]} <span className="tenue mono">({estado.status})</span>
+              {mensajeEstado(estado)} <span className="tenue mono">({estado.status})</span>
             </dd>
             <dt>Siguiente paso</dt>
             <dd className="mono">{estado.next_step ?? "(ninguno: la ejecución terminó)"}</dd>
@@ -74,6 +85,7 @@ export function VistaFlujo({ estado, eventos = [], alPuerta }: { estado: RunStat
           ) : null}
         </Panel>
       </Seccion>
+      </details>
     </>
   );
 }

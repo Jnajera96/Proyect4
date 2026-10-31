@@ -1,5 +1,22 @@
 # Cierre del portable operativo — 30 de octubre de 2026
 
+## Seguimiento rc7 — flujo accionable y progreso visible
+
+ZIP: `dist/windows-v0.2.0-operational-rc7/AISWESystem-windows-x64.zip`.
+SHA-256: `f1f26017d64672f0193370aa0931cb8e82c24f2f487e4bfe6d1a068092ecfb7f`.
+Tamaño: 118.796.148 bytes; manifiesto de 4.726 archivos y CRC verificado.
+Base `8cd0b39` más cambios de frontend para puertas accionables en Flujo,
+transición/foco al ejecutar, botón compartido para continuar y mensajes humanos.
+rc6 se conserva intacto. El éxito de construcción se condiciona a una promoción
+confirmada; los identificadores técnicos quedan en detalles desplegables.
+
+Suite completa: **982 PASS, 4 SKIP, 0 fallos**, 425,22 s. Frontend: **34 PASS**;
+navegador offline: **34 controles PASS**; TypeScript/Vite aprobado. Sin llamadas
+pagadas ni publicación real. Acta: `HUMAN-GATES-INTUITIVE-UX-VALIDATION.md`.
+Portable extraído: **14 controles PASS**, salida 0, CPython autónomo, perfiles,
+dos arranques y SQLite/checkpoint íntegros/persistentes. Frontend cotejado con
+la compilación final. Informe: `dist/windows-v0.2.0-operational-rc7/portable-profiles-report.json`.
+
 ## Seguimiento rc6 — restauración de múltiples repositorios
 
 ZIP: `dist/windows-v0.2.0-operational-rc6/AISWESystem-windows-x64.zip`.

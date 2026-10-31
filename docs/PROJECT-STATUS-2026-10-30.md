@@ -2,7 +2,7 @@
 
 Fecha: 30 de octubre de 2026. Evaluación del código fuente de
 `feature/v0.2.0-madre-continuity`, conservando la distribución anterior.
-Última validación fuente: backend973 PASS/4 SKIP, frontend32 PASS y compilación
+Última validación fuente: backend982 PASS/4 SKIP, frontend34 PASS y compilación
 TypeScript/Vite aprobada; sin nuevas inferencias pagadas.
 
 ## Avance estimado

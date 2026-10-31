@@ -11,7 +11,7 @@ import type { EstadoConexion } from "../hooks/useEventosRun";
 import type { EstadoSesion } from "../lib/auth";
 import type { Health, Project, RunEvent, RunState, RunSummary } from "../lib/contracts";
 import { fechaHora, numero } from "../lib/formato";
-import { ETIQUETA_ESTADO } from "../lib/contracts";
+import { ETIQUETA_ESTADO, mensajeEstado } from "../lib/contracts";
 import { AccionesCompositor, Compositor, EstadoCompositor } from "../components/Compositor";
 import { calcular, DiagramaFlujo } from "../components/DiagramaFlujo";
 import { InspectorEtapa } from "../components/InspectorEtapa";
@@ -153,7 +153,7 @@ export function VistaGeneral({
     <AvisoProveedor configuracion={salud?.provider_configuration} />
 
     <section className="franja" aria-label="Estado del sistema">
-      <Tarjeta rotulo="Ejecución seleccionada" valor={estado ? ETIQUETA_ESTADO[estado.status] : "Sin ejecución"}
+      <Tarjeta rotulo="Ejecución seleccionada" valor={estado ? mensajeEstado(estado) : "Sin ejecución"}
         pie={estado ? estado.run_id : `${numero(runs.length)} en la página consultada`} tono={estado ? tonoDeEstado(estado.status) : ""} />
       <Tarjeta rotulo="Proyecto" valor={proyecto?.name ?? "Sin proyecto seleccionado"} pie={`${numero(proyectos.length)} en la página consultada`} />
       <Tarjeta rotulo="Presupuesto" valor={estado ? `${numero(estado.budget.used_tokens)} tokens` : "Sin consumo seleccionado"}
@@ -169,7 +169,7 @@ export function VistaGeneral({
       <section className="panel workflow-panel" aria-label="Flujo de trabajo multiagente">
         <header className="panel-cabecera"><div><h2><Icono nombre="flujo" /> Flujo de trabajo multiagente</h2>
           <p className="tenue">Roles especializados. Evidencia en cada etapa.</p></div>
-          {estado ? <Chip tono={tonoDeEstado(estado.status)}>{ETIQUETA_ESTADO[estado.status]}</Chip> : null}</header>
+          {estado ? <Chip tono={tonoDeEstado(estado.status)}>{mensajeEstado(estado)}</Chip> : null}</header>
         <DiagramaFlujo estado={estado} eventos={eventos} alEtapa={e => estado && setInspeccion({ runId: estado.run_id, etapaId: e.id })} />
         {estado && etapa ? <InspectorEtapa key={estado.run_id + etapa.id} etapa={etapa} estado={estado}
           eventos={eventos} alCerrar={() => setInspeccion(null)}

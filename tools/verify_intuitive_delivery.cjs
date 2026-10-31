@@ -12,13 +12,15 @@ const project={project_id:'fixture-project',name:'Mi aplicación',repo_path:'C:/
 const state={run_id:'fixture-run',trace_id:'fixture',created_at:now,updated_at:now,status:'completed',next_step:null,
   instruction:{text:'Crea una página',source:'text',confirmed_by_user:true,capture_fidelity:1},
   options:{repo_path:project.repo_path,mode:'FULL_PROPOSAL',delivery_mode:'github',allowed_paths:[],protected_paths:[]},
-  interpretation:{intent:'modify',scope:{repo_path:project.repo_path},confidence:.9,constraints:[],rationale:'Fixture'},
+  interpretation:{intent:'modify',scope:{repo_path:project.repo_path,allowed_paths:[],protected_paths:[]},confidence:.9,constraints:[],rationale:'Fixture'},
   plan:{subtasks:[]},plan_index:0,outputs:{researcher_output:{findings:[],unknowns:[]},coder_output:{files_changed:[],diff:'fixture diff',rationale:'Página de fixture'},reviewer_output:{decision:'accept',findings:[],required_fixes:[],summary:'Fixture'}},
   artifacts:{diff:'fixture diff',changed_files:[]},evidence:{test_runs:[{target:'pytest.unit',exit_code:0,stdout:'Fixture only',stderr:''}],findings:[]},errors:[],approvals:[{action:'promote_changes',decision:'approved',actor:'fixture',at:now,content_sha256:'fixture'}],
   promotion_receipt:{receipt_id:'fixture',pre_promotion_sha:'a',promoted_sha:'b',head:'a',paths:['index.html'],status:'promoted'},
   final_report:{summary:'Fixture',changes_applied:['index.html'],tests_executed:[],review:'Fixture',pending:[]},
   budget:{max_tokens:100,used_tokens:0,used_input_tokens:0,used_output_tokens:0,max_model_calls:10,used_model_calls:0,max_tool_calls:10,used_tool_calls:0,max_review_cycles:2,review_cycles_used:0,max_seconds:90,elapsed_seconds:0,max_cost:1,used_cost:0}};
 const guide={available:true,kind:'web_static',summary_es:'Tu aplicación está lista para usar.',launch_action:'open_browser',command:'start iniciar.bat',instructions:['Tu aplicación está guardada en C:/fixture/myapp.','Abre iniciar.bat con doble clic.'],repo_path:project.repo_path,entrypoint:'index.html',prepared:false,launcher_path:'C:/fixture/myapp/iniciar.bat'};
+const promotedReceipt=state.promotion_receipt;
+let confirmations=0,approvals=0;
 let server,browser,projects=[],runs=[],prepared=0,launched=0,publications=[],createBody,runBody;
 (async()=>{
   const bundle=await build({stdin:{contents:"import React from 'react';import{createRoot}from'react-dom/client';import{App}from'./src/App';createRoot(document.getElementById('root')).render(<App/>);",resolveDir:path.join(root,'frontend'),loader:'tsx'},bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic'});
@@ -29,7 +31,9 @@ let server,browser,projects=[],runs=[],prepared=0,launched=0,publications=[],cre
     if(url.pathname==='/health')return json({status:'ok',fase:'Fixture sin inferencia'});
     if(url.pathname==='/projects'){if(req.method==='POST'){createBody=body;projects=[project];return json(project,201);}return json(projects);}
     if(url.pathname.endsWith('/readiness'))return json({ready:true,checks:[]});
-    if(url.pathname==='/runs'){if(req.method==='POST'){runBody=body;runs=[{run_id:state.run_id,trace_id:'fixture',intent:'modify',status:'completed',created_at:now,updated_at:now,error_count:0,awaiting_approval:false}];return json(state,202);}return json(runs);}
+    if(url.pathname==='/runs'){if(req.method==='POST'){runBody=body;state.status='awaiting_human_requirements_confirmation';state.promotion_receipt=null;runs=[{run_id:state.run_id,trace_id:'fixture',intent:'modify',status:state.status,created_at:now,updated_at:now,error_count:0,awaiting_approval:false}];return json(state,202);}return json(runs);}
+    if(url.pathname.endsWith('/confirm-requirements')){confirmations++;assert.equal(body.decision,'approved');state.status='awaiting_approval';state.next_step='approval_gate';return json(state);}
+    if(url.pathname.endsWith('/approve')){approvals++;assert.equal(body.decision,'approved');state.status='completed';state.next_step=null;state.promotion_receipt=promotedReceipt;return json(state);}
     if(url.pathname==='/runs/fixture-run')return json(state);
     if(url.pathname==='/runs/fixture-run/launch-guide')return json(guide);
     if(url.pathname.endsWith('/launch-guide/prepare')){prepared++;guide.prepared=true;return json(guide);}
@@ -61,10 +65,20 @@ let server,browser,projects=[],runs=[],prepared=0,launched=0,publications=[],cre
     await page.getByRole('radio',{name:'Modo GitHub',exact:true}).check();
     await page.getByLabel('Instrucción',{exact:true}).fill('Crea una página');
     await page.getByRole('button',{name:'Ejecutar',exact:true}).click();
+    await page.getByRole('button',{name:'Confirmar y construir',exact:true}).waitFor();
+    await page.waitForFunction(()=>document.activeElement?.id==='progreso-ejecucion');
+    assert.equal(confirmations,0);check('execute navigates and focuses real flow with an actionable requirements gate');
+    await page.getByRole('button',{name:'Actividad',exact:true}).click();
+    await page.getByRole('button',{name:'👉 Continuar aquí',exact:true}).click();
+    await page.getByRole('button',{name:'Confirmar y construir',exact:true}).click();
+    await page.getByRole('button',{name:'Aprobar',exact:true}).waitFor();
+    assert.equal(confirmations,1);assert.equal(approvals,0);check('continue returns from another view and requirements confirmation exposes approval in flow');
+    await page.getByRole('button',{name:'Aprobar',exact:true}).click();
     await page.getByRole('heading',{name:'Qué hacer con tu código',exact:true}).waitFor();
-    await page.getByRole('button',{name:'Abrir en el navegador',exact:true}).waitFor();
+    assert.equal(approvals,1);check('flow approval is explicit and refreshes completed delivery');
+    await page.getByRole('button',{name:'▶️ Probar en local ahora',exact:true}).waitFor();
     assert.equal(runBody.options.delivery_mode,'github');assert.equal(prepared,1);check('destination is persisted and launcher is prepared only through POST');
-    await page.getByRole('button',{name:'Abrir en el navegador',exact:true}).click();
+    await page.getByRole('button',{name:'▶️ Probar en local ahora',exact:true}).click();
     await page.getByText('Se solicitó abrir tu navegador.',{exact:true}).waitFor();assert.equal(launched,1);check('explicit launch sends action and displays acknowledgement');
     await page.getByRole('button',{name:'Flujo',exact:true}).click();
     await page.getByRole('button',{name:'✏️ Modificar o pedir cambios',exact:true}).click();

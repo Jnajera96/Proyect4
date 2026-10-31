@@ -1,5 +1,14 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Flujo accionable y progreso visible — 30 de octubre de 2026
+
+Ejecución navega/enfoca Flujo; ambas puertas humanas operan directamente allí.
+Banner compartido para continuar y mensajes de actividad comprensibles, con éxito
+de construcción condicionado a promoción real. Backend completo 982 PASS/4 SKIP,
+34 pruebas frontend y 34 controles de navegador PASS; build aprobado.
+Portable rc7 aprobado con 14 controles de integridad, arranque, perfiles y reinicio/SQLite.
+Acta: `HUMAN-GATES-INTUITIVE-UX-VALIDATION.md`. Sin llamadas pagadas.
+
 ## Restauración multirrepositorio — 30 de octubre de 2026
 
 Lectura previa del respaldo sin mutaciones y autorización de una ruta por proyecto.
