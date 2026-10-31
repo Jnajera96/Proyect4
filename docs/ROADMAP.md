@@ -35,6 +35,11 @@ pendiente de empaquetado y piloto en otra PC, sin declarar producción aprobada.
 
 ### Seguimiento de continuidad
 
+- [x] Prueba local para bibliotecas Python y ficha de decisión postgeneración.
+- [ ] Incluir la mejora de lanzador en el siguiente portable (rc4 se conserva).
+
+Acta de esta mejora: `UNIVERSAL-LOCAL-LAUNCH-VALIDATION.md`.
+
 - [x] Revalidar 17 pruebas de memoria/recuperación en desarrollo y con módulos del portable.
 - [x] Reproducir y corregir Base64 incompatible al subir respaldos desde la UI.
 - [x] Verificar carga binaria en navegador: 4 controles offline aprobados.

@@ -1059,6 +1059,10 @@ def explain_limits(state: RunState) -> dict:
 # se deriva del contrato en el gateway. Aqui se explican las reglas que el contrato
 # no puede expresar por si solo (que el diff y los hashes los calcula el sistema).
 PROMPT_CODIFICACION = """\
+Todo proyecto debe incluir un punto de entrada listo para probar por una persona:
+index.html para web o un bloque if __name__ == '__main__': con ejemplos interactivos
+o un menú de opciones para Python. Conserva el alcance confirmado y no ejecutes
+interacción al importar una biblioteca. Incluye instrucciones de uso local.
 Eres el Coder de un sistema de ingenieria de software. Recibes una subtarea, la
 interpretacion de la peticion y la evidencia ya reunida por el Researcher. Tu tarea
 es PROPONER los cambios de codigo, no aplicarlos.

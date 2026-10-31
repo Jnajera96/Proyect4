@@ -99,9 +99,40 @@ if __name__ == '__main__':
     assert (tmp_path / "application/result.txt").read_text() == "started"
 
 
-def test_library_is_not_falsely_presented_as_executable(tmp_path):
-    guide = describe(promoted(tmp_path, "calculator.py", "def add(a,b):\n    return a+b\n"))
-    assert not guide.available and guide.kind == "python_library"
+def test_library_has_interactive_launcher(tmp_path):
+    guide = prepare(promoted(tmp_path, "calculator.py", "def add(a,b):\n    return a+b\n"))
+    assert guide.available and guide.kind == "python_library" and guide.prepared
+    assert '-i -c' in guide.command and 'from calculator import *' in guide.command
+    content = (tmp_path / "application/iniciar.bat").read_bytes()
+    assert content.decode("utf-8").endswith("pause\r\n")
+    assert not content.startswith(b'\xef\xbb\xbf')
+
+
+def test_other_promoted_files_have_honest_folder_fallback(tmp_path):
+    guide = prepare(promoted(tmp_path, "README.md", "Datos del proyecto"))
+    assert guide.available and guide.kind == "unknown" and guide.prepared
+    assert 'start' in guide.command and 'No se detectó' in guide.instructions[-1]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows interactive launcher")
+@pytest.mark.parametrize("filename", ["calculator.py", "math-tools.py", "class.py"])
+def test_interactive_library_launch_exposes_functions(tmp_path, filename):
+    guide = prepare(promoted(tmp_path, filename, "def add(a,b):\n    return a+b\n"))
+    result = subprocess.run(
+        [os.environ["COMSPEC"], "/d", "/c", guide.launcher_path],
+        input=b"print(add(2,3))\nexit()\n", capture_output=True, timeout=15,
+        cwd=guide.repo_path,
+        env={k: v for k, v in os.environ.items()
+             if k.upper() in {"SYSTEMROOT", "WINDIR", "PATH", "TEMP", "TMP"}},
+    )
+    assert result.returncode == 0, result.stderr.decode(errors="replace")
+    assert b"5" in result.stdout
+
+
+@pytest.mark.parametrize('filename', ['index.html', 'app.py'])
+def test_every_launcher_keeps_window_open(tmp_path, filename):
+    prepare(promoted(tmp_path, filename, "print('Hola')"))
+    assert (tmp_path / "application/iniciar.bat").read_bytes().endswith(b'pause\r\n')
 
 
 def test_existing_launcher_and_changed_code_are_preserved(tmp_path):

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import keyword
 import os
 import re
 import subprocess
@@ -88,23 +89,29 @@ def describe(state: RunState) -> LaunchGuide:
             kind, entry = detected, candidate
             if kind != "python_library":
                 break
-    if not entry or kind in {"unknown", "python_library"}:
+    if not paths:
         return LaunchGuide(
-            kind=kind,
             repo_path=str(root),
-            summary_es="Se guardó una biblioteca de código, sin pantalla ni programa de inicio.",
-            instructions=[
-                "Puedes usar sus funciones desde otro programa.",
-                "Pide una pantalla o un programa principal para abrirlo con doble clic.",
-            ],
         )
-    if not re.fullmatch(r"[A-Za-z0-9_./-]+", entry) or ".." in Path(entry).parts:
+    if entry and (not re.fullmatch(r"[A-Za-z0-9_./-]+", entry) or ".." in Path(entry).parts):
         raise ValueError("El nombre del archivo de inicio necesita revisión.")
     runtime = str(Path(sys.executable).resolve())
     if any(char in runtime + str(root) for char in '%!&|<>^"\r\n'):
         raise ValueError("La ruta contiene caracteres incompatibles con el iniciador de Windows.")
     if kind == "web_static":
         command = f'start "" "%~dp0{entry.replace("/", chr(92))}"'
+    elif kind == "python_library":
+        module = entry[:-3].replace("/", ".")
+        importable = all(p.isidentifier() and not keyword.iskeyword(p) for p in module.split("."))
+        load = (
+            f"from {module} import *" if importable
+            else f"import runpy;globals().update(runpy.run_path('{entry}'))"
+        )
+        code = (
+            "import sys;sys.path.insert(0,'.');" + load + ";"
+            "print('Módulo cargado con éxito. Prueba tus funciones aquí:')"
+        )
+        command = f'"{runtime}" -i -c "{code}"'
     elif kind == "fastapi":
         module = entry[:-3].replace("/", ".")
         if not all(part.isidentifier() for part in module.split(".")):
@@ -114,12 +121,14 @@ def describe(state: RunState) -> LaunchGuide:
             f"uvicorn.run('{module}:{app_name}',host='127.0.0.1',port=8765)"
         )
         command = f'"{runtime}" -c "{code}"'
-    else:
+    elif kind == "python_cli":
         code = (
             "import sys,runpy;sys.path.insert(0,'.');"
             "runpy.run_path(sys.argv[1],run_name='__main__')"
         )
         command = f'"{runtime}" -c "{code}" "{entry}"'
+    else:
+        command = 'start "" "%~dp0"'
     launcher = root / "iniciar.bat"
     guide = LaunchGuide(
         available=True,
@@ -140,6 +149,17 @@ def describe(state: RunState) -> LaunchGuide:
         guide.instructions.append(
             "Abre http://127.0.0.1:8765 después de iniciar. Cierra la ventana para detenerla."
         )
+    elif kind == "python_library":
+        guide.instructions.append(
+            "Se abrirá una consola interactiva. Escribe tus funciones y pulsa Entrar; "
+            "usa exit() para salir."
+        )
+    elif kind == "unknown":
+        guide.summary_es = "Tus archivos están guardados; abre la carpeta para revisarlos."
+        guide.instructions.append(
+            "No se detectó un programa HTML o Python ejecutable. "
+            "Pide un punto de entrada para probar este formato."
+        )
     guide.prepared = (
         launcher.is_file()
         and not launcher.is_symlink()
@@ -155,7 +175,7 @@ def launcher_bytes(guide: LaunchGuide) -> bytes:
         'cd /d "%~dp0"\r\n'
         + guide.command
         + "\r\n"
-        + ("pause\r\n" if guide.kind == "python_cli" else "")
+        + "pause\r\n"
     ).encode("utf-8")
 
 

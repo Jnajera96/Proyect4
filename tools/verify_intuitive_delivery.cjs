@@ -66,7 +66,12 @@ let server,browser,projects=[],runs=[],prepared=0,launched=0,publications=[],cre
     assert.equal(runBody.options.delivery_mode,'github');assert.equal(prepared,1);check('destination is persisted and launcher is prepared only through POST');
     await page.getByRole('button',{name:'Abrir en el navegador',exact:true}).click();
     await page.getByText('Se solicitó abrir tu navegador.',{exact:true}).waitFor();assert.equal(launched,1);check('explicit launch sends action and displays acknowledgement');
-    await page.getByRole('button',{name:'🚀 Publicar en GitHub',exact:true}).click();
+    await page.getByRole('button',{name:'Flujo',exact:true}).click();
+    await page.getByRole('button',{name:'✏️ Modificar o pedir cambios',exact:true}).click();
+    await page.waitForFunction(()=>document.activeElement?.id==='instruccion');
+    assert.equal(await page.getByLabel('Proyecto',{exact:true}).inputValue(),project.project_id);
+    assert.equal(runs.length,1);check('request changes returns to focused composer with the generated project without executing');
+    await page.getByRole('button',{name:'🚀 Subir a GitHub',exact:true}).click();
     const modal=page.getByRole('dialog');
     assert.equal(await modal.getByLabel('Repositorio privado',{exact:true}).isChecked(),true);
     assert.equal(await modal.getByRole('button',{name:'🚀 Publicar en GitHub ahora',exact:true}).isDisabled(),true);check('publication defaults private and requires explicit confirmation');

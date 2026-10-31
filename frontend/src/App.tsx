@@ -580,6 +580,15 @@ export function App({ profile }: { profile?: {
       <div className="vista" ref={contenido} tabIndex={-1} aria-label={`Vista: ${vista}`}>
         {estado?.status === "completed" && estado.promotion_receipt?.status === "promoted" ?
           <GuiaEjecucion key={estado.run_id} estado={estado} puedeOperar={puedeOperar}
+            alPedirCambios={() => {
+              const project = proyectos.find(p => p.repo_path === estado.options.repo_path);
+              if (!project) return;
+              setProjectId(project.project_id); setVista("general"); setMenuAbierto(false);
+              window.requestAnimationFrame(() => {
+                const input = document.getElementById("instruccion");
+                input?.focus(); input?.scrollIntoView({ behavior: "smooth", block: "center" });
+              });
+            }}
             projectId={proyectos.find(p => p.repo_path === estado.options.repo_path)?.project_id} /> : null}
         {!puedeOperar && errorAccion ? <p className="banner aviso" role="alert">{errorAccion}</p> : null}
         {runId && !estado ? <p role="status" className="carga-run">Cargando la ejecución seleccionada…</p> : null}

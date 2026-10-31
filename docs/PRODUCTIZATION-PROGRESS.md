@@ -1,5 +1,15 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Prueba local y decisión posterior — 30 de octubre de 2026
+
+Lanzador interactivo para bibliotecas Python, pausa y UTF-8 en todos los BAT
+nuevos, y acceso honesto a carpeta para formatos sin entrada reconocida. Coder
+recibe la regla de punto de entrada. Ficha con probar, pedir cambios (proyecto
+y foco preservados, sin ejecutar) y publicación guiada. 49 pruebas backend
+focalizadas, 32 frontend y 12 controles de navegador PASS; build y Ruff aprobados.
+Sin inferencias/publicaciones reales ni modificación de rc4. Evidencia y límites:
+`UNIVERSAL-LOCAL-LAUNCH-VALIDATION.md`. Pendiente próximo portable.
+
 ## Continuidad y restauración rc4 — 30 de octubre de 2026
 
 Detectada y reproducida incompatibilidad Base64 de la subida de respaldos desde
