@@ -10,13 +10,13 @@ El estado ponderado actual (81/100) y la adopción real de patrones están en
 `PROJECT-STATUS-2026-10-30.md`. La generalización del Analyst se verifica en
 `UNIVERSAL-REQUIREMENTS-VALIDATION.md`; mantiene las mismas puertas humanas.
 La preparación integral, recuperación SSE y cancelación cooperativa adaptadas de
-Nova se incorporan en fuente: `NOVA-OPERATIONAL-VALIDATION.md`. Se incluyen en el
-pendiente de empaquetado y piloto en otra PC, sin declarar producción aprobada.
+Nova se incorporan en fuente: `NOVA-OPERATIONAL-VALIDATION.md`. Se incluyen en rc9; sigue pendiente el
+piloto integral en otra PC, sin declarar producción aprobada.
 
 | Orden | Trabajo y estado | Criterio para avanzar |
 | --- | --- | --- |
 | 1 | **Completado y validado en fuente:** Analyst como Product Manager, síntesis por familias/núcleo nominal para productos nuevos, revisión editable y chips de inicio rápido. | Confirmación humana obligatoria, confianza de intención clara >=0,85 y exclusiones preservadas; backend962 PASS/4 SKIP, frontend32 PASS y build aprobado. Actas: `PRODUCT-REQUIREMENTS-VALIDATION.md` y `UNIVERSAL-REQUIREMENTS-VALIDATION.md`. |
-| 2 | **RC8 corregido aprobado localmente.** | `windows-v0.2.0-operational-rc8-fixed`, dos smokes estándar de 14/14 y cuatro cierres código 0. Se conserva el candidato original retenido. Acta: `RC8-SHUTDOWN-FTS-CLOSURE.md`. |
+| 2 | **RC9 aprobado localmente; rc8 corregido conservado.** | Búsqueda por contenido y bloques de código incluidos. 14/14 controles del ZIP extraído y regresión completa aprobados. Acta vigente: `RC9-CONTEXT-HISTORY-CLOSURE.md`. |
 | 3 | **Uso en otra PC confirmado por el usuario; matriz detallada pendiente.** | Falta identificar versión/hash, Windows y recorrido: protecciones activas, reinicio, voz y promoción. No se infiere recuperación entre equipos. Cualquier inferencia pagada exige presupuesto explícito. |
 | 4 | **Pendiente:** cierre de continuidad K/L/M y recuperación. | Exportación/importación cifrada, contraseña/clave de rescate, separación entre usuarios y reconstrucción del trabajo pausado en otro equipo sin pérdida de datos. |
 | 5 | **Selección por contenido e historial FTS5 medidos offline; calidad/publicación/tokens reales pendientes.** | Consultas sin rutas: 50% de cobertura en frío y 100% con asociaciones sintéticas. Historial probado en Python/JS/TS/SQL: añade ~10% de bytes; no demuestra ahorro facturado ni calidad del modelo. Actas: `CONTEXT-MEMORY-MEASUREMENT.md` y `FTS-HISTORY-MEASUREMENT.md`. Faltan repositorios reales, tokenizer correcto y publicación voluntaria real. |

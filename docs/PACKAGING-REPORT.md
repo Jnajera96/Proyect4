@@ -220,3 +220,13 @@ características, compiladores, servicios ni se pidió reinicio/UAC.
 I deberá validar extracción/copia, permisos, Git, persistencia, promoción y reinicio
 en un Windows limpio, y después construir/verificar el instalador con accesos
 directos. H no crea instalador, tag final ni publicación remota.
+
+
+## Cierre de rc9 — contexto e historial
+
+Portable nuevo `dist/windows-v0.2.0-operational-rc9/AISWESystem-windows-x64.zip`.
+SHA-256: `56f1fd866d079eb5d29714c6cea739aa5ceaf3e3f7c8e9f64f65946391d25c99`.
+994 backend PASS/4 SKIP, 34 frontend PASS/build, 30 focalizadas, 11 desde
+el ZIP y 14/14 smoke estándar aprobados. Se conserva rc8. Fuente `8b1ff87`;
+acta vigente `RC9-CONTEXT-HISTORY-CLOSURE.md`. Sin llamadas pagadas ni publicación.
+Aprobación para el host validado; piloto entre equipos y producción pendientes.

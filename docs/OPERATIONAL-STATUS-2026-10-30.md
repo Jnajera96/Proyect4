@@ -1,6 +1,22 @@
 # Cierre del portable operativo — 30 de octubre de 2026
 
-## RC8 corregido — aprobado
+## RC9 — candidato local aprobado
+
+Entrega canónica: `dist/windows-v0.2.0-operational-rc9/AISWESystem-windows-x64.zip`.
+SHA-256: `56f1fd866d079eb5d29714c6cea739aa5ceaf3e3f7c8e9f64f65946391d25c99`.
+Tamaño: 118798364 bytes; manifiesto de 4726 archivos y CRC verificados.
+Fuente `8b1ff87`, con búsqueda por contenido y bloques de código del cierre `3100e3c`.
+
+**994 backend PASS / 4 SKIP**, **34 frontend PASS**, build TypeScript/Vite
+aprobado, **30 focalizadas PASS**, **11 pruebas con módulos del ZIP PASS** y
+**14/14 smoke estándar PASS**. Ambos cierres terminaron con código 0; perfiles,
+SQLite y checkpoint persisten tras reiniciar. CPython oficial firmado 3.13.14.
+
+Acta y límites: `RC9-CONTEXT-HISTORY-CLOSURE.md`. Sin inferencia pagada, publicación
+ni tag; no equivale a validación independiente entre equipos ni producción pública.
+Se conserva rc8 corregido como respaldo verificado.
+
+## RC8 corregido — aprobado anterior
 
 Entrega canónica local: `dist/windows-v0.2.0-operational-rc8-fixed/AISWESystem-windows-x64.zip`.
 SHA-256: `f27bf21c14cb8c47f8c75be52592e70deada90632713c4069cc369300183429b`.

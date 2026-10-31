@@ -1,20 +1,21 @@
-# Handoff para Antigravity — cierre de rc8 y pendientes
+# Handoff para Antigravity — cierre de rc9 y pendientes
 
 Fecha: 30 de octubre de 2026. Rama `feature/v0.2.0-madre-continuity`.
-Base del último trabajo: `8adcb0e`; el commit de cierre posterior de esta rama
-contiene estos cambios. Comprobar HEAD y árbol antes de modificar, sin retroceder
+Fuente del portable actual: `8b1ff87`; el commit documental posterior registra
+los resultados de verificación. Comprobar HEAD y árbol antes de modificar, sin retroceder
 a una base antigua ni descartar avances.
 
 ## Estado que conservar
 
 - Avance estimado: **81/100** hacia Windows local confiable y recuperable,
   ponderación 80,90 en `PROJECT-STATUS-2026-10-30.md`. No es aprobación de producción.
-- Entrega canónica: `dist/windows-v0.2.0-operational-rc8-fixed/AISWESystem-windows-x64.zip`.
-- SHA-256: `f27bf21c14cb8c47f8c75be52592e70deada90632713c4069cc369300183429b`.
-- **990 backend PASS / 4 SKIP**, **34 frontend PASS**, build aprobado,
-  **54 focalizadas PASS**, **18 launcher/historial con runtime empaquetado PASS**.
-- Dos smokes estándar de **14/14 PASS cada uno**, sin instrumentación ni plazos
-  abreviados; cuatro cierres código 0, SQLite/checkpoint persistentes, logs limpios.
+- Entrega canónica: `dist/windows-v0.2.0-operational-rc9/AISWESystem-windows-x64.zip`.
+- SHA-256: `56f1fd866d079eb5d29714c6cea739aa5ceaf3e3f7c8e9f64f65946391d25c99`.
+- **994 backend PASS / 4 SKIP**, **34 frontend PASS**, build aprobado,
+  **30 focalizadas PASS**, **11 de memoria con runtime empaquetado PASS**.
+- Smoke rc9 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
+  ambos cierres código 0, SQLite/checkpoint persistentes, logs limpios. Los dos
+  smokes anteriores de rc8 corregido siguen documentados en su acta.
 - No hubo llamadas pagadas ni publicación. Los candidatos anteriores se conservan;
   el rc8 original continúa como evidencia histórica de fallo, no como entrega.
 
@@ -93,3 +94,10 @@ entrada maliciosa sintética. 30 pruebas PASS. La nota llega al Coder y añade
 `FTS-HISTORY-MEASUREMENT.md`. Quedan tokenizer/revisión exactos y oráculos reales
 con presupuesto autorizado. Los pendientes 1, 4 y 5 aún requieren equipo/cuenta o
 validación externa; 6 y 7 admiten trabajo offline acotado.
+
+### Entrega rc9 verificada
+
+Fuente `8b1ff87`, 994 backend PASS/4 SKIP, 34 frontend PASS y build,
+30 focalizadas, 11 con módulos del ZIP y 14/14 smoke estándar aprobados.
+Ambos candidatos se conservan.
+Acta vigente: `RC9-CONTEXT-HISTORY-CLOSURE.md`. Avance global estimado: 81/100.

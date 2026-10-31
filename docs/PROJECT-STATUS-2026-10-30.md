@@ -1,8 +1,8 @@
 # Estado hacia la entrega funcional y adopción de patrones
 
 Fecha: 30 de octubre de 2026. Evaluación del código fuente de
-`feature/v0.2.0-madre-continuity`, conservando la distribución anterior.
-Última validación fuente: backend990 PASS/4 SKIP, frontend34 PASS y compilación
+`feature/v0.2.0-madre-continuity`, actualizada con rc9 y conservando las distribuciones anteriores.
+Última validación fuente: backend994 PASS/4 SKIP, frontend34 PASS y compilación
 TypeScript/Vite aprobada; sin nuevas inferencias pagadas.
 
 ## Avance estimado
@@ -23,9 +23,9 @@ el piloto integral entre equipos y operación de producción; voz en destino no 
 | --- | ---: | ---: | --- |
 | Perfiles y bóveda | 15 % | 95 | Recuperación/actualización en otro equipo. |
 | Agentes y promoción | 30 % | 88 | Otros productos con modelos reales y revisión independiente de calidad. |
-| UI, actividad y proyectos | 10 % | 95 | UX y puertas accionables incluidas en rc8 corregido; validar recorrido en destino. |
+| UI, actividad y proyectos | 10 % | 95 | UX y puertas accionables incluidas en rc9; validar recorrido en destino. |
 | Voz | 5 % | 90 | Micrófono/audio en el equipo de destino. |
-| Memoria, modos y rollback | 10 % | 90 | Calidad del historial, consultas sin anclas y tokens reales; no hay ahorro facturado certificado. |
+| Memoria, modos y rollback | 10 % | 90 | Calidad con modelos reales y tokens facturados. Consultas sin rutas e historial multilenguaje ya medidos offline. |
 | Continuidad y respaldo | 15 % | 55 | Recuperación por UI entre dos equipos, auto-backup, conflictos y pérdida de equipo. |
 | Distribución y operación segura | 15 % | 60 | Matriz independiente Windows/SAC, actualización/migración e aislamiento fuerte. |
 
@@ -73,8 +73,9 @@ respaldos constan en `CONTINUITY-FOLLOWUP-2026-10-30.md`.
 La co-ocurrencia de archivos (`state/memory_graph.py`), selección de contexto y
 `max_cost_per_hour` se inspiran en Neuromapa. No se atribuyen a MADRE ni a Nova.
 No se ha demostrado ahorro de 50–70 % de tokens facturados.
-La medición `CONTEXT-MEMORY-MEASUREMENT.md` obtiene ~16 % menos bytes de mensajes
-en tres fixtures con anclas y 0 % sin ellas, sin tokenizer ni cargos reales.
+La medición `CONTEXT-MEMORY-MEASUREMENT.md` obtiene ~15 % menos bytes de mensajes
+en fixtures con contenido recuperable. FTS5 añade ~10 % de bytes en cuatro casos
+multilenguaje; no hay tokenizer ni cargos reales medidos.
 
 ## Ruta restante
 
@@ -88,3 +89,7 @@ Plan maestro y cola de pendientes: `ROADMAP.md`. Actas fuente:
 `INTUITIVE-UX-NEUROMAPA-VALIDATION.md`, `PRODUCT-REQUIREMENTS-VALIDATION.md` y
 `UNIVERSAL-REQUIREMENTS-VALIDATION.md`. Los resultados offline no actualizan por sí
 solos el ZIP ni el servidor que el usuario tenga abierto.
+
+Actualización rc9: portable nuevo aprobado localmente, con 14/14 controles y 11
+pruebas de memoria desde el ZIP. Acta `RC9-CONTEXT-HISTORY-CLOSURE.md`.
+Se mantiene 81/100: las nuevas pruebas no sustituyen los cierres externos pendientes.
