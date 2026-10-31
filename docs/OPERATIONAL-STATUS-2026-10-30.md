@@ -1,5 +1,23 @@
 # Cierre del portable operativo — 30 de octubre de 2026
 
+## Seguimiento rc6 — restauración de múltiples repositorios
+
+ZIP: `dist/windows-v0.2.0-operational-rc6/AISWESystem-windows-x64.zip`.
+SHA-256: `06d366b7fa7a1b6c98d8246f32c27ed7c9cafd2ee92eb221239c8e37267b701a`.
+Tamaño: 118.795.627 bytes; manifiesto de 4.726 archivos. Base `d9d691d` más
+lectura previa de respaldo, mapeo de destinos y liberación segura de identidades
+nuevas tras fallar una importación. Se conserva rc5.
+
+38 pruebas backend focalizadas, 32 frontend y 7 controles de navegador PASS;
+TypeScript/Vite y Ruff focalizado aprobados. CRC del ZIP y cotejo del backend con
+fuente aprobados. Acta: `MULTI-REPOSITORY-RESTORE-VALIDATION.md`.
+Las pruebas API de lectura/importación de uno y dos repositorios pasan también
+con CPython y módulos empaquetados: 2 PASS, `_tmp/profile-import-rc6.xml`.
+Smoke del ZIP rc6 extraído: **14 controles PASS**, salida 0, sin llamadas pagadas;
+arranque autónomo, perfiles y SQLite tras reinicio aprobados. Informe:
+`dist/windows-v0.2.0-operational-rc6/portable-profiles-report.json`.
+No se presenta una nueva suite backend completa ni validación entre equipos.
+
 ## Seguimiento rc5 — recuperar perfil sin registro previo
 
 ZIP: `dist/windows-v0.2.0-operational-rc5/AISWESystem-windows-x64.zip`.

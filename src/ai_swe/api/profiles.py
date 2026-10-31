@@ -38,6 +38,12 @@ class Credentials(BaseModel):
     password: SecretStr = Field(min_length=12, max_length=1024)
 
 
+class VaultInspectionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    archive_b64: str = Field(min_length=1, max_length=716_000_000)
+    password: SecretStr = Field(min_length=8, max_length=1024)
+
+
 class RecoveryRequest(Credentials):
     recovery_code: SecretStr = Field(min_length=12, max_length=128)
 
@@ -405,6 +411,31 @@ def create_profile_app(settings: Settings) -> FastAPI:
             if profile.user_id in manager.contexts:
                 await manager.close_context(profile.user_id)
         return JSONResponse({"recovered": True}, headers={"Cache-Control": "no-store"})
+
+    @app.post("/auth/inspect-vault")
+    async def inspect_vault_profile(body: VaultInspectionRequest, request: Request):
+        import base64
+
+        from ai_swe.state.continuity import ContinuityError, ContinuityStore
+
+        manager.throttle(request.client.host if request.client else "local")
+        try:
+            raw = base64.b64decode(body.archive_b64, validate=True)
+            payload = await run_in_threadpool(
+                ContinuityStore._open_archive_bytes, raw, body.password.get_secret_value()
+            )
+            paths = [item["repo_path"] for item in payload["repositories"]]
+            if any(not isinstance(p, str) or not p.strip() for p in paths):
+                raise ValueError("Invalid repository paths")
+            if len(set(paths)) != len(paths):
+                raise ValueError("Duplicate repositories")
+        except (KeyError, TypeError, ValueError, VaultError, ContinuityError):
+            raise HTTPException(
+                400, "No se pudo leer el respaldo. Revisa archivo y contraseña."
+            ) from None
+        name = payload.get("profile_name")
+        return {"profile_name": name if isinstance(name, str) else "",
+                "repositories": paths}
 
     @app.post("/auth/import-vault")
     async def import_vault_profile(request: Request):

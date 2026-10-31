@@ -41,6 +41,21 @@ def test_profile_identity_and_paths(tmp_path, monkeypatch):
     assert settings.state_db_path == p.paths.database
 
 
+def test_failed_creation_rollback_releases_name_without_touching_other_profile(tmp_path):
+    store = ProfileStore(tmp_path / "users")
+    existing = store.create("existing", PASSWORD)
+    transient = store.create("temporary", PASSWORD)
+    other_store = ProfileStore(tmp_path / "other-users")
+    with pytest.raises(ValueError):
+        other_store.rollback_creation(transient)
+    assert transient.paths.vault.exists()
+    store.rollback_creation(transient)
+    replacement = store.create("temporary", PASSWORD)
+    assert replacement.user_id != transient.user_id
+    assert not transient.paths.root.exists()
+    assert store.unlock("existing", PASSWORD).user_id == existing.user_id
+
+
 def test_ledger_atomic_and_unknown_usage(tmp_path):
     ledger = BudgetLedger(tmp_path / "state.sqlite3")
     ledger.set_limit(1)

@@ -7,6 +7,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import threading
 import unicodedata
 import uuid
@@ -200,6 +201,18 @@ class ProfileStore:
                 claim.unlink(missing_ok=True)
                 raise
             return UnlockedProfile(user_id, name, paths, key, envelope["header"], {})
+
+    def rollback_creation(self, profile: UnlockedProfile) -> None:
+        """Release only the new identity owned by an unsuccessful import."""
+        with self._lock:
+            paths = UserPaths.for_user(self.users, profile.user_id)
+            claim = self.names / hashlib.sha256(profile.name.encode()).hexdigest()
+            if paths.root != profile.paths.root or claim.is_symlink():
+                raise ValueError("No se puede revertir una identidad ajena")
+            if claim.read_text(encoding="utf-8") != profile.user_id:
+                raise ValueError("La reserva del nombre pertenece a otra identidad")
+            shutil.rmtree(paths.root)
+            claim.unlink()
 
     def unlock(self, name: str, password: str) -> UnlockedProfile:
         with self._lock:

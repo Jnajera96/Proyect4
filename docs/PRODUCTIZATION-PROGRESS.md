@@ -1,5 +1,14 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Restauración multirrepositorio — 30 de octubre de 2026
+
+Lectura previa del respaldo sin mutaciones y autorización de una ruta por proyecto.
+Mapeos incompletos/solapados se rechazan antes de reconstruir repositorios. Se
+corrige la reserva de nombre que quedaba tras una importación fallida, permitiendo
+reintentar sin afectar otras identidades. 7 controles de navegador y 32 pruebas
+frontend aprobados; build aprobado. Regresión API/continuidad y portable rc6 en
+`MULTI-REPOSITORY-RESTORE-VALIDATION.md` y acta operativa. Sin consumo de API.
+
 ## Restauración desde acceso — 30 de octubre de 2026
 
 Usuario confirma funcionamiento en otra PC, sin matriz detallada ni versión

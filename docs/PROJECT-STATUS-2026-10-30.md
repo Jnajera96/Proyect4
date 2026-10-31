@@ -71,7 +71,7 @@ No se ha demostrado ahorro de 50–70 % de tokens facturados.
 
 1. Paquete rc3 construido y verificado; rc4 incorpora el arreglo de carga de respaldos.
 2. Completar la matriz de otra PC tras la confirmación de funcionamiento del usuario: versión, reinicio, voz y promoción.
-3. Cerrar recuperación y respaldo de principio a fin entre equipos; acceso de restauración implementado, múltiples rutas pendientes.
+3. Cerrar recuperación y respaldo de principio a fin entre equipos; acceso de restauración y múltiples rutas implementados, falta piloto integral por UI.
 4. Evaluar más productos/modelos y publicación voluntaria con presupuesto explícito.
 5. Resolver aislamiento de procesos/red y controles operativos antes de producción pública.
 

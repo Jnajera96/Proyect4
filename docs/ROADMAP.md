@@ -45,7 +45,9 @@ Acta de esta mejora: `UNIVERSAL-LOCAL-LAUNCH-VALIDATION.md`.
 - [x] Verificar carga binaria en navegador: 4 controles offline aprobados.
 - [ ] Validar de extremo a extremo la recuperación desde la UI en una PC independiente.
 - [x] Exponer restauración de perfil desde la pantalla de acceso y validar API/ UI offline.
-- [ ] Añadir asignación guiada de múltiples repositorios al restaurar un perfil.
+- [x] Añadir lectura previa y asignación guiada de múltiples repositorios al restaurar un perfil.
+
+Acta: `MULTI-REPOSITORY-RESTORE-VALIDATION.md`. La lectura no crea perfiles ni repositorios.
 
 Evidencia y límites: `CONTINUITY-FOLLOWUP-2026-10-30.md`.
 Recuperación desde acceso y reporte de otra PC: `PROFILE-IMPORT-UI-VALIDATION.md`.

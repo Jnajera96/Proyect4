@@ -1024,7 +1024,7 @@ class ContinuityStore:
                 except OSError:
                     pass
 
-            resolved_repo_map: dict[str, str] = {}
+            authorized_targets: dict[str, Path] = {}
             for bundle_info in payload["repositories"]:
                 old_repo = bundle_info["repo_path"]
                 target_repo = normalized_mapping.get(old_repo)
@@ -1034,6 +1034,24 @@ class ContinuityStore:
                     raise ContinuityError(
                         f"Debes autorizar una ruta local para el repositorio '{old_repo}'"
                     )
+                if not target_repo.is_absolute():
+                    raise ContinuityError("Autoriza una ruta absoluta para cada repositorio")
+                if any(_is_link(p) for p in [target_repo, *target_repo.parents]):
+                    raise ContinuityError("No se permiten enlaces en las carpetas autorizadas")
+                resolved = target_repo.resolve()
+                for previous in [wt_root_resolved, *authorized_targets.values()]:
+                    if (resolved == previous or resolved in previous.parents
+                            or previous in resolved.parents):
+                        raise ContinuityError(
+                            "Los repositorios y worktrees deben usar carpetas separadas "
+                            "sin solaparse"
+                        )
+                authorized_targets[old_repo] = resolved
+
+            resolved_repo_map: dict[str, str] = {}
+            for bundle_info in payload["repositories"]:
+                old_repo = bundle_info["repo_path"]
+                target_repo = authorized_targets[old_repo]
                 prepared_repo = self._prepare_repository(bundle_info, target_repo)
                 if prepared_repo == wt_root_resolved or prepared_repo in wt_root_resolved.parents or wt_root_resolved in prepared_repo.parents:
                     raise ContinuityError("El repositorio autorizado y los worktrees deben estar en directorios separados")
@@ -1322,6 +1340,6 @@ def import_vault_to_profile(
             worktrees_root=profile.paths.worktrees,
         )
     except Exception:
-        shutil.rmtree(profile.paths.root, ignore_errors=True)
+        profile_store.rollback_creation(profile)
         raise
     return profile
