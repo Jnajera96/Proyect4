@@ -168,3 +168,13 @@ código crítico de las tres tareas. Es un fixture nuevo, no una conversión de
 las mediciones históricas de bytes a tokens. 1.030 backend PASS/4 SKIP y 34 frontend
 PASS/build. Acta y JSON: `MEMORY-TOKEN-SAVINGS-EVIDENCE.md`. Cero llamadas pagadas.
 La meta 40–70% global y la facturación de modelos reales continúan sin acreditarse.
+
+## Compactación posterior a la evaluación de modelos
+
+Base 7e0aa4e: deduplicación exacta antes del límite de 20 hallazgos y eliminación
+sólo del extracto de código ya presente. Se conserva la auditoría completa y no
+se fusionan advertencias distintas. Redacción antes del recorte. Cero inferencias.
+Medición pareada: 3,340487% / 3,237870% de ahorro adicional sobre el contexto con
+memoria; con repeticiones, 15,078408% / 15,571988% y advertencia antes perdida
+ahora conservada. La meta global 40–70% sigue pendiente.
+Acta: `CODER-CONTEXT-COMPACTION.md`. Los pilotos entre PC y GitHub siguen pausados.

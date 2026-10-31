@@ -31,10 +31,10 @@ validación pendiente con funcionalidad ausente.
 | Orden | Tipo y trabajo | Referencias | Criterio de cierre |
 | --- | --- | --- | --- |
 | 1 | **En pausa por el usuario:** recuperación integral por UI entre dos PC | `state/continuity.py`, `api/profiles.py`, `RestaurarPerfil.tsx`, `VistaSesion.tsx`; `PORTABLE-SECOND-PC-PILOT.md` | Exportar perfil de prueba pausado antes de aprobación, importar/reasignar varios repositorios en otra PC y reanudar sin repetir Coder/Reviewer, perder gasto/historial/archivos ni aprobar automáticamente. Probar contraseña errónea, destino ocupado, reinicio, auto-backup y clave de rescate. Registrar versión/hash y Windows/SAC. |
-| 2 | Mejorar recuperación de contexto sin coincidencias y suficiencia del código enviado | `state/memory_graph.py`, `state/memory.py`, `graph/nodes.py`; `CONTEXT-MEMORY-MEASUREMENT.md`, `tools/benchmark_context_memory.py` | El fixture ambiguo tiene cobertura 0 %. Hoy Coder recibe extractos del Researcher, no necesariamente el cuerpo de funciones necesario. Reproducir con proyectos nuevos y existentes; mejorar selección/contenido acotado sin diccionario cerrado de tres productos, sin pérdida silenciosa de archivos ni quitar límites/políticas. Medir cobertura y calidad antes de reclamar optimización. |
-| 3 | Evaluar utilidad del historial FTS5 y ahorro real de contexto | `_historial_para_coder`, `tests/test_coder_historical_context.py`, benchmark | Casos nuevos/multilenguaje con y sin historial, sin contaminación entre usuario/repositorio ni instrucciones maliciosas. Tokenizer verificado del modelo correcto y mensajes completos; bytes/archivos no son tokens facturados. La medición actual ronda 16 % en fixtures con anclas y 0 % sin ellas; no demuestra 50–70 % de ahorro. |
+| 2 | Validar suficiencia en repositorios diversos y optimizar contexto | `state/memory_graph.py`, `graph/nodes.py`; `CONTEXT-MEMORY-MEASUREMENT.md`, `CODER-CONTEXT-COMPACTION.md` | Búsqueda por contenido y bloques de código ya implementados. Validar calidad en repositorios reales sin perder archivos ni reglas. La compactación conserva hallazgos distintos y auditoría; no cierra el objetivo global 40–70%. |
+| 3 | Evaluar utilidad del historial y tokenizer del proveedor | `state/memory.py`, `tests/test_coder_historical_context.py`, benchmarks | FTS5 acotado y aislado ya medido offline. Referencias exactas cl100k/o200k: ahorro global actual ~28–30%; falta tokenizer del modelo servido, efecto en calidad y facturación real. No confundir bytes, reservas o sondas con ahorro facturado. |
 | 4 | **En pausa por el usuario:** publicación real GitHub | `github_publish.py`, `api/delivery.py`, `PublicarGitHubModal.tsx` | Cuenta y repo de prueba elegidos explícitamente por el usuario; permisos/PAT, commit/push, privacidad, errores y limpieza del secreto. El asistente ya existe y está probado con mocks. No publicar sin autorización concreta. |
-| 5 | Validar más productos con modelos reales | `graph/nodes.py`, `models/`, worktrees y guías | Proyectos fuera de calculadora, oráculos funcionales independientes, Reviewer sin aceptación forzada, tests reales y promoción aprobada. FakeModelAdapter acredita flujo/contrato, no calidad de generación. Requiere presupuesto explícito disponible en ledger. |
+| 5 | Validar productos completos con modelos reales | `graph/nodes.py`, `models/`, worktrees y guías | Las diez rutas aprobaron 36 sondas JSON/Pydantic pequeñas; sólo Qwen2.5 Coder 32B conserva E2E histórico. Probar otros productos con oráculos funcionales, Reviewer independiente y promoción humana. Reconciliar reservas y autorizar gasto antes de más inferencias. |
 | 6 | **Cerrado localmente:** actualización/migración y recuperación operativa | `tools/build_windows.py`, `packaging/`, `state/`, `config.py` | Actualizar entre versiones preservando bóvedas/SQLite/ledger; respaldo previo, migraciones probadas, fallo recuperable y retorno de versión sin borrar datos. Matriz Windows/SAC independiente y guía para usuario no técnico. |
 | 7 | Implementar aislamiento fuerte antes de producción pública | `tools/runner.py`, `sandbox.py`, políticas y despliegue | Worktree no es aislamiento de procesos/red. Diseñar Runner aislado con límites de recursos/red/archivos y validar ataques; después TLS, secretos, límites operativos, auditoría, backup/restauración y política de datos. No convertir el prototipo local en servicio público sin este cierre. |
 
@@ -166,3 +166,18 @@ cierran esos trabajos. Rc11 se conserva; este cambio no genera otro portable.
 
 Verificación de este cierre: 1.059 backend PASS/4 SKIP, 31 focalizadas offline
 PASS y 39 frontend PASS/build. Los pilotos pausados permanecen sin ejecutar.
+
+
+### Compactación de contexto posterior a 7e0aa4e
+
+Deduplicación antes de elegir los 20 hallazgos del Coder; no se borra auditoría ni
+se fusiona evidencia distinta. No se repite un extracto ya incluido como código.
+Redacción antes del recorte. Ahorro adicional medido 3,24–3,34%; con repeticiones
+15,08–15,57% y conservación de una advertencia antes desplazada. Cero nuevas
+inferencias. Acta: `CODER-CONTEXT-COMPACTION.md`. Los puntos 1 y 2 del listado
+que acordó el usuario (recuperación entre PC y GitHub) permanecen pausados.
+Ruff conserva 22 avisos preexistentes en nodes.py, cero nuevos; su limpieza queda
+pendiente sin introducir un refactor global. No se reconstruye rc11.
+
+Cierre de compactación: 1.062 backend PASS/4 SKIP, 39 frontend PASS y build;
+cero inferencias nuevas. Detalles y límites en `CODER-CONTEXT-COMPACTION.md`.

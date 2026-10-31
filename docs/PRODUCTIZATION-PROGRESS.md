@@ -686,3 +686,16 @@ cierran esos trabajos. Rc11 se conserva; este cambio no genera otro portable.
 
 Verificación de este cierre: 1.059 backend PASS/4 SKIP, 31 focalizadas offline
 PASS y 39 frontend PASS/build. Los pilotos pausados permanecen sin ejecutar.
+
+
+## Compactación de evidencia del Coder
+
+Corrección de desplazamiento de hallazgos distintos por repeticiones, eliminación
+del extracto ya incluido en bloques de código y redacción antes del recorte.
+Auditoría completa intacta; prompt de sistema sin cambios. Reducción adicional
+3,24–3,34% en los fixtures, hasta 15,57% en el caso de repeticiones. Meta global
+40–70% pendiente. Acta: `CODER-CONTEXT-COMPACTION.md`. Cero nuevas llamadas
+pagadas; pilotos entre PC/GitHub pausados y rc11 sin reconstruir.
+
+Cierre de compactación: 1.062 backend PASS/4 SKIP, 39 frontend PASS y build;
+cero inferencias nuevas. Detalles y límites en `CODER-CONTEXT-COMPACTION.md`.

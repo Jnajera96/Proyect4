@@ -1,0 +1,199 @@
+{
+  "baseline_commit": "7e0aa4ed5f7f2771ea12c986faa1b4793b9a69b3",
+  "date": "2026-10-31",
+  "paid_calls": 0,
+  "scope": "Sum of ordinary text tokens per message; excludes chat framing, schema and provider billing",
+  "fixture_sha256": {
+    "api/app.py": "22743f6fdcdce0c5da7ee38c51dc48e00f7ed91f7481fb07d230f24961a9e960",
+    "api/inventory.py": "83fa4ce4a33d35a3f887340afb11d0d09dd8b89e6dcd3420c7d736bbfd32707d",
+    "api/responses.py": "67b3b2a4ade81f181bc76a3b1fa27b67edd8bdba92499a0d414af80acd7d6598",
+    "api/tasks.py": "c7477626866988e236a6f59f0ddb0f7d58c0bdc8ad2e115ea6a545a12bc7c730",
+    "frontend/client.ts": "8dc791fa001f1ef73e8de3b7b4b3a58d8d13874868dfd1169e6182a9cd3aebb8",
+    "frontend/history.ts": "a03d0cf5b17c86c2c525e885c7d1a3a22afa5265730a53937f4476fcf7e41e51",
+    "frontend/view.ts": "948ab7e592cd0037c3855f6134d9c0b4950dec3fbd714e64e4083cd763262d85",
+    "models/catalog.py": "5dd4bcef18a59fd8a18ffdfe4634cb34d510df7cb79256e6c6ee8a9181e7697b",
+    "models/events.py": "858fddec58d4db04c6363c054bc6927e770559240a4bbe83432c6176cc7adb4b",
+    "models/ledger.py": "44a293c46ffa3a9675a199144f2d6df311145b5141a711f18df39cf56c1bce20",
+    "tests/test_ledger.py": "9eac868f59335cf864d8775059960d2427f71333256e8b1f7586b7fe1178d2e5",
+    "tests/test_responses.py": "20e164cccfdd5af5700d01a9d6a356eabcb27a5e780bec6390b94daea4fa5096",
+    "tests/test_routes.py": "ca70b2c74e26490b7747f9099f5a73e2797ee87b68f86c4c9a7783e74d78b303",
+    "utils/arithmetic.py": "ce17a49628f7ab9aa085359e75d7c5722c7c846cdb698763ac6d2ee3100a037f",
+    "utils/dates.py": "b538a07f0285179be702ed3fbb15cbc91b7eca27407bd19ad45fab79081bd84f"
+  },
+  "totals": {
+    "cl100k_base": {
+      "before_memory_tokens": 10717,
+      "after_memory_tokens": 10359,
+      "additional_reduction_percent": 3.3404870766072596,
+      "fraction": "358/10717",
+      "current_associative_vs_naive_percent": 28.127384999653092
+    },
+    "o200k_base": {
+      "before_memory_tokens": 10161,
+      "after_memory_tokens": 9832,
+      "additional_reduction_percent": 3.237870288357445,
+      "fraction": "329/10161",
+      "current_associative_vs_naive_percent": 29.916601325825077
+    }
+  },
+  "cases": [
+    {
+      "case": "explicito",
+      "before_counts": {
+        "cl100k_base": {
+          "tokens": 3605,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 978
+        },
+        "o200k_base": {
+          "tokens": 3420,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 977
+        }
+      },
+      "after_counts": {
+        "cl100k_base": {
+          "tokens": 3485,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 978
+        },
+        "o200k_base": {
+          "tokens": 3310,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 977
+        }
+      },
+      "selected_files": [
+        "api/app.py",
+        "tests/test_routes.py",
+        "api/responses.py",
+        "api/inventory.py",
+        "api/tasks.py",
+        "frontend/client.ts",
+        "frontend/history.ts",
+        "frontend/view.ts"
+      ],
+      "missing_required": [],
+      "missing_code": []
+    },
+    {
+      "case": "contenido",
+      "before_counts": {
+        "cl100k_base": {
+          "tokens": 3497,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 926
+        },
+        "o200k_base": {
+          "tokens": 3315,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 932
+        }
+      },
+      "after_counts": {
+        "cl100k_base": {
+          "tokens": 3376,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 926
+        },
+        "o200k_base": {
+          "tokens": 3202,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 932
+        }
+      },
+      "selected_files": [
+        "models/ledger.py",
+        "tests/test_ledger.py",
+        "utils/arithmetic.py",
+        "frontend/view.ts",
+        "api/app.py",
+        "api/inventory.py",
+        "api/responses.py",
+        "api/tasks.py"
+      ],
+      "missing_required": [],
+      "missing_code": []
+    },
+    {
+      "case": "transversal",
+      "before_counts": {
+        "cl100k_base": {
+          "tokens": 3615,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 1049
+        },
+        "o200k_base": {
+          "tokens": 3426,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 1045
+        }
+      },
+      "after_counts": {
+        "cl100k_base": {
+          "tokens": 3498,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 1049
+        },
+        "o200k_base": {
+          "tokens": 3320,
+          "exact": true,
+          "method": "tiktoken-0.14.0",
+          "code_tokens": 1045
+        }
+      },
+      "selected_files": [
+        "api/responses.py",
+        "tests/test_responses.py",
+        "api/inventory.py",
+        "api/tasks.py",
+        "api/app.py",
+        "tests/test_routes.py",
+        "frontend/client.ts",
+        "frontend/history.ts"
+      ],
+      "missing_required": [],
+      "missing_code": []
+    }
+  ],
+  "repeated_findings_scenario": {
+    "before": {
+      "tokens": {
+        "cl100k_base": 2487,
+        "o200k_base": 2299
+      },
+      "critical_warning_preserved": false,
+      "repeated_occurrences": 20,
+      "system_sha256": "65a9ef8dd2dd999e25dc69cf084e26fe8cbd2f3e07c785654b56fe1c4e93ba18",
+      "audit_findings": 26,
+      "paid_calls": 0
+    },
+    "after": {
+      "tokens": {
+        "cl100k_base": 2112,
+        "o200k_base": 1941
+      },
+      "critical_warning_preserved": true,
+      "repeated_occurrences": 1,
+      "system_sha256": "65a9ef8dd2dd999e25dc69cf084e26fe8cbd2f3e07c785654b56fe1c4e93ba18",
+      "audit_findings": 26,
+      "paid_calls": 0
+    },
+    "reduction_percent": {
+      "cl100k_base": 15.078407720144753,
+      "o200k_base": 15.571987820791648
+    }
+  },
+  "full_prompt_goal_met": false
+}

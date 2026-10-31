@@ -157,3 +157,15 @@ cierran esos trabajos. Rc11 se conserva; este cambio no genera otro portable.
 
 Verificación de este cierre: 1.059 backend PASS/4 SKIP, 31 focalizadas offline
 PASS y 39 frontend PASS/build. Los pilotos pausados permanecen sin ejecutar.
+
+## Compactación de evidencia para Coder
+
+Implementada deduplicación sin borrar auditoría, conservación de hallazgos distintos
+y redacción antes del recorte. Ahorro incremental exacto de 3,24–3,34% en fixtures;
+no cierra la meta global 40–70% ni valida calidad con un proveedor remoto.
+Acta: `CODER-CONTEXT-COMPACTION.md`. No hay nuevas llamadas pagadas ni nuevo ZIP;
+los pilotos 1 y 2 permanecen pausados. Continúan optimización de selección,
+calidad E2E, tokenizer del proveedor y aislamiento fuerte de procesos/red.
+
+Cierre de compactación: 1.062 backend PASS/4 SKIP, 39 frontend PASS y build;
+cero inferencias nuevas. Detalles y límites en `CODER-CONTEXT-COMPACTION.md`.

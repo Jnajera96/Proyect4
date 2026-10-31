@@ -1404,7 +1404,17 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], C
 
     interpretacion = state.interpretation
     subtarea = _subtarea_actual(state)
-    hallazgos = state.evidence.findings[-20:] if state.evidence.findings else []
+    hallazgos = []
+    seen = set()
+    for finding in reversed(state.evidence.findings):
+        key = (finding.severity, finding.path, finding.explanation, finding.evidence)
+        if key in seen:
+            continue
+        seen.add(key)
+        hallazgos.append(finding)
+        if len(hallazgos) == 20:
+            break
+    hallazgos.reverse()
     from ai_swe.security import redact
 
     code_blocks = {}
@@ -1415,10 +1425,19 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], C
                 break
     current_code = "\n\n".join(reversed(list(code_blocks.values())))[:10000]
 
-    lineas_evidencia = "\n".join(
-        f"- [{f.severity.value}] {f.path}: {f.explanation} (evidencia: {f.evidence[:120]})"
-        for f in hallazgos
-    ) or "(sin hallazgos previos)"
+    evidence_lines = []
+    for finding in hallazgos:
+        excerpt = redact(finding.evidence)[:120]
+        # Do not repeat bytes already included in the code block; keep the finding itself.
+        if finding.evidence.startswith("--- inicio ") and code_blocks.get(
+            finding.path, ""
+        ).startswith(excerpt):
+            excerpt = "ver bloque de código"
+        evidence_lines.append(
+            f"- [{finding.severity.value}] {finding.path}: {finding.explanation} "
+            f"(evidencia: {excerpt})"
+        )
+    lineas_evidencia = "\n".join(evidence_lines) or "(sin hallazgos previos)"
     lineas_evidencia = redact(lineas_evidencia)[:6000]
 
     # F12: los comentarios que el humano dejo al **pedir cambios** en la puerta de
