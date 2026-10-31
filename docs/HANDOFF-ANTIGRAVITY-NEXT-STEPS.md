@@ -84,3 +84,12 @@ Esta actualización es de fuente, no una nueva compilación del portable rc8.
 Validación final del punto 2: 993 backend PASS, 4 SKIP, 34 frontend PASS y build
 aprobado. Regresión completa en `_tmp/content-context-project-confirmed.xml`;
 incidencias y límites documentados en el acta de medición.
+
+### Actualización del pendiente 3 — Evaluación offline
+
+Implementada medición FTS5 con/sin historial en cuatro lenguajes, aislamiento y
+entrada maliciosa sintética. 30 pruebas PASS. La nota llega al Coder y añade
+~10% de bytes; no afirmar ahorro ni calidad remota. Acta:
+`FTS-HISTORY-MEASUREMENT.md`. Quedan tokenizer/revisión exactos y oráculos reales
+con presupuesto autorizado. Los pendientes 1, 4 y 5 aún requieren equipo/cuenta o
+validación externa; 6 y 7 admiten trabajo offline acotado.

@@ -602,3 +602,14 @@ Cierre del punto 2: **993 backend PASS / 4 SKIP / 0 fallos**, 34 frontend PASS,
 TypeScript/Vite y Ruff focalizado aprobados. Informe final
 `_tmp/content-context-project-confirmed.xml`; CPython oficial firmado 3.13.14.
 No se han realizado llamadas pagadas ni actualizado el ZIP rc8.
+
+## Pendiente 3 — Medición offline del historial FTS5
+
+Benchmark ampliado a Python, JavaScript, TypeScript y SQL con ablación con/sin
+historial, lecciones concretas y captura de la solicitud real del Coder mediante
+FakeModelAdapter. Aislamiento por usuario/repositorio/ejecución, redacción,
+delimitadores y consulta sin coincidencias verificados. **30 pruebas PASS** y
+Ruff focalizado aprobado. Historial: 730–747 caracteres; añade 732–748 bytes
+(~9,8–10,0%) en los fixtures; no demuestra ahorro ni calidad del modelo.
+Acta: `FTS-HISTORY-MEASUREMENT.md`. Siguen pendientes tokenizer/revisión exactos y
+calidad con modelos reales. Sin cambios de runtime ni actualización del portable.
