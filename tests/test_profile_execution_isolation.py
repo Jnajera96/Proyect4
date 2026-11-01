@@ -90,14 +90,18 @@ def test_profile_graph_owns_real_worktree_and_test_targets(tmp_path, monkeypatch
     paths = []
     calls = []
 
-    def execute(sandbox, target, *, permitidos):
-        calls.append((sandbox.raiz, target, permitidos))
+    def execute(sandbox, target, *, permitidos, limits=None):
+        calls.append((sandbox.raiz, target, permitidos, limits))
         return TestRun(target=target, exit_code=0, duration_s=0)
 
     monkeypatch.setattr(nodes, "ejecutar_target", execute)
-    for profile, targets in zip(profiles, [["pytest"], ["ruff"]], strict=True):
+    for index, (profile, targets) in enumerate(zip(profiles, [["pytest"], ["ruff"]], strict=True)):
         profile.data["remote_model_roles"] = remote_roles
-        settings = profile.settings(base).model_copy(update={"allowed_test_targets": targets})
+        from ai_swe.tools.windows_job import JobLimits
+
+        settings = profile.settings(base).model_copy(update={
+            "allowed_test_targets": targets, "runner_limits": JobLimits(max_processes=index + 2),
+        })
         graph = construir_grafo(settings=settings)
         state = _state(repo, profile.user_id)
         applied = graph.nodes["apply_sandbox"].runnable.invoke(state)
@@ -109,7 +113,9 @@ def test_profile_graph_owns_real_worktree_and_test_targets(tmp_path, monkeypatch
         assert not (repo / "private.py").exists()
         tested = graph.nodes["run_tests"].runnable.invoke(state.model_copy(update=applied))
         assert [r.target for r in tested["evidence"].test_runs] == targets
-        assert calls[-1] == (path, targets[0], tuple(targets))
+        assert calls[-1] == (
+            path, targets[0], tuple(targets), settings.runner_limits if os.name == "nt" else None,
+        )
         assert model_routing.settings_for_node() is None
     assert paths[0] != paths[1]
     assert not base.workspace_root.exists()

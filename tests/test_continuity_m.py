@@ -230,7 +230,7 @@ def test_lost_device_e2e_recovery_at_review_gate_without_rerunning_coder_or_revi
     monkeypatch.setattr(
         nodes,
         "ejecutar_target",
-        lambda sandbox, target, permitidos=(): TestRun(
+        lambda sandbox, target, permitidos=(), limits=None: TestRun(
             target=target,
             command=["pytest", "-q"],
             exit_code=0,

@@ -7,15 +7,15 @@ a una base antigua ni descartar avances.
 
 ## Estado que conservar
 
-- Avance estimado: **84/100** hacia Windows local confiable y recuperable,
-  ponderación 83,90 en `PROJECT-STATUS-2026-10-30.md`. No es aprobación de producción.
-- Entrega canónica: `dist/windows-v0.2.0-rc14-process-tree-final/AISWESystem-windows-x64.zip`.
-- SHA-256: `28d53cfdff4ff915f44261cdee61207e5f182f38c7cc11516d11f6923ec75feb`.
-- Última regresión completa: **1.078 backend PASS / 4 SKIP**, **39 frontend PASS**, build aprobado,
+- Avance estimado: **85/100** hacia Windows local confiable y recuperable,
+  ponderación 84,65 en `PROJECT-STATUS-2026-10-30.md`. No es aprobación de producción.
+- Entrega canónica: `dist/windows-v0.2.0-rc15-resource-limits/AISWESystem-windows-x64.zip`.
+- SHA-256: `d16dfd57986f1fd8618da99033b52efb68b6c104915138465f6b8df1cc31bc30`.
+- Última regresión completa: **1.095 backend PASS / 4 SKIP**, **39 frontend PASS**, build aprobado,
   **28 pruebas de migración/actualización PASS**, actualización y retorno nativos verificados.
-- Verificación adicional del cierre ante muerte abrupta del supervisor: **7/7 en fuente y 7/7 en rc14**,
-  con control negativo; sólo pruebas/documentación. Ver `RUNNER-WINDOWS-PROCESS-TREE.md`.
-- Smoke rc14 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
+- Verificación del runner sobre el ZIP rc15: **33/33 PASS**, incluyendo cuotas y
+  caída abrupta del supervisor con control negativo. Ver `RUNNER-WINDOWS-RESOURCE-LIMITS.md`.
+- Smoke rc15 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
   ambos cierres código 0, SQLite/checkpoint persistentes, logs limpios. Los dos
   smokes anteriores de rc8 corregido siguen documentados en su acta.
 - Este cierre no añade inferencias ni publicación. Las 36 sondas reales previas
@@ -39,7 +39,7 @@ validación pendiente con funcionalidad ausente.
 | 4 | **En pausa por el usuario:** publicación real GitHub | `github_publish.py`, `api/delivery.py`, `PublicarGitHubModal.tsx` | Cuenta y repo de prueba elegidos explícitamente por el usuario; permisos/PAT, commit/push, privacidad, errores y limpieza del secreto. El asistente ya existe y está probado con mocks. No publicar sin autorización concreta. |
 | 5 | Validar productos completos con modelos reales | `graph/nodes.py`, `models/`, worktrees y guías | Las diez rutas aprobaron 36 sondas JSON/Pydantic pequeñas; sólo Qwen2.5 Coder 32B conserva E2E histórico. Probar otros productos con oráculos funcionales, Reviewer independiente y promoción humana. Reconciliar reservas y autorizar gasto antes de más inferencias. |
 | 6 | **Cerrado localmente:** actualización/migración y recuperación operativa | `tools/build_windows.py`, `packaging/`, `state/`, `config.py` | Actualizar entre versiones preservando bóvedas/SQLite/ledger; respaldo previo, migraciones probadas, fallo recuperable y retorno de versión sin borrar datos. Matriz Windows/SAC independiente y guía para usuario no técnico. |
-| 7 | Implementar aislamiento fuerte antes de producción pública | `tools/runner.py`, `sandbox.py`, políticas y despliegue | Worktree no es aislamiento de procesos/red. Diseñar Runner aislado con límites de recursos/red/archivos y validar ataques; después TLS, secretos, límites operativos, auditoría, backup/restauración y política de datos. No convertir el prototipo local en servicio público sin este cierre. |
+| 7 | Implementar aislamiento fuerte antes de producción pública | `tools/runner.py`, `sandbox.py`, políticas y despliegue | Cuotas nativas y cierre de procesos ya verificados en rc15. Falta aislar archivos/red y validar ataques con un entorno aislado real; después TLS, secretos, límites operativos, auditoría, backup/restauración y política de datos. No convertir el prototipo local en servicio público sin este cierre. |
 
 Los dos PC y las cuentas externas no se simulan como evidencia real. Se puede
 avanzar offline en 2, 3, pruebas de 6 y diseño/pruebas de 7 mientras el usuario
@@ -233,3 +233,20 @@ SHA-256: `28d53cfdff4ff915f44261cdee61207e5f182f38c7cc11516d11f6923ec75feb`.
 Acta: `RUNNER-WINDOWS-PROCESS-TREE.md`. Rc13 y anteriores se conservan. El avance
 global sigue en 84/100: faltan cuotas fuertes, aislamiento de archivos/red y matriz
 Windows independiente. Recuperación entre PC y piloto GitHub continúan en pausa.
+
+
+## Rc15 — cuotas nativas del ejecutor Windows
+
+Se aplican por objetivo 16 procesos, 1.024 MiB de memoria comprometida y 600 s de
+CPU de usuario acumulada, configurables con `AI_SWE_RUNNER_LIMITS`. La limpieza
+preserva el reloj de CPU y las cuotas de memoria; no hay fallback sin cuotas en
+Windows. No se modifica el `.env` privado ni se añaden dependencias.
+
+1.095 backend PASS / 4 SKIP, 39 frontend PASS y build aprobado, 33 pruebas desde
+el ZIP y 14/14 controles del smoke estándar. Cero llamadas pagadas.
+Entrega local: `dist/windows-v0.2.0-rc15-resource-limits/AISWESystem-windows-x64.zip`.
+SHA-256: `d16dfd57986f1fd8618da99033b52efb68b6c104915138465f6b8df1cc31bc30`.
+Acta: `RUNNER-WINDOWS-RESOURCE-LIMITS.md`. Rc14 y anteriores se conservan.
+Avance estimado: 85/100 (84,65 ponderado; operación segura 75→80). Siguen pendientes
+aislamiento de archivos/red, calidad/ahorro con modelos y matriz Windows independiente.
+Los pilotos de recuperación entre PC y publicación real GitHub continúan pausados.

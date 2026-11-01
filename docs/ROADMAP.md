@@ -223,3 +223,20 @@ Verificación posterior, sin cambios del ejecutable: muerte abrupta del supervis
 comprobada con TerminateProcess y control negativo. 7/7 pruebas nativas en fuente
 y 7/7 sobre rc14; acta `RUNNER-WINDOWS-PROCESS-TREE.md`. Quedan por implementar
 cuotas fuertes y aislamiento de archivos/red; esta evidencia no cierra esos puntos.
+
+
+## Rc15 — cuotas nativas del ejecutor Windows
+
+Se aplican por objetivo 16 procesos, 1.024 MiB de memoria comprometida y 600 s de
+CPU de usuario acumulada, configurables con `AI_SWE_RUNNER_LIMITS`. La limpieza
+preserva el reloj de CPU y las cuotas de memoria; no hay fallback sin cuotas en
+Windows. No se modifica el `.env` privado ni se añaden dependencias.
+
+1.095 backend PASS / 4 SKIP, 39 frontend PASS y build aprobado, 33 pruebas desde
+el ZIP y 14/14 controles del smoke estándar. Cero llamadas pagadas.
+Entrega local: `dist/windows-v0.2.0-rc15-resource-limits/AISWESystem-windows-x64.zip`.
+SHA-256: `d16dfd57986f1fd8618da99033b52efb68b6c104915138465f6b8df1cc31bc30`.
+Acta: `RUNNER-WINDOWS-RESOURCE-LIMITS.md`. Rc14 y anteriores se conservan.
+Avance estimado: 85/100 (84,65 ponderado; operación segura 75→80). Siguen pendientes
+aislamiento de archivos/red, calidad/ahorro con modelos y matriz Windows independiente.
+Los pilotos de recuperación entre PC y publicación real GitHub continúan pausados.

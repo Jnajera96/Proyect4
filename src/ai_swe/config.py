@@ -21,6 +21,7 @@ from pydantic import AliasChoices, Field, SecretStr, field_validator, model_vali
 from pydantic_settings import BaseSettings, DotEnvSettingsSource, SettingsConfigDict
 
 from ai_swe.runtime_paths import default_runtime_mode, prepare_user_directories, user_paths
+from ai_swe.tools.windows_job import JobLimits
 
 
 class Settings(BaseSettings):
@@ -156,6 +157,10 @@ class Settings(BaseSettings):
         default_factory=lambda: ["pytest.unit", "ruff.check"],
         description=("Objetivos ejecutables. pytest.unit descubre todas las pruebas locales; "
                      "pytest.integration es optativo y exige pruebas con marcador integration."),
+    )
+    runner_limits: JobLimits = Field(
+        default_factory=JobLimits,
+        description="Cuotas Windows por objetivo: procesos, memoria comprometida y CPU.",
     )
     allowed_packages: list[str] = Field(
         default_factory=list,

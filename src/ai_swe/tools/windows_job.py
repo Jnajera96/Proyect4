@@ -8,7 +8,19 @@ import sys
 import time
 from ctypes import wintypes as w
 
+from pydantic import BaseModel, ConfigDict, Field
+
 CREATE_SUSPENDED = 0x4
+
+
+class JobLimits(BaseModel):
+    model_config = ConfigDict(
+        frozen=True, extra="forbid", strict=True, revalidate_instances="always",
+    )
+
+    max_processes: int = Field(default=16, ge=1, le=128)
+    memory_mb: int = Field(default=1024, ge=64, le=8192)
+    cpu_seconds: int = Field(default=600, ge=1, le=3600)
 
 
 class JobError(RuntimeError):
@@ -50,7 +62,8 @@ class _ProcessList(c.Structure):
 
 
 class WindowsJob:
-    def __init__(self):
+    def __init__(self, limits: JobLimits | None = None):
+        policy = JobLimits() if limits is None else JobLimits.model_validate(limits)
         if os.name != "nt":
             raise JobError("El control de grupos Windows no está disponible")
         if getattr(os.lstat(sys._base_executable), "st_reparse_tag", 0) == 0x8000001B:
@@ -83,7 +96,11 @@ class WindowsJob:
         self._wait = bind("WaitForSingleObject", w.DWORD, w.HANDLE, w.DWORD)
         self.handle = self._check(self._create(None, None), "Crear grupo de procesos")
         limits = _ExtendedLimits()
-        limits.basic.flags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, no breakaway flags.
+        limits.basic.flags = 0x2000 | 0x200 | 0x8 | 0x4
+        limits.basic.max_processes = policy.max_processes
+        limits.job_memory = policy.memory_mb * 1024 * 1024
+        limits.basic.job_time = policy.cpu_seconds * 10_000_000
+        self._limits = limits
         try:
             self._check(self._set(self.handle, 9, c.byref(limits), c.sizeof(limits)),
                         "Configurar cierre del grupo")
@@ -149,8 +166,9 @@ class WindowsJob:
         handles = []
         try:
             # Stop new descendants before taking the job-owned PID snapshot.
-            limits = _ExtendedLimits()
-            limits.basic.flags = 0x2000 | 0x8
+            limits = _ExtendedLimits.from_buffer_copy(self._limits)
+            # Preserve elapsed job CPU time instead of restarting its quota during cleanup.
+            limits.basic.flags = (limits.basic.flags & ~0x4) | 0x40
             limits.basic.max_processes = 1
             self._check(self._set(self.handle, 9, c.byref(limits), c.sizeof(limits)),
                         "Impedir nuevos descendientes durante el cierre")

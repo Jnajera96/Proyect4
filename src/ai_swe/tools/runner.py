@@ -35,7 +35,7 @@ from pathlib import Path
 
 from ai_swe.contracts import TestRun
 from ai_swe.sandbox import Sandbox
-from ai_swe.tools.windows_job import CREATE_SUSPENDED, JobError, WindowsJob
+from ai_swe.tools.windows_job import CREATE_SUSPENDED, JobError, JobLimits, WindowsJob
 
 log = logging.getLogger(__name__)
 
@@ -188,13 +188,19 @@ def _recortar(texto: str) -> str:
     return "...[recortado]...\n" + texto[-(_MAX_SALIDA - 20) :]
 
 
-def _capturar(orden: list[str], sandbox: Sandbox, timeout: float) -> subprocess.CompletedProcess:
+def _capturar(
+    orden: list[str], sandbox: Sandbox, timeout: float, limits: JobLimits | None = None,
+) -> subprocess.CompletedProcess:
     """Drain both pipes fairly with a bounded byte tail and a deadline, without threads/files."""
     deadline = time.monotonic() + timeout
     try:
-        job = WindowsJob() if os.name == "nt" else None
+        if os.name != "nt" and limits is not None:
+            raise RunnerError("limites", "Las cuotas del Job Object requieren Windows")
+        job = WindowsJob(limits) if os.name == "nt" else None
     except JobError as exc:
         raise RunnerError("grupo", str(exc)) from exc
+    except ValueError as exc:
+        raise RunnerError("limites", "Configuracion de cuotas no valida") from exc
     try:
         process = subprocess.Popen(
             orden,
@@ -287,6 +293,11 @@ def _capturar(orden: list[str], sandbox: Sandbox, timeout: float) -> subprocess.
             + "\nQuedaron procesos descendientes; el grupo fue terminado y verificado."
         )
         return subprocess.CompletedProcess(orden, EXIT_ORPHANS, **output)
+    if process.returncode in (1816, 0xC0000044):  # ERROR_NOT_ENOUGH_QUOTA / STATUS_QUOTA_EXCEEDED.
+        output["stderr"] = _recortar(
+            output["stderr"]
+            + "\nWindows informó cuota insuficiente; revisa los límites de recursos."
+        )
     return subprocess.CompletedProcess(orden, process.returncode, **output)
 
 
@@ -296,6 +307,7 @@ def ejecutar(
     *,
     permitidos: tuple[str, ...],
     timeout: float = DEFAULT_TIMEOUT_S,
+    limits: JobLimits | None = None,
 ) -> TestRun:
     """Ejecuta `target` dentro del sandbox y devuelve la evidencia.
 
@@ -327,7 +339,7 @@ def ejecutar(
 
     inicio = time.perf_counter()
     try:
-        resultado = _capturar(orden, sandbox, timeout)
+        resultado = _capturar(orden, sandbox, timeout, limits)
     except subprocess.TimeoutExpired as exc:
         duracion = time.perf_counter() - inicio
         salida = (

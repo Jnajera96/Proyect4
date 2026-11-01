@@ -161,3 +161,13 @@ Incluye CPython firmado; no necesita Python/Node de desarrollo. Smoke estándar
 14/14 y 16 pruebas de runner desde la extracción aprobados en este host. Conserva
 rc13 para retorno. El alias de Microsoft Store no se admite como intérprete del
 runner de desarrollo. Alcance y límites: `RUNNER-WINDOWS-PROCESS-TREE.md`.
+
+
+## Portable vigente rc15
+
+Usa `dist/windows-v0.2.0-rc15-resource-limits/AISWESystem-windows-x64.zip`,
+SHA-256 `d16dfd57986f1fd8618da99033b52efb68b6c104915138465f6b8df1cc31bc30`. Extrae todo el ZIP y abre `AISWESystem.cmd`.
+Incluye las cuotas nativas de ejecución Windows y CPython firmado; no requiere
+Python/Node de desarrollo. 33 pruebas sobre el ZIP y smoke 14/14 aprobados en este
+host. Rc14 se conserva para retorno. Configuración avanzada y alcance de las cuotas:
+`RUNNER-WINDOWS-RESOURCE-LIMITS.md`. No hay aislamiento fuerte de archivos/red.

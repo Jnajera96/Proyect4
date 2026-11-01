@@ -1,23 +1,21 @@
 # Estado hacia la entrega funcional y adopción de patrones
 
-Fecha: 30 de octubre de 2026. Evaluación del código fuente de
-`feature/v0.2.0-madre-continuity`, actualizada con rc9 y conservando las distribuciones anteriores.
-Última validación fuente: backend1022 PASS/4 SKIP, frontend34 PASS y compilación
+Fecha: 31 de octubre de 2026. Evaluación del código fuente de
+`feature/v0.2.0-madre-continuity`, actualizada con rc15 y conservando las distribuciones anteriores.
+Última validación fuente: backend1.095 PASS/4 SKIP, frontend39 PASS y compilación
 TypeScript/Vite aprobada; sin nuevas inferencias pagadas.
 
 ## Avance estimado
 
-**84/100 hacia v0.2.0 Windows local, confiable y recuperable.** Es una estimación
-técnica ponderada (83,90 redondeado), no una métrica derivada del número de pruebas.
+**85/100 hacia v0.2.0 Windows local, confiable y recuperable.** Es una estimación
+técnica ponderada (84,65 redondeado), no una métrica derivada del número de pruebas.
 La aprobación de una plataforma pública de producción sigue pendiente.
 
-Se conserva el método del acta `OPERATIONAL-STATUS-2026-10-29.md` (74,75, redondeado
-a 75), y la evaluación anterior de 76,65 (77/100). Se actualizan memoria 85→90
-por FTS5 efectivamente incluido en Coder y verificación de contexto/cierre SQLite;
-continuidad 45→55 por importación desde acceso, múltiples rutas y reintentos
-verificados por API; distribución 45→60 por paquete actual y dos smokes estándar
-limpios, además del uso en otra PC reportado por el usuario. Siguen pendientes
-el piloto integral entre equipos y operación de producción; voz en destino no sube.
+Se conserva el método del acta `OPERATIONAL-STATUS-2026-10-29.md`. Frente a la
+ponderación previa de 83,90 (84/100), distribución y operación segura pasa de 75
+a 80 por las cuotas nativas de procesos, memoria comprometida y CPU verificadas
+en rc15. Se conservan las demás puntuaciones. No se da por cerrado el aislamiento
+de archivos/red ni se eleva la validación de voz, continuidad o Windows en destino.
 
 | Objetivo | Peso | Estimación actual | Cierre pendiente |
 | --- | ---: | ---: | --- |
@@ -27,7 +25,7 @@ el piloto integral entre equipos y operación de producción; voz en destino no 
 | Voz | 5 % | 90 | Micrófono/audio en el equipo de destino. |
 | Memoria, modos y rollback | 10 % | 90 | Calidad con modelos reales y tokens facturados. Consultas sin rutas e historial multilenguaje ya medidos offline. |
 | Continuidad y respaldo | 15 % | 60 | Recuperación por UI entre dos equipos, auto-backup, conflictos y pérdida de equipo. |
-| Distribución y operación segura | 15 % | 75 | Matriz independiente Windows/SAC y aislamiento fuerte; migración/retorno local verificados. |
+| Distribución y operación segura | 15 % | 80 | Matriz independiente Windows/SAC y aislamiento fuerte de archivos/red; cuotas nativas y migración/retorno local verificados. |
 
 ## Qué se adoptó de MADRE
 

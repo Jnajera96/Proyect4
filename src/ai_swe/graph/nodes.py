@@ -1878,7 +1878,14 @@ def run_tests(state: RunState) -> dict:
 
         try:
             emit("test_target_started", target=target, mode="deterministic")
-            corrida = ejecutar_target(sandbox, target, permitidos=permitidos)
+            from ai_swe.config import load_settings
+            from ai_swe.graph.model_routing import settings_for_node
+
+            configured = settings_for_node()
+            limits = (configured if configured is not None else load_settings()).runner_limits
+            corrida = ejecutar_target(
+                sandbox, target, permitidos=permitidos, limits=limits if os.name == "nt" else None,
+            )
         except RunnerError as exc:
             errores = _error(
                 state,

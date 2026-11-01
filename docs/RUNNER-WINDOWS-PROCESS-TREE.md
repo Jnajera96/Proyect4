@@ -96,7 +96,8 @@ creados mediante servicios externos o brokers, ni aislamiento de archivos, red,
 credenciales accesibles por permisos del usuario, CPU o RAM. El límite de procesos
 se aplica durante el cierre, no como cuota de ejecución. POSIX conserva su
 comportamiento anterior y no recibe esta garantía. Falta validar en otro equipo
-y las cuotas/aislamiento fuerte antes de declarar producción pública. La muerte
+y cerrar el aislamiento fuerte antes de declarar producción pública. Las cuotas
+nativas se verificaron posteriormente en rc15: `RUNNER-WINDOWS-RESOURCE-LIMITS.md`. La muerte
 abrupta del supervisor se comprobó después del cierre de rc14, como se detalla abajo.
 
 Referencias primarias: [Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects),
