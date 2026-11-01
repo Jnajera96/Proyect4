@@ -66,7 +66,12 @@ class WindowsJob:
         policy = JobLimits() if limits is None else JobLimits.model_validate(limits)
         if os.name != "nt":
             raise JobError("El control de grupos Windows no está disponible")
-        if getattr(os.lstat(sys._base_executable), "st_reparse_tag", 0) == 0x8000001B:
+        executable = (
+            sys.executable
+            if getattr(os.lstat(sys.executable), "st_reparse_tag", 0) == 0
+            else sys._base_executable
+        )
+        if getattr(os.lstat(executable), "st_reparse_tag", 0) == 0x8000001B:
             raise JobError(
                 "Usa el intérprete real de Python o el portable; el alias de Microsoft Store "
                 "no permite confirmar el confinamiento"
