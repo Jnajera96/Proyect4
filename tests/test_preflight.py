@@ -14,6 +14,7 @@ def hybrid(**changes):
         "model_name": "example/model:provider",
         "model_base_url": HF_ROUTER,
         "model_api_key": "synthetic-preflight-secret",
+        "hf_token": "",
     }
     return Settings(_env_file=None, **{**values, **changes})
 

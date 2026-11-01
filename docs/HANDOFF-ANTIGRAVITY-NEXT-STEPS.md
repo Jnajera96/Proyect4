@@ -9,11 +9,11 @@ a una base antigua ni descartar avances.
 
 - Avance estimado: **84/100** hacia Windows local confiable y recuperable,
   ponderación 83,90 en `PROJECT-STATUS-2026-10-30.md`. No es aprobación de producción.
-- Entrega canónica: `dist/windows-v0.2.0-rc13-output-limits/AISWESystem-windows-x64.zip`.
-- SHA-256: `865c67e27d45a1d7d93f7cf79cec1ca29ecf6e919febc6cc2327ffcff79e36ad`.
-- **1.073 backend PASS / 4 SKIP**, **39 frontend PASS**, build aprobado,
+- Entrega canónica: `dist/windows-v0.2.0-rc14-process-tree-final/AISWESystem-windows-x64.zip`.
+- SHA-256: `28d53cfdff4ff915f44261cdee61207e5f182f38c7cc11516d11f6923ec75feb`.
+- **1.078 backend PASS / 4 SKIP**, **39 frontend PASS**, build aprobado,
   **28 pruebas de migración/actualización PASS**, actualización y retorno nativos verificados.
-- Smoke rc13 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
+- Smoke rc14 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
   ambos cierres código 0, SQLite/checkpoint persistentes, logs limpios. Los dos
   smokes anteriores de rc8 corregido siguen documentados en su acta.
 - Este cierre no añade inferencias ni publicación. Las 36 sondas reales previas
@@ -215,3 +215,19 @@ SHA-256: `865c67e27d45a1d7d93f7cf79cec1ca29ecf6e919febc6cc2327ffcff79e36ad`.
 Acta: `RUNNER-OUTPUT-BOUNDS.md`. Rc12 y anteriores se conservan. Siguen pendientes
 cuotas de CPU/RAM del hijo, control verificable de descendientes y aislamiento
 de archivos/red; los pilotos entre PC y GitHub permanecen pausados.
+
+
+## Rc14 — cierre verificable de procesos en Windows
+
+El runner asigna el hijo suspendido a un Job Object antes de ejecutarlo y verifica
+el cierre mediante handles de sus procesos. Timeout conserva código 124; hijos
+activos tras salida normal provocan código 125, nunca un aprobado. El alias de
+Microsoft Store se rechaza explícitamente: usar el portable o Python real.
+
+1.078 backend PASS / 4 SKIP, 39 frontend PASS y build aprobado, 16 pruebas desde
+el ZIP extraído y 14/14 controles del smoke estándar. No hay inferencias nuevas.
+Entrega local: `dist/windows-v0.2.0-rc14-process-tree-final/AISWESystem-windows-x64.zip`.
+SHA-256: `28d53cfdff4ff915f44261cdee61207e5f182f38c7cc11516d11f6923ec75feb`.
+Acta: `RUNNER-WINDOWS-PROCESS-TREE.md`. Rc13 y anteriores se conservan. El avance
+global sigue en 84/100: faltan cuotas fuertes, aislamiento de archivos/red y matriz
+Windows independiente. Recuperación entre PC y piloto GitHub continúan en pausa.

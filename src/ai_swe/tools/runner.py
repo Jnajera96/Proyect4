@@ -35,6 +35,7 @@ from pathlib import Path
 
 from ai_swe.contracts import TestRun
 from ai_swe.sandbox import Sandbox
+from ai_swe.tools.windows_job import CREATE_SUSPENDED, JobError, WindowsJob
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ DEFAULT_TIMEOUT_S = 600.0
 # Convencion de `timeout(1)`: el proceso no termino. Se distingue de un fallo de
 # las pruebas (codigo != 0) porque la causa es otra y la accion a tomar tambien.
 EXIT_TIMEOUT = 124
+EXIT_ORPHANS = 125
 
 # Limite de los campos de salida del contrato `TestRun`.
 _MAX_SALIDA = 200_000
@@ -189,25 +191,38 @@ def _recortar(texto: str) -> str:
 def _capturar(orden: list[str], sandbox: Sandbox, timeout: float) -> subprocess.CompletedProcess:
     """Drain both pipes fairly with a bounded byte tail and a deadline, without threads/files."""
     deadline = time.monotonic() + timeout
-    process = subprocess.Popen(
-        orden,
-        cwd=str(sandbox.raiz),
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        bufsize=0,
-        shell=False,
-        env=_entorno(sandbox),
-    )
+    try:
+        job = WindowsJob() if os.name == "nt" else None
+    except JobError as exc:
+        raise RunnerError("grupo", str(exc)) from exc
+    try:
+        process = subprocess.Popen(
+            orden,
+            cwd=str(sandbox.raiz),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=CREATE_SUSPENDED if job else 0,
+            bufsize=0,
+            shell=False,
+            env=_entorno(sandbox),
+        )
+    except BaseException:
+        if job:
+            job.close()
+        raise
     pipes = {"stdout": process.stdout, "stderr": process.stderr}
     active = dict(pipes)
     tails = {name: bytearray() for name in pipes}
     truncated = set()
     timed_out = False
+    orphaned = False
     try:
+        if job:
+            timed_out = not job.assign_and_resume(process, deadline)
         for pipe in pipes.values():
             os.set_blocking(pipe.fileno(), False)
-        while active or process.poll() is None:
+        while not timed_out and (active or process.poll() is None):
             if time.monotonic() >= deadline:
                 timed_out = True
                 break
@@ -232,16 +247,30 @@ def _capturar(orden: list[str], sandbox: Sandbox, timeout: float) -> subprocess.
                 time.sleep(0.01)
     except OSError as exc:
         raise RunnerError("capturar", "no se pudo leer la salida de forma acotada") from exc
+    except JobError as exc:
+        raise RunnerError("grupo", str(exc)) from exc
     finally:
         try:
-            if process.poll() is None:
-                process.kill()
-            process.wait(timeout=5)
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            raise RunnerError("cerrar", "no se confirmó el cierre del proceso directo") from exc
+            try:
+                if job:
+                    if not timed_out and process.poll() is not None:
+                        orphaned = not job.wait_empty(.1)
+                    job.terminate_and_wait()
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=5)
+        except (JobError, OSError, subprocess.TimeoutExpired) as exc:
+            raise RunnerError("cerrar", "no se confirmó el cierre del grupo/proceso") from exc
         finally:
-            for pipe in pipes.values():
-                pipe.close()
+            try:
+                if job:
+                    job.close()
+            except JobError as exc:
+                raise RunnerError("cerrar", str(exc)) from exc
+            finally:
+                for pipe in pipes.values():
+                    pipe.close()
     output = {}
     for name, tail in tails.items():
         text = tail.decode("utf-8", errors="replace")
@@ -252,6 +281,12 @@ def _capturar(orden: list[str], sandbox: Sandbox, timeout: float) -> subprocess.
         raise subprocess.TimeoutExpired(
             orden, timeout, output=output["stdout"], stderr=output["stderr"]
         )
+    if orphaned:
+        output["stderr"] = _recortar(
+            output["stderr"]
+            + "\nQuedaron procesos descendientes; el grupo fue terminado y verificado."
+        )
+        return subprocess.CompletedProcess(orden, EXIT_ORPHANS, **output)
     return subprocess.CompletedProcess(orden, process.returncode, **output)
 
 

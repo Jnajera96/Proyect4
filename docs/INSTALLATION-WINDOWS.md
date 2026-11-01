@@ -151,3 +151,13 @@ Cierra la instancia anterior, extrae la carpeta completa en un destino nuevo y
 abre AISWESystem.cmd. No borres ni mezcles los datos de LOCALAPPDATA. Rc13 añade
 la captura acotada del runner; rc12 y anteriores se conservan. Acta y límites:
 `RUNNER-OUTPUT-BOUNDS.md`. Validación en el host local, no producción pública.
+
+
+## Portable vigente rc14
+
+Usa `dist/windows-v0.2.0-rc14-process-tree-final/AISWESystem-windows-x64.zip`,
+SHA-256 `28d53cfdff4ff915f44261cdee61207e5f182f38c7cc11516d11f6923ec75feb`. Extrae el ZIP completo y abre `AISWESystem.cmd`.
+Incluye CPython firmado; no necesita Python/Node de desarrollo. Smoke estándar
+14/14 y 16 pruebas de runner desde la extracción aprobados en este host. Conserva
+rc13 para retorno. El alias de Microsoft Store no se admite como intérprete del
+runner de desarrollo. Alcance y límites: `RUNNER-WINDOWS-PROCESS-TREE.md`.

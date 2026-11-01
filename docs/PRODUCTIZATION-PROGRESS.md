@@ -732,3 +732,19 @@ SHA-256: `865c67e27d45a1d7d93f7cf79cec1ca29ecf6e919febc6cc2327ffcff79e36ad`.
 Acta: `RUNNER-OUTPUT-BOUNDS.md`. Rc12 y anteriores se conservan. Siguen pendientes
 cuotas de CPU/RAM del hijo, control verificable de descendientes y aislamiento
 de archivos/red; los pilotos entre PC y GitHub permanecen pausados.
+
+
+## Rc14 — cierre verificable de procesos en Windows
+
+El runner asigna el hijo suspendido a un Job Object antes de ejecutarlo y verifica
+el cierre mediante handles de sus procesos. Timeout conserva código 124; hijos
+activos tras salida normal provocan código 125, nunca un aprobado. El alias de
+Microsoft Store se rechaza explícitamente: usar el portable o Python real.
+
+1.078 backend PASS / 4 SKIP, 39 frontend PASS y build aprobado, 16 pruebas desde
+el ZIP extraído y 14/14 controles del smoke estándar. No hay inferencias nuevas.
+Entrega local: `dist/windows-v0.2.0-rc14-process-tree-final/AISWESystem-windows-x64.zip`.
+SHA-256: `28d53cfdff4ff915f44261cdee61207e5f182f38c7cc11516d11f6923ec75feb`.
+Acta: `RUNNER-WINDOWS-PROCESS-TREE.md`. Rc13 y anteriores se conservan. El avance
+global sigue en 84/100: faltan cuotas fuertes, aislamiento de archivos/red y matriz
+Windows independiente. Recuperación entre PC y piloto GitHub continúan en pausa.
