@@ -16,11 +16,11 @@ piloto integral en otra PC, sin declarar producción aprobada.
 | Orden | Trabajo y estado | Criterio para avanzar |
 | --- | --- | --- |
 | 1 | **Completado y validado en fuente:** Analyst como Product Manager, síntesis por familias/núcleo nominal para productos nuevos, revisión editable y chips de inicio rápido. | Confirmación humana obligatoria, confianza de intención clara >=0,85 y exclusiones preservadas; backend962 PASS/4 SKIP, frontend32 PASS y build aprobado. Actas: `PRODUCT-REQUIREMENTS-VALIDATION.md` y `UNIVERSAL-REQUIREMENTS-VALIDATION.md`. |
-| 2 | **Rc17 final aprobado localmente; rc16 y anteriores conservados.** | Docker opt-in integrado, 1.121 backend PASS/4 SKIP, 56 pruebas del ZIP y smoke 14/14. Acta vigente: `DOCKER-RUNNER-INTEGRATION.md`. |
+| 2 | **Rc18 aprobado localmente; rc17 y anteriores conservados.** | Recuperación Docker al arrancar, 1.137 backend PASS/4 SKIP, 72 pruebas del ZIP y smoke 14/14. Acta vigente: `DOCKER-RESOURCE-RECOVERY.md`. |
 | 3 | **Uso en otra PC confirmado por el usuario; matriz detallada pendiente.** | Falta identificar versión/hash, Windows y recorrido: protecciones activas, reinicio, voz y promoción. No se infiere recuperación entre equipos. Cualquier inferencia pagada exige presupuesto explícito. |
 | 4 | **Pendiente:** cierre de continuidad K/L/M y recuperación. | Exportación/importación cifrada, contraseña/clave de rescate, separación entre usuarios y reconstrucción del trabajo pausado en otro equipo sin pérdida de datos. |
 | 5 | **Selección por contenido e historial FTS5 medidos offline; calidad/publicación/tokens reales pendientes.** | Consultas sin rutas: 50% de cobertura en frío y 100% con asociaciones sintéticas. Historial probado en Python/JS/TS/SQL: añade ~10% de bytes; no demuestra ahorro facturado ni calidad del modelo. Actas: `CONTEXT-MEMORY-MEASUREMENT.md` y `FTS-HISTORY-MEASUREMENT.md`. Faltan repositorios reales, tokenizer correcto y publicación voluntaria real. |
-| 6 | **Docker opt-in y muerte del controlador durante tarea validados localmente; operación pública pendiente.** | Próximo cierre local: recuperación segura de contenedores/snapshots tras reinicio. Faltan fallos reales del daemon, matriz Windows independiente y controles de secretos, TLS, auditoría, copias/restauración y política de datos para producción pública. |
+| 6 | **Docker opt-in y muerte del controlador durante tarea validados localmente; operación pública pendiente.** | Recuperación al arrancar de sesiones propias detenidas validada; los casos inciertos requieren revisión manual. Faltan fallos reales del daemon, matriz Windows independiente y controles de secretos, TLS, auditoría, copias/restauración y política de datos para producción pública. |
 
 ### Flujo de pendientes de la mejora de requisitos
 
@@ -303,3 +303,31 @@ watchdog sigue activo y requiere limpieza externa. Acta y límites:
 No se repiten build, smoke ni regresión completa porque el producto no cambió.
 Sigue pendiente recuperación automática de residuos al reiniciar y fallos reales
 del daemon/VM. Se mantiene 86/100 y los pilotos entre PC/GitHub pausados.
+
+
+## Rc18 — recuperación de recursos Docker al arrancar
+
+1 de noviembre de 2026. Se añaden diario atómico previo a la creación, lease del
+sistema operativo y barrido acotado al arrancar con Docker solicitado. Sólo se
+limpian sesiones propias confirmadas y detenidas. Activas, en ejecución, inciertas
+o sin identidad válida se conservan; no se modifican ledger, bóveda ni repositorios.
+
+**1.137 backend PASS / 4 SKIP**, **39 frontend PASS/build**, **72 pruebas del ZIP
+PASS** (57 de integración y 15 del launcher), **14/14 smoke PASS**, ambos cierres 0.
+Se verifica recuperación tras matar el controlador y esperar al watchdog con
+Docker real, CPython firmado y datos sintéticos. Cero llamadas pagadas.
+
+Portable aprobado localmente:
+`dist/windows-v0.2.0-rc18-docker-recovery/AISWESystem-windows-x64.zip`.
+SHA-256: `8eada0dfd22aaa45585c4b8cfd63ef67ebdf700f0b72cac0d964e44e52b3c50a`.
+121.303.057 bytes; CRC y 4.742 hashes verificados. Rc17 y anteriores se conservan.
+La imagen Linux y las dependencias no cambian. El ajuste del fixture de CPU sólo
+separa el fallo pytest intencional de la cuota de 1 s; no relaja límites del producto.
+
+Acta: `DOCKER-RESOURCE-RECOVERY.md`; evidencia:
+`DOCKER-RESOURCE-RECOVERY-EVIDENCE.json`. Se mantiene **86/100**.
+No se prueba caída real del daemon/VM ni corte eléctrico. Los recursos todavía
+activos quedan para otro arranque; creaciones inciertas y restos antiguos rc17
+necesitan revisión manual. Siguen pendientes dependencias por proyecto, matriz
+Windows/SAC, calidad con modelos y ahorro global de tokens. Los pilotos entre PC
+y publicación GitHub permanecen pausados; producción pública no aprobada.

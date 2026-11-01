@@ -26,8 +26,13 @@ sys.path.insert(0, sys.argv[1])
 from ai_swe.tools import docker_runner
 state = json.loads(Path(sys.argv[2]).read_text())
 state['root'], state['temp_parent'] = Path(state['root']), Path(state['temp_parent'])
+state['_lease'] = None  # This fixture's parent retains the OS lease until external cleanup.
 session = docker_runner.DockerSession.__new__(docker_runner.DockerSession)
 session.__dict__.update(state)
+if sys.argv[5] == 'recover':
+    from ai_swe.state.operation_lock import operation_lock
+    session._lease = operation_lock(session.root.with_suffix('.lock'))
+    session._lease.__enter__()
 original = session.run
 def observe(arguments, **kwargs):
     if arguments[:2] == ['container', 'create'] and sys.argv[5] == 'disabled':
@@ -49,8 +54,9 @@ docker_runner.execute(SimpleNamespace(raiz=Path(sys.argv[3])), 'pytest.unit',
 '''
 
 
-@pytest.mark.parametrize("watchdog", ["enabled", "disabled"])
-def test_container_watchdog_survives_controller_death(tmp_path, watchdog):
+@pytest.mark.parametrize("watchdog", ["enabled", "disabled", "recover"])
+def test_container_watchdog_survives_controller_death(tmp_path, monkeypatch, watchdog):
+    monkeypatch.setattr(docker_runner, "session_directory", lambda: tmp_path / "sessions")
     docker_runner.check_ready(docker_runner.DockerSettings(image=IMAGE))
     source = tmp_path / "repository"
     source.mkdir()
@@ -61,6 +67,8 @@ def test_container_watchdog_survives_controller_death(tmp_path, watchdog):
     session = docker_runner.DockerSession()
     session_file = tmp_path / "session.json"
     session_file.write_text(json.dumps(session.__dict__, default=str))
+    if watchdog == "recover":
+        session.release()
     receipt = tmp_path / "created.json"
     controller = None
     try:
@@ -96,6 +104,8 @@ def test_container_watchdog_survives_controller_death(tmp_path, watchdog):
                 time.sleep(.05)
             else:
                 pytest.fail("Target did not start before controller death")
+            if watchdog == "recover":
+                assert docker_runner.recover_stopped_sessions()["active"] == 1
             controller.kill()  # Owned process handle, never a PID discovered from another task.
             controller.wait(timeout=10)
             assert controller.returncode != 0
@@ -105,11 +115,15 @@ def test_container_watchdog_survives_controller_death(tmp_path, watchdog):
                 if not state["Running"]:
                     break
                 time.sleep(.2)
-            if watchdog == "enabled":
+            if watchdog != "disabled":
                 assert not state["Running"] and state["ExitCode"] == 124, state
             else:
                 assert state["Running"], "Negative control must outlive the missing watchdog"
             assert session.root.exists(), "Controller death cannot claim snapshot cleanup"
+            if watchdog == "recover":
+                result = docker_runner.recover_stopped_sessions()
+                assert result["removed"] == 1, result
+                assert not session.root.exists()
     finally:
         if controller is not None and controller.poll() is None:
             controller.kill()

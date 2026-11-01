@@ -250,6 +250,10 @@ def create_profile_app(settings: Settings) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app):
+        if settings.runner_docker is not None:
+            from ai_swe.tools.docker_runner import recover_stopped_sessions
+
+            app.state.docker_recovery = await run_in_threadpool(recover_stopped_sessions)
         async def reap():
             while True:
                 await asyncio.sleep(30)

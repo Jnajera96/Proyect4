@@ -833,3 +833,31 @@ watchdog sigue activo y requiere limpieza externa. Acta y límites:
 No se repiten build, smoke ni regresión completa porque el producto no cambió.
 Sigue pendiente recuperación automática de residuos al reiniciar y fallos reales
 del daemon/VM. Se mantiene 86/100 y los pilotos entre PC/GitHub pausados.
+
+
+## Rc18 — recuperación de recursos Docker al arrancar
+
+1 de noviembre de 2026. Se añaden diario atómico previo a la creación, lease del
+sistema operativo y barrido acotado al arrancar con Docker solicitado. Sólo se
+limpian sesiones propias confirmadas y detenidas. Activas, en ejecución, inciertas
+o sin identidad válida se conservan; no se modifican ledger, bóveda ni repositorios.
+
+**1.137 backend PASS / 4 SKIP**, **39 frontend PASS/build**, **72 pruebas del ZIP
+PASS** (57 de integración y 15 del launcher), **14/14 smoke PASS**, ambos cierres 0.
+Se verifica recuperación tras matar el controlador y esperar al watchdog con
+Docker real, CPython firmado y datos sintéticos. Cero llamadas pagadas.
+
+Portable aprobado localmente:
+`dist/windows-v0.2.0-rc18-docker-recovery/AISWESystem-windows-x64.zip`.
+SHA-256: `8eada0dfd22aaa45585c4b8cfd63ef67ebdf700f0b72cac0d964e44e52b3c50a`.
+121.303.057 bytes; CRC y 4.742 hashes verificados. Rc17 y anteriores se conservan.
+La imagen Linux y las dependencias no cambian. El ajuste del fixture de CPU sólo
+separa el fallo pytest intencional de la cuota de 1 s; no relaja límites del producto.
+
+Acta: `DOCKER-RESOURCE-RECOVERY.md`; evidencia:
+`DOCKER-RESOURCE-RECOVERY-EVIDENCE.json`. Se mantiene **86/100**.
+No se prueba caída real del daemon/VM ni corte eléctrico. Los recursos todavía
+activos quedan para otro arranque; creaciones inciertas y restos antiguos rc17
+necesitan revisión manual. Siguen pendientes dependencias por proyecto, matriz
+Windows/SAC, calidad con modelos y ahorro global de tokens. Los pilotos entre PC
+y publicación GitHub permanecen pausados; producción pública no aprobada.

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shutil
+import stat
 import subprocess
 import tempfile
 import time
@@ -17,6 +19,7 @@ from types import SimpleNamespace
 from pydantic import BaseModel, ConfigDict, Field
 
 from ai_swe.cancellation import current_cancellation
+from ai_swe.state.operation_lock import operation_lock
 from ai_swe.tools.execution_snapshot import SnapshotError, create_snapshot
 
 
@@ -35,6 +38,15 @@ class DockerError(RuntimeError):
     pass
 
 
+def session_directory():
+    return Path(tempfile.gettempdir()) / "AISWESystem-docker"
+
+
+def _local_directory(path):
+    return (path.resolve() == path.absolute() and path.is_dir()
+            and not getattr(path.lstat(), "st_file_attributes", 0) & 0x400)
+
+
 def docker_executable():
     if os.name != "nt":
         raise DockerError("El ejecutor Docker requiere Windows y Docker Desktop Linux local")
@@ -49,7 +61,11 @@ def docker_executable():
 class DockerSession:
     def __init__(self):
         executable = docker_executable()
-        self.root = Path(tempfile.mkdtemp(prefix="aiswe-docker-")).resolve()
+        base = session_directory()
+        base.mkdir(parents=True, exist_ok=True)
+        if not _local_directory(base):
+            raise DockerError("La carpeta de sesiones Docker no es local y regular")
+        self.root = Path(tempfile.mkdtemp(prefix="aiswe-docker-", dir=base)).resolve()
         self.temp_parent = self.root.parent
         config = self.root / "config"
         config.mkdir()
@@ -61,7 +77,32 @@ class DockerSession:
         self.create_started = False
         self.create_uncertain = False
         self.cid = None
+        self.image = ""
         self.control = current_cancellation()
+        self._lease = operation_lock(self.root.with_suffix(".lock"))
+        self._lease.__enter__()
+        try:
+            self.record("prepared")
+        except BaseException:
+            self.release()
+            raise
+
+    def record(self, phase):
+        path = self.root / "execution.json"
+        temporary = path.with_suffix(".tmp")
+        with temporary.open("w", encoding="utf-8") as stream:
+            json.dump({"version": 1, "owner": self.owner, "phase": phase,
+                       "container_id": self.cid, "image": self.image}, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.replace(path)
+
+    def release(self):
+        if self._lease is not None:
+            self._lease.__exit__(None, None, None)
+            self._lease = None
+            with suppress(OSError):
+                self.root.with_suffix(".lock").unlink()
 
     def run(self, arguments, *, timeout=15, cancellable=False):
         from ai_swe.tools.runner import _capturar
@@ -117,6 +158,117 @@ class DockerSession:
                     "create_uncertain": self.create_uncertain,
                 }))
             raise DockerError(message) from exc
+        finally:
+            self.release()
+
+
+def recover_stopped_sessions():
+    """Bounded startup sweep; never touch active, running or uncertain executions."""
+    report = dict(removed=0, active=0, running=0, uncertain=0, unresolved=0)
+    base = session_directory()
+    if not base.exists():
+        return report
+    deadline = time.monotonic() + 5
+    try:
+        if not _local_directory(base):
+            raise DockerError("Carpeta de sesiones no verificable")
+        with os.scandir(base) as entries:
+            for index, entry in enumerate(entries):
+                if index >= 100 or time.monotonic() >= deadline:
+                    report["unresolved"] += 1
+                    break
+                if not re.fullmatch(r"aiswe-docker-[a-z0-9_]{8}", entry.name):
+                    continue
+                root = Path(entry.path)
+                try:
+                    if not _local_directory(root):
+                        raise DockerError("Sesión no verificable")
+                    if not (root / "execution.json").is_file():
+                        continue
+                    lock_path = root.with_suffix(".lock")
+                    if lock_path.exists():
+                        info = lock_path.lstat()
+                        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                                or getattr(info, "st_file_attributes", 0) & 0x400):
+                            raise DockerError("Archivo de bloqueo no verificable")
+                    lease = operation_lock(lock_path)
+                    try:
+                        lease.__enter__()
+                    except OSError:
+                        report["active"] += 1
+                        continue
+                    try:
+                        _recover_session(root, deadline, report)
+                    finally:
+                        lease.__exit__(None, None, None)
+                        if not root.exists():
+                            with suppress(OSError):
+                                root.with_suffix(".lock").unlink()
+                except Exception as exc:  # Preserve resources on any startup verification error.
+                    report["unresolved"] += 1
+                    logging.getLogger(__name__).warning("Recuperación Docker pendiente: %s", exc)
+    except (DockerError, OSError) as exc:
+        report["unresolved"] += 1
+        logging.getLogger(__name__).warning("Recuperación Docker pendiente: %s", exc)
+    if any(report[key] for key in ("removed", "running", "uncertain", "unresolved")):
+        logging.getLogger(__name__).info("Recuperación Docker: %s", report)
+    return report
+
+
+def _recover_session(root, deadline, report):
+    from ai_swe.tools.execution_snapshot import _open_entry
+
+    path = root / "execution.json"
+    with _open_entry(path):
+        if path.stat().st_size > 4096:
+            raise DockerError("Diario demasiado extenso")
+        data = json.loads(path.read_text(encoding="utf-8"))
+    if (not isinstance(data, dict) or data.get("version") != 1
+            or not re.fullmatch(r"[0-9a-f]{32}", data.get("owner", ""))
+            or data.get("phase") not in {"prepared", "creating", "created"}):
+        raise DockerError("Identidad del diario no válida")
+    if data["phase"] == "creating":
+        report["uncertain"] += 1
+        return
+    cid, image = data.get("container_id"), data.get("image")
+    if data["phase"] == "created":
+        if (not isinstance(cid, str) or not re.fullmatch(r"[0-9a-f]{64}", cid)
+                or not isinstance(image, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", image)):
+            raise DockerError("Contenedor del diario no válido")
+    elif cid is not None or image != "":
+        raise DockerError("Diario preparado inconsistente")
+    session = DockerSession.__new__(DockerSession)
+    session.root, session.temp_parent = root, root.parent
+    session._lease, session.control = None, None
+    session.owner, session.cid = data["owner"], cid
+    session.label = "io.aiswe.execution=" + session.owner
+    session.create_started, session.create_uncertain = True, False
+    session.prefix = [docker_executable(), "--host", "npipe:////./pipe/dockerDesktopLinuxEngine",
+                      "--config", str(root / "config")]
+    original = session.run
+
+    def bounded(arguments, *, timeout=15):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise DockerError("Plazo de recuperación agotado")
+        return original(arguments, timeout=min(timeout, remaining))
+
+    session.run = bounded
+    ids = session.run(["container", "ls", "-aq", "--no-trunc", "--filter",
+                       "label=" + session.label]).splitlines()
+    if ids and ids != [cid]:
+        raise DockerError("El inventario no coincide con el diario")
+    for identity in ids:
+        container = json.loads(session.run(["container", "inspect", identity]))[0]
+        if (container["Config"].get("Labels", {}).get("io.aiswe.execution") != session.owner
+                or container["Config"].get("Labels", {}).get("io.aiswe.session") != root.name
+                or container["Config"]["Image"] != image):
+            raise DockerError("La identidad del contenedor no coincide")
+        if container["State"]["Running"]:
+            report["running"] += 1
+            return
+    session.close()
+    report["removed"] += 1
 
 
 def check_ready(policy):
@@ -151,6 +303,7 @@ def execute(sandbox, target, policy, timeout):
         if remaining <= 0:
             raise subprocess.TimeoutExpired(["docker", target], timeout)
         arguments = ["container", "create", "--pull=never", "--label", session.label,
+                     "--label", "io.aiswe.session=" + session.root.name,
                      "--label", "io.aiswe.snapshot=" + digest, "--network=none", "--read-only",
                      "--user=0:0", "--cap-drop=ALL", "--cap-add=SETUID", "--cap-add=SETGID",
                      "--security-opt=no-new-privileges=true", "--cgroupns=private",
@@ -164,10 +317,13 @@ def execute(sandbox, target, policy, timeout):
                      target, digest, str(remaining), str(policy.cpu_seconds)]
         session.create_started = True
         session.create_uncertain = True
+        session.image = policy.image
+        session.record("creating")
         cid = session.run(arguments, timeout=min(30, remaining))
         if not re.fullmatch(r"[0-9a-f]{64}", cid):
             raise DockerError("No se recibió un ID válido del contenedor creado")
         session.cid, session.create_uncertain = cid, False
+        session.record("created")
         if session.control:
             session.control.check()
         remaining = deadline - time.monotonic()

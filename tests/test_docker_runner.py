@@ -164,7 +164,7 @@ def test_isolation():
      "    subprocess.Popen(['python', '-c', 'import time; time.sleep(60)'])\n", 125),
 ])
 def test_real_docker_reports_actual_exit_and_cleans_container(tmp_path, target, code, expected):
-    result = run_source(tmp_path, code, target=target, cpu_seconds=1)
+    result = run_source(tmp_path, code, target=target, cpu_seconds=1 if expected == 126 else 10)
     assert result.exit_code == expected, result.stderr + result.stdout
 
 

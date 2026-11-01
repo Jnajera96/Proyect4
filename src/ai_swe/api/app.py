@@ -493,6 +493,10 @@ def crear_app(
         install_redacting_filter()
         _configurar_nivel_de_log(ajustes.log_level)
         file_handler = installed_log_handler(ajustes.log_dir, profile_id=ajustes.profile_id)
+        if ajustes.runner_docker is not None:
+            from ai_swe.tools.docker_runner import recover_stopped_sessions
+
+            _app.state.docker_recovery = await run_in_threadpool(recover_stopped_sessions)
 
         # Recuperacion al arrancar: una ejecucion en `planned` o `running`
         # pertenece a un proceso que ya no existe. Dejarla asi seria la terminacion

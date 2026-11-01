@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-01",
+  "base_commit": "52ffe40ace630de87bcfe9a97337c56a83812914",
+  "paid_calls": 0,
+  "recovery_enabled_by_default": false,
+  "full_backend": {
+    "report": "_tmp\\docker-recovery-full.xml",
+    "passed": 1137,
+    "skipped": 4,
+    "seconds": 707.186,
+    "report_sha256": "f5e6454b05b58880e94c540a194d9a1026249622b85502a3a22d84b86b5a2f80"
+  },
+  "focused": {
+    "report": "_tmp\\docker-recovery-real.xml",
+    "passed": 34,
+    "skipped": 0,
+    "seconds": 129.436,
+    "report_sha256": "914d49abac2de71d9d10ddbb4e7ebaf7e0bcf324d53e340acd5669481430ef5c"
+  },
+  "portable_tests": {
+    "report": "_tmp\\rc18-recovery-confirmed.xml",
+    "passed": 57,
+    "skipped": 0,
+    "seconds": 174.094,
+    "report_sha256": "7b2c8c5c2b73776ea6588fd95187a2dcd5f89b272c0350801b0f0d822ff15613"
+  },
+  "portable_launcher": {
+    "report": "_tmp\\rc18-recovery-launcher.xml",
+    "passed": 15,
+    "skipped": 0,
+    "seconds": 4.657,
+    "report_sha256": "b71be8640a177e0153ad29f8bf8f4808a6cea0c8c4a6a7f6be1e48d8cadc9383"
+  },
+  "frontend_passed": 39,
+  "frontend_build": true,
+  "portable": {
+    "zip": "dist\\windows-v0.2.0-rc18-docker-recovery\\AISWESystem-windows-x64.zip",
+    "sha256": "8eada0dfd22aaa45585c4b8cfd63ef67ebdf700f0b72cac0d964e44e52b3c50a",
+    "bytes": 121303057,
+    "files": 4742,
+    "crc": true,
+    "source_match": true
+  },
+  "smoke": {
+    "success": true,
+    "checks": [
+      "all manifest hashes match",
+      "no developer state or secrets files",
+      "installed defaults to profiles",
+      "private API gated before login",
+      "integrated frontend served",
+      "profile registration with packaged cryptography",
+      "empty profile has no global token",
+      "packaged graph accepts deterministic run",
+      "human confirmation required",
+      "graceful packaged shutdown",
+      "encrypted profile login survives restart",
+      "SQLite and graph checkpoint survive restart",
+      "persisted SQLite integrity",
+      "restart shutdown graceful"
+    ],
+    "paid_calls": 0
+  },
+  "image_unchanged": "sha256:37b09beaaf4efae0e6c6fa63136577121b03ecbb3047a81e36489e932a59f4d8",
+  "sources": {
+    "src/ai_swe/tools/docker_runner.py": "29dcfb40c7e92b9bb289d65fac2c6b944d7d7ab14273e7ac0f9e57d9f1c8f7f1",
+    "src/ai_swe/api/app.py": "952964f3665ac4e5891ad635158f3a58189b5d33d33461911a3421a0306b075d",
+    "src/ai_swe/api/profiles.py": "2c9d654399a4669f1bbe0b8daaa479fc128064dd7fc3241c60a2624af06cf234",
+    "tests/test_docker_recovery.py": "9e678aebdeaa31c7a470d4276b2c900b5aaf58180fe53614c3a41e2c9129e082",
+    "tests/test_docker_controller_crash.py": "6320e9d5dfcbe2a88014a753d9e7e9e64ed1fb3062654ad970235f9ae0301c16",
+    "tests/test_docker_runner.py": "e92b53e823cca229647d1faa95558aaa12e27250d8ee81add1837a73c6de4826"
+  },
+  "retained_failure": "_tmp/rc18-recovery-tests.xml: unrelated pytest failure report reached the one-second CPU fixture quota",
+  "fixture_correction": "Only the CPU quota case keeps one second; unrelated exit-code cases allow ten. Product limits unchanged. Full suite application code is final; the corrected fixture is reverified in the portable subset.",
+  "remaining": [
+    "running containers need another startup after watchdog expiry",
+    "uncertain creation requires manual review",
+    "old rc17 resources without a journal are not adopted",
+    "real daemon/VM failure and power loss unverified",
+    "cross-PC and GitHub pilots remain paused"
+  ]
+}

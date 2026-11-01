@@ -1,8 +1,8 @@
 # Estado hacia la entrega funcional y adopción de patrones
 
 Fecha: 1 de noviembre de 2026. Evaluación del código fuente de
-`feature/v0.2.0-madre-continuity`, actualizada con rc17 y conservando las distribuciones anteriores.
-Última validación fuente: backend1.121 PASS/4 SKIP, frontend39 PASS y compilación
+`feature/v0.2.0-madre-continuity`, actualizada con rc18 y conservando las distribuciones anteriores.
+Última validación fuente: backend1.137 PASS/4 SKIP, frontend39 PASS y compilación
 TypeScript/Vite aprobada; sin nuevas inferencias pagadas.
 
 ## Avance estimado
@@ -25,7 +25,7 @@ La producción pública y una matriz independiente de Windows siguen pendientes.
 | Voz | 5 % | 90 | Micrófono/audio en el equipo de destino. |
 | Memoria, modos y rollback | 10 % | 90 | Calidad con modelos reales y tokens facturados. Consultas sin rutas e historial multilenguaje ya medidos offline. |
 | Continuidad y respaldo | 15 % | 60 | Recuperación por UI entre dos equipos, auto-backup, conflictos y pérdida de equipo. |
-| Distribución y operación segura | 15 % | 88 | Matriz Windows/SAC, fallos del daemon y recuperación automática de residuos. Docker opt-in, muerte del controlador durante tarea, cuotas y migración/retorno local verificados. |
+| Distribución y operación segura | 15 % | 88 | Matriz Windows/SAC, fallos reales del daemon/VM y casos inciertos. Docker opt-in, muerte del controlador durante tarea, cuotas y migración/retorno local verificados. |
 
 ## Qué se adoptó de MADRE
 
@@ -162,3 +162,31 @@ watchdog sigue activo y requiere limpieza externa. Acta y límites:
 No se repiten build, smoke ni regresión completa porque el producto no cambió.
 Sigue pendiente recuperación automática de residuos al reiniciar y fallos reales
 del daemon/VM. Se mantiene 86/100 y los pilotos entre PC/GitHub pausados.
+
+
+## Rc18 — recuperación de recursos Docker al arrancar
+
+1 de noviembre de 2026. Se añaden diario atómico previo a la creación, lease del
+sistema operativo y barrido acotado al arrancar con Docker solicitado. Sólo se
+limpian sesiones propias confirmadas y detenidas. Activas, en ejecución, inciertas
+o sin identidad válida se conservan; no se modifican ledger, bóveda ni repositorios.
+
+**1.137 backend PASS / 4 SKIP**, **39 frontend PASS/build**, **72 pruebas del ZIP
+PASS** (57 de integración y 15 del launcher), **14/14 smoke PASS**, ambos cierres 0.
+Se verifica recuperación tras matar el controlador y esperar al watchdog con
+Docker real, CPython firmado y datos sintéticos. Cero llamadas pagadas.
+
+Portable aprobado localmente:
+`dist/windows-v0.2.0-rc18-docker-recovery/AISWESystem-windows-x64.zip`.
+SHA-256: `8eada0dfd22aaa45585c4b8cfd63ef67ebdf700f0b72cac0d964e44e52b3c50a`.
+121.303.057 bytes; CRC y 4.742 hashes verificados. Rc17 y anteriores se conservan.
+La imagen Linux y las dependencias no cambian. El ajuste del fixture de CPU sólo
+separa el fallo pytest intencional de la cuota de 1 s; no relaja límites del producto.
+
+Acta: `DOCKER-RESOURCE-RECOVERY.md`; evidencia:
+`DOCKER-RESOURCE-RECOVERY-EVIDENCE.json`. Se mantiene **86/100**.
+No se prueba caída real del daemon/VM ni corte eléctrico. Los recursos todavía
+activos quedan para otro arranque; creaciones inciertas y restos antiguos rc17
+necesitan revisión manual. Siguen pendientes dependencias por proyecto, matriz
+Windows/SAC, calidad con modelos y ahorro global de tokens. Los pilotos entre PC
+y publicación GitHub permanecen pausados; producción pública no aprobada.
