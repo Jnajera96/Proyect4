@@ -20,7 +20,7 @@ piloto integral en otra PC, sin declarar producción aprobada.
 | 3 | **Uso en otra PC confirmado por el usuario; matriz detallada pendiente.** | Falta identificar versión/hash, Windows y recorrido: protecciones activas, reinicio, voz y promoción. No se infiere recuperación entre equipos. Cualquier inferencia pagada exige presupuesto explícito. |
 | 4 | **Pendiente:** cierre de continuidad K/L/M y recuperación. | Exportación/importación cifrada, contraseña/clave de rescate, separación entre usuarios y reconstrucción del trabajo pausado en otro equipo sin pérdida de datos. |
 | 5 | **Selección por contenido e historial FTS5 medidos offline; calidad/publicación/tokens reales pendientes.** | Consultas sin rutas: 50% de cobertura en frío y 100% con asociaciones sintéticas. Historial probado en Python/JS/TS/SQL: añade ~10% de bytes; no demuestra ahorro facturado ni calidad del modelo. Actas: `CONTEXT-MEMORY-MEASUREMENT.md` y `FTS-HISTORY-MEASUREMENT.md`. Faltan repositorios reales, tokenizer correcto y publicación voluntaria real. |
-| 6 | **Docker opt-in validado localmente; operación pública pendiente.** | Validar fallos reales del daemon/controlador y matriz Windows independiente. Faltan controles operativos de secretos, TLS, auditoría, copias/restauración y política de datos para producción pública. |
+| 6 | **Docker opt-in y muerte del controlador durante tarea validados localmente; operación pública pendiente.** | Próximo cierre local: recuperación segura de contenedores/snapshots tras reinicio. Faltan fallos reales del daemon, matriz Windows independiente y controles de secretos, TLS, auditoría, copias/restauración y política de datos para producción pública. |
 
 ### Flujo de pendientes de la mejora de requisitos
 
@@ -291,3 +291,15 @@ No es aprobación de producción pública. Pendientes: robustez ante caída real
 daemon/controlador, matriz Windows/SAC independiente, dependencias por proyecto,
 calidad con modelos y ahorro global de tokens 40–70%. Los pilotos de recuperación
 entre PC y publicación real GitHub continúan pausados.
+
+
+## Seguimiento: muerte abrupta del controlador Docker
+
+1 de noviembre de 2026. 20 pruebas focalizadas PASS en fuente y 2 PASS con
+el runtime y los módulos del ZIP rc17 sin modificar. El watchdog termina el
+contenedor con 124 después de matar el controlador; el control negativo sin
+watchdog sigue activo y requiere limpieza externa. Acta y límites:
+`DOCKER-CONTROLLER-CRASH-VALIDATION.md`, evidencia JSON asociada.
+No se repiten build, smoke ni regresión completa porque el producto no cambió.
+Sigue pendiente recuperación automática de residuos al reiniciar y fallos reales
+del daemon/VM. Se mantiene 86/100 y los pilotos entre PC/GitHub pausados.

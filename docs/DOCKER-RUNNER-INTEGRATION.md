@@ -143,3 +143,15 @@ No es aprobación de producción pública. Pendientes: robustez ante caída real
 daemon/controlador, matriz Windows/SAC independiente, dependencias por proyecto,
 calidad con modelos y ahorro global de tokens 40–70%. Los pilotos de recuperación
 entre PC y publicación real GitHub continúan pausados.
+
+
+## Seguimiento: muerte abrupta del controlador Docker
+
+1 de noviembre de 2026. 20 pruebas focalizadas PASS en fuente y 2 PASS con
+el runtime y los módulos del ZIP rc17 sin modificar. El watchdog termina el
+contenedor con 124 después de matar el controlador; el control negativo sin
+watchdog sigue activo y requiere limpieza externa. Acta y límites:
+`DOCKER-CONTROLLER-CRASH-VALIDATION.md`, evidencia JSON asociada.
+No se repiten build, smoke ni regresión completa porque el producto no cambió.
+Sigue pendiente recuperación automática de residuos al reiniciar y fallos reales
+del daemon/VM. Se mantiene 86/100 y los pilotos entre PC/GitHub pausados.

@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-01",
+  "base_commit": "7ead9d2700cde274cb75a6a4bd5f3f3a3107d051",
+  "paid_calls": 0,
+  "runtime_changed": false,
+  "portable_changed": false,
+  "zip_sha256": "0491df0eb6d93220b9185584388f46f7fa5494c07cd906a975d4801d8f63b62c",
+  "tests": {
+    "docker-controller-crash-ready.xml": {
+      "passed": 20,
+      "seconds": 97.996,
+      "report_sha256": "9ac7c1645a68df77c91f0530c880133f5a97aa868e1c3ab35c0935310a0764cb"
+    },
+    "docker-controller-crash-rc17.xml": {
+      "passed": 2,
+      "seconds": 49.078,
+      "report_sha256": "192f5df1d354b68a76cd606173f513821e451db10d16087381ab97a0c03cfaaf"
+    }
+  },
+  "test_source_sha256": "6ece4b4f5f07819b42f99e7d5cfd6627c66bc8d6ba007bcd0717f0b58128b4c3",
+  "retained_failure": "_tmp/docker-controller-crash.xml: Docker Desktop was stopped",
+  "verified": [
+    "controller killed through retained process handle",
+    "started target before controller death",
+    "watchdog exit code 124",
+    "negative fixture remains running for 23 seconds without watchdog",
+    "external cleanup restricted to owned session label"
+  ],
+  "not_verified": [
+    "daemon or VM death",
+    "power loss",
+    "automatic orphan recovery after restart",
+    "all creation race windows"
+  ]
+}
