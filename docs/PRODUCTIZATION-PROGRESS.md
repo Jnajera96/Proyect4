@@ -748,3 +748,8 @@ SHA-256: `28d53cfdff4ff915f44261cdee61207e5f182f38c7cc11516d11f6923ec75feb`.
 Acta: `RUNNER-WINDOWS-PROCESS-TREE.md`. Rc13 y anteriores se conservan. El avance
 global sigue en 84/100: faltan cuotas fuertes, aislamiento de archivos/red y matriz
 Windows independiente. Recuperación entre PC y piloto GitHub continúan en pausa.
+
+Verificación posterior de caída abrupta del supervisor, sin cambio de ejecutable:
+7/7 pruebas nativas en fuente y 7/7 sobre rc14, incluyendo control negativo.
+No se repitió la suite completa ni el build; rc14 y su hash permanecen vigentes.
+Acta: `RUNNER-WINDOWS-PROCESS-TREE.md`. El avance global continúa en 84/100.

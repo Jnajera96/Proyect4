@@ -218,3 +218,8 @@ SHA-256: `28d53cfdff4ff915f44261cdee61207e5f182f38c7cc11516d11f6923ec75feb`.
 Acta: `RUNNER-WINDOWS-PROCESS-TREE.md`. Rc13 y anteriores se conservan. El avance
 global sigue en 84/100: faltan cuotas fuertes, aislamiento de archivos/red y matriz
 Windows independiente. Recuperación entre PC y piloto GitHub continúan en pausa.
+
+Verificación posterior, sin cambios del ejecutable: muerte abrupta del supervisor
+comprobada con TerminateProcess y control negativo. 7/7 pruebas nativas en fuente
+y 7/7 sobre rc14; acta `RUNNER-WINDOWS-PROCESS-TREE.md`. Quedan por implementar
+cuotas fuertes y aislamiento de archivos/red; esta evidencia no cierra esos puntos.

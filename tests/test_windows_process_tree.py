@@ -1,8 +1,11 @@
 import ctypes
 import os
+import subprocess
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from ctypes import wintypes as w
+from pathlib import Path
 
 import pytest
 from test_f8_test_runner import repo as repo
@@ -106,3 +109,57 @@ def test_unverified_shutdown_never_reports_success(sandbox, monkeypatch):
     monkeypatch.setattr(runner.WindowsJob, "terminate_and_wait", refuse)
     with pytest.raises(runner.RunnerError, match="no se confirmó el cierre"):
         runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=2)
+
+
+@pytest.mark.parametrize("kill_on_close", [True, False])
+def test_abrupt_supervisor_death_closes_job_and_terminates_child(tmp_path, kill_on_close):
+    import ai_swe.tools.windows_job as jobs
+
+    pidfile = tmp_path / "owned-child.pid"
+    child = (
+        "import os,time;from pathlib import Path;"
+        f"Path({str(pidfile)!r}).write_text(str(os.getpid()));time.sleep(30)"
+    )
+    control = "" if kill_on_close else (
+        "import ctypes;from ai_swe.tools.windows_job import _ExtendedLimits;"
+        "limits=_ExtendedLimits();"
+        "assert job._set(job.handle,9,ctypes.byref(limits),ctypes.sizeof(limits));"
+    )
+    supervisor = (
+        "import sys,subprocess,time;"
+        f"sys.path.insert(0,{str(Path(jobs.__file__).resolve().parents[2])!r});"
+        "from ai_swe.tools.windows_job import WindowsJob,CREATE_SUSPENDED;"
+        "job=WindowsJob();"
+        f"{control}"
+        f"child=subprocess.Popen([sys.executable,'-c',{child!r}],"
+        "creationflags=CREATE_SUSPENDED,stdin=subprocess.DEVNULL,"
+        "stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL);"
+        "assert job.assign_and_resume(child);time.sleep(30)"
+    )
+    api = process_api()
+    handle = None
+    with subprocess.Popen(
+        [sys.executable, "-B", "-c", supervisor],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    ) as parent:
+        try:
+            handle = api.OpenProcess(0x100000 | 0x1000 | 1, False, wait_pid(pidfile))
+            assert handle, "Could not retain our child handle"
+            assert api.WaitForSingleObject(handle, 0) == 258, "Child exited before the crash"
+            # TerminateProcess skips Python finally blocks; use only our retained parent handle.
+            assert api.TerminateProcess(int(parent._handle), 73)
+            assert parent.wait(timeout=5) == 73
+            if kill_on_close:
+                assert api.WaitForSingleObject(handle, 5000) == 0, "Child survived supervisor death"
+            else:
+                # The negative control must survive; cleanup below still terminates only our child.
+                assert api.WaitForSingleObject(handle, 500) == 258
+        finally:
+            if parent.poll() is None:
+                parent.kill()
+                parent.wait(timeout=5)
+            if handle:
+                if api.WaitForSingleObject(handle, 0) == 258:
+                    api.TerminateProcess(handle, 1)
+                    api.WaitForSingleObject(handle, 5000)
+                api.CloseHandle(handle)

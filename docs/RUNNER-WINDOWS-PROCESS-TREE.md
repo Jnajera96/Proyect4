@@ -95,9 +95,9 @@ a los handles observados durante su cierre. No es una barrera contra procesos
 creados mediante servicios externos o brokers, ni aislamiento de archivos, red,
 credenciales accesibles por permisos del usuario, CPU o RAM. El límite de procesos
 se aplica durante el cierre, no como cuota de ejecución. POSIX conserva su
-comportamiento anterior y no recibe esta garantía. Falta validar en otro equipo,
-la muerte abrupta del supervisor y las cuotas/aislamiento fuerte antes de declarar
-producción pública.
+comportamiento anterior y no recibe esta garantía. Falta validar en otro equipo
+y las cuotas/aislamiento fuerte antes de declarar producción pública. La muerte
+abrupta del supervisor se comprobó después del cierre de rc14, como se detalla abajo.
 
 Referencias primarias: [Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects),
 [QueryInformationJobObject](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-queryinformationjobobject)
@@ -118,3 +118,29 @@ SHA-256: `28d53cfdff4ff915f44261cdee61207e5f182f38c7cc11516d11f6923ec75feb`.
 Acta: `RUNNER-WINDOWS-PROCESS-TREE.md`. Rc13 y anteriores se conservan. El avance
 global sigue en 84/100: faltan cuotas fuertes, aislamiento de archivos/red y matriz
 Windows independiente. Recuperación entre PC y piloto GitHub continúan en pausa.
+
+## Verificación adicional: muerte abrupta del supervisor
+
+Base: `72fbf3a`. Se termina mediante TerminateProcess el supervisor sintético,
+utilizando exclusivamente el handle retenido por Popen: no se ejecutan finally
+de Python ni la limpieza explícita del runner. Antes se confirma que su hijo está
+vivo mediante otro handle propio; después se verifica su terminación en cinco
+segundos. El cierre del Job Object por Windows elimina ese hijo.
+
+El control negativo desactiva KILL_ON_JOB_CLOSE sólo en el Job Object del fixture,
+sin modificar archivos productivos. En ese caso el hijo debe seguir vivo; el test
+lo termina después mediante su handle propio. Así se evita una prueba vacua que
+aprobase por una salida natural o una causa distinta a la política del grupo.
+
+- Fuente con CPython oficial firmado: **7/7 PASS**, incluyendo los cinco casos
+  anteriores y los dos escenarios nuevos; `_tmp/job-supervisor-calibrated.xml`.
+- Módulos y runtime de rc14 extraído, sin src de desarrollo: **7/7 PASS**;
+  `_tmp/job-supervisor-rc14-calibrated.xml`.
+- Ruff del archivo de pruebas y git diff --check: aprobados.
+
+Sólo cambian pruebas y documentación. No se repiten la regresión completa ni el
+build del frontend, ni se fabrica otro ZIP idéntico. La última regresión completa
+sigue siendo 1.078 PASS / 4 SKIP, y el smoke previo del portable sigue en 14/14.
+El paquete, su SHA-256 y el avance estimado de 84/100 se mantienen. Esta prueba no
+demuestra aislamiento de archivos/red, cuotas de recursos ni resistencia contra
+brokers externos o procesos con privilegios equivalentes al usuario.

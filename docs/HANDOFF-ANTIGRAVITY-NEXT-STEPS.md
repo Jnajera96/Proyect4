@@ -11,8 +11,10 @@ a una base antigua ni descartar avances.
   ponderación 83,90 en `PROJECT-STATUS-2026-10-30.md`. No es aprobación de producción.
 - Entrega canónica: `dist/windows-v0.2.0-rc14-process-tree-final/AISWESystem-windows-x64.zip`.
 - SHA-256: `28d53cfdff4ff915f44261cdee61207e5f182f38c7cc11516d11f6923ec75feb`.
-- **1.078 backend PASS / 4 SKIP**, **39 frontend PASS**, build aprobado,
+- Última regresión completa: **1.078 backend PASS / 4 SKIP**, **39 frontend PASS**, build aprobado,
   **28 pruebas de migración/actualización PASS**, actualización y retorno nativos verificados.
+- Verificación adicional del cierre ante muerte abrupta del supervisor: **7/7 en fuente y 7/7 en rc14**,
+  con control negativo; sólo pruebas/documentación. Ver `RUNNER-WINDOWS-PROCESS-TREE.md`.
 - Smoke rc14 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
   ambos cierres código 0, SQLite/checkpoint persistentes, logs limpios. Los dos
   smokes anteriores de rc8 corregido siguen documentados en su acta.
