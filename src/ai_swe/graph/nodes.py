@@ -1024,8 +1024,12 @@ def _fragmento_relevante(root: Path, relative: str, query: str) -> str:
     start = max(0, best - 5)
     header = f"--- inicio {redact(relative)[:160]} ---\n[fragmento parcial]\n"
     footer = "\n--- fin ---"
+    limit = 1800 - len(header + footer)
+    # Leading context must not consume the matching line and its nearby implementation.
+    while start < best and len("\n".join(lines[start:best + 6])) > limit:
+        start += 1
     body = "\n".join(lines[start:start + 100])
-    return header + body[:1800 - len(header + footer)] + footer
+    return header + body[:limit] + footer
 
 
 def _primera_linea(ruta: Path) -> str:

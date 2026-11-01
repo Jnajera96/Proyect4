@@ -9,13 +9,13 @@ a una base antigua ni descartar avances.
 
 - Avance estimado: **85/100** hacia Windows local confiable y recuperable,
   ponderación 84,65 en `PROJECT-STATUS-2026-10-30.md`. No es aprobación de producción.
-- Entrega canónica: `dist/windows-v0.2.0-rc15-resource-limits/AISWESystem-windows-x64.zip`.
-- SHA-256: `d16dfd57986f1fd8618da99033b52efb68b6c104915138465f6b8df1cc31bc30`.
-- Última regresión completa: **1.095 backend PASS / 4 SKIP**, **39 frontend PASS**, build aprobado,
+- Entrega canónica: `dist/windows-v0.2.0-rc16-context-window/AISWESystem-windows-x64.zip`.
+- SHA-256: `43a2616ab0256edcd66ebfe0635af0b2ccc8ff7d9bd7bec3965bd9bf4bf316a8`.
+- Última regresión completa: **1.097 backend PASS / 4 SKIP**, **39 frontend PASS**, build aprobado,
   **28 pruebas de migración/actualización PASS**, actualización y retorno nativos verificados.
-- Verificación del runner sobre el ZIP rc15: **33/33 PASS**, incluyendo cuotas y
+- Verificación del runner sobre el ZIP rc16: **35/35 PASS**, incluyendo cuotas y
   caída abrupta del supervisor con control negativo. Ver `RUNNER-WINDOWS-RESOURCE-LIMITS.md`.
-- Smoke rc15 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
+- Smoke rc16 estándar de **14/14 PASS**, sin instrumentación ni plazos abreviados;
   ambos cierres código 0, SQLite/checkpoint persistentes, logs limpios. Los dos
   smokes anteriores de rc8 corregido siguen documentados en su acta.
 - Este cierre no añade inferencias ni publicación. Las 36 sondas reales previas
@@ -39,7 +39,7 @@ validación pendiente con funcionalidad ausente.
 | 4 | **En pausa por el usuario:** publicación real GitHub | `github_publish.py`, `api/delivery.py`, `PublicarGitHubModal.tsx` | Cuenta y repo de prueba elegidos explícitamente por el usuario; permisos/PAT, commit/push, privacidad, errores y limpieza del secreto. El asistente ya existe y está probado con mocks. No publicar sin autorización concreta. |
 | 5 | Validar productos completos con modelos reales | `graph/nodes.py`, `models/`, worktrees y guías | Las diez rutas aprobaron 36 sondas JSON/Pydantic pequeñas; sólo Qwen2.5 Coder 32B conserva E2E histórico. Probar otros productos con oráculos funcionales, Reviewer independiente y promoción humana. Reconciliar reservas y autorizar gasto antes de más inferencias. |
 | 6 | **Cerrado localmente:** actualización/migración y recuperación operativa | `tools/build_windows.py`, `packaging/`, `state/`, `config.py` | Actualizar entre versiones preservando bóvedas/SQLite/ledger; respaldo previo, migraciones probadas, fallo recuperable y retorno de versión sin borrar datos. Matriz Windows/SAC independiente y guía para usuario no técnico. |
-| 7 | Implementar aislamiento fuerte antes de producción pública | `tools/runner.py`, `sandbox.py`, políticas y despliegue | Cuotas nativas y cierre de procesos ya verificados en rc15. Falta aislar archivos/red y validar ataques con un entorno aislado real; después TLS, secretos, límites operativos, auditoría, backup/restauración y política de datos. No convertir el prototipo local en servicio público sin este cierre. |
+| 7 | Implementar aislamiento fuerte antes de producción pública | `tools/runner.py`, `sandbox.py`, políticas y despliegue | Cuotas nativas y cierre de procesos ya verificados en rc15. Docker local e imagen ya preparados con pruebas reales; falta snapshot seguro, integración del backend, preflight y cancelación antes de validar ataques desde la aplicación; después TLS, secretos, límites operativos, auditoría, backup/restauración y política de datos. No convertir el prototipo local en servicio público sin este cierre. |
 
 Los dos PC y las cuentas externas no se simulan como evidencia real. Se puede
 avanzar offline en 2, 3, pruebas de 6 y diseño/pruebas de 7 mientras el usuario
@@ -250,3 +250,25 @@ Acta: `RUNNER-WINDOWS-RESOURCE-LIMITS.md`. Rc14 y anteriores se conservan.
 Avance estimado: 85/100 (84,65 ponderado; operación segura 75→80). Siguen pendientes
 aislamiento de archivos/red, calidad/ahorro con modelos y matriz Windows independiente.
 Los pilotos de recuperación entre PC y publicación real GitHub continúan pausados.
+
+
+## Rc16 — código relevante conservado y preparación Docker
+
+1 de noviembre de 2026. Corregida la pérdida de la función solicitada cuando
+líneas largas de contexto previo consumían el fragmento. No aumentan los límites
+ni se modifica el prompt de sistema, la redacción o las puertas humanas.
+
+1.097 backend PASS / 4 SKIP, 39 frontend PASS/build, 35 pruebas desde el ZIP y
+smoke estándar 14/14. Cero inferencias pagadas. Entrega local:
+`dist/windows-v0.2.0-rc16-context-window/AISWESystem-windows-x64.zip`.
+SHA-256: `43a2616ab0256edcd66ebfe0635af0b2ccc8ff7d9bd7bec3965bd9bf4bf316a8`.
+Acta: `CODER-CONTEXT-WINDOW-SUFFICIENCY.md`. Rc15 y anteriores se conservan.
+
+Docker Desktop ya estaba instalado por usuario, fuera de PATH. Motor Linux local
+e imagen inmutable preparados; 20 controles reales y 3 rechazos de CLI aprobados.
+Ver `DOCKER-ISOLATION-PREPARATION.md` y su evidencia JSON. **La aplicación sigue
+usando el runner local**: faltan snapshot seguro, integración Docker, preflight
+y cancelación sobre el contenedor. No se afirma aislamiento integrado.
+Avance: 85/100, sin cambiar ponderaciones ni dar por cumplido el ahorro global
+40–70% (benchmark completo sigue en 28,127385% / 29,916601%). Los pilotos de
+recuperación entre PC y publicación real GitHub permanecen pausados.

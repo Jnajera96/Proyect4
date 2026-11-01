@@ -171,3 +171,13 @@ Incluye las cuotas nativas de ejecución Windows y CPython firmado; no requiere
 Python/Node de desarrollo. 33 pruebas sobre el ZIP y smoke 14/14 aprobados en este
 host. Rc14 se conserva para retorno. Configuración avanzada y alcance de las cuotas:
 `RUNNER-WINDOWS-RESOURCE-LIMITS.md`. No hay aislamiento fuerte de archivos/red.
+
+
+## Portable vigente rc16
+
+Usa `dist/windows-v0.2.0-rc16-context-window/AISWESystem-windows-x64.zip`,
+SHA-256 `43a2616ab0256edcd66ebfe0635af0b2ccc8ff7d9bd7bec3965bd9bf4bf316a8`. Extrae todo el ZIP y abre `AISWESystem.cmd`.
+35 pruebas sobre la extracción y smoke 14/14 aprobados. Incluye la corrección de
+ventana de código relevante y conserva las cuotas Windows de rc15. No necesita
+Docker para su flujo actual: la preparación Docker del repositorio todavía no
+está integrada en la aplicación. Rc15 se conserva. Ver `CODER-CONTEXT-WINDOW-SUFFICIENCY.md`.

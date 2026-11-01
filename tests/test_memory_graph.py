@@ -1,4 +1,24 @@
+import pytest
+
 from ai_swe.state.memory_graph import FileMemoryGraph
+
+
+@pytest.mark.parametrize("filename,padding,target", [
+    ("operations.py", "padding = '",
+     "def calcular_balance(ingresos, gastos):\n    return ingresos - gastos\n"),
+    ("operations.js", "var padding = '",
+     "function calcularBalance(ingresos, gastos) {\n  return ingresos - gastos;\n}\n"),
+])
+def test_long_leading_lines_do_not_displace_relevant_code(tmp_path, filename, padding, target):
+    from ai_swe.graph.nodes import _fragmento_relevante
+
+    body = (padding + "x" * 1000 + "';\n") * 6 + target
+    (tmp_path / filename).write_text(body, encoding="utf-8")
+    snippet = _fragmento_relevante(tmp_path, filename, "Corrige calcular balance")
+    assert target.strip() in snippet
+    assert len(snippet) <= 1800 and len(snippet.splitlines()) <= 103
+    assert snippet.startswith(f"--- inicio {filename} ---")
+    assert snippet.endswith("--- fin ---")
 
 
 def test_content_matches_seed_associated_files(tmp_path):

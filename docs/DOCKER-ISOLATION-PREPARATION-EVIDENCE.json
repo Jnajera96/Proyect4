@@ -1,0 +1,37 @@
+{
+  "success": true,
+  "image_id": "sha256:55c177ad698e01456dec9f3d86c06f54b6c6a42b74b1c0e6844696b1fbbced60",
+  "owner_label": "io.aiswe.isolation-proof=df84bcbd010b48dd9beb2cf4a79ab1a5",
+  "paid_calls": 0,
+  "application_backend_integrated": false,
+  "checks": [
+    "local_linux_amd64_image",
+    "restricted_container_configuration",
+    "non_root_user",
+    "no_capabilities",
+    "no_new_privileges",
+    "seccomp_enabled",
+    "host_credentials_absent",
+    "input_canary_readable",
+    "outside_canary_not_mounted",
+    "write_denied:/input/inside.txt",
+    "write_denied:/etc/aiswe-write-probe",
+    "temporary_writes_allowed",
+    "network_egress_unreachable",
+    "memory_cgroup_limit",
+    "pids_cgroup_limit",
+    "cpu_cgroup_limit",
+    "normalized_linux_snapshot_permissions",
+    "real_pytest_passed",
+    "real_ruff_passed",
+    "owned_containers_removed"
+  ],
+  "tool_sha256": "33a5208704064510400cd44f3ca8a58654a829e7342456d3790abb1f4bc72b9d",
+  "base_image": "python:3.13.14-slim-bookworm@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8",
+  "requirements_sha256": "e6bf527dbf10fc7f1aebde1640fb14f03fba44c82c1ca22604c901b87515c65c",
+  "cli_boundaries": [
+    "mutable_image_rejected",
+    "occupied_output_preserved",
+    "optimized_python_rejected"
+  ]
+}

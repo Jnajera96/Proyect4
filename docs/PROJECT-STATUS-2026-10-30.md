@@ -1,8 +1,8 @@
 # Estado hacia la entrega funcional y adopción de patrones
 
-Fecha: 31 de octubre de 2026. Evaluación del código fuente de
-`feature/v0.2.0-madre-continuity`, actualizada con rc15 y conservando las distribuciones anteriores.
-Última validación fuente: backend1.095 PASS/4 SKIP, frontend39 PASS y compilación
+Fecha: 1 de noviembre de 2026. Evaluación del código fuente de
+`feature/v0.2.0-madre-continuity`, actualizada con rc16 y conservando las distribuciones anteriores.
+Última validación fuente: backend1.097 PASS/4 SKIP, frontend39 PASS y compilación
 TypeScript/Vite aprobada; sin nuevas inferencias pagadas.
 
 ## Avance estimado
@@ -99,3 +99,25 @@ portable, transacciones, recuperación tras interrupciones y prueba rc9→rc10 c
 runtimes reales. Los valores 81/100 anteriores son históricos. Las demás áreas
 no cambian; no se incrementa calidad de modelos ni recuperación entre PC sin piloto.
 Evidencia: `SAFE-UPGRADE-MIGRATIONS.md`. La producción pública continúa pendiente.
+
+
+## Rc16 — código relevante conservado y preparación Docker
+
+1 de noviembre de 2026. Corregida la pérdida de la función solicitada cuando
+líneas largas de contexto previo consumían el fragmento. No aumentan los límites
+ni se modifica el prompt de sistema, la redacción o las puertas humanas.
+
+1.097 backend PASS / 4 SKIP, 39 frontend PASS/build, 35 pruebas desde el ZIP y
+smoke estándar 14/14. Cero inferencias pagadas. Entrega local:
+`dist/windows-v0.2.0-rc16-context-window/AISWESystem-windows-x64.zip`.
+SHA-256: `43a2616ab0256edcd66ebfe0635af0b2ccc8ff7d9bd7bec3965bd9bf4bf316a8`.
+Acta: `CODER-CONTEXT-WINDOW-SUFFICIENCY.md`. Rc15 y anteriores se conservan.
+
+Docker Desktop ya estaba instalado por usuario, fuera de PATH. Motor Linux local
+e imagen inmutable preparados; 20 controles reales y 3 rechazos de CLI aprobados.
+Ver `DOCKER-ISOLATION-PREPARATION.md` y su evidencia JSON. **La aplicación sigue
+usando el runner local**: faltan snapshot seguro, integración Docker, preflight
+y cancelación sobre el contenedor. No se afirma aislamiento integrado.
+Avance: 85/100, sin cambiar ponderaciones ni dar por cumplido el ahorro global
+40–70% (benchmark completo sigue en 28,127385% / 29,916601%). Los pilotos de
+recuperación entre PC y publicación real GitHub permanecen pausados.
