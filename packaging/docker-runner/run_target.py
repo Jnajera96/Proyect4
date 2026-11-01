@@ -1,6 +1,7 @@
 """Immutable PID-1 supervisor. Untrusted targets never run with supervisor credentials."""
 
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -52,6 +53,16 @@ def worker(target, digest):
         output.write_bytes(data)
         output.chmod(0o644)
     os.chdir(destination)
+    # Fixed read-only image path; -I prevents application code from entering the probe.
+    sys.path.insert(0, "/opt/aiswe")
+    from dependency_detector import detect_python_dependencies, repository_files
+
+    manifest = detect_python_dependencies(repository_files(destination))
+    missing = [module for module in manifest.third_party_modules + manifest.stdlib_modules
+               if importlib.util.find_spec(module) is None]
+    if missing:
+        print("DEPENDENCY_UNAVAILABLE: " + ", ".join(missing), file=sys.stderr, flush=True)
+        raise SystemExit(127)
     os.execvpe(TARGETS[target][0], TARGETS[target], {
         "PATH": os.environ["PATH"], "HOME": "/tmp", "TMPDIR": "/tmp", "LANG": "C.UTF-8",
         "PYTHONDONTWRITEBYTECODE": "1", "PYTHONPATH": "/workspace/src:/workspace",

@@ -1,5 +1,34 @@
 # Cierre del portable operativo — 30 de octubre de 2026
 
+## RC19 — dependencias Python por proyecto verificadas (1 de noviembre de 2026)
+
+Detector AST sin importar código generado, clasificación estándar/local/externa,
+requisitos canónicos propuestos y política conjunta de autorización, declaración
+y presencia offline. El Coder recibe límites antes de proponer; un módulo faltante
+detiene el ciclo con evidencia, sin instalación automática ni reintentos ciegos.
+El iniciador comprueba módulos y explica la preparación manual antes de arrancar.
+
+Entrega: `dist/windows-v0.2.0-rc19-dependencies/AISWESystem-windows-x64.zip`.
+SHA-256: `393a3ad9101c149060e68c94af3f1a8bf83831f0a1d36802a326cadefb0f9099`.
+121.312.395 bytes; 4.744 archivos, CRC y hashes de manifiesto comprobados.
+Backend: 1.154 PASS / 4 SKIP; frontend: 39 PASS y build aprobado.
+Portable: 92 pruebas + 15 de launcher y 14/14 controles de humo aprobados.
+Cero llamadas pagadas. rc18 permanece intacto como entrega histórica.
+
+Docker requiere reconstrucción explícita de imagen con protocolo 2 mediante
+`tools/build_docker_runner.py`; no se modifica la configuración privada.
+Imagen comprobada: `sha256:bdfbf24d45bbdbb966f5cdd3fe45e5a1b3f323043f4140a8787ffcfb8502721c`.
+La imagen base conserva solo las seis herramientas fijadas: paquetes adicionales
+requieren una imagen revisada con ruedas y hashes fijados, sin red durante la ejecución.
+FastAPI no se instala automáticamente. Python dinámico/transitivo y Node quedan
+fuera del detector estático; no se presenta como un instalador universal.
+
+Acta: [PROJECT-DEPENDENCIES-VALIDATION.md](PROJECT-DEPENDENCIES-VALIDATION.md).
+Evidencia: [PROJECT-DEPENDENCIES-EVIDENCE.json](PROJECT-DEPENDENCIES-EVIDENCE.json).
+Se conserva la estimación de 86/100: no se convierte el número de pruebas en
+avance de producto. Continuidad entre PC y publicación real en GitHub siguen pausadas.
+
+
 ## RC10 — actualización segura verificada localmente
 
 Entrega del área: `dist/windows-v0.2.0-safe-upgrade-rc10-verified/AISWESystem-windows-x64.zip`.

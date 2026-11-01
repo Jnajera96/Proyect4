@@ -348,11 +348,14 @@ def ejecutar(
         if docker is None:
             resultado = _capturar(orden, sandbox, timeout, limits)
         else:
+            from ai_swe.tools.dependency_detector import DependencyError
             from ai_swe.tools.docker_runner import DockerError, execute
 
             try:
                 resultado = execute(sandbox, target, docker, timeout)
                 orden = list(resultado.args)
+            except DependencyError as exc:
+                raise RunnerError("dependencias", str(exc)) from exc
             except (DockerError, OSError, ValueError) as exc:
                 raise RunnerError("docker", str(exc)) from exc
     except subprocess.TimeoutExpired as exc:

@@ -1099,6 +1099,10 @@ def explain_limits(state: RunState) -> dict:
 # se deriva del contrato en el gateway. Aqui se explican las reglas que el contrato
 # no puede expresar por si solo (que el diff y los hashes los calcula el sistema).
 PROMPT_CODIFICACION = """\
+Usa la biblioteca estándar siempre que cubra la necesidad. Una declaración en
+requirements.txt no autoriza ni instala paquetes. Respeta allowed_packages y el
+inventario offline; declara los paquetes externos autorizados con sus versiones
+compatibles. No uses pip, red ni imports dinámicos para eludir estas restricciones.
 Todo proyecto debe incluir un punto de entrada listo para probar por una persona:
 index.html para web o un bloque if __name__ == '__main__': con ejemplos interactivos
 o un menú de opciones para Python. Conserva el alcance confirmado y no ejecutes
@@ -1385,6 +1389,34 @@ def _historial_para_coder(state: RunState) -> str:
     return prefix + bloque_no_confiable(label, content[:limit])
 
 
+def _entorno_dependencias(manifest=None):
+    from ai_swe.config import load_settings
+    from ai_swe.graph.model_routing import settings_for_node
+    from ai_swe.tools.dependency_detector import IMPORT_PACKAGES, TOOL_MODULES, installed_modules
+    from ai_swe.tools.docker_runner import check_ready
+
+    settings = settings_for_node() or load_settings()
+    if settings.runner_docker is not None:
+        return settings, check_ready(settings.runner_docker) or {}
+    modules = set(TOOL_MODULES) | set(IMPORT_PACKAGES) | set(settings.allowed_packages)
+    if manifest is not None:
+        modules.update(manifest.third_party_modules)
+        modules.update(manifest.declared_packages)
+    return settings, installed_modules(sorted(modules))
+
+
+def _contexto_dependencias(state):
+    import sys
+
+    settings, available = _entorno_dependencias()
+    platform = "Linux amd64 en Docker sin red" if settings.runner_docker else sys.platform
+    return (f"Entorno de verificación: {platform}.\n"
+            f"Dependencias autorizadas (allowed_packages): {settings.allowed_packages}.\n"
+            f"Inventario offline verificado: {dict(sorted(available.items())[:64])}.\n"
+            "El módulo externo no preinstalado no se puede ejecutar en este entorno. "
+            "Usa http.server, sqlite3 o urllib; declarar requirements.txt no instala nada.")
+
+
 def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], CodeProposal] | None:
     """Intenta que el modelo proponga el cambio. `None` si hay que caer al fallback.
 
@@ -1494,6 +1526,7 @@ def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], C
         f"Objetivos de verificacion que se ejecutaran: {_targets_permitidos()}.\n"
         "Si se incluye pytest.integration, proporciona pruebas funcionales reales "
         "marcadas pytest.mark.integration; ausencia de pruebas no se acepta como exito.\n"
+        f"{_contexto_dependencias(state)}\n\n"
         f"{_contexto_correccion_coder(state)}\n\n"
         f"{_historial_para_coder(state)}\n\n"
         f"Peticion original del usuario:\n{state.instruction.text}"
@@ -1586,6 +1619,9 @@ def coder(state: RunState) -> dict:
     try:
         resultado = _coder_del_modelo(state)
     except Exception as exc:  # noqa: BLE001 - la frontera convierte cualquier fallo
+        if isinstance(exc, DockerError):
+            return _escalar(state, _error(state, "RUNNER_NOT_READY", "coder", str(exc),
+                                          recuperable=False))
         if not _es_fallo_esperado(exc):
             raise
         motivo = f"{type(exc).__name__}: {exc}"[:500]
@@ -1621,6 +1657,23 @@ def coder(state: RunState) -> dict:
         }
 
     cambio, presupuesto, avisos, propuesta = resultado
+    from ai_swe.tools.dependency_detector import detect_python_dependencies, repository_files
+    from ai_swe.tools.policy import dependency_issues
+
+    try:
+        manifest = detect_python_dependencies(repository_files(Path(_alcance(state).repo_path),
+                                                              propuesta.files))
+        settings, available = _entorno_dependencias(manifest)
+        problems = dependency_issues(manifest, settings.allowed_packages, available)
+    except (DockerError, OSError, ValueError) as exc:
+        problems = [f"No se pudo verificar el inventario de dependencias: {exc}"]
+    if problems:
+        diagnostics = [*problems, *(notice[:600] for notice in avisos)]
+        result = _escalar(state, _error(state, "DEPENDENCY_UNAVAILABLE", "coder",
+                                       "\n".join(diagnostics)[:2000], recuperable=False))
+        result.update(outputs=_con_salidas(state, coder_output=cambio, code_proposal=propuesta),
+                      budget=presupuesto)
+        return result
     # Un recorte por alcance no puede quedar sin dejar rastro.
     for aviso in avisos:
         errores = _error(
@@ -1868,6 +1921,19 @@ def run_tests(state: RunState) -> dict:
     evidencia: list[TestRun] = []
     errores = list(state.errors)
     llamadas = state.budget.used_tool_calls
+    from ai_swe.tools.dependency_detector import detect_python_dependencies, repository_files
+    from ai_swe.tools.docker_runner import DockerError
+    from ai_swe.tools.policy import dependency_issues
+
+    try:
+        manifest = detect_python_dependencies(repository_files(sandbox.raiz))
+        settings, available = _entorno_dependencias(manifest)
+        problems = dependency_issues(manifest, settings.allowed_packages, available)
+    except (DockerError, OSError, ValueError) as exc:
+        problems = [str(exc)]
+    if problems:
+        return _escalar(state, _error(state, "DEPENDENCY_UNAVAILABLE", "coder",
+                                      "\n".join(problems)[:2000], recuperable=False))
 
     for target in permitidos:
         decision = decide(
@@ -1904,6 +1970,9 @@ def run_tests(state: RunState) -> dict:
                 **docker_args,
             )
         except RunnerError as exc:
+            if exc.operacion == "dependencias":
+                return _escalar(state, _error(state, "DEPENDENCY_UNAVAILABLE", "coder",
+                                              str(exc), recuperable=False))
             errores = _error(
                 state,
                 "TEST_EXECUTOR_FAILED",
@@ -1924,6 +1993,14 @@ def run_tests(state: RunState) -> dict:
         )
         evidencia.append(corrida)
         llamadas += 1
+        if corrida.exit_code != 0 and "ModuleNotFoundError:" in corrida.stdout + corrida.stderr:
+            result = _escalar(state, _error(state, "DEPENDENCY_UNAVAILABLE", "coder",
+                "Falta un módulo durante la prueba. Revisa los módulos locales y el "
+                "inventario offline; no se reintentará automáticamente.", recuperable=False))
+            result.update(evidence=_con_evidencia(state, test_runs=[*state.evidence.test_runs,
+                                                                  *evidencia]),
+                          budget=_con_presupuesto(state, used_tool_calls=llamadas))
+            return result
 
     if not evidencia:
         return _escalar(state, errores)

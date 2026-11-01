@@ -29,6 +29,42 @@ from ai_swe.tools.registry import ALLOWLIST_ARGS, ROLE_APPROVAL_TOOLS, ROLE_TOOL
 _WINDOWS_DRIVE = re.compile(r"^[A-Za-z]:")
 
 
+def dependency_issues(manifest, allowed_packages, available_modules):
+    """Authorization is independent of declaration and offline availability."""
+    from packaging.requirements import Requirement
+    from packaging.utils import canonicalize_name
+
+    from ai_swe.tools.dependency_detector import TOOL_MODULES, package_for
+
+    allowed = {canonicalize_name(p) for p in allowed_packages}
+    tools = {package_for(m) for m in TOOL_MODULES}
+    available = {package_for(m): version for m, version in available_modules.items()}
+    # Syntax errors go to pytest; unavailable or oversized source cannot be authorized by omission.
+    issues = [error for error in manifest.errors
+              if not error.startswith("No se pudo analizar Python:")]
+    for module in manifest.third_party_modules:
+        package = package_for(module)
+        if package not in allowed | tools:
+            issues.append(f"El módulo '{module}' ({package}) no está en allowed_packages. "
+                          "Usa biblioteca estándar o incluye el módulo local que falta.")
+        elif module not in available_modules:
+            issues.append(f"El módulo '{module}' es una dependencia externa no preinstalada "
+                          "en el entorno aislado. Usa http.server, sqlite3 o urllib; "
+                          "declararla no la instala.")
+        if module in manifest.unmet_modules and package not in tools:
+            issues.append(f"Declara '{package}' explícitamente en requirements.txt.")
+    for text in manifest.requirements:
+        requirement = Requirement(text)
+        package = canonicalize_name(requirement.name)
+        if package not in allowed | tools:
+            issues.append(f"El paquete declarado '{package}' no está autorizado.")
+        elif package not in available:
+            issues.append(f"El paquete declarado '{package}' no está disponible offline.")
+        elif requirement.specifier and not requirement.specifier.contains(available[package]):
+            issues.append(f"La versión instalada de '{package}' no cumple {requirement.specifier}.")
+    return list(dict.fromkeys(issues))
+
+
 @dataclass(frozen=True)
 class DecisionContext:
     """Contexto de la decision. Todo lo que el Engine necesita saber, y nada mas."""

@@ -119,6 +119,8 @@ def assemble(root: Path, frontend: Path, bundle: Path, archive: Path, uv: Path) 
     recipe.mkdir()
     for name in ("Dockerfile", ".dockerignore", "requirements.txt", "run_target.py"):
         shutil.copy2(root / "packaging/docker-runner" / name, recipe / name)
+    shutil.copy2(root / "src/ai_swe/tools/dependency_detector.py",
+                 recipe / "dependency_detector.py")
     (runtime / "python313._pth").write_text(
         "python313.zip\n.\n../packages\n../app\nimport site\n", encoding="utf-8"
     )

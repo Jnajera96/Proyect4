@@ -2,3 +2,4 @@
 !Dockerfile
 !requirements.txt
 !run_target.py
+!dependency_detector.py

@@ -28,6 +28,10 @@ class LaunchGuide(BaseModel):
     entrypoint: str = ""
     prepared: bool = False
     launcher_path: str = ""
+    dependency_modules: list[str] = Field(default_factory=list)
+    missing_modules: list[str] = Field(default_factory=list)
+    suggested_requirements: str = ""
+    installation_command: str = ""
 
 
 def approved_repository(state: RunState) -> Path:
@@ -112,6 +116,8 @@ def describe(state: RunState) -> LaunchGuide:
     runtime = str(Path(sys.executable).resolve())
     if any(char in runtime + str(root) for char in '%!&|<>^"\r\n'):
         raise ValueError("La ruta contiene caracteres incompatibles con el iniciador de Windows.")
+    python_paths = repr([".", "src", Path(entry).parent.as_posix()])
+    python_setup = f"import sys;sys.path[:0]={python_paths};"
     if kind == "web_static":
         command = f'start "" "%~dp0{entry.replace("/", chr(92))}"'
     elif kind == "python_library":
@@ -123,7 +129,7 @@ def describe(state: RunState) -> LaunchGuide:
             else f"import runpy;globals().update(runpy.run_path('{entry}'))"
         )
         code = (
-            "import sys;sys.path.insert(0,'.');" + load + ";"
+            python_setup + load + ";"
             "print('Módulo cargado con éxito. Prueba tus funciones aquí:')"
         )
         command = f'"{runtime}" -i -c "{code}"'
@@ -132,13 +138,13 @@ def describe(state: RunState) -> LaunchGuide:
         if not all(part.isidentifier() for part in module.split(".")):
             raise ValueError("El módulo de la aplicación necesita un nombre válido.")
         code = (
-            "import sys;sys.path.insert(0,'.');import uvicorn;"
+            python_setup + "import uvicorn;"
             f"uvicorn.run('{module}:{app_name}',host='127.0.0.1',port=8765)"
         )
         command = f'"{runtime}" -c "{code}"'
     elif kind == "python_cli":
         code = (
-            "import sys,runpy;sys.path.insert(0,'.');"
+            python_setup + "import runpy;"
             "runpy.run_path(sys.argv[1],run_name='__main__')"
         )
         command = f'"{runtime}" -c "{code}" "{entry}"'
@@ -190,6 +196,51 @@ def describe(state: RunState) -> LaunchGuide:
             "No se detectó un programa HTML o Python ejecutable. "
             "Pide un punto de entrada para probar este formato."
         )
+    if kind in {"fastapi", "python_cli", "python_library"}:
+        from ai_swe.tools.dependency_detector import (
+            detect_python_dependencies,
+            installed_modules,
+            package_for,
+            repository_files,
+        )
+
+        files = [f for f in repository_files(root) if not Path(f.path).name.startswith("test_")
+                 and "tests" not in Path(f.path).parts]
+        manifest = detect_python_dependencies(files)
+        modules = set(manifest.third_party_modules)
+        if kind == "fastapi":
+            modules.update({"fastapi", "uvicorn"})
+        if len(modules) > 64 or sum(map(len, modules)) > 3000:
+            raise ValueError("Demasiados módulos para preparar un iniciador revisable.")
+        guide.dependency_modules = sorted(modules)
+        available = installed_modules(modules)
+        guide.missing_modules = sorted(modules - set(available))
+        guide.suggested_requirements = "".join(p + "\n" for p in sorted({
+            package_for(m) for m in modules}))
+        guide.installation_command = f'"{runtime}" -m pip install -r requirements.txt'
+        unsafe_requirements = any(e.startswith("requirements.txt") for e in manifest.errors)
+        if unsafe_requirements:
+            guide.installation_command = ""
+        if guide.missing_modules:
+            guide.summary_es = "Tu aplicación necesita preparar dependencias antes de iniciar."
+            guide.instructions.append("Faltan módulos en el Python del iniciador: "
+                                      + ", ".join(guide.missing_modules) + ".")
+            if not manifest.has_manifest:
+                names = guide.suggested_requirements.strip().replace("\n", ", ")
+                guide.instructions.append("Primero crea y revisa requirements.txt con: " + names)
+            if guide.installation_command:
+                guide.instructions.append(
+                    "Revisa el archivo y, si autorizas su instalación, ejecuta: "
+                    + guide.installation_command)
+            guide.instructions.append("No se instalará nada automáticamente. Si ese Python no "
+                                      "incluye pip, prepara un entorno Python con pip y configura "
+                                      "el iniciador para usarlo; no se usa otra .venv en silencio.")
+        if manifest.errors:
+            guide.instructions.append("Revisa los archivos Python y requirements.txt antes de "
+                                      "instalar: el análisis estático está incompleto.")
+        if unsafe_requirements:
+            guide.instructions.append("El manifiesto contiene fuentes no admitidas. "
+                                      "No se ofrece un comando de instalación hasta corregirlo.")
     guide.prepared = (
         launcher.is_file()
         and not launcher.is_symlink()
@@ -199,10 +250,24 @@ def describe(state: RunState) -> LaunchGuide:
 
 
 def launcher_bytes(guide: LaunchGuide) -> bytes:
+    preflight = ""
+    if guide.dependency_modules:
+        runtime = str(Path(sys.executable).resolve())
+        probe = ("import importlib.util,sys;sys.exit(any(importlib.util.find_spec(m) is None "
+                 f"for m in {tuple(guide.dependency_modules)!r}))")
+        preflight = (
+            f'"{runtime}" -I -c "{probe}"\r\n'
+            "if errorlevel 1 (\r\n"
+            "echo Faltan dependencias en el Python de este iniciador.\r\n"
+            "echo Revisa o crea requirements.txt antes de iniciar.\r\n"
+            f"echo Instala solo si autorizas el archivo: {guide.installation_command}\r\n"
+            "echo Si este Python no incluye pip, prepara un entorno con pip.\r\n"
+            "pause\r\nexit /b 1\r\n)\r\n"
+        )
     return (
         "@echo off\r\nsetlocal DisableDelayedExpansion\r\nchcp 65001 >nul\r\n"
         "rem AI SWE - iniciador revisable; no contiene credenciales\r\n"
-        'cd /d "%~dp0"\r\n' + guide.command + "\r\n" + "pause\r\n"
+        'cd /d "%~dp0"\r\n' + preflight + guide.command + "\r\n" + "pause\r\n"
     ).encode("utf-8")
 
 
@@ -229,6 +294,9 @@ def launch(state: RunState) -> LaunchGuide:
     guide = prepare(state)
     if not guide.available:
         raise ValueError(guide.summary_es)
+    if guide.missing_modules:
+        raise ValueError("Faltan dependencias: " + ", ".join(guide.missing_modules)
+                         + ". Revisa requirements.txt y la guía antes de iniciar.")
     if guide.kind == "web_static":
         if not webbrowser.open((Path(guide.repo_path) / guide.entrypoint).as_uri()):
             raise ValueError("No se pudo abrir el navegador; abre iniciar.bat con doble clic.")

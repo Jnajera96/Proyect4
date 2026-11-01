@@ -4,6 +4,8 @@ export interface LaunchGuide {
   available: boolean; kind: string; summary_es: string; launch_action: string;
   command: string; instructions: string[]; repo_path: string; entrypoint: string;
   prepared: boolean; launcher_path: string;
+  dependency_modules?: string[]; missing_modules?: string[];
+  suggested_requirements?: string; installation_command?: string;
 }
 const post = (body?: unknown): RequestInit => ({ method: "POST",
   headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) });

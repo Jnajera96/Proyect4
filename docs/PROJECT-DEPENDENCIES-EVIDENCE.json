@@ -1,0 +1,93 @@
+{
+  "base_commit": "7695a7337ee381dfb2d909465d50b0c1e3a9aae7",
+  "paid_api_calls": 0,
+  "backend": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "4",
+    "tests": "1158",
+    "time": "608.505",
+    "timestamp": "2026-11-01T16:14:00.902994-06:00",
+    "hostname": "Najeras_Lap",
+    "passed": 1154
+  },
+  "final_diagnostics_and_launch": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "2",
+    "tests": "35",
+    "time": "17.195",
+    "timestamp": "2026-11-01T16:21:37.346244-06:00",
+    "hostname": "Najeras_Lap",
+    "passed": 33
+  },
+  "portable": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "92",
+    "time": "168.187",
+    "timestamp": "2026-11-01T16:31:07.880212-06:00",
+    "hostname": "Najeras_Lap",
+    "passed": 92
+  },
+  "portable_launcher": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "15",
+    "time": "3.405",
+    "timestamp": "2026-11-01T16:31:28.043451-06:00",
+    "hostname": "Najeras_Lap",
+    "passed": 15
+  },
+  "frontend": {
+    "passed": 39,
+    "build": "passed"
+  },
+  "smoke": {
+    "success": true,
+    "checks": [
+      "all manifest hashes match",
+      "no developer state or secrets files",
+      "installed defaults to profiles",
+      "private API gated before login",
+      "integrated frontend served",
+      "profile registration with packaged cryptography",
+      "empty profile has no global token",
+      "packaged graph accepts deterministic run",
+      "human confirmation required",
+      "graceful packaged shutdown",
+      "encrypted profile login survives restart",
+      "SQLite and graph checkpoint survive restart",
+      "persisted SQLite integrity",
+      "restart shutdown graceful"
+    ],
+    "paid_calls": 0
+  },
+  "archive": {
+    "zip": "dist\\windows-v0.2.0-rc19-dependencies\\AISWESystem-windows-x64.zip",
+    "sha256": "393a3ad9101c149060e68c94af3f1a8bf83831f0a1d36802a326cadefb0f9099",
+    "bytes": 121312395,
+    "files": 4744,
+    "crc": true,
+    "source_match": true
+  },
+  "image": {
+    "image": "sha256:bdfbf24d45bbdbb966f5cdd3fe45e5a1b3f323043f4140a8787ffcfb8502721c",
+    "detector_sha256": "9797e2498a6afac9f5cfd3ef2e2a5d1b2c76cb0871e2061e50556d61b6cea721",
+    "source_matches_image": true,
+    "exit_code": 0,
+    "stdout": ".                                                                        [100%]\n1 passed in 0.01s\n",
+    "paid_calls": 0
+  },
+  "notes": [
+    "La suite completa precede el ajuste final de texto de diagnóstico; la suite focalizada y el portable verifican ese ajuste.",
+    "El primer intento detectó un namespace src clasificado como externo; se corrigió el detector sin modificar pruebas existentes.",
+    "El límite de 10 archivos de propuesta se mantiene; una fixture se ajustó a ese contrato."
+  ]
+}

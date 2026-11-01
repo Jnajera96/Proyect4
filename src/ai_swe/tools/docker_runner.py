@@ -121,8 +121,13 @@ class DockerSession:
         text = self.run(["image", "inspect", policy.image])
         image = json.loads(text)[0]
         if (image["Os"] != "linux" or image["Architecture"] != "amd64"
-                or (image["Config"].get("Labels") or {}).get("io.aiswe.runner-protocol") != "1"):
-            raise DockerError("La imagen no implementa el protocolo aprobado del ejecutor Linux")
+                or (image["Config"].get("Labels") or {}).get("io.aiswe.runner-protocol") != "2"):
+            raise DockerError("Reconstruye la imagen: falta el protocolo 2 de dependencias offline")
+        try:
+            entries = image["Config"]["Labels"]["io.aiswe.python-modules"].split(",")
+            return dict(entry.split("=", 1) for entry in entries)
+        except (KeyError, ValueError, AttributeError) as exc:
+            raise DockerError("La imagen no declara su inventario de módulos") from exc
 
     def close(self):
         try:
@@ -276,7 +281,7 @@ def check_ready(policy):
 
     session = DockerSession()
     try:
-        session.ready(policy)
+        return session.ready(policy)
     except (RunnerError, OSError, ValueError, subprocess.TimeoutExpired) as exc:
         raise DockerError("No se pudo verificar Docker y la imagen local") from exc
     finally:
@@ -292,11 +297,22 @@ def execute(sandbox, target, policy, timeout):
     deadline = time.monotonic() + min(timeout, 3600)
     session = DockerSession()
     try:
-        session.ready(policy)
+        available = session.ready(policy)
         if session.control:
             session.control.check()
         snapshot = session.root / "snapshot"
         digest = create_snapshot(sandbox.raiz, snapshot)
+        from ai_swe.tools.dependency_detector import (
+            DependencyError,
+            detect_python_dependencies,
+            repository_files,
+        )
+
+        manifest = detect_python_dependencies(repository_files(snapshot))
+        missing = sorted(set(manifest.third_party_modules) - set(available))
+        if missing:
+            raise DependencyError("DEPENDENCY_UNAVAILABLE: módulos ausentes en la imagen: "
+                                  + ", ".join(missing))
         if "," in str(snapshot):
             raise DockerError("Ruta temporal no compatible con montajes Docker")
         remaining = deadline - time.monotonic()
@@ -340,6 +356,8 @@ def execute(sandbox, target, policy, timeout):
         if result.returncode and state["ExitCode"] == 0:
             raise DockerError("El cliente Docker falló sin confirmar la salida")
         error = result.stderr
+        if state["ExitCode"] == 127 and "DEPENDENCY_UNAVAILABLE:" in error:
+            raise DependencyError(error[-2000:])
         if state.get("OOMKilled"):
             error += "\nEl contenedor agotó su cuota de memoria"
         return subprocess.CompletedProcess(
