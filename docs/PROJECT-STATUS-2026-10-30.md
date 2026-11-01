@@ -1,21 +1,21 @@
 # Estado hacia la entrega funcional y adopción de patrones
 
 Fecha: 1 de noviembre de 2026. Evaluación del código fuente de
-`feature/v0.2.0-madre-continuity`, actualizada con rc16 y conservando las distribuciones anteriores.
-Última validación fuente: backend1.097 PASS/4 SKIP, frontend39 PASS y compilación
+`feature/v0.2.0-madre-continuity`, actualizada con rc17 y conservando las distribuciones anteriores.
+Última validación fuente: backend1.121 PASS/4 SKIP, frontend39 PASS y compilación
 TypeScript/Vite aprobada; sin nuevas inferencias pagadas.
 
 ## Avance estimado
 
-**85/100 hacia v0.2.0 Windows local, confiable y recuperable.** Es una estimación
-técnica ponderada (84,65 redondeado), no una métrica derivada del número de pruebas.
+**86/100 hacia v0.2.0 Windows local, confiable y recuperable.** Es una estimación
+técnica ponderada (85,85 redondeado), no una métrica derivada del número de pruebas.
 La aprobación de una plataforma pública de producción sigue pendiente.
 
-Se conserva el método del acta `OPERATIONAL-STATUS-2026-10-29.md`. Frente a la
-ponderación previa de 83,90 (84/100), distribución y operación segura pasa de 75
-a 80 por las cuotas nativas de procesos, memoria comprometida y CPU verificadas
-en rc15. Se conservan las demás puntuaciones. No se da por cerrado el aislamiento
-de archivos/red ni se eleva la validación de voz, continuidad o Windows en destino.
+Se conserva el método del acta `OPERATIONAL-STATUS-2026-10-29.md`.
+Frente a 84,65, distribución y operación segura pasa de 80 a 88 por el runner
+Docker opt-in validado de extremo a extremo. Las demás puntuaciones se conservan.
+No se eleva voz, calidad de modelos ni recuperación entre PC sin su piloto.
+La producción pública y una matriz independiente de Windows siguen pendientes.
 
 | Objetivo | Peso | Estimación actual | Cierre pendiente |
 | --- | ---: | ---: | --- |
@@ -25,7 +25,7 @@ de archivos/red ni se eleva la validación de voz, continuidad o Windows en dest
 | Voz | 5 % | 90 | Micrófono/audio en el equipo de destino. |
 | Memoria, modos y rollback | 10 % | 90 | Calidad con modelos reales y tokens facturados. Consultas sin rutas e historial multilenguaje ya medidos offline. |
 | Continuidad y respaldo | 15 % | 60 | Recuperación por UI entre dos equipos, auto-backup, conflictos y pérdida de equipo. |
-| Distribución y operación segura | 15 % | 80 | Matriz independiente Windows/SAC y aislamiento fuerte de archivos/red; cuotas nativas y migración/retorno local verificados. |
+| Distribución y operación segura | 15 % | 88 | Matriz Windows/SAC independiente y fallos reales del daemon/controlador. Docker opt-in, cuotas y migración/retorno local verificados. |
 
 ## Qué se adoptó de MADRE
 
@@ -121,3 +121,32 @@ y cancelación sobre el contenedor. No se afirma aislamiento integrado.
 Avance: 85/100, sin cambiar ponderaciones ni dar por cumplido el ahorro global
 40–70% (benchmark completo sigue en 28,127385% / 29,916601%). Los pilotos de
 recuperación entre PC y publicación real GitHub permanecen pausados.
+
+
+## Rc17 — ejecutor Docker opcional integrado y verificado
+
+1 de noviembre de 2026. Snapshot Windows con handles bloqueados y SHA-256,
+rechazo de enlaces, worker Linux sin privilegios, red deshabilitada, cuotas y
+watchdog dentro de la imagen. Preflight antes del Coder y limpieza del contenedor
+real en cancelación/timeout. Si no se verifica el cierre, se conservan diario,
+worktree y reservas; no se declara cancelación confirmada.
+
+**1.121 backend PASS / 4 SKIP**, **39 frontend PASS/build**, **56 pruebas desde
+el ZIP PASS** y **14/14 controles del smoke estándar PASS**, ambos cierres 0.
+Se valida promoción con FakeModelAdapter y Docker real, sin llamadas pagadas.
+Portable aprobado localmente:
+`dist/windows-v0.2.0-rc17-docker-runner-final/AISWESystem-windows-x64.zip`.
+SHA-256: `0491df0eb6d93220b9185584388f46f7fa5494c07cd906a975d4801d8f63b62c`.
+121.301.245 bytes; CRC y 4.742 hashes aprobados. CPython oficial firmado 3.13.14.
+El primer candidato `windows-v0.2.0-rc17-docker-runner` está retenido; rc16 se conserva.
+
+Acta: `DOCKER-RUNNER-INTEGRATION.md`; evidencia JSON del mismo nombre.
+Docker es opt-in y requiere motor/imagen locales. Sin configuración sigue el
+runner Windows; no se editó el `.env` privado. El ZIP incluye receta, no Docker
+ni una imagen Linux. El lanzador de la aplicación generada puede correr en el host.
+
+Avance estimado: **86/100** (85,85 ponderado; distribución y operación 80→88).
+No es aprobación de producción pública. Pendientes: robustez ante caída real del
+daemon/controlador, matriz Windows/SAC independiente, dependencias por proyecto,
+calidad con modelos y ahorro global de tokens 40–70%. Los pilotos de recuperación
+entre PC y publicación real GitHub continúan pausados.

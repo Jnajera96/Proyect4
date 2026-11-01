@@ -21,10 +21,12 @@ from pydantic import AliasChoices, Field, SecretStr, field_validator, model_vali
 from pydantic_settings import BaseSettings, DotEnvSettingsSource, SettingsConfigDict
 
 from ai_swe.runtime_paths import default_runtime_mode, prepare_user_directories, user_paths
+from ai_swe.tools.docker_runner import DockerSettings
 from ai_swe.tools.windows_job import JobLimits
 
 
 class Settings(BaseSettings):
+    runner_docker: DockerSettings | None = None
     runtime_mode: Literal["development", "installed"] = Field(default_factory=default_runtime_mode)
 
     @classmethod

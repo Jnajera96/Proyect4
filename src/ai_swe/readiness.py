@@ -58,6 +58,14 @@ def check_readiness(settings: Settings, repo: str, mode: str = "FULL_PROPOSAL") 
         "initialize_head" if valid else "register_project",
     )
     if mode == "FULL_PROPOSAL":
+        if settings.runner_docker is not None:
+            from ai_swe.tools.docker_runner import DockerError, check_ready
+
+            try:
+                check_ready(settings.runner_docker)
+                add("DOCKER", True, "Pruebas aisladas con Docker listas.")
+            except (DockerError, OSError) as exc:
+                add("DOCKER", False, str(exc), "configure_runner")
         config = provider_configuration(settings)
         roles = {"coder", "reviewer"}.issubset(settings.remote_model_roles)
         configured = (

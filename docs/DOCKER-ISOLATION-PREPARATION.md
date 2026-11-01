@@ -93,3 +93,11 @@ Los pilotos de recuperación entre PC y publicación real GitHub continúan paus
 
 Referencias primarias: [ejecución y restricciones](https://docs.docker.com/engine/containers/run/)
 y [creación de contenedores](https://docs.docker.com/reference/cli/docker/container/create/).
+
+
+## Seguimiento posterior — rc17
+
+Los puntos de integración anteriores se implementan y validan como opción en
+rc17. Esta acta y su JSON conservan la prueba histórica de preparación; no se
+reescriben como evidencia del backend. Ver `DOCKER-RUNNER-INTEGRATION.md` para
+el cierre, activación explícita y límites vigentes.

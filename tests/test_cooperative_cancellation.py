@@ -28,6 +28,30 @@ def settings_for(tmp_path):
     )
 
 
+def test_unverified_execution_cleanup_preserves_worktree_and_reservations(tmp_path):
+    settings = settings_for(tmp_path)
+    with RunStore(settings.state_db_path) as store:
+        engine = RunEngine(store, settings=settings)
+        state = engine.crear_estado("crea un juego")
+        engine.create(state)
+        worktree = settings.workspace_root / state.run_id
+        worktree.mkdir(parents=True)
+        state = state.model_copy(update={"artifacts": state.artifacts.model_copy(
+            update={"worktree_path": str(worktree)})})
+        engine._app.update_state(engine._config(state.run_id), state.model_dump())
+        ledger = BudgetLedger(settings.state_db_path)
+        ledger.set_limit(5)
+        ledger.reserve_call(state.run_id, run_limit=0.1, estimate=0.01)
+        engine._cancel_control(state.run_id).block_cleanup("Contenedor sin cierre verificado")
+        result = engine.request_cancel(state.run_id)
+        assert result.status == "needs_human" and worktree.exists()
+        assert result.cancellation.status == "requested"
+        assert result.cancellation.finished_at is None
+        assert result.cancellation.released_reservations == 0
+        assert ledger.summary()["reserved"] == 0.1
+        assert result.errors[-1].error_class == "CANCEL_CLEANUP_UNVERIFIED"
+
+
 def repository(tmp_path):
     root = tmp_path / "repo"
     root.mkdir()

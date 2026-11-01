@@ -360,3 +360,32 @@ y cancelación sobre el contenedor. No se afirma aislamiento integrado.
 Avance: 85/100, sin cambiar ponderaciones ni dar por cumplido el ahorro global
 40–70% (benchmark completo sigue en 28,127385% / 29,916601%). Los pilotos de
 recuperación entre PC y publicación real GitHub permanecen pausados.
+
+
+## Rc17 — ejecutor Docker opcional integrado y verificado
+
+1 de noviembre de 2026. Snapshot Windows con handles bloqueados y SHA-256,
+rechazo de enlaces, worker Linux sin privilegios, red deshabilitada, cuotas y
+watchdog dentro de la imagen. Preflight antes del Coder y limpieza del contenedor
+real en cancelación/timeout. Si no se verifica el cierre, se conservan diario,
+worktree y reservas; no se declara cancelación confirmada.
+
+**1.121 backend PASS / 4 SKIP**, **39 frontend PASS/build**, **56 pruebas desde
+el ZIP PASS** y **14/14 controles del smoke estándar PASS**, ambos cierres 0.
+Se valida promoción con FakeModelAdapter y Docker real, sin llamadas pagadas.
+Portable aprobado localmente:
+`dist/windows-v0.2.0-rc17-docker-runner-final/AISWESystem-windows-x64.zip`.
+SHA-256: `0491df0eb6d93220b9185584388f46f7fa5494c07cd906a975d4801d8f63b62c`.
+121.301.245 bytes; CRC y 4.742 hashes aprobados. CPython oficial firmado 3.13.14.
+El primer candidato `windows-v0.2.0-rc17-docker-runner` está retenido; rc16 se conserva.
+
+Acta: `DOCKER-RUNNER-INTEGRATION.md`; evidencia JSON del mismo nombre.
+Docker es opt-in y requiere motor/imagen locales. Sin configuración sigue el
+runner Windows; no se editó el `.env` privado. El ZIP incluye receta, no Docker
+ni una imagen Linux. El lanzador de la aplicación generada puede correr en el host.
+
+Avance estimado: **86/100** (85,85 ponderado; distribución y operación 80→88).
+No es aprobación de producción pública. Pendientes: robustez ante caída real del
+daemon/controlador, matriz Windows/SAC independiente, dependencias por proyecto,
+calidad con modelos y ahorro global de tokens 40–70%. Los pilotos de recuperación
+entre PC y publicación real GitHub continúan pausados.

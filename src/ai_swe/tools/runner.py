@@ -190,9 +190,12 @@ def _recortar(texto: str) -> str:
 
 def _capturar(
     orden: list[str], sandbox: Sandbox, timeout: float, limits: JobLimits | None = None,
+    *, control=None,
 ) -> subprocess.CompletedProcess:
     """Drain both pipes fairly with a bounded byte tail and a deadline, without threads/files."""
     deadline = time.monotonic() + timeout
+    if control:
+        control.check()
     try:
         if os.name != "nt" and limits is not None:
             raise RunnerError("limites", "Las cuotas del Job Object requieren Windows")
@@ -229,6 +232,8 @@ def _capturar(
         for pipe in pipes.values():
             os.set_blocking(pipe.fileno(), False)
         while not timed_out and (active or process.poll() is None):
+            if control:
+                control.check()
             if time.monotonic() >= deadline:
                 timed_out = True
                 break
@@ -308,6 +313,7 @@ def ejecutar(
     permitidos: tuple[str, ...],
     timeout: float = DEFAULT_TIMEOUT_S,
     limits: JobLimits | None = None,
+    docker=None,
 ) -> TestRun:
     """Ejecuta `target` dentro del sandbox y devuelve la evidencia.
 
@@ -339,8 +345,19 @@ def ejecutar(
 
     inicio = time.perf_counter()
     try:
-        resultado = _capturar(orden, sandbox, timeout, limits)
+        if docker is None:
+            resultado = _capturar(orden, sandbox, timeout, limits)
+        else:
+            from ai_swe.tools.docker_runner import DockerError, execute
+
+            try:
+                resultado = execute(sandbox, target, docker, timeout)
+                orden = list(resultado.args)
+            except (DockerError, OSError, ValueError) as exc:
+                raise RunnerError("docker", str(exc)) from exc
     except subprocess.TimeoutExpired as exc:
+        if docker is not None:
+            orden = list(exc.cmd)
         duracion = time.perf_counter() - inicio
         salida = (
             exc.stdout.decode(errors="replace")

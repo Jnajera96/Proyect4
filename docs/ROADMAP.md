@@ -1,12 +1,12 @@
 # Roadmap vigente de cierre y experimentación
 
-## Plan maestro hasta la entrega funcional — actualización del 31 de octubre de 2026
+## Plan maestro hasta la entrega funcional — actualización del 1 de noviembre de 2026
 
 Meta inmediata: entrega Windows local que una persona no técnica pueda configurar,
 usar para construir una aplicación, revisar y abrir, con recuperación comprobada.
 La producción pública requiere además el último control de seguridad de esta lista.
 La validación fuente no equivale a actualizar el portable instalado.
-El estado ponderado actual (84/100) y la adopción real de patrones están en
+El estado ponderado actual (86/100) y la adopción real de patrones están en
 `PROJECT-STATUS-2026-10-30.md`. La generalización del Analyst se verifica en
 `UNIVERSAL-REQUIREMENTS-VALIDATION.md`; mantiene las mismas puertas humanas.
 La preparación integral, recuperación SSE y cancelación cooperativa adaptadas de
@@ -16,11 +16,11 @@ piloto integral en otra PC, sin declarar producción aprobada.
 | Orden | Trabajo y estado | Criterio para avanzar |
 | --- | --- | --- |
 | 1 | **Completado y validado en fuente:** Analyst como Product Manager, síntesis por familias/núcleo nominal para productos nuevos, revisión editable y chips de inicio rápido. | Confirmación humana obligatoria, confianza de intención clara >=0,85 y exclusiones preservadas; backend962 PASS/4 SKIP, frontend32 PASS y build aprobado. Actas: `PRODUCT-REQUIREMENTS-VALIDATION.md` y `UNIVERSAL-REQUIREMENTS-VALIDATION.md`. |
-| 2 | **RC9 aprobado localmente; rc8 corregido conservado.** | Búsqueda por contenido y bloques de código incluidos. 14/14 controles del ZIP extraído y regresión completa aprobados. Acta vigente: `RC9-CONTEXT-HISTORY-CLOSURE.md`. |
+| 2 | **Rc17 final aprobado localmente; rc16 y anteriores conservados.** | Docker opt-in integrado, 1.121 backend PASS/4 SKIP, 56 pruebas del ZIP y smoke 14/14. Acta vigente: `DOCKER-RUNNER-INTEGRATION.md`. |
 | 3 | **Uso en otra PC confirmado por el usuario; matriz detallada pendiente.** | Falta identificar versión/hash, Windows y recorrido: protecciones activas, reinicio, voz y promoción. No se infiere recuperación entre equipos. Cualquier inferencia pagada exige presupuesto explícito. |
 | 4 | **Pendiente:** cierre de continuidad K/L/M y recuperación. | Exportación/importación cifrada, contraseña/clave de rescate, separación entre usuarios y reconstrucción del trabajo pausado en otro equipo sin pérdida de datos. |
 | 5 | **Selección por contenido e historial FTS5 medidos offline; calidad/publicación/tokens reales pendientes.** | Consultas sin rutas: 50% de cobertura en frío y 100% con asociaciones sintéticas. Historial probado en Python/JS/TS/SQL: añade ~10% de bytes; no demuestra ahorro facturado ni calidad del modelo. Actas: `CONTEXT-MEMORY-MEASUREMENT.md` y `FTS-HISTORY-MEASUREMENT.md`. Faltan repositorios reales, tokenizer correcto y publicación voluntaria real. |
-| 6 | **Pendiente antes de producción pública:** aislamiento y operación. | Aislamiento de ejecución/red/recursos, secretos, TLS, límites operativos, auditoría, copias/restauración y política de datos; matriz de release aprobada y límites documentados. |
+| 6 | **Docker opt-in validado localmente; operación pública pendiente.** | Validar fallos reales del daemon/controlador y matriz Windows independiente. Faltan controles operativos de secretos, TLS, auditoría, copias/restauración y política de datos para producción pública. |
 
 ### Flujo de pendientes de la mejora de requisitos
 
@@ -262,3 +262,32 @@ y cancelación sobre el contenedor. No se afirma aislamiento integrado.
 Avance: 85/100, sin cambiar ponderaciones ni dar por cumplido el ahorro global
 40–70% (benchmark completo sigue en 28,127385% / 29,916601%). Los pilotos de
 recuperación entre PC y publicación real GitHub permanecen pausados.
+
+
+## Rc17 — ejecutor Docker opcional integrado y verificado
+
+1 de noviembre de 2026. Snapshot Windows con handles bloqueados y SHA-256,
+rechazo de enlaces, worker Linux sin privilegios, red deshabilitada, cuotas y
+watchdog dentro de la imagen. Preflight antes del Coder y limpieza del contenedor
+real en cancelación/timeout. Si no se verifica el cierre, se conservan diario,
+worktree y reservas; no se declara cancelación confirmada.
+
+**1.121 backend PASS / 4 SKIP**, **39 frontend PASS/build**, **56 pruebas desde
+el ZIP PASS** y **14/14 controles del smoke estándar PASS**, ambos cierres 0.
+Se valida promoción con FakeModelAdapter y Docker real, sin llamadas pagadas.
+Portable aprobado localmente:
+`dist/windows-v0.2.0-rc17-docker-runner-final/AISWESystem-windows-x64.zip`.
+SHA-256: `0491df0eb6d93220b9185584388f46f7fa5494c07cd906a975d4801d8f63b62c`.
+121.301.245 bytes; CRC y 4.742 hashes aprobados. CPython oficial firmado 3.13.14.
+El primer candidato `windows-v0.2.0-rc17-docker-runner` está retenido; rc16 se conserva.
+
+Acta: `DOCKER-RUNNER-INTEGRATION.md`; evidencia JSON del mismo nombre.
+Docker es opt-in y requiere motor/imagen locales. Sin configuración sigue el
+runner Windows; no se editó el `.env` privado. El ZIP incluye receta, no Docker
+ni una imagen Linux. El lanzador de la aplicación generada puede correr en el host.
+
+Avance estimado: **86/100** (85,85 ponderado; distribución y operación 80→88).
+No es aprobación de producción pública. Pendientes: robustez ante caída real del
+daemon/controlador, matriz Windows/SAC independiente, dependencias por proyecto,
+calidad con modelos y ahorro global de tokens 40–70%. Los pilotos de recuperación
+entre PC y publicación real GitHub continúan pausados.

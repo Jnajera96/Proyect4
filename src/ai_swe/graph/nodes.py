@@ -1571,6 +1571,16 @@ def coder(state: RunState) -> dict:
         return _escalar(state, _error(state, "MODE_DENIED", "supervisor",
             "El modo seleccionado no permite esta operacion", recuperable=False))
 
+    from ai_swe.graph.model_routing import settings_for_node
+    from ai_swe.tools.docker_runner import DockerError, check_ready
+
+    configured = settings_for_node()
+    if configured is not None and configured.runner_docker is not None:
+        try:
+            check_ready(configured.runner_docker)
+        except (DockerError, OSError) as exc:
+            return _escalar(state, _error(state, "RUNNER_NOT_READY", "coder", str(exc),
+                                          recuperable=False))
     errores = list(state.errors)
     avisos: list[str] = []
     try:
@@ -1886,9 +1896,12 @@ def run_tests(state: RunState) -> dict:
             from ai_swe.graph.model_routing import settings_for_node
 
             configured = settings_for_node()
-            limits = (configured if configured is not None else load_settings()).runner_limits
+            settings = configured if configured is not None else load_settings()
+            limits = settings.runner_limits
+            docker_args = {"docker": settings.runner_docker} if settings.runner_docker else {}
             corrida = ejecutar_target(
                 sandbox, target, permitidos=permitidos, limits=limits if os.name == "nt" else None,
+                **docker_args,
             )
         except RunnerError as exc:
             errores = _error(
@@ -1898,6 +1911,11 @@ def run_tests(state: RunState) -> dict:
                 f"no se pudo ejecutar '{target}': {exc}",
                 recuperable=False,
             )
+            from ai_swe.cancellation import current_cancellation
+
+            control = current_cancellation()
+            if control and control.cleanup_error:
+                return _escalar(state, errores)
             continue
 
         emit(
@@ -2880,6 +2898,11 @@ def _limpiar_sandbox(state: RunState) -> None:
     recuperacion de ejecuciones huerfanas: son tres caminos terminales distintos y
     tener la logica repetida es como se olvida uno.
     """
+    from ai_swe.cancellation import current_cancellation
+
+    control = current_cancellation()
+    if control and control.cleanup_error:
+        return
     limpiar_worktree(
         state.artifacts.worktree_path,
         repo_original=_alcance(state).repo_path,

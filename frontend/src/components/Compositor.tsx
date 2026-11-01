@@ -133,7 +133,8 @@ export function Compositor({
           {estado.errorPreparacion && <p role="alert">No se pudo comprobar: {estado.errorPreparacion}</p>}
           {estado.preparacion && <>
             <p>{estado.preparacion.ready ? "Preparación local lista. Permisos y saldo remoto no verificados." : "Completa estos pasos antes de ejecutar:"}</p>
-            <ul>{estado.preparacion.checks.filter(check => !check.ready).map(check => <li key={check.code}>{check.message}</li>)}</ul>
+            <ul>{estado.preparacion.checks.filter(check => !check.ready || check.code === "DOCKER").map(check => <li key={check.code}>{check.message}</li>)}</ul>
+            {estado.preparacion.checks.some(check => check.action === "configure_runner") && <p>Revisa Docker Desktop y la imagen del ejecutor en la configuración local. Después pulsa «Volver a comprobar preparación».</p>}
             {puedeAdministrar && estado.preparacion.checks.some(check => check.action === "initialize_head") && <>
               <p>Se creará un commit vacío. No se incluirán tus archivos ni los cambios preparados.</p>
               <button type="button" onClick={acciones.alInicializarBase}>Inicializar commit base en 1 clic</button>

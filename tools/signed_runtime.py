@@ -115,6 +115,10 @@ def assemble(root: Path, frontend: Path, bundle: Path, archive: Path, uv: Path) 
     shutil.copy2(Path(sys.executable).parent / "ruff.exe", bundle / "tools/ruff.exe")
     shutil.copy2(root / "packaging/signed_start.py", bundle / "start.py")
     shutil.copy2(root / "tools/upgrade_portable.py", bundle / "tools/upgrade_portable.py")
+    recipe = bundle / "tools/docker-runner"
+    recipe.mkdir()
+    for name in ("Dockerfile", ".dockerignore", "requirements.txt", "run_target.py"):
+        shutil.copy2(root / "packaging/docker-runner" / name, recipe / name)
     (runtime / "python313._pth").write_text(
         "python313.zip\n.\n../packages\n../app\nimport site\n", encoding="utf-8"
     )

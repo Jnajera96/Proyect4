@@ -199,6 +199,19 @@ class RunEngine:
 
         control = self._cancel_control(run_id)
         promoted = state.promotion_receipt and state.promotion_receipt.status == "promoted"
+        if control.cleanup_error:
+            result = state.model_copy(update={
+                "status": RunStatus.NEEDS_HUMAN, "next_step": None, "updated_at": _ahora(),
+                "cancellation": CancellationReceipt(
+                    requested_at=control.requested_at, worktree_cleanup="execution_unverified",
+                ),
+                "errors": [*state.errors, RunError(
+                    error_class="CANCEL_CLEANUP_UNVERIFIED", agent="supervisor",
+                    message=control.cleanup_error, recoverable=False, occurred_at=_ahora(),
+                )],
+            })
+            self._app.update_state(self._config(run_id), result.model_dump())
+            return self._persistir(run_id, result)
         too_late = promoted or state.status is RunStatus.COMPLETED
         cleanup = "preserved_promoted" if promoted else "not_needed"
         if not too_late and state.artifacts.worktree_path:
@@ -647,12 +660,13 @@ class RunEngine:
         # **no llega a `finalize`**: sin esto, una excepcion sin capturar dejaba el
         # worktree vivo en `var/workspaces` para siempre, y el repositorio del usuario
         # acumulaba referencias fantasma. Es el mismo teardown, desde la otra puerta.
-        limpiar_worktree(
-            nuevo.artifacts.worktree_path,
-            repo_original=_repositorio_de(nuevo),
-            run_id=run_id,
-            base_commit=nuevo.artifacts.base_commit or "",
-        )
+        if not self._cancel_control(run_id).cleanup_error:
+            limpiar_worktree(
+                nuevo.artifacts.worktree_path,
+                repo_original=_repositorio_de(nuevo),
+                run_id=run_id,
+                base_commit=nuevo.artifacts.base_commit or "",
+            )
         return nuevo
 
     @staticmethod
