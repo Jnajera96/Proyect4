@@ -38,6 +38,7 @@ from ai_swe.contracts import (
     FileProposal,
     FinalReport,
     Finding,
+    InstructionSource,
     Intent,
     Outputs,
     PolicyEffect,
@@ -79,6 +80,7 @@ _MODIFICAR = (
     "cambia", "cambiar", "añade", "anade", "añadir", "implementa", "implementar",
     "construye", "construir", "desarrolla", "desarrollar", "programa", "programar",
     "genera", "generar", "haz", "hazme",
+    "agrega", "agregar", "incorpora", "incorporar", "pon", "ponle", "quita", "quitar",
     "refactoriza", "refactorizar", "crea", "crear", "elimina", "borra",
 )
 _PREGUNTA = (
@@ -90,22 +92,32 @@ _INSPECCIONAR = (
     "lista", "listar", "enumera", "enumerar", "describe", "describir",
 )
 
+_INTRO_CONVERSACIONAL = re.compile(
+    r"^(?:(?:oye|hola|buenas|mira|a ver|porfa|por favor|bueno|disculpa|hey|saludos)[, ]+)+",
+    re.IGNORECASE,
+)
+
+
 def _nucleo_producto(texto: str) -> str:
     plano = " ".join(texto.split()).strip(" .!")
+    limpio = _INTRO_CONVERSACIONAL.sub("", plano).strip(" .!")
     solicitud = re.match(
         r"^(?:por favor[, ]+)?(?:"
+        r"(?:\b(?:podr[ií]as|podrias|puedes|quisiera|me\s+gustar[ií]a)\s+(?:que\s+)?(?:crees|crear|hagas|hacer|implementes|implementar)\s+)|"
         r"(?:crea|crear|haz|hazme|construye|construir|desarrolla|desarrollar|genera|generar|"
         r"programa|programar|implementa|implementar)\s+(?:(?:un|una|el|la)\s+)?|"
-        r"(?:quiero|necesito)\s+(?:un|una)\s+|(?:un|una)\s+)(.+)$",
-        plano, re.IGNORECASE,
+        r"(?:quiero|necesito)\s+(?:un|una|el|la)?\s*|(?:un|una)\s+)(.+)$",
+        limpio, re.IGNORECASE,
+    )
+    archetypes = (
+        r"^(?:calculadora|conversor|convertidor|gestor|temporizador|reloj|calendario|agenda|"
+        r"juego|tablero|dashboard|tracker|contador|generador|herramienta|simulador|editor|visor)\b"
     )
     if solicitud:
         nombre = solicitud[1]
-    elif re.match(
-        r"^(?:calculadora|conversor|convertidor|gestor|temporizador|reloj|calendario|agenda|"
-        r"juego|tablero|dashboard|tracker|contador|generador|herramienta|simulador|editor|visor)\b",
-        plano, re.IGNORECASE,
-    ):
+    elif re.match(archetypes, limpio, re.IGNORECASE):
+        nombre = limpio
+    elif re.match(archetypes, plano, re.IGNORECASE):
         nombre = plano
     else:
         return ""
@@ -417,6 +429,11 @@ Respeta exclusiones y prioridades explícitas. Estructura también las reparacio
 en las cuatro dimensiones sin ampliar el cambio puntual solicitado.
 No añadas cuentas, servicios de pago, recomendaciones médicas ni publicación remota
 por defecto. Para preguntas o inspecciones explica la intención sin proponer construir.
+Si la instrucción procede de dictado por voz ([Instruccion dictada por voz]), interpreta con
+flexibilidad la expresión oral: limpia muletillas, vacilaciones y fórmulas de cortesía
+conversacionales (ej. 'oye mira', 'porfa hazme', 'a ver si puedes', 'quisiera que'), extrayendo
+la intención funcional y técnica subyacente de forma fiel y completa. Formula la propuesta base
+estructurada en las 4 dimensiones (Funcionalidades, Validaciones y errores, Interfaz, Pruebas automatizadas).
 La confirmación final SIEMPRE corresponde a la puerta humana.
 """
 
@@ -495,10 +512,14 @@ def _interpretacion_del_modelo(
         return None
     gateway = _gateway_por_defecto() if gateway is None else gateway
 
+    texto_usuario = state.instruction.text
+    if getattr(state.instruction, "source", None) == InstructionSource.VOICE:
+        texto_usuario = f"[Instruccion dictada por voz]\n{state.instruction.text}"
+
     peticion = ModelRequest(
         messages=[
             ModelMessage(role=MessageRole.SYSTEM, content=PROMPT_INTERPRETACION),
-            ModelMessage(role=MessageRole.USER, content=state.instruction.text),
+            ModelMessage(role=MessageRole.USER, content=texto_usuario),
         ],
         max_output_tokens=1024,
         temperature=0.0,

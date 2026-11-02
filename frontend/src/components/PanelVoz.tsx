@@ -24,6 +24,9 @@ import { Chip, Fila, Panel } from "./ui";
 
 type Fase = "inicial" | "grabando" | "listo" | "transcribiendo" | "revisando" | "error";
 
+const VOCABULARIO_SWE =
+  "software, Python, pytest, FastAPI, endpoint, git, commit, frontend, backend, refactorizar, función, clase, variable, interfaz, base de datos, SQLite, React, TypeScript, test, bug, migración, Docker";
+
 export function PanelVoz({
   disponible,
   alConfirmar,
@@ -109,7 +112,7 @@ export function PanelVoz({
     setFase("transcribiendo");
     setError(null);
     try {
-      const resultado = await api.transcribir(audio, nombreAudio);
+      const resultado = await api.transcribir(audio, nombreAudio, VOCABULARIO_SWE);
       setTranscripcion(resultado);
       setTexto(resultado.text);
       setFase("revisando");
