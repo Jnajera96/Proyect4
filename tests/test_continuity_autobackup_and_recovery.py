@@ -205,7 +205,8 @@ def test_invalid_backup_input_returns_explained_error(tmp_path):
         assert "CONTINUITY_ERROR" in response.text
 
 
-def test_authenticated_worker_backup_can_restore_pending_requirements(tmp_path):
+def test_authenticated_worker_backup_can_restore_pending_requirements(tmp_path, caplog):
+    import logging
     import time
 
     from fastapi.testclient import TestClient
@@ -214,6 +215,7 @@ def test_authenticated_worker_backup_can_restore_pending_requirements(tmp_path):
     from ai_swe.config import Settings
 
     password = "Synthetic backup password"
+    caplog.set_level(logging.INFO)
     app = crear_app(settings=Settings(
         _env_file=None, profile_mode=True, profiles_root=tmp_path / "users",
         stt_provider="fake",
@@ -221,6 +223,11 @@ def test_authenticated_worker_backup_can_restore_pending_requirements(tmp_path):
     with TestClient(app) as client:
         response = client.post("/auth/register", json={"name": "backup-user", "password": password})
         assert response.status_code == 201
+        profile = app.state.profiles.contexts[response.json()["user"]["id"]]
+        continuity = profile.app.state.engine.continuity
+        assert continuity._profile_key == profile.profile.key
+        assert continuity._profile_header == profile.profile.header
+        assert continuity._password is None
         headers = {"X-CSRF-Token": response.json()["csrf_token"]}
         assert client.post("/continuity/backup-config", json={
             "folder": str(tmp_path / "backups"), "enabled": True,
@@ -243,6 +250,7 @@ def test_authenticated_worker_backup_can_restore_pending_requirements(tmp_path):
         )
         archive = Path(status["last_backup_path"]).read_bytes()
         assert password.encode() not in archive
+        assert password not in caplog.text
         with pytest.raises(ContinuityError):
             ContinuityStore._open_archive_bytes(archive, "wrong-password")
 

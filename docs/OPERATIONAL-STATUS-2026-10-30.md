@@ -1,5 +1,26 @@
 # Cierre del portable operativo — 30 de octubre de 2026
 
+## RC24 — validación local offline (2 de noviembre de 2026)
+
+Fuentes de `e47c40f`, incluidas recuperación `67e6fef`, integración Node/seguridad
+`a5e7e7e` y autorización npm `e47c40f`. Sin cambios de lógica de producto en este
+cierre: se añaden comprobaciones y documentación.
+
+- Backend desde `.venv`: **1185 PASS / 18 SKIP**.
+- Frontend: **39 PASS**, TypeScript/Vite aprobados con Node 24.22.1 y npm offline.
+- Seguridad y respaldo: **11 PASS**; paquete: **47 PASS**.
+- Suplemento Windows Job con CPython oficial: **22 PASS / 0 SKIP**.
+- Smoke portable estándar: **14/14**, con reinicio y ambos cierres ordenados.
+- ZIP: `dist/windows-v0.2.0-rc24/AISWESystem-windows-x64.zip`.
+- SHA-256: `10794bd86428bfcde983a0ed353e73e17285ca157bd8ec5bb6a926aa1d94c480`.
+- Tamaño: **121318903 bytes**; manifiesto: **4745 archivos**.
+
+Acta: [RELEASE-RC24-VALIDATION-2026-11-02.md](RELEASE-RC24-VALIDATION-2026-11-02.md).
+Evidencia: [RELEASE-RC24-EVIDENCE-2026-11-02.json](RELEASE-RC24-EVIDENCE-2026-11-02.json).
+Rc23 conserva su hash. Cero consumo de API y ningún push; pilotos GitHub y dos
+PC físicas pausados. La estimación 91/100 no se convierte en 100 % por este smoke.
+
+
 ## Revisión vigente — 2 de noviembre de 2026
 
 Plan único: [PLAN-MAESTRO-CIERRE-v0.2.0.md](PLAN-MAESTRO-CIERRE-v0.2.0.md).

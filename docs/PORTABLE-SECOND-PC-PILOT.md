@@ -1,5 +1,12 @@
 # Piloto del portable en otra PC
 
+Actualizado: 2 de noviembre de 2026, candidato rc24. **Piloto físico pausado**;
+esta guía prepara la validación, no autoriza ni acredita su ejecución.
+
+ZIP: `dist/windows-v0.2.0-rc24/AISWESystem-windows-x64.zip`.
+SHA-256: `10794bd86428bfcde983a0ed353e73e17285ca157bd8ec5bb6a926aa1d94c480`.
+Acta: `RELEASE-RC24-VALIDATION-2026-11-02.md`.
+
 ## Alcance
 
 Esta guía prepara la prueba pendiente; no acredita que ya se haya realizado.
@@ -28,9 +35,10 @@ No copiar el perfil real ni compartir tokens, contraseñas o archivos de bóveda
    requisitos. No se debe lanzar una inferencia remota.
 4. Cerrar el launcher, abrirlo de nuevo, iniciar sesión y comprobar que la
    ejecución y su puerta humana permanecen. Registrar cualquier bloqueo Windows.
-5. Conceder micrófono solo si se desea probar voz; comprobar texto editable y
-   confirmación explícita. Los pesos de STT no vienen dentro del portable, por lo
-   que una descarga inicial puede ser necesaria; registrar ese requisito.
+5. Para voz offline, usar pesos locales previamente preparados y verificados;
+   no descargar durante el piloto. Si faltan, registrar «voz pendiente por pesos».
+   Los pesos de STT no vienen dentro del portable. Seguir la sección específica
+   de CPU/int8 y verificar texto editable y confirmación explícita.
 
 ## Continuidad entre equipos
 
@@ -57,3 +65,85 @@ No copiar el perfil real ni compartir tokens, contraseñas o archivos de bóveda
 
 El aislamiento de procesos/red y el cierre de producción pública siguen siendo
 requisitos independientes de este piloto.
+
+## Comandos exactos de integridad y arranque rc24
+
+En PowerShell, ajustar las rutas del ZIP y una carpeta de destino nueva:
+
+```powershell
+$zip = 'C:\Users\usuario\Downloads\AISWESystem-windows-x64.zip'
+$destino = 'C:\Users\usuario\Desktop\AISWE-rc24-piloto'
+(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
+# Comparar con el hash del acta antes de extraer. No usar -Force.
+Expand-Archive -LiteralPath $zip -DestinationPath $destino
+$app = Join-Path $destino 'AISWESystem'
+& "$app\AISWESystem.cmd" --runtime-info
+Get-AuthenticodeSignature -LiteralPath "$app\runtime\python.exe" |
+    Select-Object Status,SignerCertificate
+$manifest = Get-Content -LiteralPath "$app\BUNDLE-MANIFEST.json" -Raw | ConvertFrom-Json
+foreach ($item in $manifest.PSObject.Properties) {
+    $actual = (Get-FileHash -LiteralPath (Join-Path $app $item.Name) -Algorithm SHA256).Hash
+    if ($actual -ne $item.Value) { throw "Hash incorrecto: $($item.Name)" }
+}
+& "$app\AISWESystem.cmd"
+```
+
+Esperado: modo `installed`, perfiles activos, frontend presente y firma válida
+de Python Software Foundation. `frozen=false` es normal para CPython firmado;
+el marcador de bundle activa el modo instalado. El navegador abre una URL local
+`127.0.0.1` con puerto disponible. Anotar URL y cerrar con Ctrl+C en la consola,
+esperando el cierre antes de reabrir. Los datos deben persistir bajo
+`%LOCALAPPDATA%\AISWESystem`, fuera del ZIP extraído.
+
+No instalar Python, Node ni paquetes para lograr el arranque. Git y el runner
+Docker tienen requisitos separados; el ZIP no instala Docker ni acredita un
+runtime Node para aplicaciones generadas. Conservar SAC/SmartScreen activos:
+no pulsar «Ejecutar de todas formas», desbloquear archivos ni cambiar políticas
+para convertir un bloqueo en aprobado. Recoger evidencia de sólo lectura:
+
+```powershell
+Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -MaxEvents 20 |
+    Select-Object TimeCreated,Id,Message
+```
+
+Registrar Windows edición/build x64, navegador, Git y protecciones activas.
+Si no hay permiso para leer eventos, anotarlo sin elevar privilegios.
+
+## Micrófono y Whisper CPU/int8 sin red
+
+Con servidor cerrado y una carpeta con los pesos completos del modelo
+`Systran/faster-whisper-small`, configurar sólo la consola del piloto:
+
+```powershell
+$env:AI_SWE_STT_MODEL = 'D:\Modelos\faster-whisper-small'
+$env:AI_SWE_STT_DEVICE = 'cpu'
+$env:AI_SWE_STT_COMPUTE_TYPE = 'int8'
+$env:AI_SWE_STT_LANGUAGE = 'es'
+$env:HF_HUB_OFFLINE = '1'
+& "$app\AISWESystem.cmd"
+```
+
+Permitir micrófono únicamente para la URL local. En «Dictar la instrucción»,
+grabar «Analiza el proyecto y muestra un resumen. No modifiques archivos»,
+detener y transcribir. Editar una palabra y pulsar «Usar como instrucción».
+El texto debe quedar editable sin crear una ejecución automáticamente.
+Registrar fidelidad, modelo, CPU/int8 y error literal si falla. Si los pesos
+están incompletos, no habilitar red ni instalar paquetes como solución implícita.
+Los mocks y el smoke no prueban micrófono físico ni inferencia Whisper real.
+
+## Precisión del piloto de bóveda
+
+Esta sección sigue pausada hasta autorización nueva. En origen, esperar worker
+inactivo y confirmar el estado completado del auto-respaldo; copiar únicamente
+el `.aiswe-vault` sintético y conservar el original. Desde acceso en destino,
+elegir restaurar perfil, ingresar contraseña localmente y revisar los repositorios
+antes de asignar una carpeta vacía y distinta a cada uno, sin solapamientos.
+Una inspección sin repositorio no requiere inventar una ruta.
+
+Usar un nombre de perfil nuevo; repetir importación con el mismo nombre debe
+rechazarse por defecto. Renombrar sólo se solicita expresamente. Antes de reanudar,
+comprobar run_id, historial, memoria, presupuesto, repositorios revinculados y puerta
+humana pendiente. La importación no aprueba ni ejecuta agentes. Reiniciar destino
+y repetir las comprobaciones; si hay worktree, revisar base SHA y parche antes
+de reanudar. Ante fallo conservar origen: no sobrescribir repositorios ni copiar
+SQLite sobre un perfil activo. No enviar bóvedas o secretos con el reporte.

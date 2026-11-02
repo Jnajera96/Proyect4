@@ -1,6 +1,27 @@
 # Plan maestro de cierre v0.2.0
 
-Fecha: 2 de noviembre de 2026. Base inspeccionada: `b8f5022`.
+## RC24 — validación local offline (2 de noviembre de 2026)
+
+Fuentes de `e47c40f`, incluidas recuperación `67e6fef`, integración Node/seguridad
+`a5e7e7e` y autorización npm `e47c40f`. Sin cambios de lógica de producto en este
+cierre: se añaden comprobaciones y documentación.
+
+- Backend desde `.venv`: **1185 PASS / 18 SKIP**.
+- Frontend: **39 PASS**, TypeScript/Vite aprobados con Node 24.22.1 y npm offline.
+- Seguridad y respaldo: **11 PASS**; paquete: **47 PASS**.
+- Suplemento Windows Job con CPython oficial: **22 PASS / 0 SKIP**.
+- Smoke portable estándar: **14/14**, con reinicio y ambos cierres ordenados.
+- ZIP: `dist/windows-v0.2.0-rc24/AISWESystem-windows-x64.zip`.
+- SHA-256: `10794bd86428bfcde983a0ed353e73e17285ca157bd8ec5bb6a926aa1d94c480`.
+- Tamaño: **121318903 bytes**; manifiesto: **4745 archivos**.
+
+Acta: [RELEASE-RC24-VALIDATION-2026-11-02.md](RELEASE-RC24-VALIDATION-2026-11-02.md).
+Evidencia: [RELEASE-RC24-EVIDENCE-2026-11-02.json](RELEASE-RC24-EVIDENCE-2026-11-02.json).
+Rc23 conserva su hash. Cero consumo de API y ningún push; pilotos GitHub y dos
+PC físicas pausados. La estimación 91/100 no se convierte en 100 % por este smoke.
+
+
+Fecha: 2 de noviembre de 2026. Base inspeccionada para rc24: `e47c40f`.
 Alcance: aplicación Windows local con perfiles, generación revisada, promoción,
 prueba local y recuperación. No incluye SaaS ni aprobación de producción pública.
 
@@ -20,12 +41,12 @@ por separado antes de recomendarlo.
 
 | Prioridad | Área | Estado comprobado | Criterio pendiente y siguiente acción |
 | --- | --- | --- | --- |
-| P0 | Recuperación y preservación | Respaldo cifrado, migraciones y restauración locales implementados. En esta revisión se reprodujeron y corrigieron errores de integridad, nombre máximo y entrada Base64 inválida. | Exigir rechazo de arranque ante integridad fallida, sin checkpoint WAL ni limpieza de ejecuciones; conservar los datos para restaurar respaldo. Revalidar API y portable. |
-| P0 | Dependencias Node | Conectadas a Coder, runner y guía en `a5e7e7e`. Se corrige autorización con lista vacía y paquetes declarados sin imports; ambos nodos escalan antes de herramientas. Acta: `NODE-DEPENDENCY-GATES-VALIDATION.md`. | Verificar runtime, versiones y disponibilidad offline antes de afirmar soporte Node completo. Incorporar esta corrección al próximo portable. No ejecutar npm install ni scripts del proyecto automáticamente en el host. |
-| P0 | Seguridad efectiva por perfil | Existen controles de TLS, HSTS, throttling y auditoría añadidos en fuente. | Verificar su aplicación en la frontera real de perfiles, rutas públicas y SSE. Configurar TLS no significa disponer de certificado válido ni proteger HTTP automáticamente. No exponer públicamente para realizar esta validación. |
-| P1 | Auto-respaldo en ciclo de vida | Worker invoca auto_backup al terminar; el perfil aporta clave en memoria. Pruebas locales disponibles. | Añadir o mantener evidencia de API autenticada → configuración → pausa → respaldo cifrado → restauración. Comprobar concurrencia, errores visibles y renovación de credenciales. Sin probar en otra PC no cerrar continuidad de equipo. |
+| P0 | Recuperación y preservación | Rechazo ante integridad fallida, contratos de importación y restauración sin repositorio verificados en fuente y rc24; respaldo cifrado y migraciones existentes sin regresión. | Mantener datos ante daño y restaurar respaldos verificados; la matriz física independiente sigue pendiente. |
+| P0 | Dependencias Node | Conectadas a Coder, runner y guía en `a5e7e7e`. Se corrige autorización con lista vacía y paquetes declarados sin imports; ambos nodos escalan antes de herramientas. Acta: `NODE-DEPENDENCY-GATES-VALIDATION.md`. | Verificar runtime, versiones y disponibilidad offline antes de afirmar soporte Node completo. Incluida y verificada en rc24; no implica disponibilidad npm offline. No ejecutar npm install ni scripts del proyecto automáticamente en el host. |
+| P0 | Seguridad efectiva por perfil | HSTS según configuración, throttle 429/Retry-After y auditoría sin contraseña verificados en frontera de perfiles y rc24. | Cierre local de los controles solicitados. TLS real/certificados, revisión de todas las rutas y producción pública siguen sin certificar. |
+| P1 | Auto-respaldo en ciclo de vida | Verificados clave/header en memoria, worker, archivo cifrado, logs INFO sin contraseña y restauración de pausa humana, en fuente y rc24. | Cierre local del recorrido solicitado; concurrencia adversa, renovación de credenciales y recuperación física entre equipos tienen validación independiente. |
 | P1 | Motor y nuevos productos | Puertas humanas, propuestas y promoción verificadas offline; aislamiento Docker opt-in. | Validar productos representativos con los modelos que se pretenden recomendar y evidencia de calidad independiente. Actualmente bloqueado para inferencias pagadas. |
-| P1 | Distribución actualizada | rc20 aprobado según acta histórica; cambios posteriores requieren candidato nuevo. | Build, hashes fuente/paquete, pruebas con runtime firmado, smoke de perfiles, persistencia y cierre. Conservar el candidato anterior si cualquiera falla. |
+| P1 | Distribución actualizada | Rc24 aprobado localmente: firmas, fuentes, manifiesto/CRC, tests empaquetados y smoke 14/14. Rc23 preservado. | Matriz Windows independiente pendiente; no convertir este cierre en certificación pública. |
 | P1 | Compatibilidad Windows independiente | Usuario reportó funcionamiento en otra PC de una versión previa. | Registrar hash exacto, Windows, protecciones, micrófono, promoción y reinicio en destino. La observación histórica no acredita el candidato nuevo. Requiere usuario/equipo destino. |
 | P1 | Continuidad entre equipos | Exportación/importación y reconstrucción de worktree implementadas y probadas localmente. | Piloto independiente por UI con repositorios revinculados y continuación sin duplicar efectos. **Pausado por decisión vigente.** Preparar procedimiento; no ejecutarlo sin autorización nueva. |
 | P1 | Publicación guiada GitHub | Endpoint/modal y mocks disponibles. El remoto del código fuente existe. | Piloto del asistente con PAT, permisos, creación, push y enlace final sobre proyecto descartable. **Pausado por decisión vigente.** No reutilizar el respaldo remoto del código fuente como evidencia. |

@@ -1,0 +1,178 @@
+{
+  "date": "2026-11-02",
+  "base_commit": "e47c40fad200ae6ebd1a5076821bd851dc6af7cb",
+  "paid_api_calls": 0,
+  "external_api_calls": 0,
+  "full_backend": {
+    "tests": 1203,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 18,
+    "passed": 1185,
+    "seconds": 514.772,
+    "omissions": [
+      {
+        "test": "test_transcripcion_real_opt_in",
+        "reason": "opt-in: define AI_SWE_RUN_REAL_STT_TESTS=1 (descarga un modelo)"
+      },
+      {
+        "test": "test_la_plataforma_no_permite_construir_el_vector_de_enlace",
+        "reason": "el sistema no permite crear enlaces: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_rc24_full\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test' -> 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_rc24_full\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test\\\\enlace_de_prueba'"
+      },
+      {
+        "test": "test_llamada_real_controlada",
+        "reason": "prueba de integracion real: exige AI_SWE_RUN_REAL_PROVIDER_TESTS=1, AI_SWE_MODEL_API_KEY y AI_SWE_MODEL_NAME"
+      },
+      {
+        "test": "test_linked_private_path_denied",
+        "reason": "Symlink privilege unavailable"
+      },
+      {
+        "test": "test_runner_terminates_real_descendant[True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_runner_terminates_real_descendant[False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_assignment_failure_never_runs_user_code",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_alias_interpreter_rejected_before_launch",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_unverified_shutdown_never_reports_success",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_abrupt_supervisor_death_closes_job_and_terminates_child[True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_abrupt_supervisor_death_closes_job_and_terminates_child[False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_default_job_applies_resource_limits_before_any_process_starts",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_committed_memory_is_bounded_with_a_successful_control[64-False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_committed_memory_is_bounded_with_a_successful_control[256-True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_process_limit_denies_creation_but_allows_an_in_limit_child[1-False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_process_limit_denies_creation_but_allows_an_in_limit_child[2-True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_total_user_cpu_limit_terminates_busy_job_before_wall_timeout",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_cleanup_preserves_memory_and_cpu_limits",
+        "reason": "Windows Job Objects require non-Store Python"
+      }
+    ]
+  },
+  "profile_boundary_and_backup": {
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 11,
+    "seconds": 7.095,
+    "omissions": []
+  },
+  "native_windows_job_supplement": {
+    "tests": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 22,
+    "seconds": 15.547,
+    "omissions": []
+  },
+  "portable_tests": {
+    "tests": 47,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 47,
+    "seconds": 22.138,
+    "omissions": []
+  },
+  "smoke": {
+    "success": true,
+    "checks": [
+      "all manifest hashes match",
+      "no developer state or secrets files",
+      "installed defaults to profiles",
+      "private API gated before login",
+      "integrated frontend served",
+      "profile registration with packaged cryptography",
+      "empty profile has no global token",
+      "packaged graph accepts deterministic run",
+      "human confirmation required",
+      "graceful packaged shutdown",
+      "encrypted profile login survives restart",
+      "SQLite and graph checkpoint survive restart",
+      "persisted SQLite integrity",
+      "restart shutdown graceful"
+    ],
+    "paid_calls": 0
+  },
+  "archive": {
+    "zip": "dist\\windows-v0.2.0-rc24\\AISWESystem-windows-x64.zip",
+    "sha256": "10794bd86428bfcde983a0ed353e73e17285ca157bd8ec5bb6a926aa1d94c480",
+    "bytes": 121318903,
+    "files": 4745,
+    "crc": true,
+    "source_match": true
+  },
+  "frontend": {
+    "node": "24.22.1",
+    "passed": 39,
+    "build": "passed",
+    "npm_offline": true
+  },
+  "runtime": {
+    "python": "3.13.14",
+    "signatures": [
+      {
+        "name": "python.exe",
+        "status": "Valid",
+        "signer": "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+      },
+      {
+        "name": "pythonw.exe",
+        "status": "Valid",
+        "signer": "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+      }
+    ]
+  },
+  "rc23_preserved": true,
+  "commands": {
+    "backend": ".venv/Scripts/python.exe -m pytest tests/ -q -o \"pythonpath=src . tests\" --basetemp <temporary> --junitxml=_tmp/rc24-full.xml",
+    "frontend": "npm test && npm run build (Node 24.22.1, npm_config_offline=true)",
+    "build": "tools/build_windows.py --output dist/windows-v0.2.0-rc24 --format signed-python --python-archive _tmp/signed-runtime-input/python-3.13.14-embed-amd64.zip (UV_OFFLINE=1)",
+    "smoke": "tools/verify_portable_profiles.py dist/windows-v0.2.0-rc24/extracted/AISWESystem _tmp/rc24-smoke"
+  },
+  "limits": [
+    "HSTS validates response headers with configured certificate files, not certificate validity or TLS negotiation.",
+    "Real authentication endpoint is /auth/login, not /profiles/auth.",
+    "Portable API fixtures use explicit single-profile mode; smoke verifies installed profile defaults independently.",
+    "Node authorization/declaration gates do not provide or install Node runtimes/packages.",
+    "Microphone, Whisper weights/inference, independent physical PC and real GitHub publication were not run."
+  ]
+}
