@@ -459,7 +459,7 @@ def create_profile_app(settings: Settings) -> FastAPI:
             new_name = body.get("name")
             new_password = body.get("new_password") or password
             repo_mapping = body.get("repo_mapping") or {}
-            conflict_strategy = body.get("conflict_strategy", "rename")
+            conflict_strategy = body.get("conflict_strategy", "error")
             profile = await run_in_threadpool(
                 import_vault_to_profile,
                 manager.store,

@@ -13,8 +13,10 @@ from ai_swe.tools import runner
 from ai_swe.tools.windows_job import WindowsJob, _ExtendedLimits
 
 STORE_ALIAS = getattr(os.lstat(sys._base_executable), "st_reparse_tag", 0) == 0x8000001B
-WINDOWS = pytest.mark.skipif(os.name != "nt" or STORE_ALIAS, reason="Windows Job Objects require non-Store Python")
-
+WINDOWS = pytest.mark.skipif(
+    os.name != "nt" or STORE_ALIAS,
+    reason="Windows Job Objects require non-Store Python",
+)
 
 @pytest.mark.parametrize("values", [
     {"max_processes": 0}, {"max_processes": 129}, {"memory_mb": 63},
@@ -81,16 +83,33 @@ def test_process_limit_denies_creation_but_allows_an_in_limit_child(
 ):
     from ai_swe.tools.windows_job import JobLimits
 
-    scripted_target(monkeypatch,
+    code = (
         "import subprocess,sys;print('before',flush=True);"
         "p=subprocess.Popen([sys.executable,'-c','pass']);"
-        "assert p.wait()==0;print('child finished')")
+        "assert p.wait()==0;print('child finished')"
+    )
+
+    scripted_target(monkeypatch, code)
+
+    # El lanzador del entorno virtual puede consumir un proceso adicional.
+    # Usamos Python base solo en esta prueba para medir la cuota real.
+    monkeypatch.setitem(
+        runner.TARGET_COMMANDS,
+        "pytest.unit",
+        (sys._base_executable, "-u", "-c", code),
+    )
+
     result = runner.ejecutar(
-        sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=10,
+        sandbox,
+        "pytest.unit",
+        permitidos=("pytest.unit",),
+        timeout=10,
         limits=JobLimits(max_processes=max_processes),
     )
+
     assert "before" in result.stdout
     assert result.passed == allowed
+
     if allowed:
         assert "child finished" in result.stdout
     else:

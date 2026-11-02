@@ -1,5 +1,34 @@
 # Proyecto 4 — AI Software Engineering System
 
+## Mantenimiento y estabilización — 2026-11-02
+
+Rama de trabajo: `feature/complete-project-requirements`.
+
+### Correcciones realizadas
+
+1. **Límites de procesos en Windows**
+   - Se ajustó la prueba de Windows Job Objects para utilizar el ejecutable base de Python.
+   - Se evita que el lanzador del entorno virtual consuma una cuota adicional de procesos durante la prueba.
+   - Se conservan los límites de seguridad del runner.
+
+2. **Importación de perfiles**
+   - El endpoint `POST /auth/import-vault` utiliza `conflict_strategy="error"` de manera predeterminada.
+   - Una importación con nombre de perfil duplicado devuelve HTTP 400.
+   - Se mantiene disponible `conflict_strategy="rename"` cuando se solicita explícitamente.
+   - Se añadieron comprobaciones de regresión para la restauración de repositorios y ejecuciones pendientes.
+
+### Validación
+
+- Pruebas específicas de Windows: 15 aprobadas.
+- Pruebas de importación de perfiles: 2 aprobadas.
+- Pruebas relacionadas de continuidad: aprobadas.
+- Suite completa de pytest: ejecutada hasta el 100 %, sin fallos visibles en la salida de progreso.
+- Ruff: sin errores en los archivos modificados.
+- `git diff --check`: sin errores.
+
+Estas correcciones estabilizan el entorno de desarrollo y las pruebas de regresión.
+No representan una nueva versión publicada ni una certificación de producción.
+
 ## v0.1.0 — entrega local aprobada
 
 Entrega canónica: `dist/windows-signed-python-rc2/AISWESystem-signed-python-rc2.zip`.

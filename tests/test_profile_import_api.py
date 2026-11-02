@@ -89,6 +89,36 @@ def test_new_device_import_without_registration_preserves_pending_run(tmp_path, 
             assert (new_repo / "app.py").read_bytes() == (old_repo / "app.py").read_bytes()
         assert client.post("/auth/import-vault", json=request).status_code == 400
 
+        # El renombrado debe funcionar cuando se solicita explícitamente.
+        renamed_repos = [
+            tmp_path / "destination" / f"renamed-repo-{i}"
+            for i in range(count)
+        ]
+        renamed_mapping = {
+            str(old): str(new)
+            for old, new in zip(old_repos, renamed_repos, strict=True)
+        }
+
+        renamed = client.post("/auth/import-vault", json={
+            **request,
+            "repo_mapping": renamed_mapping,
+            "conflict_strategy": "rename",
+        })
+
+        assert renamed.status_code == 201, renamed.text
+        assert renamed.json()["authenticated"] is True
+
+        for pending, old_repo, renamed_repo in zip(
+            pending_runs, old_repos, renamed_repos, strict=True
+        ):
+            run = client.get(f"/runs/{pending.run_id}").json()
+            assert run["status"] == pending.status
+            assert run["options"]["repo_path"] == str(renamed_repo.resolve())
+            assert (renamed_repo / "app.py").read_bytes() == (
+                old_repo / "app.py"
+            ).read_bytes()
+
+
     with TestClient(crear_app(settings=settings)) as client:
         login = client.post(
             "/auth/login", json={"name": "restored", "password": "new-device-password"}
