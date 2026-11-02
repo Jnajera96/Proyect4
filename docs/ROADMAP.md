@@ -16,8 +16,7 @@ Cero llamadas pagadas. rc19 y entregas anteriores se conservan en dist/.
 
 Acta: [TOKEN-SAVINGS-PORTABLE-RC20-VALIDATION.md](TOKEN-SAVINGS-PORTABLE-RC20-VALIDATION.md).
 Evidencia: [TOKEN-SAVINGS-PORTABLE-RC20-EVIDENCE.json](TOKEN-SAVINGS-PORTABLE-RC20-EVIDENCE.json).
-Avance ponderado estimado: 90/100. Matriz en otra PC y calidad de modelos pendientes.
-Continuidad entre PC y publicación real en GitHub siguen pausadas.
+Avance ponderado estimado: 91/100. Auto-respaldo en caliente y resolución de conflictos integrados; publicación en GitHub remota inicializada (https://github.com/Jnajera96/Proyect4). Matriz Windows en otra PC y evaluación con modelos reales pendientes.
 
 
 ## RC19 — dependencias Python por proyecto verificadas (1 de noviembre de 2026)

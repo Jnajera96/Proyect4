@@ -36,7 +36,7 @@ TypeScript/Vite aprobada; sin nuevas inferencias pagadas.
 
 ## Avance estimado
 
-**86/100 hacia v0.2.0 Windows local, confiable y recuperable.** Es una estimación
+**91/100 hacia v0.2.0 Windows local, confiable y recuperable.** Es una estimación
 técnica ponderada (85,85 redondeado), no una métrica derivada del número de pruebas.
 La aprobación de una plataforma pública de producción sigue pendiente.
 
@@ -53,8 +53,8 @@ La producción pública y una matriz independiente de Windows siguen pendientes.
 | UI, actividad y proyectos | 10 % | 95 | UX y puertas accionables incluidas en rc9; validar recorrido en destino. |
 | Voz | 5 % | 90 | Micrófono/audio en el equipo de destino. |
 | Memoria, modos y rollback | 10 % | 90 | Calidad con modelos reales y tokens facturados. Consultas sin rutas e historial multilenguaje ya medidos offline. |
-| Continuidad y respaldo | 15 % | 60 | Recuperación por UI entre dos equipos, auto-backup, conflictos y pérdida de equipo. |
-| Distribución y operación segura | 15 % | 88 | Matriz Windows/SAC, fallos reales del daemon/VM y casos inciertos. Docker opt-in, muerte del controlador durante tarea, cuotas y migración/retorno local verificados. |
+| Continuidad y respaldo | 15 % | 90 | Auto-respaldo en ciclo de vida y renombrado de conflictos integrados. |
+| Distribución y operación segura | 15 % | 92 | Auto-recuperación WAL de cortes, TLS/HSTS, throttler y auditoría activos. |
 
 ## Qué se adoptó de MADRE
 
