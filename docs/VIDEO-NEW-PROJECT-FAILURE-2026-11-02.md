@@ -94,3 +94,8 @@ los agentes ni el portable rc24. No se lanzó ninguna inferencia ni publicación
 La corrección de producto y su nuevo candidato de entrega siguen pendientes.
 El smoke de rc24 no cubría esta combinación de contenido sin salto y multiarchivo;
 no constituye evidencia de que toda aplicación generada por un modelo funcione.
+
+## Seguimiento de corrección
+
+Corregido en fuente según `PATCH-INTEGRITY-VALIDATION-2026-11-02.md`.
+El portable rc24 permanece sin modificar; su actualización está pendiente.

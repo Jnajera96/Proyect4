@@ -110,7 +110,8 @@ def _rutas_del_patch(sandbox: Sandbox) -> list[str]:
 
 def _aplicar(repo: Path, parche: str, *, check: bool) -> None:
     """Aplica (o valida) el parche en el repositorio. `shell=False` siempre."""
-    args = ["apply"]
+    # Normalize existing CRLF for matching without converting approved output to CRLF.
+    args = ["-c", "core.autocrlf=input", "apply"]
     if check:
         args.append("--check")
     args.append("-")
@@ -222,7 +223,8 @@ def promover(
     #    repositorio a medias es peor que uno sin tocar.
     discrepancias = _verificar_reproduccion(sandbox, repo, rutas)
     if discrepancias:
-        resultado = git("apply", "-R", "-", cwd=repo, check=False, entrada=parche)
+        resultado = git("-c", "core.autocrlf=input", "apply", "-R", "-",
+                        cwd=repo, check=False, entrada=parche)
         revertido = resultado.returncode == 0
         raise PromotionError(
             "verificacion",

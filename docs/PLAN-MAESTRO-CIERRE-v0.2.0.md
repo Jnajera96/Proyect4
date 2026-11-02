@@ -41,6 +41,7 @@ por separado antes de recomendarlo.
 
 | Prioridad | Área | Estado comprobado | Criterio pendiente y siguiente acción |
 | --- | --- | --- | --- |
+| P0 | Integridad de propuestas multiarchivo | Corregidos EOF, bytes UTF-8, hash escrito, promoción autocrlf y claridad de fallos de pruebas en fuente. Acta: `PATCH-INTEGRITY-VALIDATION-2026-11-02.md`. | Reconstruir y verificar un portable nuevo: rc24 aún contiene el defecto diagnosticado. |
 | P0 | Recuperación y preservación | Rechazo ante integridad fallida, contratos de importación y restauración sin repositorio verificados en fuente y rc24; respaldo cifrado y migraciones existentes sin regresión. | Mantener datos ante daño y restaurar respaldos verificados; la matriz física independiente sigue pendiente. |
 | P0 | Dependencias Node | Conectadas a Coder, runner y guía en `a5e7e7e`. Se corrige autorización con lista vacía y paquetes declarados sin imports; ambos nodos escalan antes de herramientas. Acta: `NODE-DEPENDENCY-GATES-VALIDATION.md`. | Verificar runtime, versiones y disponibilidad offline antes de afirmar soporte Node completo. Incluida y verificada en rc24; no implica disponibilidad npm offline. No ejecutar npm install ni scripts del proyecto automáticamente en el host. |
 | P0 | Seguridad efectiva por perfil | HSTS según configuración, throttle 429/Retry-After y auditoría sin contraseña verificados en frontera de perfiles y rc24. | Cierre local de los controles solicitados. TLS real/certificados, revisión de todas las rutas y producción pública siguen sin certificar. |

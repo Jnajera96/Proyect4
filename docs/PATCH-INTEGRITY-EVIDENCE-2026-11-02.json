@@ -1,0 +1,240 @@
+{
+  "date": "2026-11-02",
+  "base_commit": "c68a646a51d01329c37b614843f8c0bb793bd753",
+  "paid_api_calls": 0,
+  "full_backend": {
+    "tests": 1214,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 18,
+    "passed": 1196,
+    "seconds": 524.171,
+    "omissions": [
+      {
+        "test": "test_transcripcion_real_opt_in",
+        "reason": "opt-in: define AI_SWE_RUN_REAL_STT_TESTS=1 (descarga un modelo)"
+      },
+      {
+        "test": "test_la_plataforma_no_permite_construir_el_vector_de_enlace",
+        "reason": "el sistema no permite crear enlaces: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_patch_integrity_final_full\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test' -> 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_patch_integrity_final_full\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test\\\\enlace_de_prueba'"
+      },
+      {
+        "test": "test_llamada_real_controlada",
+        "reason": "prueba de integracion real: exige AI_SWE_RUN_REAL_PROVIDER_TESTS=1, AI_SWE_MODEL_API_KEY y AI_SWE_MODEL_NAME"
+      },
+      {
+        "test": "test_linked_private_path_denied",
+        "reason": "Symlink privilege unavailable"
+      },
+      {
+        "test": "test_runner_terminates_real_descendant[True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_runner_terminates_real_descendant[False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_assignment_failure_never_runs_user_code",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_alias_interpreter_rejected_before_launch",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_unverified_shutdown_never_reports_success",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_abrupt_supervisor_death_closes_job_and_terminates_child[True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_abrupt_supervisor_death_closes_job_and_terminates_child[False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_default_job_applies_resource_limits_before_any_process_starts",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_committed_memory_is_bounded_with_a_successful_control[64-False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_committed_memory_is_bounded_with_a_successful_control[256-True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_process_limit_denies_creation_but_allows_an_in_limit_child[1-False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_process_limit_denies_creation_but_allows_an_in_limit_child[2-True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_total_user_cpu_limit_terminates_busy_job_before_wall_timeout",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_cleanup_preserves_memory_and_cpu_limits",
+        "reason": "Windows Job Objects require non-Store Python"
+      }
+    ]
+  },
+  "requested_backend": {
+    "tests": 47,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "passed": 46,
+    "seconds": 27.266,
+    "omissions": [
+      {
+        "test": "test_la_plataforma_no_permite_construir_el_vector_de_enlace",
+        "reason": "el sistema no permite crear enlaces: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_patch_integrity_final_requested\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test' -> 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_patch_integrity_final_requested\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test\\\\enlace_de_prueba'"
+      }
+    ]
+  },
+  "extended_promotion_continuity": {
+    "tests": 79,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "passed": 78,
+    "seconds": 79.392,
+    "omissions": [
+      {
+        "test": "test_la_plataforma_no_permite_construir_el_vector_de_enlace",
+        "reason": "el sistema no permite crear enlaces: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_patch_integrity_eol_verified\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test' -> 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_patch_integrity_eol_verified\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test\\\\enlace_de_prueba'"
+      }
+    ]
+  },
+  "native_windows_job_supplement": {
+    "tests": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 22,
+    "seconds": 17.152,
+    "omissions": []
+  },
+  "frontend": {
+    "passed": 41,
+    "build": "passed",
+    "node": "24.22.1",
+    "npm_offline": true
+  },
+  "first_full_attempt": {
+    "tests": 1211,
+    "failures": 16,
+    "errors": 0,
+    "skipped": 18,
+    "passed": 1177,
+    "seconds": 579.207,
+    "omissions": [
+      {
+        "test": "test_transcripcion_real_opt_in",
+        "reason": "opt-in: define AI_SWE_RUN_REAL_STT_TESTS=1 (descarga un modelo)"
+      },
+      {
+        "test": "test_la_plataforma_no_permite_construir_el_vector_de_enlace",
+        "reason": "el sistema no permite crear enlaces: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_patch_integrity_full\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test' -> 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_patch_integrity_full\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test\\\\enlace_de_prueba'"
+      },
+      {
+        "test": "test_llamada_real_controlada",
+        "reason": "prueba de integracion real: exige AI_SWE_RUN_REAL_PROVIDER_TESTS=1, AI_SWE_MODEL_API_KEY y AI_SWE_MODEL_NAME"
+      },
+      {
+        "test": "test_linked_private_path_denied",
+        "reason": "Symlink privilege unavailable"
+      },
+      {
+        "test": "test_runner_terminates_real_descendant[True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_runner_terminates_real_descendant[False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_assignment_failure_never_runs_user_code",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_alias_interpreter_rejected_before_launch",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_unverified_shutdown_never_reports_success",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_abrupt_supervisor_death_closes_job_and_terminates_child[True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_abrupt_supervisor_death_closes_job_and_terminates_child[False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_default_job_applies_resource_limits_before_any_process_starts",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_committed_memory_is_bounded_with_a_successful_control[64-False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_committed_memory_is_bounded_with_a_successful_control[256-True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_process_limit_denies_creation_but_allows_an_in_limit_child[1-False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_process_limit_denies_creation_but_allows_an_in_limit_child[2-True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_total_user_cpu_limit_terminates_busy_job_before_wall_timeout",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "test": "test_cleanup_preserves_memory_and_cpu_limits",
+        "reason": "Windows Job Objects require non-Store Python"
+      }
+    ]
+  },
+  "python_source_preservation": {
+    "src/ai_swe/graph/nodes.py": {
+      "comments_preserved": true,
+      "docstrings_preserved": true,
+      "sha256": "9b8a1326077f80abe9043ae5924ea93f471503ad4e7736cc49ec15378a9332d3"
+    },
+    "src/ai_swe/tools/patcher.py": {
+      "comments_preserved": true,
+      "docstrings_preserved": true,
+      "sha256": "79cf43c16803032961e645e7b72995c27d0e61eca814b27e04e7d982174721c3"
+    },
+    "src/ai_swe/sandbox.py": {
+      "comments_preserved": true,
+      "docstrings_preserved": true,
+      "sha256": "c88b1fc2be90f1e6345b9fd740768ae3fe3628bf4fbe175ccebb3eace9e063d8"
+    },
+    "src/ai_swe/tools/promoter.py": {
+      "comments_preserved": true,
+      "docstrings_preserved": true,
+      "sha256": "1174ef3ef0154cecd772171211916b1cad8e0b69d22fb84e8be95f89ffcda1d3"
+    }
+  },
+  "notes": [
+    "The first complete attempt found 16 promotion regressions caused by autocrlf conversion; no existing test was weakened.",
+    "Promotion uses command-local Git configuration and scopes raw diffs to actual changed paths; repository/global configuration is unchanged.",
+    "No existing portable was modified or rebuilt, and no user project/database was changed.",
+    "No-newline marks apply to the immediately preceding diff side; counts exclude metadata."
+  ]
+}

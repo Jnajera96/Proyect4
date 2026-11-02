@@ -207,7 +207,7 @@ class Sandbox:
         destino = self.resolver_destino(ruta_relativa)
         try:
             destino.parent.mkdir(parents=True, exist_ok=True)
-            destino.write_text(contenido, encoding="utf-8")
+            destino.write_text(contenido, encoding="utf-8", newline="")
         except OSError as exc:
             raise SandboxError(
                 "escribir",
@@ -230,7 +230,7 @@ class Sandbox:
         if not destino.is_file():
             return None
         try:
-            return destino.read_text(encoding="utf-8")
+            return destino.read_bytes().decode("utf-8")
         except (UnicodeDecodeError, OSError):
             return None
 
@@ -257,7 +257,13 @@ class Sandbox:
         altera lo que se confirma: no hay `git commit` aqui.
         """
         _git("add", "-N", "--", ".", cwd=self.raiz, check=False)
-        result = _git("diff", "HEAD", "--no-color", cwd=self.raiz, check=False)
+        changed = _git("diff", "HEAD", "--name-only", "-z", cwd=self.raiz, check=False)
+        rutas = [ruta for ruta in (changed.stdout or "").split("\0") if ruta]
+        if not rutas:
+            return ""
+        # Ignore untouched checkout CRLF while preserving bytes of the actual changes.
+        result = _git("-c", "core.autocrlf=false", "diff", "HEAD", "--no-color", "--", *rutas,
+                      cwd=self.raiz, check=False)
         return result.stdout or ""
 
     def archivos_modificados(self) -> list[str]:

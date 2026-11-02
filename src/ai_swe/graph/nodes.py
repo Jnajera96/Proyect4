@@ -1190,7 +1190,10 @@ def _diff_unificado(propuesta: FileProposal, contenido_previo: str | None = None
         tofile=etiqueta_nueva,
         n=3,
     )
-    texto = "".join(trozos)
+    texto = "".join(
+        linea if linea.endswith("\n") else linea + "\n\\ No newline at end of file\n"
+        for linea in trozos
+    )
 
     # Un `delete` **siempre** produce un trozo, aunque no haya contenido previo.
     # `difflib` no emite nada cuando ambos lados son iguales -y dos cadenas vacias lo
@@ -1198,6 +1201,8 @@ def _diff_unificado(propuesta: FileProposal, contenido_previo: str | None = None
     # "no hay cambio". Se sintetiza la cabecera, que es lo que git escribe para un
     # archivo eliminado.
     if not texto and propuesta.operation is FileOperation.DELETE:
+        return f"--- {etiqueta_vieja}\n+++ {etiqueta_nueva}\n"
+    if not texto and propuesta.operation is FileOperation.CREATE:
         return f"--- {etiqueta_vieja}\n+++ {etiqueta_nueva}\n"
     return texto
 
@@ -1255,7 +1260,7 @@ def _contar_desde_diff(trozo: str) -> tuple[int, int]:
     """
     anadidas = eliminadas = 0
     for linea in trozo.splitlines():
-        if linea.startswith("+++") or linea.startswith("---"):
+        if linea.startswith(("+++", "---", "\\")):
             continue
         if linea.startswith("+"):
             anadidas += 1

@@ -24,6 +24,7 @@ async function cargar(ruta) {
 const { DiagramaFlujo } = await cargar("../src/components/DiagramaFlujo.tsx");
 const { PanelPlan, PanelPresupuesto } = await cargar("../src/components/evidencia.tsx");
 const { VistaFlujo } = await cargar("../src/views/VistaFlujo.tsx");
+const { VistaSeguridad } = await cargar("../src/views/VistaSeguridad.tsx");
 const { api } = await cargar("../src/lib/api.ts");
 const { VisorDiff } = await cargar("../src/components/VisorDiff.tsx");
 const { calcular } = await cargar("../src/components/DiagramaFlujo.tsx");
@@ -70,6 +71,26 @@ function estado(cambios = {}) {
 }
 const informe = { summary: "completado", changes_applied: ["app.py (+1/-0)"], tests_executed: [], pending: [], review: "accept" };
 const evento = (kind, seq, data = {}) => ({ kind, seq, at: "2026-10-28T12:00:00Z", data });
+
+test("seguridad distingue fallos de verificación de errores del motor", () => {
+  const html = renderToStaticMarkup(React.createElement(VistaSeguridad, {
+    estado: estado({evidence: {test_runs: [{target:"pytest.unit",exit_code:2}],findings:[]}}),
+    sesion: "autenticado", rol:"admin",
+  }));
+  assert.match(html,/objetivos de verificación reportaron fallos/);
+  assert.doesNotMatch(html,/Sin errores registrados/);
+  assert.match(html,/pytest.unit/);
+});
+
+test("seguridad usa la última ejecución del objetivo y no un fallo histórico", () => {
+  const html = renderToStaticMarkup(React.createElement(VistaSeguridad, {
+    estado: estado({evidence: {test_runs: [
+      {target:"pytest.unit",exit_code:2},{target:"pytest.unit",exit_code:0},
+    ],findings:[]}}), sesion:"autenticado", rol:"admin",
+  }));
+  assert.doesNotMatch(html,/objetivos de verificación reportaron fallos/);
+  assert.match(html,/Sin errores registrados/);
+});
 
 test("inspect y PLAN_ONLY muestran No aplica para etapas que no ejecutaran", () => {
   for (const cambios of [{ interpretation: { intent: "inspect" } }, { options: { mode: "PLAN_ONLY" } }]) {

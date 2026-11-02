@@ -17,7 +17,7 @@
  */
 import type { EstadoSesion } from "../lib/auth";
 import type { RunState } from "../lib/contracts";
-import { PanelErrores, PanelPresupuesto, PanelSeguridadRun } from "../components/evidencia";
+import { PanelErrores, PanelPresupuesto, PanelPruebas, PanelSeguridadRun } from "../components/evidencia";
 import { EstadoVacio, Panel, Seccion } from "../components/ui";
 
 export function VistaSeguridad({
@@ -29,6 +29,10 @@ export function VistaSeguridad({
   sesion: EstadoSesion;
   rol: string | null;
 }) {
+  const pruebas = [...new Map(
+    (estado?.evidence?.test_runs ?? []).map((p) => [p.target, p]),
+  ).values()];
+  const hayFallos = pruebas.some((p) => p.exit_code !== 0);
   return (
     <>
       <Seccion titulo="Sesión" nota="El estado de acceso de esta pestaña.">
@@ -69,9 +73,22 @@ export function VistaSeguridad({
               distintas. */}
           <PanelSeguridadRun estado={estado} />
 
-          <Seccion titulo="Registro de errores">
-            <PanelErrores errores={estado.errors} />
+          <Seccion titulo="Errores del motor" nota="Los resultados de pruebas y linter se muestran por separado.">
+            {!estado.errors.length && hayFallos ? (
+              <Panel>
+                <p className="aviso" role="status">
+                  Los objetivos de verificación reportaron fallos. No se han registrado errores del motor.
+                  Revisa la salida de las pruebas a continuación.
+                </p>
+              </Panel>
+            ) : <PanelErrores errores={estado.errors} />}
           </Seccion>
+
+          {pruebas.length ? (
+            <Seccion titulo="Objetivos de verificación">
+              <PanelPruebas pruebas={pruebas} />
+            </Seccion>
+          ) : null}
 
           <Seccion titulo="Presupuesto">
             <PanelPresupuesto budget={estado.budget} />

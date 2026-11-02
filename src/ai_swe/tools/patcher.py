@@ -24,6 +24,7 @@ Una ruta denegada no llega nunca a `mkdir`, ni siquiera crea el directorio padre
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from dataclasses import dataclass, field
 
@@ -171,7 +172,13 @@ def aplicar(
                     resultado.borrados.append(ruta)
             else:
                 sandbox.escribir(ruta, contenidos[ruta] or "")
-                resultado.aplicados.append(ruta)
+                escrito = sandbox.resolver_destino(ruta).read_bytes()
+                if hashlib.sha256(escrito).hexdigest() != archivo.sha256:
+                    resultado.fallos[ruta] = (
+                        "Corrupción de parche: el SHA-256 escrito no coincide con la propuesta"
+                    )
+                else:
+                    resultado.aplicados.append(ruta)
         except EscapeDetectado as exc:
             # La barrera fisica salto. Cuenta como denegacion: es un escape.
             resultado.denegados[ruta] = exc.motivo
@@ -179,6 +186,10 @@ def aplicar(
         except SandboxError as exc:
             resultado.fallos[ruta] = str(exc)
             log.warning("sandbox: fallo aplicando %r: %s", ruta, exc)
+        except OSError as exc:
+            resultado.fallos[ruta] = (
+                f"No se pudo verificar el archivo escrito: {type(exc).__name__}"
+            )
 
     return resultado
 
@@ -201,8 +212,20 @@ def _contenido_de(cambio: CodeChange) -> dict[str, str | None]:
     """
     contenidos: dict[str, str | None] = {}
     for ruta, lineas in _trozos_por_archivo(cambio.diff).items():
-        nuevas = [linea[1:] for linea in lineas if linea.startswith("+") and not linea.startswith("+++")]
-        contenidos[ruta] = ("\n".join(nuevas) + "\n") if nuevas else None
+        if any(linea.startswith("+++ /dev/null") for linea in lineas):
+            contenidos[ruta] = None
+            continue
+        nuevas: list[str] = []
+        adicion_previa = False
+        for linea in lineas:
+            if linea.startswith("\\"):
+                if adicion_previa and nuevas[-1].endswith("\n"):
+                    nuevas[-1] = nuevas[-1][:-1]
+                continue
+            adicion_previa = linea.startswith("+")
+            if adicion_previa:
+                nuevas.append(linea[1:])
+        contenidos[ruta] = "".join(nuevas)
     return contenidos
 
 
@@ -220,22 +243,23 @@ def _trozos_por_archivo(diff: str) -> dict[str, list[str]]:
     """
     trozos: dict[str, list[str]] = {}
     ruta_actual: str | None = None
+    origen: str | None = None
 
-    for linea in diff.splitlines():
+    for linea in diff.splitlines(keepends=True):
         if linea.startswith("+++ "):
             destino = linea[4:].strip()
             if destino.startswith("b/"):
                 ruta_actual = destino[2:]
-                trozos.setdefault(ruta_actual, [])
+                trozos[ruta_actual] = []
             else:
                 # `+++ /dev/null`: es un borrado. La ruta la da la cabecera `---`.
-                ruta_actual = None
+                ruta_actual = origen
+                if ruta_actual is not None:
+                    trozos[ruta_actual] = [linea]
             continue
         if linea.startswith("--- "):
-            origen = linea[4:].strip()
-            if ruta_actual is None and origen.startswith("a/"):
-                ruta_actual = origen[2:]
-                trozos.setdefault(ruta_actual, [])
+            anterior = linea[4:].strip()
+            origen = anterior[2:] if anterior.startswith("a/") else None
             continue
         if ruta_actual is None:
             continue
