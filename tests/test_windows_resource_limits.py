@@ -1,5 +1,6 @@
 import ctypes
 import os
+import sys
 
 import pytest
 from pydantic import ValidationError
@@ -11,7 +12,8 @@ from ai_swe.config import Settings
 from ai_swe.tools import runner
 from ai_swe.tools.windows_job import WindowsJob, _ExtendedLimits
 
-WINDOWS = pytest.mark.skipif(os.name != "nt", reason="Windows Job Objects")
+STORE_ALIAS = getattr(os.lstat(sys._base_executable), "st_reparse_tag", 0) == 0x8000001B
+WINDOWS = pytest.mark.skipif(os.name != "nt" or STORE_ALIAS, reason="Windows Job Objects require non-Store Python")
 
 
 @pytest.mark.parametrize("values", [

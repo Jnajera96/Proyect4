@@ -5,7 +5,9 @@ from __future__ import annotations
 import ast
 import importlib.machinery
 import importlib.metadata
+import json
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
@@ -193,3 +195,132 @@ def repository_files(root: Path, proposals=()):
         else:
             files[name] = SourceFile(name, proposal.new_content, proposal.operation)
     return list(files.values())
+
+NODE_EXTENSIONS = frozenset({".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx"})
+NODE_BUILTINS = frozenset({
+    "assert", "async_hooks", "buffer", "child_process", "cluster", "console",
+    "constants", "crypto", "dgram", "diagnostics_channel", "dns", "domain",
+    "events", "fs", "http", "http2", "https", "inspector", "module", "net",
+    "os", "path", "perf_hooks", "process", "punycode", "querystring",
+    "readline", "repl", "stream", "string_decoder", "test", "timers", "tls",
+    "trace_events", "tty", "url", "util", "v8", "vm", "wasi", "worker_threads",
+    "zlib",
+})
+
+
+@dataclass
+class NodeDependencyManifest:
+    builtin_modules: list[str] = field(default_factory=list)
+    local_modules: list[str] = field(default_factory=list)
+    third_party_modules: list[str] = field(default_factory=list)
+    unmet_modules: list[str] = field(default_factory=list)
+    has_manifest: bool = False
+    packages: list[str] = field(default_factory=list)
+    declared_packages: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+
+    @property
+    def needs_manifest(self) -> bool:
+        return bool(self.unmet_modules)
+
+
+def npm_package_name(specifier: str) -> str:
+    specifier = specifier.strip()
+    if specifier.startswith("@"):
+        parts = specifier.split("/")
+        return f"{parts[0]}/{parts[1]}" if len(parts) >= 2 else specifier
+    return specifier.split("/")[0]
+
+
+def _strip_js_comments(text: str) -> str:
+    # Strip block comments
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    # Strip line comments
+    text = re.sub(r"//.*", "", text)
+    return text
+
+
+def detect_node_dependencies(
+    files: list[FileProposal | FileChange | SourceFile],
+) -> NodeDependencyManifest:
+    manifest = NodeDependencyManifest()
+    content: dict[str, str] = {}
+    for file in files:
+        if getattr(file, "operation", "") == "delete":
+            continue
+        path = PurePosixPath(file.path.replace("\\", "/"))
+        if path.is_absolute() or ".." in path.parts or ":" in str(path):
+            manifest.errors.append("Ruta no relativa: " + str(path))
+            continue
+        if path.suffix not in NODE_EXTENSIONS and path.as_posix() != "package.json":
+            continue
+        text = getattr(file, "new_content", None)
+        if not isinstance(text, str):
+            manifest.errors.append("Contenido no disponible: " + str(path))
+            continue
+        if len(text.encode("utf-8")) > 512 * 1024:
+            manifest.errors.append("Archivo demasiado extenso: " + str(path))
+            continue
+        content[path.as_posix()] = text
+
+    manifest.has_manifest = "package.json" in content
+    declared: set[str] = set()
+    if manifest.has_manifest:
+        try:
+            pkg_data = json.loads(content["package.json"])
+            if isinstance(pkg_data, dict):
+                for key in ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies"):
+                    val = pkg_data.get(key)
+                    if isinstance(val, dict):
+                        declared.update(val.keys())
+        except Exception:
+            manifest.errors.append("package.json no es un JSON válido")
+
+    local_names: set[str] = set()
+    for name in content:
+        p = PurePosixPath(name)
+        if p.suffix in NODE_EXTENSIONS:
+            local_names.add(p.stem)
+            local_names.add(p.as_posix())
+
+    builtins: set[str] = set()
+    local: set[str] = set()
+    external: set[str] = set()
+
+    # Regexes for import / export / require
+    import_re = re.compile(
+        r"""(?:import\s+(?:(?:[\w*\s{},]+from\s+)|)?['"]([^'"]+)['"]|"""
+        r"""require\(\s*['"]([^'"]+)['"]\s*\)|"""
+        r"""import\(\s*['"]([^'"]+)['"]\s*\)|"""
+        r"""export\s+.*\s+from\s+['"]([^'"]+)['"])"""
+    )
+
+    for name, text in content.items():
+        if not any(name.endswith(ext) for ext in NODE_EXTENSIONS):
+            continue
+        clean_text = _strip_js_comments(text)
+        for match in import_re.finditer(clean_text):
+            specifier = next(s for s in match.groups() if s is not None).strip()
+            if not specifier:
+                continue
+            if specifier.startswith(("./", "../", "/", "#")):
+                local.add(specifier)
+            elif specifier.startswith("node:"):
+                clean_builtin = specifier.removeprefix("node:").split("/")[0]
+                builtins.add(clean_builtin)
+            elif specifier.split("/")[0] in NODE_BUILTINS:
+                builtins.add(specifier.split("/")[0])
+            elif specifier in local_names:
+                local.add(specifier)
+            else:
+                pkg = npm_package_name(specifier)
+                external.add(pkg)
+
+    manifest.builtin_modules = sorted(builtins)
+    manifest.local_modules = sorted(local)
+    manifest.third_party_modules = sorted(external)
+    manifest.packages = sorted(external)
+    manifest.declared_packages = sorted(declared)
+    manifest.unmet_modules = sorted(p for p in external if p not in declared)
+    return manifest
+

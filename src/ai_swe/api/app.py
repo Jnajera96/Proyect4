@@ -82,6 +82,7 @@ from ai_swe.security import (
     Credenciales,
     Identidad,
     Rol,
+    log_security_event,
     credencial_de_peticion,
     credenciales_de,
     install_redacting_filter,
@@ -136,6 +137,7 @@ CABECERAS_SEGURIDAD = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(self), geolocation=()",
 }
 
 
@@ -166,6 +168,28 @@ class LimitadorDePeticiones:
         vigentes.append(ahora)
         self._marcas[cliente] = vigentes
         return True
+
+
+class AuthThrottler:
+    """Limite de intentos fallidos de autenticacion por cliente (anti fuerza bruta)."""
+
+    def __init__(self, max_fallos: int = 10, ventana_s: float = 60.0) -> None:
+        self._max_fallos = max_fallos
+        self._ventana = ventana_s
+        self._fallos: dict[str, list[float]] = {}
+
+    def registrar_fallo(self, ip: str, ahora: float) -> None:
+        vigentes = [t for t in self._fallos.get(ip, ()) if ahora - t < self._ventana]
+        vigentes.append(ahora)
+        self._fallos[ip] = vigentes
+
+    def esta_bloqueado(self, ip: str, ahora: float) -> bool:
+        vigentes = [t for t in self._fallos.get(ip, ()) if ahora - t < self._ventana]
+        self._fallos[ip] = vigentes
+        return len(vigentes) >= self._max_fallos
+
+    def reset(self, ip: str) -> None:
+        self._fallos.pop(ip, None)
 
 
 async def _leer_audio_limitado(audio: UploadFile, limite: int) -> bytes:
@@ -546,6 +570,9 @@ def crear_app(
     # y `testserver` estan porque son el bucle local y el cliente de pruebas.
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(ajustes.trusted_hosts))
 
+    auth_throttler = AuthThrottler(ajustes.auth_rate_limit_per_minute)
+    app.state.auth_throttler = auth_throttler
+
     if ajustes.rate_limit_enabled:
         limitador = LimitadorDePeticiones(ajustes.rate_limit_per_minute)
         app.state.rate_limiter = limitador
@@ -554,6 +581,13 @@ def crear_app(
         async def _limitar_peticiones(request: Request, call_next):
             cliente = request.client.host if request.client else "desconocido"
             if not limitador.permitir(cliente, time.monotonic()):
+                log_security_event(
+                    event_type="RATE_LIMIT_EXCEEDED",
+                    client_ip=cliente,
+                    status="BLOCKED",
+                    detail="demasiadas peticiones; intentalo mas tarde",
+                    resource=str(request.url.path),
+                )
                 return JSONResponse(
                     status_code=429,
                     content={"detail": "demasiadas peticiones; intentalo mas tarde"},
@@ -570,6 +604,8 @@ def crear_app(
         respuesta = await call_next(request)
         for nombre, valor in CABECERAS_SEGURIDAD.items():
             respuesta.headers.setdefault(nombre, valor)
+        if request.url.scheme == "https" or getattr(ajustes, "ssl_certfile", None) is not None:
+            respuesta.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         return respuesta
 
     app.state.settings = ajustes
@@ -593,7 +629,9 @@ def crear_app(
     )
 
     def _identidad_de_cabecera(
-        x_api_key: str | None, authorization: str | None
+        x_api_key: str | None,
+        authorization: str | None,
+        request: Request | None = None,
     ) -> Identidad | None:
         """Identidad a partir de las dos cabeceras admitidas.
 
@@ -605,8 +643,32 @@ def crear_app(
         """
         if not credenciales.activa:
             return None
+        cliente_ip = request.client.host if (request and request.client) else "desconocido"
+        ahora = time.monotonic()
+        if ajustes.auth_rate_limit_enabled and auth_throttler.esta_bloqueado(cliente_ip, ahora):
+            log_security_event(
+                event_type="AUTH_FAILURE",
+                client_ip=cliente_ip,
+                status="BLOCKED",
+                detail="demasiados intentos fallidos de autenticacion",
+                resource=str(request.url.path) if request else None,
+            )
+            raise HTTPException(
+                status_code=429,
+                detail="demasiados intentos de autenticación fallidos; inténtalo más tarde",
+                headers={"Retry-After": "60"},
+            )
         identidad = credencial_de_peticion(credenciales, x_api_key, authorization)
         if identidad is None:
+            if ajustes.auth_rate_limit_enabled:
+                auth_throttler.registrar_fallo(cliente_ip, ahora)
+            log_security_event(
+                event_type="AUTH_FAILURE",
+                client_ip=cliente_ip,
+                status="FAILURE",
+                detail="credenciales invalidas o ausentes",
+                resource=str(request.url.path) if request else None,
+            )
             raise HTTPException(
                 status_code=401,
                 detail=(
@@ -615,22 +677,45 @@ def crear_app(
                 ),
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        log_security_event(
+            event_type="AUTH_SUCCESS",
+            client_ip=cliente_ip,
+            status="SUCCESS",
+            detail="autenticacion exitosa",
+            role=identidad.rol.value,
+            key_id=identidad.clave_id,
+            resource=str(request.url.path) if request else None,
+        )
         return identidad
 
     def _identidad(
+        request: Request,
         x_api_key: str | None = Header(default=None, alias="X-API-Key"),
         authorization: str | None = Header(default=None),
     ) -> Identidad | None:
         """Dependencia de identidad para los manejadores normales."""
-        return _identidad_de_cabecera(x_api_key, authorization)
+        return _identidad_de_cabecera(x_api_key, authorization, request=request)
 
     def _exige(minimo: Rol):
         """Dependencia que exige un rol minimo. Sin autenticacion, no exige nada."""
 
-        def dependencia(identidad: Identidad | None = Depends(_identidad)) -> Identidad | None:
+        def dependencia(
+            request: Request,
+            identidad: Identidad | None = Depends(_identidad),
+        ) -> Identidad | None:
             if identidad is None:
                 return None
             if not identidad.puede(minimo):
+                cliente_ip = request.client.host if request.client else "desconocido"
+                log_security_event(
+                    event_type="ACCESS_DENIED",
+                    client_ip=cliente_ip,
+                    status="DENIED",
+                    detail=f"esta accion requiere el rol '{minimo.value}'; la clave usada tiene '{identidad.rol.value}'",
+                    role=identidad.rol.value,
+                    key_id=identidad.clave_id,
+                    resource=str(request.url.path),
+                )
                 raise HTTPException(
                     status_code=403,
                     detail=(

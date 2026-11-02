@@ -132,6 +132,14 @@ class Settings(BaseSettings):
             and not self.model_api_key.get_secret_value().strip()
         ):
             self.model_api_key = self.hf_token
+
+        if (self.ssl_certfile is None) != (self.ssl_keyfile is None):
+            raise ValueError("ssl_certfile y ssl_keyfile deben configurarse conjuntamente")
+        if self.ssl_certfile is not None:
+            if not self.ssl_certfile.is_file():
+                raise ValueError(f"ssl_certfile no existe o no es un archivo: {self.ssl_certfile}")
+            if not self.ssl_keyfile.is_file():
+                raise ValueError(f"ssl_keyfile no existe o no es un archivo: {self.ssl_keyfile}")
         return self
 
     # --- Alcance y seguridad -------------------------------------------------
@@ -231,6 +239,24 @@ class Settings(BaseSettings):
         description="Limite de peticiones por minuto. Apagado: encenderlo antes de exponer.",
     )
     rate_limit_per_minute: int = Field(default=120, ge=1)
+    # --- Hardening para Produccion Publica (TLS & Auth Throttling) -----------
+    ssl_certfile: Path | None = Field(
+        default=None,
+        description="Ruta al certificado PEM para TLS/SSL nativo.",
+    )
+    ssl_keyfile: Path | None = Field(
+        default=None,
+        description="Ruta a la clave privada PEM para TLS/SSL nativo.",
+    )
+    auth_rate_limit_enabled: bool = Field(
+        default=False,
+        description="Límite estricto de intentos fallidos de autenticación por minuto (anti fuerza bruta). Apagado por defecto.",
+    )
+    auth_rate_limit_per_minute: int = Field(
+        default=10,
+        ge=1,
+        description="Máximo número de intentos fallidos de autenticación por minuto por cliente antes de retornar 429.",
+    )
     # Hosts aceptados en la cabecera `Host`. Un valor que no este aqui es 400: es la
     # defensa contra el envenenamiento de host. `testserver` esta porque es el que
     # usa el cliente de pruebas de FastAPI.

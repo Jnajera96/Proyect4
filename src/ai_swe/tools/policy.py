@@ -65,6 +65,21 @@ def dependency_issues(manifest, allowed_packages, available_modules):
     return list(dict.fromkeys(issues))
 
 
+def node_dependency_issues(manifest, allowed_packages=(), available_modules=()):
+    """Valida dependencias de Node/NPM contra politicas y disponibilidad."""
+    allowed = {p.lower() for p in allowed_packages}
+    available = {m.lower() for m in available_modules}
+    issues = [error for error in manifest.errors]
+    for pkg in manifest.third_party_modules:
+        if allowed and pkg.lower() not in allowed:
+            issues.append(f"El paquete npm '{pkg}' no está en allowed_packages.")
+        elif available and pkg.lower() not in available:
+            issues.append(f"El paquete npm '{pkg}' no está instalado en el entorno offline.")
+        if pkg in manifest.unmet_modules:
+            issues.append(f"Declara '{pkg}' en package.json.")
+    return list(dict.fromkeys(issues))
+
+
 @dataclass(frozen=True)
 class DecisionContext:
     """Contexto de la decision. Todo lo que el Engine necesita saber, y nada mas."""

@@ -28,6 +28,7 @@ from ai_swe.security.auth import (
     credencial_de_peticion,
     credenciales_de,
 )
+from ai_swe.security.audit import SecurityAuditEvent, log_security_event
 from ai_swe.security.logging import RedactingFilter, install_redacting_filter
 from ai_swe.security.redaction import (
     CLAVES_QUE_REDACTAN_VALOR,
@@ -53,6 +54,8 @@ __all__ = [
     "MARCA_INICIO",
     "REDACTADO",
     "ROLES_VALIDOS",
+    "SecurityAuditEvent",
+    "log_security_event",
     "Credenciales",
     "Identidad",
     "RedactingFilter",

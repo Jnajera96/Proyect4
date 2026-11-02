@@ -14,7 +14,8 @@ from test_runner_output_limits import scripted_target
 
 from ai_swe.tools import runner
 
-pytestmark = pytest.mark.skipif(os.name != "nt", reason="Windows Job Objects")
+STORE_ALIAS = getattr(os.lstat(sys._base_executable), "st_reparse_tag", 0) == 0x8000001B
+pytestmark = pytest.mark.skipif(os.name != "nt" or STORE_ALIAS, reason="Windows Job Objects require non-Store Python")
 
 
 def process_api():
