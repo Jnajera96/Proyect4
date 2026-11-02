@@ -522,6 +522,12 @@ def crear_app(
 
             _app.state.docker_recovery = await run_in_threadpool(recover_stopped_sessions)
 
+        # Recuperacion de corte al arrancar: integridad y consolidacion WAL
+        if hasattr(almacen, "recover_from_crash"):
+            recup_info = almacen.recover_from_crash()
+            if not recup_info.get("integrity_ok"):
+                log.error("integridad de base de datos comprometida tras reinicio: %s", recup_info)
+
         # Recuperacion al arrancar: una ejecucion en `planned` o `running`
         # pertenece a un proceso que ya no existe. Dejarla asi seria la terminacion
         # anomala que MET-13 prohibe, y el navegador esperaria para siempre.

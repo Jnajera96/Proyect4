@@ -73,12 +73,22 @@ class RunWorker:
             finally:
                 with self._active_lock:
                     self._active -= 1
+                self._disparar_auto_respaldo()
         try:
             self._pool.submit(run)
         except BaseException:
             with self._active_lock:
                 self._active -= 1
             raise
+
+    def _disparar_auto_respaldo(self) -> None:
+        continuity = getattr(self._engine, "continuity", None)
+        if continuity is None:
+            return
+        try:
+            continuity.auto_backup(active_runs=self.active)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("auto_backup en trabajador omitido o con advertencia: %s", exc)
 
     def _ejecutar_seguro(self, run_id: str) -> None:
         """Ejecuta y **siempre** deja la ejecucion en un estado terminal.

@@ -148,6 +148,8 @@ class ProfileManager:
             child = crear_app(settings=profile.settings(self.settings))
             child.state.profile = profile
             child.state.ledger = BudgetLedger(profile.paths.database)
+            if hasattr(child.state, "engine") and hasattr(child.state.engine, "continuity"):
+                child.state.engine.continuity.set_credentials(profile.key, profile.header)
             lifetime = child.router.lifespan_context(child)
             await lifetime.__aenter__()
             context = ProfileContext(profile, child, lifetime)
@@ -457,6 +459,7 @@ def create_profile_app(settings: Settings) -> FastAPI:
             new_name = body.get("name")
             new_password = body.get("new_password") or password
             repo_mapping = body.get("repo_mapping") or {}
+            conflict_strategy = body.get("conflict_strategy", "rename")
             profile = await run_in_threadpool(
                 import_vault_to_profile,
                 manager.store,
@@ -465,6 +468,7 @@ def create_profile_app(settings: Settings) -> FastAPI:
                 new_name=new_name,
                 new_password=new_password,
                 repo_mapping=repo_mapping,
+                conflict_strategy=conflict_strategy,
             )
         except (KeyError, ValueError, OSError, VaultError, ContinuityError) as exc:
             raise HTTPException(400, str(exc) or "No se pudo importar el respaldo") from None

@@ -321,6 +321,18 @@ class RunStore:
             self.append_event(run_id, EventKind.RUN_DONE, {"status": RunStatus.NEEDS_HUMAN.value})
         return abiertas
 
+    def recover_from_crash(self) -> dict:
+        """Verifica la integridad de la base y consolida diarios WAL pendientes tras un corte."""
+        with self._lock:
+            integrity = self._conn.execute("PRAGMA integrity_check").fetchone()
+            is_ok = bool(integrity and integrity[0] == "ok")
+            checkpoint = self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+            self._conn.commit()
+            return {
+                "integrity_ok": is_ok,
+                "wal_checkpoint": list(checkpoint) if checkpoint else None,
+            }
+
     # ------------------------------------------------------------------ eventos
     def append_event(self, run_id: str, kind: EventKind, data: dict | None = None) -> RunEvent:
         """Anade un evento en una sola sentencia.

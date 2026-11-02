@@ -154,6 +154,9 @@ class ContinuityStore:
         self.owner = owner
         self.profile_name = profile_name or owner
         self.worktrees_root = Path(worktrees_root) if worktrees_root else self.database.parent / "worktrees"
+        self._profile_key: bytes | None = None
+        self._profile_header: dict | None = None
+        self._password: str | None = None
         with self.connection() as con:
             con.executescript(
                 """
@@ -746,6 +749,17 @@ class ContinuityStore:
         _atomic_write_bytes(target, archive_bytes)
         return target
 
+    def set_credentials(
+        self,
+        key: bytes | None = None,
+        header: dict | None = None,
+        password: str | None = None,
+    ) -> None:
+        """Configura credenciales para auto-respaldo silencioso en el ciclo de vida."""
+        self._profile_key = key
+        self._profile_header = header
+        self._password = password
+
     def auto_backup(
         self,
         password: str | None = None,
@@ -765,19 +779,23 @@ class ContinuityStore:
                 )
             return None
 
+        eff_pwd = password if password is not None else self._password
+        eff_key = profile_key if profile_key is not None else self._profile_key
+        eff_hdr = profile_header if profile_header is not None else self._profile_header
+
         backup_dir = Path(cfg["backup_dir"])
         try:
             if _is_link(backup_dir):
                 raise ContinuityError("La carpeta de auto-respaldo es un enlace no permitido")
             backup_dir.mkdir(parents=True, exist_ok=True)
-            if password is not None:
-                archive_bytes = self.export_archive(password, active_runs=0)
-            elif profile_key is not None and profile_header is not None:
+            if eff_pwd is not None:
+                archive_bytes = self.export_archive(eff_pwd, active_runs=0)
+            elif eff_key is not None and eff_hdr is not None:
                 archive_bytes = self.export_with_profile_key(
-                    profile_key, profile_header, active_runs=0
+                    eff_key, eff_hdr, active_runs=0
                 )
             else:
-                raise ContinuityError("Se requiere clave o contraseña para cifrar el auto-respaldo")
+                return None
 
             stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
             filename = f"aiswe-{self.owner[:8]}-{stamp}-{uuid.uuid4().hex[:8]}.aiswe-vault"
@@ -1316,11 +1334,20 @@ def import_vault_to_profile(
     new_name: str | None = None,
     new_password: str | None = None,
     repo_mapping: dict[str, str | Path],
+    conflict_strategy: str = "error",
 ):
     """Restaura un archivo .aiswe-vault creando un perfil nuevo sin sobrescribir perfiles existentes."""
     payload = ContinuityStore._open_archive_bytes(archive_bytes, archive_password)
     target_name = new_name or payload.get("profile_name") or "restored"
     target_password = new_password or archive_password
+
+    if conflict_strategy == "rename" and hasattr(profile_store, "_find"):
+        base_name = target_name
+        counter = 1
+        while profile_store._find(target_name) is not None:
+            target_name = f"{base_name}-restored" if counter == 1 else f"{base_name}-restored-{counter}"
+            counter += 1
+
     try:
         profile = profile_store.create(target_name, target_password)
     except ValueError as exc:
