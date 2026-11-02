@@ -1,0 +1,52 @@
+{
+  "date": "2026-11-02",
+  "base_commit": "8a4030ee23351659ca5477d94943714ee67cfd82",
+  "paid_api_calls": 0,
+  "frontend": {
+    "passed": 39,
+    "build": "passed"
+  },
+  "token_savings": {
+    "cl100k_base_total_percent": 41.185256,
+    "o200k_base_total_percent": 42.379799,
+    "code_reduction_percent": 66.208948,
+    "critical_sufficiency": true,
+    "goal_40_70_met": true
+  },
+  "smoke": {
+    "success": true,
+    "checks": [
+      "all manifest hashes match",
+      "no developer state or secrets files",
+      "installed defaults to profiles",
+      "private API gated before login",
+      "integrated frontend served",
+      "profile registration with packaged cryptography",
+      "empty profile has no global token",
+      "packaged graph accepts deterministic run",
+      "human confirmation required",
+      "graceful packaged shutdown",
+      "encrypted profile login survives restart",
+      "SQLite and graph checkpoint survive restart",
+      "persisted SQLite integrity",
+      "restart shutdown graceful"
+    ],
+    "paid_calls": 0
+  },
+  "archive": {
+    "zip": "dist/windows-v0.2.0-rc20-token-savings/AISWESystem-windows-x64.zip",
+    "sha256": "24d9feacb320eaa7f3670fdd582549dcfb7cd8c69add7f88231ef45bc5d4a929",
+    "bytes": 120749150,
+    "files": 4745,
+    "crc": true,
+    "source_match": true
+  },
+  "consolidated_features": [
+    "Recuperación conservadora de recursos Docker al arrancar (diario atómico y barrido seguro)",
+    "Detector estático de dependencias Python por proyecto (AST, clasificación stdlib/local/terceros)",
+    "Prevención de bucles por dependencias faltantes (DEPENDENCY_UNAVAILABLE preventiva)",
+    "Lanzador local de borradores ante escalación o ciclos agotados ('Probar en local ahora')",
+    "Ahorro formal de tokens del 40–70% en mensajes completos con tokenizadores de referencia",
+    "Confinamiento confiable de Windows Job Object bajo entornos virtuales"
+  ]
+}

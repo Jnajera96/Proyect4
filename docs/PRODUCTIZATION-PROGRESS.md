@@ -1,5 +1,25 @@
 # Productización v0.1.0 — registro de continuidad
 
+## RC20 — ahorro de tokens 40–70% y consolidación portable (2 de noviembre de 2026)
+
+Consolidación integral de dependencias por proyecto, ahorro de tokens de memoria
+y contexto en prompt completo (41.19% en cl100k_base y 42.38% en o200k_base con 100% de
+suficiencia crítica), lanzador local de borradores ante escalación o ciclos agotados
+y compatibilidad de confinamiento Windows Job Object bajo entornos virtuales.
+
+Entrega: `dist/windows-v0.2.0-rc20-token-savings/AISWESystem-windows-x64.zip`.
+SHA-256: `24d9feacb320eaa7f3670fdd582549dcfb7cd8c69add7f88231ef45bc5d4a929`.
+120.749.150 bytes; 4.745 archivos, CRC y hashes de manifiesto comprobados.
+Frontend: 39 PASS y build de Vite aprobado.
+Smoke portable: 14/14 controles de humo aprobados (apagado limpio y reinicio cifrado verificados).
+Cero llamadas pagadas. rc19 y entregas anteriores se conservan en dist/.
+
+Acta: [TOKEN-SAVINGS-PORTABLE-RC20-VALIDATION.md](TOKEN-SAVINGS-PORTABLE-RC20-VALIDATION.md).
+Evidencia: [TOKEN-SAVINGS-PORTABLE-RC20-EVIDENCE.json](TOKEN-SAVINGS-PORTABLE-RC20-EVIDENCE.json).
+Avance ponderado estimado: 90/100. Matriz en otra PC y calidad de modelos pendientes.
+Continuidad entre PC y publicación real en GitHub siguen pausadas.
+
+
 ## RC19 — dependencias Python por proyecto verificadas (1 de noviembre de 2026)
 
 Detector AST sin importar código generado, clasificación estándar/local/externa,
