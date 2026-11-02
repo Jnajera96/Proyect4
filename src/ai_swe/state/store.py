@@ -326,6 +326,8 @@ class RunStore:
         with self._lock:
             integrity = self._conn.execute("PRAGMA integrity_check").fetchone()
             is_ok = bool(integrity and integrity[0] == "ok")
+            if not is_ok:
+                raise sqlite3.DatabaseError("Fallo de integridad: restaura un respaldo verificado")
             checkpoint = self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
             self._conn.commit()
             return {

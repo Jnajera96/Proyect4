@@ -1,5 +1,24 @@
 # Cierre del portable operativo — 30 de octubre de 2026
 
+## Revisión vigente — 2 de noviembre de 2026
+
+Plan único: [PLAN-MAESTRO-CIERRE-v0.2.0.md](PLAN-MAESTRO-CIERRE-v0.2.0.md).
+Acta: [RELEASE-RECOVERY-REVIEW-2026-11-02.md](RELEASE-RECOVERY-REVIEW-2026-11-02.md).
+Rc23 verificado localmente; rc21/rc22 retenidos y rc20 conservado.
+Backend: 1185 PASS / 4 SKIP en la regresión completa;
+el último caso de restauración sin repositorio y su corrección se verificaron
+además con 16 pruebas fuente y 47 pruebas del portable final.
+Frontend: 39 PASS y build con Node 24.22.1; smoke: 14/14. Cero llamadas pagadas.
+
+ZIP: `dist/windows-v0.2.0-rc23-recovery/AISWESystem-windows-x64.zip`.
+SHA-256: `4754230ec1bbcbb1295c0c4b121f1fdb715ba809395744046e3b03cb97587460`.
+Se corrigen cinco defectos de recuperación, sin cambiar confirmaciones humanas
+ni sobrescribir perfiles. La cifra 91/100 sigue siendo una estimación informada,
+no certificación de entrega. Integración Node, frontera TLS/perfiles y pilotos
+independientes siguen abiertos conforme al plan; el remoto del código fuente
+no constituye un piloto del asistente GitHub.
+
+
 ## RC20 — ahorro de tokens 40–70% y consolidación portable (2 de noviembre de 2026)
 
 Consolidación integral de dependencias por proyecto, ahorro de tokens de memoria

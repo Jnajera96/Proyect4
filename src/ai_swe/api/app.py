@@ -89,6 +89,7 @@ from ai_swe.security import (
     redact_deep,
 )
 from ai_swe.state import RunStore
+from ai_swe.state.continuity import ContinuityError
 from ai_swe.stt.base import STTAdapter, STTError, STTNotAvailable, Transcript, crear_adaptador_stt
 
 log = logging.getLogger(__name__)
@@ -517,29 +518,29 @@ def crear_app(
         install_redacting_filter()
         _configurar_nivel_de_log(ajustes.log_level)
         file_handler = installed_log_handler(ajustes.log_dir, profile_id=ajustes.profile_id)
-        if ajustes.runner_docker is not None:
-            from ai_swe.tools.docker_runner import recover_stopped_sessions
-
-            _app.state.docker_recovery = await run_in_threadpool(recover_stopped_sessions)
-
-        # Recuperacion de corte al arrancar: integridad y consolidacion WAL
-        if hasattr(almacen, "recover_from_crash"):
-            recup_info = almacen.recover_from_crash()
-            if not recup_info.get("integrity_ok"):
-                log.error("integridad de base de datos comprometida tras reinicio: %s", recup_info)
-
-        # Recuperacion al arrancar: una ejecucion en `planned` o `running`
-        # pertenece a un proceso que ya no existe. Dejarla asi seria la terminacion
-        # anomala que MET-13 prohibe, y el navegador esperaria para siempre.
-        huerfanas = almacen.orphan_open_runs()
-        if huerfanas:
-            log.warning("ejecuciones huerfanas marcadas como escaladas: %s", huerfanas)
-            # Y se limpia su worktree. Una ejecucion huerfana no va a llegar nunca a
-            # `finalize` ni al aborto del motor: es el tercer camino terminal, y el
-            # unico que no pasa ni por el grafo ni por el motor.
-            for run_id in huerfanas:
-                _limpiar_worktree_de_huerfana(motor, run_id)
         try:
+            if ajustes.runner_docker is not None:
+                from ai_swe.tools.docker_runner import recover_stopped_sessions
+
+                _app.state.docker_recovery = await run_in_threadpool(recover_stopped_sessions)
+
+            # Recuperacion de corte al arrancar: integridad y consolidacion WAL
+            if hasattr(almacen, "recover_from_crash"):
+                recup_info = almacen.recover_from_crash()
+                if not recup_info.get("integrity_ok"):
+                    raise RuntimeError("Fallo de integridad: restaura un respaldo verificado")
+
+            # Recuperacion al arrancar: una ejecucion en `planned` o `running`
+            # pertenece a un proceso que ya no existe. Dejarla asi seria la terminacion
+            # anomala que MET-13 prohibe, y el navegador esperaria para siempre.
+            huerfanas = almacen.orphan_open_runs()
+            if huerfanas:
+                log.warning("ejecuciones huerfanas marcadas como escaladas: %s", huerfanas)
+                # Y se limpia su worktree. Una ejecucion huerfana no va a llegar nunca a
+                # `finalize` ni al aborto del motor: es el tercer camino terminal, y el
+                # unico que no pasa ni por el grafo ni por el motor.
+                for run_id in huerfanas:
+                    _limpiar_worktree_de_huerfana(motor, run_id)
             yield
         finally:
             # Se espera a las ejecuciones aceptadas **antes** de cerrar el almacen.

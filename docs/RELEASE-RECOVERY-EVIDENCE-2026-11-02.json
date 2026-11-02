@@ -1,0 +1,111 @@
+{
+  "date": "2026-11-02",
+  "base_commit": "b8f50223f80f5860da29fa0065386b682eb15222",
+  "paid_api_calls": 0,
+  "frontend": {
+    "node": "24.22.1",
+    "passed": 39,
+    "build": "passed"
+  },
+  "full_suite": {
+    "tests": 1189,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 4,
+    "passed": 1185,
+    "seconds": 624.953
+  },
+  "portable_suite": {
+    "tests": 47,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 47,
+    "seconds": 61.937
+  },
+  "smoke": {
+    "success": true,
+    "checks": [
+      "all manifest hashes match",
+      "no developer state or secrets files",
+      "installed defaults to profiles",
+      "private API gated before login",
+      "integrated frontend served",
+      "profile registration with packaged cryptography",
+      "empty profile has no global token",
+      "packaged graph accepts deterministic run",
+      "human confirmation required",
+      "graceful packaged shutdown",
+      "encrypted profile login survives restart",
+      "SQLite and graph checkpoint survive restart",
+      "persisted SQLite integrity",
+      "restart shutdown graceful"
+    ],
+    "paid_calls": 0
+  },
+  "archive": {
+    "zip": "dist\\windows-v0.2.0-rc23-recovery\\AISWESystem-windows-x64.zip",
+    "sha256": "4754230ec1bbcbb1295c0c4b121f1fdb715ba809395744046e3b03cb97587460",
+    "bytes": 121317330,
+    "files": 4745,
+    "crc": true,
+    "source_match": true
+  },
+  "docker_repeat": {
+    "tests": 56,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 56,
+    "seconds": 179.452
+  },
+  "backup_restore_final": {
+    "tests": 16,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 16,
+    "seconds": 28.99
+  },
+  "first_full_attempt": {
+    "tests": 1188,
+    "failures": 15,
+    "errors": 0,
+    "skipped": 4,
+    "passed": 1169,
+    "seconds": 751.736
+  },
+  "skipped": [
+    {
+      "test": "test_transcripcion_real_opt_in",
+      "reason": "opt-in: define AI_SWE_RUN_REAL_STT_TESTS=1 (descarga un modelo)"
+    },
+    {
+      "test": "test_la_plataforma_no_permite_construir_el_vector_de_enlace",
+      "reason": "el sistema no permite crear enlaces: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_resume_nov02_final_full\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test' -> 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_resume_nov02_final_full\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test\\\\enlace_de_prueba'"
+    },
+    {
+      "test": "test_llamada_real_controlada",
+      "reason": "prueba de integracion real: exige AI_SWE_RUN_REAL_PROVIDER_TESTS=1, AI_SWE_MODEL_API_KEY y AI_SWE_MODEL_NAME"
+    },
+    {
+      "test": "test_linked_private_path_denied",
+      "reason": "Symlink privilege unavailable"
+    }
+  ],
+  "source_hashes": {
+    "src/ai_swe/api/app.py": "37fd0efa750844166e2b3cd8d6e235e37854f290aab99d63fffbf776d0a46d4a",
+    "src/ai_swe/api/profiles.py": "3f5c9cf2dccc5e3a54c7d4068ff58cfe873a5937b8f10170fe335cb980f3e335",
+    "src/ai_swe/state/continuity.py": "14f67cf21976b0553ab082fb48c6aaebfd5c2e4d321596f5f8f6441e68971b2f",
+    "src/ai_swe/state/store.py": "ff5bae6209c0918ded009d26bca79c790eec0dcc7634b73f1f1ecb9f34bcc254",
+    "tests/test_continuity_autobackup_and_recovery.py": "fda43429ffaaeb2df6812f147b9ac7dc594fbcbad68ece4159e1ecd3fc918d6a"
+  },
+  "notes": [
+    "El primer intento completo encontró 13 fallos de Docker cerrado y dos regresiones reales de importación duplicada.",
+    "Docker Desktop existente se inició sin instalación, reinicio ni cambio de protecciones.",
+    "La suite completa comenzó antes del último caso de restauración sin repositorio. Ese caso y su corrección se verificaron en 16 pruebas fuente y en el portable final.",
+    "Las fixtures de API mono-perfil del portable usan AI_SWE_PROFILE_MODE=false; el smoke verifica el modo instalado de perfiles predeterminado.",
+    "rc21 y rc22 son candidatos intermedios no aprobados. rc20 permanece intacto.",
+    "No se valida producción pública, modelos de pago, ni continuidad en otra PC."
+  ]
+}

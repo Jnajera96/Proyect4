@@ -1171,6 +1171,12 @@ class ContinuityStore:
                 if isinstance(val, dict) and val.get("repo_path"):
                     return {**val, "repo_path": map_repo(val["repo_path"])}
             elif channel == "interpretation":
+                scope = val.get("scope") if isinstance(val, dict) else getattr(val, "scope", None)
+                repository = (scope.get("repo_path") if isinstance(scope, dict)
+                              else getattr(scope, "repo_path", None))
+                # An inspection without a repository has no filesystem path to rebind.
+                if repository == "(sin repositorio configurado)":
+                    return val
                 if hasattr(val, "scope") and val.scope and val.scope.repo_path:
                     new_scope = val.scope.model_copy(
                         update={"repo_path": map_repo(val.scope.repo_path)}
@@ -1345,7 +1351,8 @@ def import_vault_to_profile(
         base_name = target_name
         counter = 1
         while profile_store._find(target_name) is not None:
-            target_name = f"{base_name}-restored" if counter == 1 else f"{base_name}-restored-{counter}"
+            suffix = "-restored" if counter == 1 else f"-restored-{counter}"
+            target_name = base_name[:64 - len(suffix)] + suffix
             counter += 1
 
     try:
