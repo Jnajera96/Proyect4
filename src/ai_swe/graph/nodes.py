@@ -1642,14 +1642,25 @@ def coder(state: RunState) -> dict:
         }
 
     cambio, presupuesto, avisos, propuesta = resultado
-    from ai_swe.tools.dependency_detector import detect_python_dependencies, repository_files
-    from ai_swe.tools.policy import dependency_issues
+    from ai_swe.tools.dependency_detector import (
+        detect_python_dependencies,
+        detect_node_dependencies,
+        repository_files,
+        repository_node_files,
+    )
+    from ai_swe.tools.policy import dependency_issues, node_dependency_issues
 
     try:
-        manifest = detect_python_dependencies(repository_files(Path(_alcance(state).repo_path),
-                                                              propuesta.files))
+        repo_dir = Path(_alcance(state).repo_path)
+        manifest = detect_python_dependencies(repository_files(repo_dir, propuesta.files))
         settings, available = _entorno_dependencias(manifest)
         problems = dependency_issues(manifest, settings.allowed_packages, available)
+
+        node_files = repository_node_files(repo_dir, propuesta.files)
+        if node_files:
+            node_manifest = detect_node_dependencies(node_files)
+            node_problems = node_dependency_issues(node_manifest, settings.allowed_packages)
+            problems.extend(node_problems)
     except (DockerError, OSError, ValueError) as exc:
         problems = [f"No se pudo verificar el inventario de dependencias: {exc}"]
     if problems:
@@ -1906,14 +1917,25 @@ def run_tests(state: RunState) -> dict:
     evidencia: list[TestRun] = []
     errores = list(state.errors)
     llamadas = state.budget.used_tool_calls
-    from ai_swe.tools.dependency_detector import detect_python_dependencies, repository_files
+    from ai_swe.tools.dependency_detector import (
+        detect_python_dependencies,
+        detect_node_dependencies,
+        repository_files,
+        repository_node_files,
+    )
     from ai_swe.tools.docker_runner import DockerError
-    from ai_swe.tools.policy import dependency_issues
+    from ai_swe.tools.policy import dependency_issues, node_dependency_issues
 
     try:
         manifest = detect_python_dependencies(repository_files(sandbox.raiz))
         settings, available = _entorno_dependencias(manifest)
         problems = dependency_issues(manifest, settings.allowed_packages, available)
+
+        node_files = repository_node_files(sandbox.raiz)
+        if node_files:
+            node_manifest = detect_node_dependencies(node_files)
+            node_problems = node_dependency_issues(node_manifest, settings.allowed_packages)
+            problems.extend(node_problems)
     except (DockerError, OSError, ValueError) as exc:
         problems = [str(exc)]
     if problems:

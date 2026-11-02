@@ -94,6 +94,7 @@ def describe(state: RunState) -> LaunchGuide:
     paths = [f.path for f in state.artifacts.changed_files if (root / f.path).is_file()]
     html = sorted(p for p in paths if p.endswith(".html"))
     python = sorted(p for p in paths if p.endswith(".py") and not Path(p).name.startswith("test_"))
+    node_files = sorted(p for p in paths if (p.endswith(".js") or p.endswith(".ts") or p.endswith(".mjs")) and not Path(p).name.startswith("test_"))
     entry = "index.html" if "index.html" in html else html[0] if html else ""
     kind, app_name = ("web_static", "") if entry else ("unknown", "")
     if not entry:
@@ -107,6 +108,9 @@ def describe(state: RunState) -> LaunchGuide:
             kind, entry = detected, candidate
             if kind != "python_library":
                 break
+    if not entry and (node_files or (root / "package.json").is_file()):
+        entry = "package.json" if (root / "package.json").is_file() else (node_files[0] if node_files else "")
+        kind = "node_app" 
     if not paths:
         return LaunchGuide(
             repo_path=str(root),
@@ -120,6 +124,8 @@ def describe(state: RunState) -> LaunchGuide:
     python_setup = f"import sys;sys.path[:0]={python_paths};"
     if kind == "web_static":
         command = f'start "" "%~dp0{entry.replace("/", chr(92))}"'
+    elif kind == "node_app":
+        command = f'echo Aplicacion Node detectada: %~dp0{entry.replace("/", chr(92))}\r\necho Revisa el codigo antes de ejecutar en una terminal.'
     elif kind == "python_library":
         module = entry[:-3].replace("/", ".")
         importable = all(p.isidentifier() and not keyword.iskeyword(p) for p in module.split("."))
@@ -241,6 +247,24 @@ def describe(state: RunState) -> LaunchGuide:
         if unsafe_requirements:
             guide.instructions.append("El manifiesto contiene fuentes no admitidas. "
                                       "No se ofrece un comando de instalación hasta corregirlo.")
+    if kind == "node_app":
+        from ai_swe.tools.dependency_detector import (
+            detect_node_dependencies,
+            repository_node_files,
+        )
+
+        files = [f for f in repository_node_files(root) if not Path(f.path).name.startswith("test_")]
+        node_manifest = detect_node_dependencies(files)
+        guide.instructions.append("Aplicación Node.js detectada.")
+        if node_manifest.unmet_modules:
+            guide.instructions.append(
+                "Declara las dependencias externas en package.json: "
+                + ", ".join(node_manifest.unmet_modules)
+            )
+        guide.instructions.append(
+            "No se ejecuta npm install ni scripts automáticamente en el host. "
+            "Revisa el proyecto antes de ejecutarlo manualmente."
+        )
     guide.prepared = (
         launcher.is_file()
         and not launcher.is_symlink()

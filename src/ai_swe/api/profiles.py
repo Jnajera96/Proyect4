@@ -133,7 +133,14 @@ class ProfileManager:
         while attempts and attempts[0] < now - 60:
             attempts.popleft()
         if len(attempts) >= 10:
-            raise HTTPException(429, "Demasiados intentos; espera un minuto")
+            from ai_swe.security import log_security_event
+
+            log_security_event("RATE_LIMIT_EXCEEDED", client, "BLOCKED", "Límite de intentos de autenticación de perfil alcanzado")
+            raise HTTPException(
+                429,
+                "Demasiados intentos; espera un minuto",
+                headers={"Retry-After": "60"},
+            )
         attempts.append(now)
 
     def session(self, request: HTTPConnection) -> Session | None:
@@ -284,6 +291,10 @@ def create_profile_app(settings: Settings) -> FastAPI:
         response = await call_next(request)
         for name, value in CABECERAS_SEGURIDAD.items():
             response.headers.setdefault(name, value)
+        if settings.ssl_certfile and settings.ssl_keyfile:
+            response.headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+            )
         response.headers["Cache-Control"] = "no-store"
         return response
 

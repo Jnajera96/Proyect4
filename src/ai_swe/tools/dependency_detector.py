@@ -207,6 +207,49 @@ NODE_BUILTINS = frozenset({
     "zlib",
 })
 
+def repository_node_files(root: Path, proposals=()):
+    """Read only Node/JS files and package.json, excluding links and private trees."""
+    root = root.resolve()
+    files, total = {}, 0
+    ignored = {".git", ".venv", "venv", "node_modules", "__pycache__", "dist", "build",
+               ".pytest_cache", ".ruff_cache", ".codex", ".serena"}
+    for parent, directories, names in os.walk(root, followlinks=False):
+        directories[:] = [d for d in directories if d not in ignored
+                          and not (Path(parent) / d).is_symlink()
+                          and not getattr((Path(parent) / d).lstat(),
+                                          "st_file_attributes", 0) & 0x400]
+        for name in names:
+            path = Path(parent) / name
+            relative = path.relative_to(root).as_posix()
+            if path.suffix not in NODE_EXTENSIONS and relative != "package.json":
+                continue
+            info = path.lstat()
+            if (path.is_symlink() or info.st_nlink != 1
+                    or getattr(info, "st_file_attributes", 0) & 0x400
+                    or not path.resolve().is_relative_to(root)):
+                raise ValueError("Archivo de dependencias no regular")
+            if (len(files) >= 2000 or info.st_size > 512 * 1024
+                    or total + info.st_size > 64 * 1024**2):
+                raise ValueError("Inventario de dependencias demasiado extenso")
+            with path.open("rb") as stream:
+                data = stream.read(512 * 1024 + 1)
+            if len(data) > 512 * 1024 or total + len(data) > 64 * 1024**2:
+                raise ValueError("Inventario de dependencias demasiado extenso")
+            text_content = data.decode("utf-8-sig", errors="replace")
+            total += len(data)
+            files[relative] = SourceFile(relative, text_content)
+    for proposal in proposals:
+        name = PurePosixPath(proposal.path.replace("\\", "/")).as_posix()
+        ext = PurePosixPath(name).suffix
+        if ext in NODE_EXTENSIONS or name == "package.json":
+            if getattr(proposal, "operation", "") == "delete":
+                files.pop(name, None)
+            else:
+                files[name] = SourceFile(name, getattr(proposal, "new_content", ""), getattr(proposal, "operation", "create"))
+    return list(files.values())
+
+
+
 
 @dataclass
 class NodeDependencyManifest:
