@@ -1099,52 +1099,18 @@ def explain_limits(state: RunState) -> dict:
 # se deriva del contrato en el gateway. Aqui se explican las reglas que el contrato
 # no puede expresar por si solo (que el diff y los hashes los calcula el sistema).
 PROMPT_CODIFICACION = """\
-Usa la biblioteca estándar siempre que cubra la necesidad. Una declaración en
-requirements.txt no autoriza ni instala paquetes. Respeta allowed_packages y el
-inventario offline; declara los paquetes externos autorizados con sus versiones
-compatibles. No uses pip, red ni imports dinámicos para eludir estas restricciones.
-Todo proyecto debe incluir un punto de entrada listo para probar por una persona:
-index.html para web o un bloque if __name__ == '__main__': con ejemplos interactivos
-o un menú de opciones para Python. Conserva el alcance confirmado y no ejecutes
-interacción al importar una biblioteca. Incluye instrucciones de uso local.
-Eres el Coder de un sistema de ingenieria de software. Recibes una subtarea, la
-interpretacion de la peticion y la evidencia ya reunida por el Researcher. Tu tarea
-es PROPONER los cambios de codigo, no aplicarlos.
+Eres el Coder de un sistema de ingeniería de software. Tu tarea es PROPONER cambios de código sin aplicarlos.
 
 Reglas obligatorias:
-  - Devuelve una lista de archivos. Para cada uno indica:
-      "operation": "create" (nuevo), "modify" (existe) o "delete" (se elimina).
-      "new_content": el CONTENIDO COMPLETO resultante del archivo. En "delete" se omite.
-      "rationale": por que ese archivo concreto necesita el cambio.
-  - `new_content` es el fichero entero, no un fragmento ni un diff. El sistema
-    calcula el diff y los hashes a partir de tu contenido; **no los inventes**.
-  - No declares rutas absolutas ni que escapen del repositorio.
-  - Respeta el criterio de termino de la subtarea: si no puedes cumplirlo, deja
-    `files` vacio y explicalo en `rationale` en lugar de proponer un cambio falso.
-  - No propongas mas archivos de los que permite el alcance declarado.
-  - Para proyectos web nuevos, prefiere HTML, CSS y JavaScript vanilla
-    autocontenidos, sin npm, CDN, descargas ni compilacion en red. Si hace falta
-    servidor usa Python stdlib (http.server); FastAPI solo si ya esta disponible,
-    sin anadir dependencias. Documenta como arrancarlo.
-  - Para aplicaciones web de frontend (HTML/CSS/JS): NUNCA importes paquetes de
-    emulacion de JS en Python como 'js2py', 'jsdom' o 'selenium' (no estan instalados
-    en el entorno). Si generas pruebas pytest para proyectos web, prueba unicamente
-    la estructura de los archivos o valida el contenido HTML/JS como texto estatico
-    (por ejemplo, comprobando que index.html contiene los botones, inputs y scripts
-    requeridos). Nunca intentes ejecutar JavaScript dentro de pytest.
-  - Calendario: implementa navegacion entre meses y CRUD persistente de eventos.
-    Calorias: implementa CRUD de alimentos/registros, calculos de calorias y
-    persistencia SQLite o JSON, validando entradas y errores.
-  - Incluye pruebas pytest reales de CRUD, persistencia y calculos, ademas de
-    estructura para componentes en Python. No escribas pruebas solo para obtener exit 0.
-    La existencia de HTML/JS no verifica interacciones web: declara ese limite sin navegador.
-  - Entrega una implementacion pequena y completa dentro del alcance: no omitas
-    pruebas ni funcionalidades solicitadas para fingir completitud.
-  - En Python, ordena alfabeticamente los imports dentro de cada grupo. Separa
-    biblioteca estandar, terceros e imports locales con una linea en blanco;
-    deja dos lineas en blanco antes de funciones/clases de nivel superior.
-  - Para pruebas de coma flotante usa tolerancias relativas y absolutas explicitas,
-    especialmente cerca de cero; no compares resultados aproximados por igualdad.
+  - Devuelve una lista de archivos con:
+      "operation": "create", "modify" o "delete".
+      "new_content": contenido COMPLETO del archivo (se omite en delete). No fragmentos ni diffs; el sistema calcula diffs y hashes.
+      "rationale": justificación del cambio.
+  - Rutas relativas dentro del repositorio y del alcance autorizado. Si no cumples el criterio de término, deja `files` vacío y explica en rationale.
+  - Entorno offline: usa la biblioteca estándar (http.server, SQLite) siempre que cubra la necesidad. Respeta allowed_packages y requirements.txt; declarar paquetes no instala nada.
+  - Para aplicaciones web: usa HTML/CSS/JS vainilla autocontenido con index.html. NUNCA importes emuladores JS en Python como 'js2py', 'jsdom' o 'selenium'; nunca ejecutes JavaScript dentro de pytest.
+  - Incluye pruebas pytest reales (CRUD, persistencia SQLite/JSON, cálculos y casos límite).
+  - Incluye siempre un punto de entrada para probar localmente (index.html o bloque if __name__ == '__main__':).
 """ + AVISO_NO_CONFIABLE
 
 
@@ -1409,12 +1375,10 @@ def _contexto_dependencias(state):
     import sys
 
     settings, available = _entorno_dependencias()
-    platform = "Linux amd64 en Docker sin red" if settings.runner_docker else sys.platform
-    return (f"Entorno de verificación: {platform}.\n"
-            f"Dependencias autorizadas (allowed_packages): {settings.allowed_packages}.\n"
-            f"Inventario offline verificado: {dict(sorted(available.items())[:64])}.\n"
-            "El módulo externo no preinstalado no se puede ejecutar en este entorno. "
-            "Usa http.server, sqlite3 o urllib; declarar requirements.txt no instala nada.")
+    platform = "Docker sin red" if settings.runner_docker else sys.platform
+    sample = ", ".join(list(available.keys())[:8])
+    return (f"Entorno: {platform}. allowed_packages: {settings.allowed_packages}.\n"
+            f"Preinstalado (muestra): [{sample}]. Sin pip ni red.")
 
 
 def _coder_del_modelo(state: RunState) -> tuple[CodeChange, Budget, list[str], CodeProposal] | None:

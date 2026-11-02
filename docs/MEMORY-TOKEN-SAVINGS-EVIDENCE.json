@@ -13,16 +13,16 @@
       ],
       "arms": {
         "naive": {
-          "bytes": 20189,
+          "bytes": 20363,
           "counts": {
             "cl100k_base": {
-              "tokens": 4794,
+              "tokens": 4908,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 2913
             },
             "o200k_base": {
-              "tokens": 4671,
+              "tokens": 4818,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 2933
@@ -49,19 +49,19 @@
           "missing_code": [],
           "history_chars": 0,
           "code_blocks": 15,
-          "message_sha256": "320eae6dc340668eed7f66e293c775242061699395fe1c67e42bd249de3efc99"
+          "message_sha256": "1c077b5e8ef7b09f3b2aaae83770fa535def91cfef83e00de07a2b9e384b851c"
         },
         "asociativa": {
-          "bytes": 13697,
+          "bytes": 11520,
           "counts": {
             "cl100k_base": {
-              "tokens": 3471,
+              "tokens": 2920,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 978
             },
             "o200k_base": {
-              "tokens": 3298,
+              "tokens": 2809,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 977
@@ -81,23 +81,23 @@
           "missing_code": [],
           "history_chars": 800,
           "code_blocks": 5,
-          "message_sha256": "51a6ff49d9cfc8b37be8fa17523942c582dc40a5be48fcaf70d9b797f5b9ef60"
+          "message_sha256": "ec39a06ab1681c3db6e3c616795e520c5f35b5debfe528eb1bb5c530e96804ff"
         }
       },
       "reductions": {
         "cl100k_base": {
-          "fraction": "441/1598",
-          "percent": 27.596996245306634,
+          "fraction": "497/1227",
+          "percent": 40.505297473512634,
           "exact": true,
           "code_percent": 66.42636457260556,
-          "full_prompt_target_met": false
+          "full_prompt_target_met": true
         },
         "o200k_base": {
-          "fraction": "1373/4671",
-          "percent": 29.394134018411474,
+          "fraction": "2009/4818",
+          "percent": 41.697799916978,
           "exact": true,
           "code_percent": 66.68939652233209,
-          "full_prompt_target_met": false
+          "full_prompt_target_met": true
         }
       }
     },
@@ -111,16 +111,16 @@
       ],
       "arms": {
         "naive": {
-          "bytes": 20191,
+          "bytes": 20365,
           "counts": {
             "cl100k_base": {
-              "tokens": 4796,
+              "tokens": 4912,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 2913
             },
             "o200k_base": {
-              "tokens": 4667,
+              "tokens": 4817,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 2933
@@ -147,19 +147,19 @@
           "missing_code": [],
           "history_chars": 0,
           "code_blocks": 15,
-          "message_sha256": "9a8db1bcc0c8bcb6bc67cc95a2359cb56ff70715e3c70c9b75830447fe2cc2c0"
+          "message_sha256": "b676608fe2af4b8e2cbc38d17de8f06740ee8f9c4fb9c8e518793898d36689c1"
         },
         "asociativa": {
-          "bytes": 13361,
+          "bytes": 11184,
           "counts": {
             "cl100k_base": {
-              "tokens": 3363,
+              "tokens": 2811,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 926
             },
             "o200k_base": {
-              "tokens": 3193,
+              "tokens": 2701,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 932
@@ -179,23 +179,23 @@
           "missing_code": [],
           "history_chars": 560,
           "code_blocks": 5,
-          "message_sha256": "a79daa0bc8ee09c095847d69034edf0a8401930513764797ed34d5e32619791b"
+          "message_sha256": "1c8f3853e65b084136a7868446838157a40387e0ef7c98fa12a32860cef2203b"
         }
       },
       "reductions": {
         "cl100k_base": {
-          "fraction": "1433/4796",
-          "percent": 29.8790658882402,
+          "fraction": "2101/4912",
+          "percent": 42.7728013029316,
           "exact": true,
           "code_percent": 68.21146584277378,
-          "full_prompt_target_met": false
+          "full_prompt_target_met": true
         },
         "o200k_base": {
-          "fraction": "1474/4667",
-          "percent": 31.5834583244054,
+          "fraction": "2116/4817",
+          "percent": 43.927755864646045,
           "exact": true,
           "code_percent": 68.2236617797477,
-          "full_prompt_target_met": false
+          "full_prompt_target_met": true
         }
       }
     },
@@ -211,16 +211,16 @@
       ],
       "arms": {
         "naive": {
-          "bytes": 20201,
+          "bytes": 20375,
           "counts": {
             "cl100k_base": {
-              "tokens": 4795,
+              "tokens": 4911,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 2913
             },
             "o200k_base": {
-              "tokens": 4670,
+              "tokens": 4820,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 2933
@@ -247,19 +247,19 @@
           "missing_code": [],
           "history_chars": 0,
           "code_blocks": 15,
-          "message_sha256": "7e8b38bcc577f83d375b253fb67585dba507fbe468f78deed7e6af776579b11b"
+          "message_sha256": "55b73fd67f86274d5699520a5c41faf31c260781d7f2d3cc822c32e324da0bcf"
         },
         "asociativa": {
-          "bytes": 13749,
+          "bytes": 11572,
           "counts": {
             "cl100k_base": {
-              "tokens": 3481,
+              "tokens": 2933,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 1049
             },
             "o200k_base": {
-              "tokens": 3304,
+              "tokens": 2819,
               "exact": true,
               "method": "tiktoken-0.14.0",
               "code_tokens": 1045
@@ -279,43 +279,43 @@
           "missing_code": [],
           "history_chars": 561,
           "code_blocks": 5,
-          "message_sha256": "38f5549633dc3acc59dda700fb4bedea3b092ea3621c8797cbf9ecc904869962"
+          "message_sha256": "f3ddc2619530bbe024c8f4fa3dd8ac59de6512e5fd678d7a8c64b01b6ec3c418"
         }
       },
       "reductions": {
         "cl100k_base": {
-          "fraction": "1314/4795",
-          "percent": 27.40354535974974,
+          "fraction": "1978/4911",
+          "percent": 40.27692934229281,
           "exact": true,
           "code_percent": 63.98901476141435,
-          "full_prompt_target_met": false
+          "full_prompt_target_met": true
         },
         "o200k_base": {
-          "fraction": "683/2335",
-          "percent": 29.25053533190578,
+          "fraction": "2001/4820",
+          "percent": 41.51452282157676,
           "exact": true,
           "code_percent": 64.3709512444596,
-          "full_prompt_target_met": false
+          "full_prompt_target_met": true
         }
       }
     }
   ],
   "totals": {
     "cl100k_base": {
-      "naive_tokens": 14385,
-      "memory_tokens": 10315,
-      "fraction": "814/2877",
-      "percent": 28.293361140076467,
+      "naive_tokens": 14731,
+      "memory_tokens": 8664,
+      "fraction": "6067/14731",
+      "percent": 41.185255583463444,
       "exact": true,
       "naive_code_tokens": 8739,
       "memory_code_tokens": 2953,
       "code_percent": 66.20894839226456
     },
     "o200k_base": {
-      "naive_tokens": 14008,
-      "memory_tokens": 9795,
-      "fraction": "4213/14008",
-      "percent": 30.075671045117076,
+      "naive_tokens": 14455,
+      "memory_tokens": 8329,
+      "fraction": "6126/14455",
+      "percent": 42.37979937737807,
       "exact": true,
       "naive_code_tokens": 8799,
       "memory_code_tokens": 2954,

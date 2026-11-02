@@ -90,7 +90,7 @@ def _naive_code(request, repo, candidates):
             + text[end:],
         }
     )
-    return request.model_copy(update={"messages": [request.messages[0], message]})
+    return request.model_copy(update={"messages": [request.messages[0], message, *request.messages[2:]]})
 
 
 def _code_section(text):
@@ -304,7 +304,7 @@ def main():
     print(f"Objetivo 40–70% del prompt completo: {goal_met}")
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        with args.output.open("x", encoding="utf-8") as stream:
+        with args.output.open("w", encoding="utf-8") as stream:
             json.dump(report, stream, indent=2, ensure_ascii=False)
     return 0 if sufficient else 2
 
