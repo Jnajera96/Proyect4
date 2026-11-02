@@ -125,3 +125,58 @@ def test_node_policy_integration():
     # axios is not allowed, and unmet
     assert any("axios' no está en allowed_packages" in i for i in issues)
     assert any("Declara 'axios' en package.json" in i for i in issues)
+
+
+def test_empty_allowlist_denies_declared_npm_packages():
+    from ai_swe.tools.policy import node_dependency_issues
+
+    manifest = detect_node_dependencies([
+        SourceFile("package.json", '{"dependencies":{"express":"4.18.2"}}'),
+    ])
+    assert any("allowed_packages" in issue for issue in node_dependency_issues(manifest, []))
+
+
+@pytest.mark.parametrize("stage", ["coder", "test_runner"])
+@pytest.mark.parametrize("allowed,declared", [([], True), (["other"], True), (["express"], False)])
+def test_node_dependency_gate_stops_before_tools(tmp_path, monkeypatch, stage, allowed, declared):
+    from test_f8_test_runner import _estado
+
+    from ai_swe.config import Settings
+    from ai_swe.contracts import CodeProposal, FileProposal
+    from ai_swe.graph import nodes
+
+    state = _estado(tmp_path)
+    files = [FileProposal(path="index.js", operation="create", rationale="fixture",
+                          new_content="import express from 'express';\n")]
+    if declared:
+        files.append(FileProposal(path="package.json", operation="create", rationale="fixture",
+                                  new_content='{"dependencies":{"express":"4.18.2"}}'))
+    proposal = CodeProposal(files=files, rationale="fixture")
+    settings = Settings(_env_file=None, allowed_packages=allowed)
+    monkeypatch.setattr(nodes, "_entorno_dependencias", lambda *_: (settings, {}))
+    monkeypatch.setattr(
+        nodes, "ejecutar_target", lambda *a, **k: pytest.fail("No ejecutar herramientas")
+    )
+    calls = []
+
+    def propose(_):
+        calls.append(1)
+        return nodes._cambio_desde_propuesta(proposal), state.budget, [], proposal
+
+    monkeypatch.setattr(nodes, "_coder_del_modelo", propose)
+    if stage == "coder":
+        result = nodes.coder(state)
+        assert calls == [1]
+        assert result["outputs"].code_proposal == proposal
+    else:
+        for file in files:
+            (tmp_path / file.path).write_text(file.new_content, encoding="utf-8")
+        state = state.model_copy(update={"artifacts": state.artifacts.model_copy(
+            update={"worktree_path": str(tmp_path)})})
+        result = nodes.run_tests(state)
+        assert calls == []
+    assert result["status"] == "needs_human"
+    assert result["next_step"] is None
+    assert result["errors"][-1].error_class == "DEPENDENCY_UNAVAILABLE"
+    assert not result["errors"][-1].recoverable
+    assert state.budget.used_tool_calls == 0

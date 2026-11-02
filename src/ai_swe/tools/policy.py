@@ -70,8 +70,8 @@ def node_dependency_issues(manifest, allowed_packages=(), available_modules=()):
     allowed = {p.lower() for p in allowed_packages}
     available = {m.lower() for m in available_modules}
     issues = [error for error in manifest.errors]
-    for pkg in manifest.third_party_modules:
-        if allowed and pkg.lower() not in allowed:
+    for pkg in sorted(set(manifest.third_party_modules) | set(manifest.declared_packages)):
+        if pkg.lower() not in allowed:
             issues.append(f"El paquete npm '{pkg}' no está en allowed_packages.")
         elif available and pkg.lower() not in available:
             issues.append(f"El paquete npm '{pkg}' no está instalado en el entorno offline.")
