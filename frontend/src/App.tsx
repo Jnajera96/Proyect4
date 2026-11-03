@@ -44,7 +44,7 @@ import { hitosDe, useEventosRun } from "./hooks/useEventosRun";
 import { Navegacion, type ItemNav, type VistaId } from "./components/Navegacion";
 import { PantallaAcceso } from "./components/PantallaAcceso";
 import type { AccionesCompositor, EstadoCompositor } from "./components/Compositor";
-import { Chip, Panel } from "./components/ui";
+import { Chip, Esqueleto, Panel } from "./components/ui";
 import { VistaDetalle } from "./views/VistaDetalle";
 import { VistaEjecuciones } from "./views/VistaEjecuciones";
 import { VistaFlujo } from "./views/VistaFlujo";
@@ -58,6 +58,8 @@ import { VistaSesion } from "./views/VistaSesion";
 import { Icono } from "./components/Icono";
 import { useReadiness } from "./hooks/useReadiness";
 import { readiness } from "./lib/readiness";
+import { BarraContexto } from "./components/BarraContexto";
+import { comandosBase, PaletaComandos } from "./components/PaletaComandos";
 
 /** Que respondio el servidor a las peticiones protegidas. */
 type ResultadoCarga = "ok" | "401" | "fallo";
@@ -126,6 +128,7 @@ export function App({ profile }: { profile?: {
   const [vista, setVista] = useState<VistaId>("general");
   const [sidebarCompacta, setSidebarCompacta] = useState(false);
   const contenido = useRef<HTMLDivElement | null>(null);
+  const [paletaAbierta, setPaletaAbierta] = useState(false);
 
   const { eventos, conexion, reanudar, errorReconciliacion } = useEventosRun(runId, snapshot => {
     if (runSeleccionado.current === snapshot.run_id) setEstado(snapshot);
@@ -475,6 +478,39 @@ export function App({ profile }: { profile?: {
     { id: "sesion", etiqueta: "Sesión" },
   ];
 
+  // Atajos globales del estudio. Ctrl/⌘+K abre la paleta; Alt+1…8 salta a cada
+  // vista en el orden de la barra lateral. No se capturan mientras se escribe en
+  // un campo (salvo Ctrl+K, que es explícito), para no robar teclas al usuario.
+  useEffect(() => {
+    const atajo = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletaAbierta((v) => !v);
+        return;
+      }
+      const destino = e.target as HTMLElement | null;
+      const escribiendo = destino && (destino.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(destino.tagName));
+      if (e.altKey && !e.ctrlKey && !e.metaKey && !escribiendo && /^[1-8]$/.test(e.key)) {
+        const item = items[Number(e.key) - 1];
+        if (!item) return;
+        e.preventDefault();
+        if (item.id === "flujo") irAlProgreso(); else setVista(item.id);
+      }
+    };
+    window.addEventListener("keydown", atajo);
+    return () => window.removeEventListener("keydown", atajo);
+  });
+
+  const comandos = comandosBase({
+    items,
+    proyectos,
+    runs,
+    alVista: (v) => { if (v === "flujo") irAlProgreso(); else setVista(v); setMenuAbierto(false); },
+    alProyecto: (id) => { setProjectId(id); setVista("general"); },
+    alRun: (id) => seleccionarRun(id),
+    alTema: setTema,
+  });
+
   // El chip de salud tiene que seguir siendo el **primero** de la cabecera: es el
   // que el verificador lee para comprobar que la fase sale de `/health`.
   const cabecera = (
@@ -484,7 +520,7 @@ export function App({ profile }: { profile?: {
       <div>
         <button className="contraer-sidebar" aria-label={sidebarCompacta ? "Expandir barra lateral" : "Contraer barra lateral"} aria-expanded={!sidebarCompacta} aria-controls="sidebar" onClick={() => setSidebarCompacta(v => !v)}><Icono nombre="capas" /></button>
         <div className="titulo">AI Software Engineering System</div>
-        <p className="subtitulo">Espacio de trabajo · Ingeniería con evidencia</p>
+        <p className="subtitulo">{profile?.name ? `${profile.name} · ` : ""}{items.find((i) => i.id === vista)?.etiqueta ?? "Espacio de trabajo"}</p>
       </div>
       <div className="fila">
         {saludError ? (
@@ -514,6 +550,9 @@ export function App({ profile }: { profile?: {
         ) : null}
         {!profile && sesion === "sin-autenticacion" ? <Chip>sin autenticación</Chip> : null}
         {rol ? <Chip>{rol}</Chip> : null}
+        <button type="button" className="topbar-buscar" onClick={() => setPaletaAbierta(true)} aria-label="Abrir paleta de comandos (Ctrl+K)" title="Buscar o ir a… (Ctrl+K)">
+          <Icono nombre="buscar" /><kbd>Ctrl K</kbd>
+        </button>
         <label className="solo-lector" htmlFor="tema">Tema</label>
         <select id="tema" className="selector-tema" value={tema}
           onChange={e => setTema(e.target.value as typeof tema)}>
@@ -545,6 +584,7 @@ export function App({ profile }: { profile?: {
         {cabecera}
         <Panel>
           <p className="tenue">Comprobando el estado del servidor…</p>
+          <Esqueleto lineas={4} />
         </Panel>
       </main>
     );
@@ -588,10 +628,13 @@ export function App({ profile }: { profile?: {
           proyectos={proyectos} proyectoActual={projectId}
           runs={runs} runActual={runId} alRun={id => { seleccionarRun(id); setMenuAbierto(false); }}
           alProyecto={id => { setProjectId(id); setVista("general"); setMenuAbierto(false); }}
-          alCrearProyecto={() => { setVista("proyectos"); setMenuAbierto(false); }} perfilNombre={profile?.name} />
+          alCrearProyecto={() => { setVista("proyectos"); setMenuAbierto(false); }} perfilNombre={profile?.name}
+          alBuscar={() => { setMenuAbierto(false); setPaletaAbierta(true); }} />
       </aside>
       {cabecera}
       <main id="contenido" className="app contenido">
+      <BarraContexto estado={estado} eventos={eventos} proyectos={proyectos}
+        alIrA={(v) => { if (v === "flujo") irAlProgreso(); else setVista(v); }} />
 
       <div className="vista" ref={contenido} tabIndex={-1} aria-label={`Vista: ${vista}`}>
         {estado && (estado.status === "running" || estado.status === "planned" || estado.status.startsWith("awaiting")) &&
@@ -612,7 +655,7 @@ export function App({ profile }: { profile?: {
             }}
             projectId={proyectos.find(p => p.repo_path === estado.options.repo_path)?.project_id} /> : null}
         {!puedeOperar && errorAccion ? <p className="banner aviso" role="alert">{errorAccion}</p> : null}
-        {runId && !estado ? <p role="status" className="carga-run">Cargando la ejecución seleccionada…</p> : null}
+        {runId && !estado ? <div role="status" className="carga-run"><span className="solo-lector">Cargando la ejecución seleccionada…</span><Esqueleto lineas={3} /></div> : null}
         {vista === "general" ? (
           <VistaGeneral
             salud={salud}
@@ -712,6 +755,7 @@ export function App({ profile }: { profile?: {
         ) : null}
       </div>
       </main>
+      <PaletaComandos abierta={paletaAbierta} comandos={comandos} alCerrar={() => setPaletaAbierta(false)} />
     </div>
   );
 }

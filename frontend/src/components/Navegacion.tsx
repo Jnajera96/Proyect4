@@ -37,6 +37,7 @@ export function Navegacion({
   runActual,
   alRun,
   perfilNombre,
+  alBuscar,
 }: {
   vista: VistaId;
   items: ItemNav[];
@@ -49,27 +50,54 @@ export function Navegacion({
   runActual?: string | null;
   alRun?: (id: string) => void;
   perfilNombre?: string;
+  /** Abre la paleta de comandos (Ctrl/⌘ + K). */
+  alBuscar?: () => void;
 }) {
+  // Las secciones agrupan por intención: dónde trabajo, qué está corriendo y
+  // cómo está protegido el sistema. El orden de `items` se respeta dentro de
+  // cada grupo; un id desconocido cae en «Sistema» en vez de desaparecer.
+  const grupos: { titulo: string; ids: VistaId[] }[] = [
+    { titulo: "Espacio de trabajo", ids: ["general", "proyectos"] },
+    { titulo: "Ejecución", ids: ["ejecuciones", "detalle", "flujo", "actividad"] },
+    { titulo: "Sistema", ids: ["seguridad", "sesion"] },
+  ];
+  const conocidos = new Set(grupos.flatMap((g) => g.ids));
+  const itemsDe = (g: { titulo: string; ids: VistaId[] }) =>
+    items.filter((it) => g.ids.includes(it.id) || (g.titulo === "Sistema" && !conocidos.has(it.id)));
   return (
     <div className="sidebar-contenido">
     <div className="marca"><span className="marca-icono"><Icono nombre="cubo" /></span><span>AI Software<span>Engineering System</span></span></div>
+    {alBuscar ? (
+      <button type="button" className="sidebar-buscar" onClick={alBuscar} aria-label="Buscar o ir a… (Ctrl+K)">
+        <Icono nombre="buscar" /><span>Buscar o ir a…</span><kbd>Ctrl K</kbd>
+      </button>
+    ) : null}
     <nav className="navegacion" aria-label="Secciones de la aplicación">
-      {items.map((item) => {
-        const activo = item.id === vista;
+      {grupos.map((g) => {
+        const propios = itemsDe(g);
+        if (!propios.length) return null;
         return (
-          <button
-            key={item.id}
-            type="button"
-            aria-label={item.etiqueta}
-            className={activo ? "nav-item activo" : "nav-item"}
-            aria-current={activo ? "page" : undefined}
-            onClick={() => alCambiar(item.id)}
-          >
-            <Icono nombre={item.id} /><span>{item.etiqueta}</span>
-            {item.aviso ? (
-              <span className="nav-aviso" title="Requiere tu decisión" aria-label="Requiere tu decisión" />
-            ) : null}
-          </button>
+          <div className="nav-grupo" key={g.titulo}>
+            <p className="nav-grupo-titulo">{g.titulo}</p>
+            {propios.map((item) => {
+              const activo = item.id === vista;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-label={item.etiqueta}
+                  className={activo ? "nav-item activo" : "nav-item"}
+                  aria-current={activo ? "page" : undefined}
+                  onClick={() => alCambiar(item.id)}
+                >
+                  <Icono nombre={item.id} /><span>{item.etiqueta}</span>
+                  {item.aviso ? (
+                    <span className="nav-aviso" title="Requiere tu decisión" aria-label="Requiere tu decisión" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         );
       })}
     </nav>
@@ -100,7 +128,7 @@ export function Navegacion({
         <span className="usuario-avatar" aria-hidden="true" />
         <div className="usuario-info">
           <strong>{perfilNombre || "Desarrollador"}</strong>
-          <span>{perfilNombre ? `${perfilNombre}@aiswe.local` : "dev@empresa.com"}</span>
+          <span>{perfilNombre ? "Perfil local cifrado" : "Sesión local"}</span>
         </div>
         <button
           type="button"
