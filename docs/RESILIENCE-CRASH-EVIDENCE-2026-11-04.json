@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-03",
+  "status": "passed_cleanly",
+  "base_commit": "33e45a4",
+  "paid_api_calls": 0,
+  "remote_model_calls": 0,
+  "concurrency_and_crash_results": {
+    "total_tests": 11,
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 12.31,
+    "suites": [
+      {
+        "file": "tests/stress/test_concurrency_and_crash.py",
+        "tests": [
+          "test_concurrent_pause_resumes_reject_parallel_attempts",
+          "test_worker_dispatch_failure_allows_immediate_subsequent_resume",
+          "test_concurrent_ledger_and_checkpoint_writes_leave_valid_sqlite",
+          "test_forced_process_termination_rolls_back_and_preserves_requirements_plan",
+          "test_worker_auto_backup_during_checkpoint_writes_finishes_and_restores",
+          "test_worker_submission_failure_recovers_state",
+          "test_post_crash_sqlite_integrity"
+        ],
+        "passed": 7,
+        "failed": 0
+      },
+      {
+        "file": "tests/test_worker_claim_resilience.py",
+        "tests": [
+          "test_submit_resume_paused_releases_claim_on_closed_worker",
+          "test_submit_resume_paused_releases_claim_on_submission_failure",
+          "test_budget_ledger_concurrent_wal_resilience",
+          "test_concurrent_reclamar_reanudacion_pausa_exactly_one_wins"
+        ],
+        "passed": 4,
+        "failed": 0
+      }
+    ]
+  },
+  "wal_mode": "PRAGMA journal_mode=WAL",
+  "busy_timeout_ms": 30000,
+  "retry_policy": "exponential_backoff_max_5_attempts",
+  "integrity_check": "ok",
+  "data_loss_detected": false
+}
