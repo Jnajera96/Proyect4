@@ -1,0 +1,60 @@
+{
+  "date": "2026-11-02",
+  "base_commit": "86ce8018a5aa8f9b5c1c49fd98e71889631fda92",
+  "capabilities": {
+    "mcp": {
+      "version": "2025-06-18",
+      "transport": "stdio JSON-RPC",
+      "tools": ["read_file", "git_status"],
+      "scope": "read_only",
+      "quota_per_run": 5,
+      "max_bytes_per_file": 32768
+    },
+    "observability": {
+      "storage": "sqlite_local",
+      "export_protocol": "OTLP_HTTP_JSON",
+      "destination": "langfuse",
+      "pii_redacted": true,
+      "offline_by_default": true
+    },
+    "knowledge_graph": {
+      "engine": "ast_native",
+      "max_paths": 100,
+      "ui_filter": true,
+      "ui_download": true
+    },
+    "tts": {
+      "engine": "web_speech_api",
+      "local_voices_only": true,
+      "max_chars": 4000,
+      "controls": ["play", "stop"]
+    }
+  },
+  "tests": {
+    "pytest_local_capabilities": {
+      "passed": 42,
+      "failed": 0,
+      "skipped": 0
+    },
+    "verify_local_capabilities_script": {
+      "checks": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    "frontend": {
+      "tests": 44,
+      "passed": 44,
+      "failed": 0,
+      "build": "passed"
+    }
+  },
+  "ui_studio": {
+    "barra_contexto": true,
+    "paleta_comandos": "ctrl_k",
+    "visor_diff_dividido": true,
+    "navegacion_agrupada": true
+  },
+  "portable_rc25_status": "preserved_unmodified",
+  "paid_api_calls": 0,
+  "git_push": false
+}
