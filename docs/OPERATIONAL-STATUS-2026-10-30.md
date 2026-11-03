@@ -14,11 +14,13 @@ Conciliación y acciones: `README-PENDING-RECONCILIATION-2026-11-02.md` y
 `PLAN-MAESTRO-CIERRE-v0.2.0.md`.
 
 El README público mantenía pendientes históricos de autenticación/cancelación
-ya implementadas. Se actualizaron las referencias locales sin push. Pendiente real
-P0: alinear el flag declarativo de egreso con el runner y probar su efecto; Windows
-Job no bloquea red. También quedan disponibilidad Node, pruebas de modelos/productos,
-concurrencia/credenciales de respaldo y pilotos independientes. MCP, Langfuse,
-Graphify/Knowledge Graph y TTS quedan en evolución posterior con alcance explícito.
+ya implementadas. Se actualizaron las referencias locales sin push. Los contratos
+P0 de egreso de red y delimitación de Node quedaron cerrados en fuente en el commit
+`2cee2cf` (1.205 PASS / 18 SKIP / 0 FAIL; ver `NETWORK-NODE-CONTRACTS-VALIDATION-2026-11-02.md`).
+Pendientes reales de cierre: empaquetar un candidato posterior (rc26) que distribuya
+estos contratos, pruebas de modelos/productos representativos, concurrencia/credenciales
+de respaldo y pilotos independientes (segunda PC física y asistente GitHub). MCP,
+Langfuse, Graphify/Knowledge Graph y TTS quedan en evolución posterior con alcance explícito.
 
 Recomendación: estabilizar rc25 y priorizar el recorrido completo de usuario y
 los controles de aislamiento antes de añadir funciones. Continuidad física y
