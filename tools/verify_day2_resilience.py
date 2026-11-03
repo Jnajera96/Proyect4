@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import platform
 import subprocess
 import sys
 import tempfile
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
@@ -46,7 +46,10 @@ def main():
                   executable=sys.executable, platform=platform.platform(), command=command,
                   paid_api_calls=0, real_network=False)
     if (output / "results.xml").exists():
-        report["suites"] = [s.attrib for s in ET.parse(output / "results.xml").iter("testsuite")]
+        # Pytest exit status is authoritative; preserve XML evidence without interpreting entities.
+        with (output / "results.xml").open("rb") as junit:
+            report["junit_sha256"] = hashlib.file_digest(junit, "sha256").hexdigest()
+        report["junit_report"] = str(output / "results.xml")
     report["success"] = code == 0 and before == after
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))

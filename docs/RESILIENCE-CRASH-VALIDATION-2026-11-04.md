@@ -60,3 +60,7 @@ Esto evita dos interferencias observadas: borrado de temporales compartidos por 
 [Reporte JSON](RESILIENCE-CRASH-EVIDENCE-2026-11-04.json): base estable, casos reales, conteos, parámetros, hashes JUnit/log y hashes de las cuatro suites. Crudos locales en `_tmp/day2-codex-independent/`. La comprobación Ruff del supervisor y suite adversa aprobó.
 
 No se ejecutó regresión completa backend/frontend, pruebas de carga prolongada, conexiones remotas, Docker real, almacenamiento en red ni corte físico de energía. No se inyectaron errores de bloqueo directamente en vault.py. La carrera HTTP demuestra exclusión de despachos en la cola, no facturación exactamente una vez en un proveedor externo. RC26 no se reconstruyó con los commits del Día 2: ese empaquetado y su certificación son una actividad posterior.
+
+## Seguimiento de seguridad del supervisor
+
+Se eliminó el parser XML del supervisor tras el hallazgo `use-defused-xml-parse`. El resultado de pytest sigue siendo la autoridad; el JUnit se conserva como bytes opacos con ruta y SHA-256 calculado en streaming, sin resolver entidades ni cargar un árbol XML. No se añadió dependencia. Tres tests unitarios pasan con XML normal, una entidad externa y una declaración de expansión. Esta corrección de metadatos no reejecutó las 22 pruebas del acta ni altera su evidencia histórica.

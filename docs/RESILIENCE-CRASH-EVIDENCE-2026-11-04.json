@@ -272,5 +272,13 @@
     "No vault lock-retry fault injection; synthetic in-memory password exercised, not real profile credentials",
     "RC26 ZIP not rebuilt or recertified with Day 2 core commits"
   ],
-  "supersedes": "The earlier 11-test report in 96f58bb is replaced by actual independent JUnit identities and 22 targeted passes."
+  "supersedes": "The earlier 11-test report in 96f58bb is replaced by actual independent JUnit identities and 22 targeted passes.",
+  "security_followup": {
+    "date": "2026-11-03",
+    "finding": "use-defused-xml-parse",
+    "resolution": "Remove XML parsing; record opaque JUnit file path and streaming SHA-256; pytest exit code stays authoritative",
+    "new_dependencies": 0,
+    "unit_tests_passed": 3,
+    "stress_regression_rerun": false
+  }
 }
