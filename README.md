@@ -22,12 +22,14 @@ un lanzador npm en el host. Estos contratos requieren un nuevo portable para
 distribuirse; rc25 se conserva intacto.
 
 Siguen pendientes la validación independiente en destino, calidad de modelos y
-los pilotos pausados de continuidad y publicación. MCP, Langfuse, Graphify/Knowledge
-Graph y TTS son evolución futura, no capacidades acreditadas ni requisitos nuevos
-implícitos de cierre local. La estimación informada permanece en 91/100.
+los pilotos pausados de continuidad y publicación. Por decisión del usuario se priorizan
+capacidades locales: MCP de lectura, trazas/exportación OTLP opcional, grafo AST nativo
+y TTS con voces locales. Ver [alcance y validación](docs/LOCAL-CAPABILITIES-VALIDATION-2026-11-02.md).
+Graphify externo y certificación real de Langfuse/audio siguen separados de la
+implementación offline. La estimación histórica permanece en 91/100, sin recalibrar.
 
-Los apartados siguientes conservan contexto histórico y comandos del prototipo;
-sus cifras y pendientes no describen por sí solos el estado actual.
+La instalación y cronología conservan contexto histórico. El bloque de capacidades
+y las actas enlazadas describen las fuentes actuales; el ZIP tiene su propia versión.
 
 ## v0.1.0 — entrega histórica local aprobada
 
@@ -59,12 +61,14 @@ la ejecución de forma trazable y entrega un resultado revisado con evidencia.
 
 ---
 
-## Estado histórico del prototipo
+## Capacidades vigentes en las fuentes
 
-**14 fases completadas y verificadas: `M0`, `M1`, `F1`–`F14`.**
+**Estado de las fuentes posteriores a rc25, conciliado el 2 de noviembre de 2026.**
 
 El sistema está **funcional de extremo a extremo** en su alcance declarado:
-**prototipo local, un solo usuario, `127.0.0.1`, sin autenticación**.
+**aplicación Windows local en `127.0.0.1`, con perfiles autenticados y datos aislados por perfil**.
+El acceso heredado sin perfiles sigue siendo una opción local explícita; esto no certifica
+un servicio público multiusuario. El ZIP rc25 no incluye las capacidades nuevas de esta tabla.
 
 > **Documentación.** Índice único: [`docs/README.md`](docs/README.md).
 > Estado verificado: [`PROJECT_SNAPSHOT.json`](PROJECT_SNAPSHOT.json) y la auditoría
@@ -74,7 +78,7 @@ El sistema está **funcional de extremo a extremo** en su alcance declarado:
 | Capacidad | Estado | Dónde |
 |---|---|---|
 | Grafo de orquestación (17 nodos, 2 puertas HITL) | ✅ verificado | `src/ai_swe/graph/` |
-| API REST + SSE (12 endpoints) | ✅ verificado | `src/ai_swe/api/app.py` |
+| API REST + SSE | ✅ verificado | `src/ai_swe/api/app.py` |
 | Persistencia (SQLite + checkpoint) | ✅ verificado | `src/ai_swe/state/` |
 | Model Gateway + 2 proveedores + presupuesto | ✅ verificado | `src/ai_swe/models/` |
 | Requirements Analyst (`F3`) | ✅ verificado | `graph/nodes.py` |
@@ -92,13 +96,13 @@ El sistema está **funcional de extremo a extremo** en su alcance declarado:
 | Redacción centralizada de secretos (`RNF-S3`) | ✅ verificado | `src/ai_swe/security/` |
 | Contrato exportado para el navegador | ✅ verificado (GENERATED) | `frontend/contracts.json` |
 | Diagrama arquitectónico | ✅ generado con validación geométrica | `docs/diagrama-arquitectura.svg` |
-| **Autenticación** | 🔴 no implementada (`AUD-06`) | — |
-| **MCP** | 🔴 no implementado | `src/ai_swe/mcp/` (placeholder) |
-| **Observabilidad / Langfuse** | 🔴 no implementada | `src/ai_swe/observability/` (placeholder) |
-| **Knowledge Graph / Graphify** | 🔵 propuesta `[PROP]`, no implementada | `docs/05-graphify-evaluacion.md` |
-| **TTS** | 🔴 no implementado | — |
-| **Cancelación de ejecución** (`RF-16`) | 🔴 devuelve 501 | `api/app.py` |
-| **Aislamiento de proceso del sandbox** | 🔴 no implementado — solo confina escritura | ver `docs/audit/13-SANDBOX-EXECUTION-AUDIT.md` |
+| **Autenticación** | ✅ perfiles locales, bóveda cifrada y permisos; sin certificación pública | `src/ai_swe/api/profiles.py`, `security/auth.py`, `state/profiles.py` |
+| **MCP** | ✅ subset local stdio de lectura; opt-in, sin servidores arbitrarios | `src/ai_swe/mcp/`, Researcher, `AI_SWE_MCP_ENABLED` |
+| **Observabilidad / Langfuse** | ✅ trazas SQLite y exportación OTLP manual probada con dobles; recepción real pendiente | `src/ai_swe/observability/traces.py`, `models/providers/langfuse.py`, vista Actividad |
+| **Knowledge Graph / Graphify** | ✅ grafo AST local de relaciones extraídas; 🔵 Graphify externo no integrado | `src/ai_swe/state/knowledge_graph.py`, memoria asociativa, vista Actividad |
+| **TTS** | ✅ lectura voluntaria con voces locales del navegador; audición física pendiente | `frontend/src/components/LectorResultado.tsx`, `AI_SWE_TTS_ENABLED` |
+| **Cancelación de ejecución** (`RF-16`) | ✅ cooperativa, con recibo y conciliación de reservas; no es un 501 | `src/ai_swe/cancellation.py`, `graph/engine.py`, `api/app.py` |
+| **Aislamiento de proceso del sandbox** | ✅ Windows Job limita recursos; Docker local fija network none; el runner nativo rechaza red estricta | `src/ai_swe/tools/windows_job.py`, `docker_runner.py`, `runner.py` |
 
 **Qué funciona hoy, de verdad:** el sistema arranca, acepta una instrucción y devuelve
 el `run_id` de inmediato; la ejecuta en un trabajador; publica el progreso **nodo a
@@ -108,20 +112,25 @@ dentro; lo revisa con evidencia; y **promueve al repositorio del usuario** el ca
 aprobado, con verificación de integridad SHA256. Toda ejecución termina en un estado
 terminal explícito (`MET-13 = 0`).
 
-**Suite de pruebas: 601 casos, 0 fallos, 2 saltos opt-in** (sin red ni credenciales).
+**Validación vigente:** resultados reproducibles en
+[LOCAL-CAPABILITIES-VALIDATION-2026-11-02.md](docs/LOCAL-CAPABILITIES-VALIDATION-2026-11-02.md).
+La base de contratos anterior registró 1.205 PASS / 18 SKIP y 44 comprobaciones
+focalizadas; las cifras nuevas se publican en esa acta sin sumar suites solapadas.
 
-**Qué no está listo, y se declara:**
-- **No hay autenticación** (`AUD-06`). Mitigado con el binding fijo a `127.0.0.1`.
-- **El «sandbox» no aísla el proceso.** Confina la *escritura* del Coder con cuatro
-  barreras, pero ejecuta el `pytest` del repositorio del usuario con el mismo usuario
-  del sistema, sin límites de CPU/memoria/procesos ni aislamiento de red. **No debe
-  exponerse a una red.**
-- **El sistema nunca se ha ejecutado contra un modelo real** (`TD-01`): funciona con
-  los fallbacks deterministas y con el proveedor falso.
-- **Cinco ajustes declarados en `.env.example` no se aplican todavía** (allowlist de
-  repositorios, bloqueo de red y tres límites de presupuesto).
+**Límites que siguen vigentes:**
+- Windows Job no es una VM ni un firewall. El opt-in nativo acepta ese riesgo;
+  para red estricta se exige Docker ya preparado. No se instala nada en silencio.
+- MCP implementa solo `read_file` y `git_status`, sin escritura, shell ni servidores
+  externos. La cuota y el alcance se verifican antes de las lecturas del Researcher.
+- El grafo no infiere significados con un LLM ni acredita la implementación de Graphify.
+- Langfuse requiere configuración y una exportación autorizada. Las pruebas no
+  contactan un servicio real ni acreditan su instalación/configuración en otra PC.
+- TTS solo utiliza voces locales existentes; sin ellas se informa indisponibilidad.
+  No se han certificado todos los navegadores ni la audición física del equipo destino.
+- Las pruebas con dobles no acreditan calidad universal de los modelos remotos ni
+  disponibilidad de paquetes npm. La publicación GitHub y continuidad física siguen pausadas.
 
-El detalle completo, con evidencia, está en la auditoría integral:
+La auditoría original se conserva como historia; las actas vigentes la complementan:
 [`docs/audit/00-EXECUTIVE-AUDIT.md`](docs/audit/00-EXECUTIVE-AUDIT.md).
 
 **No se atribuya al sistema nada que no pueda demostrarse.** Lo que existe es una
@@ -155,8 +164,8 @@ Para la entrada por voz y la observabilidad, extras opcionales:
 
 ```bash
 pip install -e ".[voice]"           # faster-whisper (Speech-to-Text local)
-pip install -e ".[observability]"   # Langfuse
-pip install -e ".[mcp]"             # servidores MCP (FASE FUTURA, no usado todavía)
+pip install -e ".[observability]"   # SDK opcional; la exportación OTLP propia no lo requiere
+pip install -e ".[mcp]"             # SDK opcional para ampliaciones; no requerido por MCP propio
 ```
 
 > ✅ **Reproducibilidad resuelta.** Existe `uv.lock` (99 paquetes), generado con `uv lock`

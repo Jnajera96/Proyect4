@@ -1,13 +1,6 @@
-"""Cliente y servidores MCP.
+"""MCP local stdio 2025-06-18, subset read_file/git_status.
 
-Pendiente: fase M3.
-
-Dos servidores en el prototipo: sistema de archivos y Git. Se justifica en
-docs/01-arquitectura.md, seccion 12.3: MCP se usa **solo** donde cruza un limite
-de proceso o de confianza.
-
-Notas de implementacion derivadas de la revision 2026-07-28 del protocolo:
-  - La restriccion de rutas NO puede depender de `Roots` (deprecado). Se valida
-    cada ruta resolviendola y comprobando que queda dentro del area autorizada.
-  - El contexto de traza W3C se propaga en `_meta` para no romper la traza.
+Cliente y servidor propios, sin SDK ni servidores arbitrarios. El Researcher
+lo activa explícitamente y conserva alcance, presupuesto y datos no confiables.
+No ofrece escritura, shell, sampling ni propagación W3C a servicios externos.
 """

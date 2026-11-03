@@ -1373,6 +1373,10 @@ def crear_app(
 
     register_delivery_routes(app, engine=motor, store=almacen, settings=ajustes,
                              read=LEER, operate=OPERAR, admin=ADMINISTRAR)
+    from ai_swe.api.local_capabilities import register_local_capabilities
+
+    register_local_capabilities(app, engine=motor, store=almacen, settings=ajustes,
+                                read=LEER, admin=ADMINISTRAR)
     from ai_swe.api.readiness import register_readiness_routes
 
     register_readiness_routes(app, store=almacen,

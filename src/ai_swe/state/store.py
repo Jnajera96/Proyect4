@@ -365,7 +365,9 @@ class RunStore:
             self._conn.commit()
         return RunEvent(seq=int(fila["seq"]), at=momento, kind=kind, data=json.loads(carga))
 
-    def events(self, run_id: str, after_seq: int = 0) -> list[RunEvent]:
+    def events(
+        self, run_id: str, after_seq: int = 0, *, limit: int | None = None,
+    ) -> list[RunEvent]:
         """Eventos de una ejecucion posteriores a `after_seq`.
 
         La lectura tambien toma el cerrojo. **No es exceso de celo:** la primera
@@ -377,8 +379,8 @@ class RunStore:
         with self._lock:
             filas = self._conn.execute(
                 "SELECT seq, at, kind, data FROM run_events"
-                " WHERE run_id = ? AND seq > ? ORDER BY seq",
-                (run_id, max(0, after_seq)),
+                " WHERE run_id = ? AND seq > ? ORDER BY seq LIMIT ?",
+                (run_id, max(0, after_seq), -1 if limit is None else max(0, min(limit, 10000))),
             ).fetchall()
         return [
             RunEvent(

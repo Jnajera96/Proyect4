@@ -162,6 +162,14 @@ def positive_seconds(value: str) -> float:
 
 
 def main(argv=None) -> int:
+    # Closed child entry: arguments are data, never an arbitrary module/command.
+    worker_args = list(sys.argv[1:] if argv is None else argv)
+    if worker_args[:1] == ['--mcp-server']:
+        if len(worker_args) != 3:
+            return 2
+        from ai_swe.mcp.server import main as mcp_main
+
+        return mcp_main(worker_args[1:])
     parser = argparse.ArgumentParser(description="AI Software Engineering System local")
     parser.add_argument(
         "--profiles", action=argparse.BooleanOptionalAction, default=True,

@@ -1,5 +1,11 @@
 # Evaluación: Graphify como capa de contexto
 
+> Actualización 2026-11-02: existe un grafo AST nativo de archivos, símbolos e
+> importaciones, con consulta/filtro/descarga local. No es una integración de
+> Graphify. Ver [alcance vigente](LOCAL-CAPABILITIES-VALIDATION-2026-11-02.md).
+> Las afirmaciones de «Knowledge Graph no implementado» siguientes corresponden
+> a la propuesta histórica; la adopción de Graphify sigue siendo una evaluación.
+
 > ⚠️ **AVISO `SUPERSEDED` (parcial) — 2026-10-06.**
 > **Graphify / Knowledge Graph sigue sin implementarse.** Este documento es una
 > **propuesta de diseño `[PROP]`**, no una descripción de algo que exista.

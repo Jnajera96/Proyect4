@@ -327,6 +327,9 @@ class ModelGateway:
                     model=bruto.model or request.model,
                     provider=adapter.name,
                     duration_ms=(time.perf_counter() - inicio) * 1000,
+                    input_tokens=bruto.usage.input_tokens,
+                    output_tokens=bruto.usage.output_tokens,
+                    cost=self._pricing.cost(bruto.model or request.model or "unknown", bruto.usage),
                 )
                 if reservation is not None:
                     declared = self._pricing.cost(bruto.model or model, bruto.usage)

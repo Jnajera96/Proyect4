@@ -31,6 +31,37 @@ const { calcular } = await cargar("../src/components/DiagramaFlujo.tsx");
 const { actividadesPendientes, ActividadPipeline } = await cargar("../src/components/ActividadPipeline.tsx");
 const { PuertaRequisitos } = await cargar("../src/components/PuertaRequisitos.tsx");
 const { mensajeEstado } = await cargar("../src/lib/contracts.ts");
+const { iniciarLectura } = await cargar("../src/lib/localCapabilities.ts");
+const { LectorResultado } = await cargar("../src/components/LectorResultado.tsx");
+const { CapacidadesLocales } = await cargar("../src/components/CapacidadesLocales.tsx");
+
+test("TTS usa solo voces locales y no cae silenciosamente a una voz remota", () => {
+  let calls=0;
+  const remote={localService:false,lang:"es-MX",name:"remote"};
+  const local={localService:true,lang:"es-MX",name:"local"};
+  const synth={getVoices:()=>[remote],cancel(){},speak(){calls++;}};
+  assert.throws(()=>iniciarLectura("Resultado",synth,{}),/No hay voces locales/);
+  assert.equal(calls,0);
+  synth.getVoices=()=>[remote,local];
+  const utterance={}; iniciarLectura("Resultado",synth,utterance);
+  assert.equal(utterance.voice,local); assert.equal(utterance.text,"Resultado");
+  assert.equal(calls,1);
+});
+
+test("TTS acota texto y mantiene controles voluntarios de reproducción y parada", () => {
+  const utterance={};
+  iniciarLectura("a".repeat(5000),{getVoices:()=>[{localService:true,lang:"es"}],cancel(){},speak(){}},utterance);
+  assert.equal(utterance.text.length,4000);
+  const html=renderToStaticMarkup(React.createElement(LectorResultado,{texto:"Resultado"}));
+  assert.match(html,/Escuchar resultado/); assert.match(html,/Detener lectura/);
+  assert.match(html,/no está habilitada/);
+});
+
+test("las capacidades locales ofrecen consultas y exportación explícita", () => {
+  const html=renderToStaticMarkup(React.createElement(CapacidadesLocales,{runId:"fixture"}));
+  assert.match(html,/Consultar trazas/); assert.match(html,/Ver relaciones del código/);
+  assert.match(html,/button disabled="">Exportar a Langfuse/);
+});
 
 test("mensajes humanos distinguen actividad de una promoción realmente completada", () => {
   for (const [step, message] of Object.entries({researcher:"Analizando", coder:"Escribiendo", run_tests:"Verificando", reviewer:"Revisando"})) {

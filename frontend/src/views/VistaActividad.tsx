@@ -5,6 +5,7 @@ import type { EstadoConexion } from "../hooks/useEventosRun";
 import { Chip, EstadoVacio, Panel } from "../components/ui";
 import { fechaHora } from "../lib/formato";
 import { ActividadPipeline } from "../components/ActividadPipeline";
+import { CapacidadesLocales } from "../components/CapacidadesLocales";
 
 export function VistaActividad({ estado, eventos, conexion }: {
   estado: RunState | null; eventos: RunEvent[]; conexion: EstadoConexion;
@@ -14,6 +15,7 @@ export function VistaActividad({ estado, eventos, conexion }: {
   return <>
     <header className="pagina-titulo"><h1>Actividad en tiempo real</h1><p>Eventos recibidos del motor para la ejecución seleccionada.</p></header>
     {estado ? <ActividadPipeline eventos={eventos} estado={estado} /> : null}
+    {estado ? <CapacidadesLocales key={estado.run_id} runId={estado.run_id} /> : null}
     <Panel><div className="actividad-estados">
       <div><span className="tenue">Conexión SSE</span><Chip tono={conexion === "error" ? "error" : conexion === "conectado" ? "ok" : ""}>{conexion}</Chip></div>
       <div><span className="tenue">Estado de ejecución</span><strong>{estado ? ETIQUETA_ESTADO[estado.status] : "Sin ejecución"}</strong></div>

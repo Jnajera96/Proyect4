@@ -1,5 +1,16 @@
 # Índice de documentación
 
+## Capacidades locales priorizadas
+
+- [Diseño aprobado](LOCAL-CAPABILITIES-DESIGN-2026-11-02.md).
+- [Alcance, uso y validación](LOCAL-CAPABILITIES-VALIDATION-2026-11-02.md).
+- [Evidencia](LOCAL-CAPABILITIES-EVIDENCE-2026-11-02.json).
+- [Handoff para Antigravity](HANDOFF-ANTIGRAVITY-LOCAL-CAPABILITIES-2026-11-02.md).
+
+Este bloque prevalece sobre los estados históricos «MCP/TTS/observabilidad no
+implementados». Graphify externo, pruebas físicas y nueva distribución se informan
+por separado; no se consideran cerrados por la implementación local.
+
 ## Cierre v0.1.0
 
 Entrega canónica y alcance local aprobado: [producto](PRODUCT-v0.1.0.md),

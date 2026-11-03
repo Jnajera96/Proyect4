@@ -40,11 +40,8 @@ dependencies = [
 
 [project.optional-dependencies]
 packaging = ["pyinstaller==6.22.3"]
-# MCP: servidores de archivos y Git. PERTENECE A UNA FASE FUTURA (`F13`) y NO se
-# importa todavia en `src/`. Estaba declarada como dependencia OBLIGATORIA por
-# error: una instalacion limpia instalaba un paquete que ningun modulo usaba.
-# Se mueve a extra para que el manifiesto describa lo que el codigo realmente
-# necesita. NO instalar hasta que exista el cliente MCP.
+# SDK MCP opcional para ampliaciones. El cliente/servidor stdio propio no lo usa
+# ni requiere instalarlo; no se añade al runtime portable por esta capacidad.
 mcp = [
     "mcp>=1.0",
 ]
@@ -54,7 +51,7 @@ voice = [
     # faster-whisper 1.2.1 usa av.open(metadata_errors=...), eliminado en PyAV 19.
     "av<19",
 ]
-# Observabilidad. Prescindible en ejecucion, no en evaluacion.
+# SDK opcional: la exportación OTLP/HTTP propia usa httpx ya instalado, no este extra.
 observability = [
     "langfuse>=2.50",
 ]

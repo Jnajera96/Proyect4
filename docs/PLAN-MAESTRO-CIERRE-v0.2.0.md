@@ -1,5 +1,25 @@
 # Plan maestro de cierre v0.2.0
 
+## Prioridad temporal acordada: capacidades locales
+
+El 2 de noviembre el usuario pausó el empaquetado siguiente y los pilotos para
+terminar la sección de capacidades del README. Se conserva rc25; no se modifica
+el artefacto ni se publica al remoto en esta intervención.
+
+- Conciliar autenticación, cancelación y aislamiento con su implementación existente.
+- Entregar observabilidad SQLite con exportación OTLP manual y opcional.
+- Entregar MCP stdio propio de lectura; Git queda limitado a HEAD, sin filtros
+  del worktree ni comandos libres. Activación explícita y cuota de herramientas.
+- Entregar grafo AST nativo visible y consultable, reutilizando las rutas
+  seleccionadas por memoria. Graphify externo se mantiene en evaluación.
+- Entregar lectura voluntaria con voces locales del navegador, sin fallback remoto.
+
+El alcance y los resultados vigentes están en
+[LOCAL-CAPABILITIES-VALIDATION-2026-11-02.md](LOCAL-CAPABILITIES-VALIDATION-2026-11-02.md).
+El cierre de implementación local no acredita audición física, recepción real en
+Langfuse, integración de Graphify ni un portable actualizado. La estimación
+histórica 91/100 no se recalcula a partir del número de pruebas.
+
 ## RC25 — candidato recomendado para pruebas locales
 
 Fecha: 2 de noviembre de 2026. Base de producto `f2554d2`: corrige integridad de

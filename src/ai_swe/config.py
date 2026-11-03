@@ -323,33 +323,17 @@ class Settings(BaseSettings):
         "int16", "float16", "bfloat16", "float32",
     ] = Field(default="int8" if sys.platform == "win32" else "default")
     stt_confidence_warn_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
-    # Salida por voz. **NO IMPLEMENTADA.** No existe `TTSAdapter` ni un solo
-    # consumidor de este ajuste: se conserva porque `docs/01-arquitectura.md` la
-    # declara como **propuesta** (`[PROP]`), no como requisito (`RF-01`..`RF-03` no
-    # la incluyen). Se marca aqui y en `.env.example` para que no se lea como una
-    # capacidad presente: un flag que aparenta una funcion que no existe es
-    # exactamente la configuracion enganosa que esta fase corrige. Cuando exista el
-    # adaptador, la marca desaparece.
-    tts_enabled: bool = Field(
-        default=False,
-        description="Salida por voz. **NO IMPLEMENTADO**: ningun codigo lo consume (propuesta).",
-    )
-
-    # --- Observabilidad ------------------------------------------------------
-    # **NO IMPLEMENTADA.** No hay integracion con Langfuse: `langfuse_enabled` y
-    # `langfuse_host` no los lee ningun codigo. Las **claves** si se usan -las
-    # registra el redactor en `registrar_secretos`, para que una clave no acabe en
-    # un log el dia que la integracion exista-, y ese registro es la unica parte
-    # viva de estos cuatro campos. Llega en la fase de observabilidad.
-    langfuse_enabled: bool = Field(
-        default=False, description="**NO IMPLEMENTADO**: no hay integracion con Langfuse."
-    )
+    # Capabilities are local first; no service is contacted at startup.
+    mcp_enabled: bool = Field(default=False,
+        description="Researcher con MCP stdio local de solo lectura, activación explícita.")
+    tts_enabled: bool = Field(default=False,
+        description="Permite lectura voluntaria con voces locales del navegador.")
+    langfuse_enabled: bool = Field(default=False,
+        description="Permite exportar trazas manualmente; nunca condiciona el flujo local.")
     langfuse_public_key: SecretStr = Field(default=SecretStr(""))
     langfuse_secret_key: SecretStr = Field(default=SecretStr(""))
-    langfuse_host: str = Field(
-        default="http://localhost:3000",
-        description="**NO IMPLEMENTADO**: host previsto para Langfuse.",
-    )
+    langfuse_host: str = Field(default="http://localhost:3000",
+        description="Destino OTLP Langfuse: HTTPS remoto o HTTP solo en bucle local.")
     log_level: str = Field(default="INFO")
 
     @field_validator("log_level")
@@ -363,15 +347,7 @@ class Settings(BaseSettings):
 
     @property
     def tts_active(self) -> bool:
-        """Refleja `tts_enabled`. **El TTS no esta implementado** (ver el campo).
-
-        La descripcion anterior decia que "el TTS solo se activa si esta habilitado
-        y el STT esta configurado", y el cuerpo solo devolvia `tts_enabled`: la
-        documentacion prometia una comprobacion que no existia. Se corrige la
-        descripcion en lugar de la comprobacion, porque no hay nada que comprobar
-        mientras no exista el adaptador. Se conserva el acceso porque es el punto
-        por el que la futura implementacion consultara la configuracion.
-        """
+        """Permiso del servidor; la disponibilidad real depende de una voz local."""
         return self.tts_enabled
 
     def presupuesto(self):

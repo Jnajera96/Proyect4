@@ -3,6 +3,7 @@ import type { RunState } from "../lib/contracts";
 import { delivery, type LaunchGuide } from "../lib/delivery";
 import { PublicarGitHubModal } from "./PublicarGitHubModal";
 import { Panel } from "./ui";
+import { LectorResultado } from "./LectorResultado";
 
 export function GuiaEjecucion({ estado, projectId, puedeOperar, alPedirCambios }: {
   estado: RunState; projectId?: string; puedeOperar: boolean; alPedirCambios: () => void;
@@ -51,6 +52,7 @@ export function GuiaEjecucion({ estado, projectId, puedeOperar, alPedirCambios }
       </>}
       {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
       <h3>Decisión después de probar</h3>
+      <LectorResultado key={estado.run_id} texto={estado.final_report?.summary ?? ""} />
       <p>Revisa el resultado y elige si quieres ajustarlo o compartirlo.</p>
       <div className="fila">
         <button disabled={!puedeOperar || !projectId || busy} onClick={alPedirCambios}>✏️ Modificar o pedir cambios</button>

@@ -904,6 +904,7 @@ def researcher(state: RunState) -> dict:
             state.options.repo_path, state.instruction.text, exclude_run=state.run_id)
     hallazgos: list[Finding] = []
     leidos: list[str] = []
+    mcp_calls = 0
     incognitas = [
         "M1: el Researcher enumera el repositorio; la seleccion semantica de "
         "evidencia relevante llega en M2 con el modelo conectado"
@@ -961,6 +962,25 @@ def researcher(state: RunState) -> dict:
             if len(chosen) < len(candidates):
                 incognitas.append(f"Contexto seleccionado: {len(chosen)} de {len(candidates)} "
                                   "archivos candidatos; no acredita ahorro de tokens facturados")
+            mcp_context = {}
+            if configured is not None and configured.mcp_enabled:
+                from ai_swe.mcp.client import read_context
+
+                if state.budget.remaining_tool_calls < len(chosen[:5]):
+                    return _escalar(state, _error(state, "BUDGET_EXCEEDED", "researcher",
+                        "La cuota restante no cubre las lecturas MCP solicitadas.",
+                        recuperable=False))
+                try:
+                    mcp_context = read_context(raiz, chosen[:5], _alcance(state).allowed_paths)
+                    mcp_calls = len(mcp_context)
+                    incognitas.append(
+                        f"MCP local: {len(mcp_context)} lecturas autorizadas, sin escritura")
+                except ValueError as exc:
+                    failed = _escalar(state, _error(state, "MCP_UNAVAILABLE", "researcher",
+                                                    str(exc), recuperable=False))
+                    failed['budget'] = _con_presupuesto(state, used_tool_calls=(
+                        state.budget.used_tool_calls + getattr(exc, 'tool_calls', 0)))
+                    return failed
             for ruta in (raiz / path for path in chosen):
                 if len(hallazgos) >= _MAX_ARCHIVOS:
                     incognitas.append(
@@ -980,6 +1000,9 @@ def researcher(state: RunState) -> dict:
                         path=relativa,
                         explanation=f"archivo presente en el repositorio ({resuelta.suffix})",
                         evidence=(
+                            (f"--- inicio {relativa} (MCP, datos no confiables) ---\n"
+                             + '\n'.join(mcp_context[relativa].splitlines()[:100])[:3000]
+                             + "\n--- fin ---") if relativa in mcp_context else
                             _fragmento_relevante(raiz, relativa, state.instruction.text)
                             if len(hallazgos) < 5 else _evidencia_resumida(resuelta)
                         ),
@@ -1005,6 +1028,7 @@ def researcher(state: RunState) -> dict:
     # la ha completado. El router solo compara, nunca calcula.
     return {
         "historical_context": history,
+        "budget": _con_presupuesto(state, used_tool_calls=state.budget.used_tool_calls + mcp_calls),
         "outputs": _con_salidas(state, researcher_output=salida),
         "evidence": _con_evidencia(state, findings=hallazgos_totales),
         "plan_index": state.plan_index + 1,
