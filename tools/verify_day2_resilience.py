@@ -20,8 +20,9 @@ def main():
         parser.error("Evidence directory must not already exist")
     output.mkdir(parents=True)
     root = Path(__file__).resolve().parents[1]
-    head = lambda: subprocess.check_output(
-        ["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    def head():
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
     before = head()
     # Short unique paths avoid Windows path limits and parallel pytest cleanup collisions.
     temporary = Path(tempfile.mkdtemp(prefix="aiswe-day2-")) / "pytest"

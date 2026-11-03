@@ -1,46 +1,276 @@
 {
-  "date": "2026-11-03",
-  "status": "passed_cleanly",
-  "base_commit": "33e45a4",
+  "document_label_date": "2026-11-04",
+  "executed_local_date": "2026-11-03",
+  "timezone": "America/Mexico_City",
+  "status": "passed_local_day2_scope",
+  "independent_verifier": "Codex provider-preflight",
+  "base_commit": "96f58bb44f5f4e3a62434c7869517033157557fd",
+  "stable_base": true,
+  "source_integration": {
+    "stress_suite": "33e45a4",
+    "worker_wal_hardening": "6c5069f",
+    "migration_retry": "4f0ecc3",
+    "retry_time_import": "36da66b"
+  },
   "paid_api_calls": 0,
-  "remote_model_calls": 0,
-  "concurrency_and_crash_results": {
-    "total_tests": 11,
-    "passed": 11,
+  "pushes": 0,
+  "tests": {
+    "collected": 22,
+    "passed": 22,
     "failed": 0,
+    "errors": 0,
     "skipped": 0,
-    "duration_seconds": 12.31,
-    "suites": [
+    "duration_seconds": 27.06,
+    "cases": [
       {
-        "file": "tests/stress/test_concurrency_and_crash.py",
-        "tests": [
-          "test_concurrent_pause_resumes_reject_parallel_attempts",
-          "test_worker_dispatch_failure_allows_immediate_subsequent_resume",
-          "test_concurrent_ledger_and_checkpoint_writes_leave_valid_sqlite",
-          "test_forced_process_termination_rolls_back_and_preserves_requirements_plan",
-          "test_worker_auto_backup_during_checkpoint_writes_finishes_and_restores",
-          "test_worker_submission_failure_recovers_state",
-          "test_post_crash_sqlite_integrity"
-        ],
-        "passed": 7,
-        "failed": 0
+        "name": "test_simultaneous_http_resume_dispatches_exactly_once[10]",
+        "class": "tests.stress.test_concurrency_and_crash",
+        "seconds": 0.872,
+        "status": "passed"
       },
       {
-        "file": "tests/test_worker_claim_resilience.py",
-        "tests": [
-          "test_submit_resume_paused_releases_claim_on_closed_worker",
-          "test_submit_resume_paused_releases_claim_on_submission_failure",
-          "test_budget_ledger_concurrent_wal_resilience",
-          "test_concurrent_reclamar_reanudacion_pausa_exactly_one_wins"
-        ],
-        "passed": 4,
-        "failed": 0
+        "name": "test_simultaneous_http_resume_dispatches_exactly_once[20]",
+        "class": "tests.stress.test_concurrency_and_crash",
+        "seconds": 1.189,
+        "status": "passed"
+      },
+      {
+        "name": "test_failed_worker_submission_releases_claim_for_http_retry[closed_worker]",
+        "class": "tests.stress.test_concurrency_and_crash",
+        "seconds": 0.281,
+        "status": "passed"
+      },
+      {
+        "name": "test_failed_worker_submission_releases_claim_for_http_retry[executor]",
+        "class": "tests.stress.test_concurrency_and_crash",
+        "seconds": 0.257,
+        "status": "passed"
+      },
+      {
+        "name": "test_forty_wal_writers_preserve_reservations_and_langgraph_checkpoints",
+        "class": "tests.stress.test_concurrency_and_crash",
+        "seconds": 1.685,
+        "status": "passed"
+      },
+      {
+        "name": "test_forced_process_termination_rolls_back_and_preserves_requirements_plan",
+        "class": "tests.stress.test_concurrency_and_crash",
+        "seconds": 2.898,
+        "status": "passed"
+      },
+      {
+        "name": "test_worker_auto_backup_during_checkpoint_writes_finishes_and_restores",
+        "class": "tests.stress.test_concurrency_and_crash",
+        "seconds": 0.75,
+        "status": "passed"
+      },
+      {
+        "name": "test_coder_budget_exceeded_enters_paused_preserving_plan_and_evidence",
+        "class": "tests.test_budget_pause_and_recovery",
+        "seconds": 0.547,
+        "status": "passed"
+      },
+      {
+        "name": "test_resume_verifies_budget_preflight_and_blocks_if_still_exhausted",
+        "class": "tests.test_budget_pause_and_recovery",
+        "seconds": 0.301,
+        "status": "passed"
+      },
+      {
+        "name": "test_double_click_protection_prevents_duplicate_resume",
+        "class": "tests.test_budget_pause_and_recovery",
+        "seconds": 0.245,
+        "status": "passed"
+      },
+      {
+        "name": "test_budget_recovery_resumes_coder_and_preserves_subsequent_approvals",
+        "class": "tests.test_budget_pause_and_recovery",
+        "seconds": 5.143,
+        "status": "passed"
+      },
+      {
+        "name": "test_uncertain_consumption_reservation_retained_and_warned",
+        "class": "tests.test_budget_pause_and_recovery",
+        "seconds": 0.047,
+        "status": "passed"
+      },
+      {
+        "name": "test_worktree_snapshot_captures_modified_binary_untracked_and_deleted",
+        "class": "tests.test_continuity_m",
+        "seconds": 1.08,
+        "status": "passed"
+      },
+      {
+        "name": "test_manual_cooperative_pause_at_node_boundary_and_resume",
+        "class": "tests.test_continuity_m",
+        "seconds": 0.688,
+        "status": "passed"
+      },
+      {
+        "name": "test_export_archive_encryption_tamper_wrong_password_and_no_plaintext",
+        "class": "tests.test_continuity_m",
+        "seconds": 0.76,
+        "status": "passed"
+      },
+      {
+        "name": "test_auto_backup_defers_when_running_and_writes_atomically_when_stabilized",
+        "class": "tests.test_continuity_m",
+        "seconds": 0.976,
+        "status": "passed"
+      },
+      {
+        "name": "test_lost_device_e2e_recovery_at_review_gate_without_rerunning_coder_or_reviewer",
+        "class": "tests.test_continuity_m",
+        "seconds": 4.726,
+        "status": "passed"
+      },
+      {
+        "name": "test_import_rejects_occupied_non_git_dir_dirty_repo_and_ledger_rollback",
+        "class": "tests.test_continuity_m",
+        "seconds": 1.73,
+        "status": "passed"
+      },
+      {
+        "name": "test_submit_resume_paused_releases_claim_on_closed_worker",
+        "class": "tests.test_worker_claim_resilience",
+        "seconds": 0.081,
+        "status": "passed"
+      },
+      {
+        "name": "test_submit_resume_paused_releases_claim_on_submission_failure",
+        "class": "tests.test_worker_claim_resilience",
+        "seconds": 0.068,
+        "status": "passed"
+      },
+      {
+        "name": "test_budget_ledger_concurrent_wal_resilience",
+        "class": "tests.test_worker_claim_resilience",
+        "seconds": 0.632,
+        "status": "passed"
+      },
+      {
+        "name": "test_concurrent_reclamar_reanudacion_pausa_exactly_one_wins",
+        "class": "tests.test_worker_claim_resilience",
+        "seconds": 0.325,
+        "status": "passed"
       }
-    ]
+    ],
+    "per_file": {
+      "tests/stress/test_concurrency_and_crash.py": 7,
+      "tests/test_budget_pause_and_recovery.py": 5,
+      "tests/test_continuity_m.py": 6,
+      "tests/test_worker_claim_resilience.py": 4
+    }
   },
-  "wal_mode": "PRAGMA journal_mode=WAL",
-  "busy_timeout_ms": 30000,
-  "retry_policy": "exponential_backoff_max_5_attempts",
-  "integrity_check": "ok",
-  "data_loss_detected": false
+  "workloads": {
+    "concurrent_http_resume_clients": [
+      10,
+      20
+    ],
+    "accepted_per_batch": 1,
+    "http_conflicts_per_batch": [
+      9,
+      19
+    ],
+    "http_transport": "in_process_TestClient_without_profile_auth_or_rate_limiting",
+    "successful_dispatches_verified": "one queued dispatch; agents not executed in the race test",
+    "submission_failures": [
+      "closed_worker",
+      "executor_submit_exception"
+    ],
+    "wal_writer_threads": 40,
+    "ledger_writer_threads": 20,
+    "checkpoint_writer_threads": 20,
+    "iterations_per_writer": 6,
+    "ledger_reservations": 120,
+    "langgraph_checkpoints": 120,
+    "settled_total": 7.5,
+    "crash": "TerminateProcess of an owned synthetic child after BEGIN IMMEDIATE and uncommitted writes",
+    "crash_assertions": [
+      "integrity_check ok",
+      "uncommitted reservation absent",
+      "confirmed interpretation survives",
+      "confirmed PLAN_ONLY plan survives"
+    ],
+    "worker_backup": {
+      "concurrent_checkpoint_jobs": 4,
+      "writes_per_job": 10,
+      "trigger": "RunWorker completion callback",
+      "credentials": "synthetic password in memory",
+      "encrypted_archive_restored": true,
+      "no_password_in_captured_logs": true
+    }
+  },
+  "execution": {
+    "start_head": "96f58bb44f5f4e3a62434c7869517033157557fd",
+    "end_head": "96f58bb44f5f4e3a62434c7869517033157557fd",
+    "stable_head": true,
+    "returncode": 0,
+    "deadline_seconds": 180,
+    "python": "3.13.14 (tags/v3.13.14:fd17997, Jun 10 2026, 13:03:48) [MSC v.1944 64 bit (AMD64)]",
+    "executable": "C:\\Users\\jose_\\.codex\\worktrees\\provider-preflight\\proyecto4-ai-swe\\.venv\\Scripts\\python.exe",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "command": [
+      "C:\\Users\\jose_\\.codex\\worktrees\\provider-preflight\\proyecto4-ai-swe\\.venv\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "tests/stress/test_concurrency_and_crash.py",
+      "tests/test_budget_pause_and_recovery.py",
+      "tests/test_continuity_m.py",
+      "tests/test_worker_claim_resilience.py",
+      "-v",
+      "--tb=short",
+      "--basetemp",
+      "C:\\Users\\jose_\\AppData\\Local\\Temp\\aiswe-day2-wfp7n966\\pytest",
+      "-o",
+      "tmp_path_retention_policy=failed",
+      "--junitxml=C:\\Users\\jose_\\.codex\\worktrees\\provider-preflight\\proyecto4-ai-swe\\_tmp\\day2-codex-independent\\results.xml"
+    ],
+    "paid_api_calls": 0,
+    "real_network": false,
+    "suites": [
+      {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "22",
+        "time": "27.060",
+        "timestamp": "2026-11-03T10:22:19.486151-06:00",
+        "hostname": "Najeras_Lap"
+      }
+    ],
+    "success": true
+  },
+  "hashes": {
+    "junit_sha256": "9e96a009aae1324c0b55ee615b5acb0820881f286464ced284886eec54dcde32",
+    "log_sha256": "29a4f85466331fa55e506d936e3bad1398512f5da6c57fcc9ba898ae83c4548e",
+    "test_sources": {
+      "tests/stress/test_concurrency_and_crash.py": "69e64af2fc746c452abb7323c7eb937daecea4ebc334447c8f6e2ed1cc058938",
+      "tests/test_budget_pause_and_recovery.py": "4e17a45993513642bdc1baab04a33be6e677d31a0fa0d90a30e1e51a0969bb4c",
+      "tests/test_continuity_m.py": "601eeb215ce9c71eaad5b9721a2f5352e6f21995d1eabebe212ee0414e50f28d",
+      "tests/test_worker_claim_resilience.py": "80ca378cbd094d797cde796e366edc973b7c1f161ceddc7b6433e103ea6e455a"
+    }
+  },
+  "invalidated_runs": [
+    {
+      "reason": "shared pytest temp root removed during parallel tests; HEAD changed",
+      "included_in_pass_count": false
+    },
+    {
+      "reason": "deep workspace basetemp; one continuity case failed; superseded by short unique temp paths",
+      "included_in_pass_count": false
+    }
+  ],
+  "limitations": [
+    "Local Windows process/thread trials, not physical power loss or disk failure",
+    "No real provider HTTP, Docker, microphone, TTS or Langfuse",
+    "No multi-host SQLite/SMB/NFS certification",
+    "No full backend or frontend regression rerun",
+    "Queued HTTP race does not assert exactly-once external model billing",
+    "No proof of absence of all possible deadlocks beyond tested workloads and 180-second supervisor",
+    "No vault lock-retry fault injection; synthetic in-memory password exercised, not real profile credentials",
+    "RC26 ZIP not rebuilt or recertified with Day 2 core commits"
+  ],
+  "supersedes": "The earlier 11-test report in 96f58bb is replaced by actual independent JUnit identities and 22 targeted passes."
 }
