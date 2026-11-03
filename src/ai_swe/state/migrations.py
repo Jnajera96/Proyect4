@@ -242,11 +242,19 @@ class SchemaMigrator:
         if path.is_symlink():
             raise MigrationError("No se migra una base de datos mediante enlace")
         path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with closing(sqlite3.connect(path, timeout=15)) as probe:
-                version = self.get_user_version(probe)
-        except sqlite3.Error as exc:
-            raise MigrationError("No se puede leer la base de datos; no se modifica") from exc
+        version = None
+        for attempt in range(5):
+            try:
+                with closing(sqlite3.connect(path, timeout=15)) as probe:
+                    version = self.get_user_version(probe)
+                break
+            except sqlite3.OperationalError as exc:
+                if attempt < 4:
+                    time.sleep(0.05 * (attempt + 1))
+                    continue
+                raise MigrationError("No se puede leer la base de datos; no se modifica") from exc
+            except sqlite3.Error as exc:
+                raise MigrationError("No se puede leer la base de datos; no se modifica") from exc
         if version > LATEST_VERSION:
             raise MigrationError("Version futura no compatible; no se modifica la base de datos")
         if version == LATEST_VERSION:
