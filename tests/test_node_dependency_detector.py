@@ -137,7 +137,9 @@ def test_empty_allowlist_denies_declared_npm_packages():
 
 
 @pytest.mark.parametrize("stage", ["coder", "test_runner"])
-@pytest.mark.parametrize("allowed,declared", [([], True), (["other"], True), (["express"], False)])
+@pytest.mark.parametrize("allowed,declared", [
+    ([], True), (["other"], True), (["express"], False), (["express"], True),
+])
 def test_node_dependency_gate_stops_before_tools(tmp_path, monkeypatch, stage, allowed, declared):
     from test_f8_test_runner import _estado
 

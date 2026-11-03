@@ -29,7 +29,8 @@ def test_test_runner_does_not_add_bytecode_to_reviewed_diff(repo, tmp_path, monk
     sandbox = crear(repo, "run-no-bytecode", workspace_root=tmp_path / "ws")
     try:
         before = sandbox.diff()
-        result = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",))
+        result = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",),
+            network_egress_enabled=True)
         assert result.exit_code == 0, result.stdout + result.stderr
         assert sandbox.diff() == before
         assert not list(sandbox.raiz.rglob("*.pyc"))

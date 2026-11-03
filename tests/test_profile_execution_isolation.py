@@ -90,7 +90,7 @@ def test_profile_graph_owns_real_worktree_and_test_targets(tmp_path, monkeypatch
     paths = []
     calls = []
 
-    def execute(sandbox, target, *, permitidos, limits=None):
+    def execute(sandbox, target, *, permitidos, limits=None, network_egress_enabled=False):
         calls.append((sandbox.raiz, target, permitidos, limits))
         return TestRun(target=target, exit_code=0, duration_s=0)
 

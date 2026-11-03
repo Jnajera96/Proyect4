@@ -62,7 +62,8 @@ def test_runner_terminates_real_descendant(sandbox, monkeypatch, tmp_path, paren
     api = process_api()
     with ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(
-            runner.ejecutar, sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=2
+            runner.ejecutar, sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=2,
+            network_egress_enabled=True,
         )
         pid = wait_pid(pidfile)
         handle = api.OpenProcess(0x100000 | 0x1000 | 1, False, pid)
@@ -88,7 +89,8 @@ def test_assignment_failure_never_runs_user_code(sandbox, monkeypatch, tmp_path)
         raise runner.JobError("Synthetic assignment failure")
     monkeypatch.setattr(runner.WindowsJob, "assign_and_resume", refuse)
     with pytest.raises(runner.RunnerError, match="Synthetic assignment failure"):
-        runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=2)
+        runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=2,
+            network_egress_enabled=True)
     assert not marker.exists()
 
 
@@ -109,7 +111,8 @@ def test_unverified_shutdown_never_reports_success(sandbox, monkeypatch):
         raise runner.JobError("Synthetic verification failure")
     monkeypatch.setattr(runner.WindowsJob, "terminate_and_wait", refuse)
     with pytest.raises(runner.RunnerError, match="no se confirmó el cierre"):
-        runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=2)
+        runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=2,
+            network_egress_enabled=True)
 
 
 @pytest.mark.parametrize("kill_on_close", [True, False])

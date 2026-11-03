@@ -413,6 +413,7 @@ def test_real_graph_builds_offline_project_with_gates_and_promotion(
     monkeypatch.setattr(model_routing, "gateway_from_settings",
                         lambda _: ModelGateway([adapter]))
     settings = Settings(_env_file=None, profile_id="builder-test",
+                        network_egress_enabled=True,  # Trusted synthetic native fixtures.
                         remote_model_roles=["coder", "reviewer"],
                         workspace_root=tmp_path / "worktrees",
                         allowed_test_targets=["pytest.unit", "ruff.check"])

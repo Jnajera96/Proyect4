@@ -17,6 +17,7 @@ from ai_swe.state.budget_ledger import BudgetLedger
 def settings_for(tmp_path):
     return Settings(
         _env_file=None,
+        network_egress_enabled=True,  # Trusted synthetic native-execution fixtures.
         profile_id="cancel-fixture",
         model_provider="fake",
         model_name="fixture",

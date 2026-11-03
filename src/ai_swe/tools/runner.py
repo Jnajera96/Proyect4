@@ -314,6 +314,7 @@ def ejecutar(
     timeout: float = DEFAULT_TIMEOUT_S,
     limits: JobLimits | None = None,
     docker=None,
+    network_egress_enabled: bool = False,
 ) -> TestRun:
     """Ejecuta `target` dentro del sandbox y devuelve la evidencia.
 
@@ -339,6 +340,14 @@ def ejecutar(
 
     if not math.isfinite(timeout) or timeout <= 0:
         raise RunnerError("timeout", "el plazo debe ser positivo y finito")
+
+    if docker is None and network_egress_enabled is not True:
+        raise RunnerError(
+            "network_egress",
+            "El aislamiento estricto de red network_egress_enabled=False exige un entorno "
+            "confinado como Docker; el ejecutor local de Windows no garantiza el bloqueo "
+            "físico de sockets",
+        )
 
     orden = list(argv)  # lista, nunca una cadena; `shell=False` siempre
     log.info("runner: ejecutando %s en %s", target, sandbox.raiz)

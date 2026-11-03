@@ -1979,9 +1979,13 @@ def run_tests(state: RunState) -> dict:
             docker_args = {"docker": settings.runner_docker} if settings.runner_docker else {}
             corrida = ejecutar_target(
                 sandbox, target, permitidos=permitidos, limits=limits if os.name == "nt" else None,
+                network_egress_enabled=settings.network_egress_enabled,
                 **docker_args,
             )
         except RunnerError as exc:
+            if exc.operacion == "network_egress":
+                return _escalar(state, _error(state, "NETWORK_EGRESS_UNAVAILABLE", "coder",
+                                              str(exc), recuperable=False))
             if exc.operacion == "dependencias":
                 return _escalar(state, _error(state, "DEPENDENCY_UNAVAILABLE", "coder",
                                               str(exc), recuperable=False))

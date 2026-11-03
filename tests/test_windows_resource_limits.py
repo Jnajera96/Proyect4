@@ -64,6 +64,7 @@ def test_committed_memory_is_bounded_with_a_successful_control(
     result = runner.ejecutar(
         sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=10,
         limits=JobLimits(memory_mb=memory_mb),
+        network_egress_enabled=True,
     )
     assert "before" in result.stdout
     assert result.passed == allowed
@@ -88,6 +89,7 @@ def test_process_limit_denies_creation_but_allows_an_in_limit_child(
     result = runner.ejecutar(
         sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=10,
         limits=JobLimits(max_processes=max_processes),
+        network_egress_enabled=True,
     )
     assert "before" in result.stdout
     assert result.passed == allowed
@@ -106,6 +108,7 @@ def test_total_user_cpu_limit_terminates_busy_job_before_wall_timeout(sandbox, m
     result = runner.ejecutar(
         sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=10,
         limits=JobLimits(cpu_seconds=1),
+        network_egress_enabled=True,
     )
     assert result.exit_code == 0xC0000044
     assert not result.passed

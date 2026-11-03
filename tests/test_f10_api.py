@@ -86,7 +86,7 @@ def cliente(tmp_path: Path):
 
 
 @pytest.fixture(autouse=True)
-def _inyeccion_limpia(tmp_path: Path):
+def _inyeccion_limpia(tmp_path: Path, monkeypatch):
     """Deja el estado de modulo que comparten API y grafo como estaba.
 
     El motor de la API usa el **mismo** modulo `nodes` que las pruebas, asi que
@@ -100,6 +100,8 @@ def _inyeccion_limpia(tmp_path: Path):
     **empiece** desde cero, que es la propiedad que se quiere, en lugar de confiar
     en que la anterior se porto bien.
     """
+    # Only trusted synthetic native fixtures opt in to host execution.
+    monkeypatch.setenv("AI_SWE_NETWORK_EGRESS_ENABLED", "true")
     _limpiar_inyecciones()
     yield
     _limpiar_inyecciones()

@@ -73,7 +73,7 @@ def node_dependency_issues(manifest, allowed_packages=(), available_modules=()):
     for pkg in sorted(set(manifest.third_party_modules) | set(manifest.declared_packages)):
         if pkg.lower() not in allowed:
             issues.append(f"El paquete npm '{pkg}' no está en allowed_packages.")
-        elif available and pkg.lower() not in available:
+        elif pkg.lower() not in available:
             issues.append(f"El paquete npm '{pkg}' no está instalado en el entorno offline.")
         if pkg in manifest.unmet_modules:
             issues.append(f"Declara '{pkg}' en package.json.")

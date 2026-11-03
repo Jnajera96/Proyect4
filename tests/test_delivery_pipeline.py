@@ -36,7 +36,7 @@ def test_promoted_offline_project_exposes_guide_without_get_side_effects(tmp_pat
     adapter = BuilderAdapter(project_files("calendar"))
     monkeypatch.setattr(model_routing, "gateway_from_settings", lambda _: ModelGateway([adapter]))
     settings = Settings(
-        _env_file=None,
+        _env_file=None, network_egress_enabled=True,
         profile_mode=False,
         profile_id="delivery-fixture",
         state_db_path=tmp_path / "state.sqlite3",

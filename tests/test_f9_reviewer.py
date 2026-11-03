@@ -200,12 +200,14 @@ class _AdapterPorRol:
 
 
 @pytest.fixture(autouse=True)
-def _inyeccion_limpia():
+def _inyeccion_limpia(monkeypatch):
     """Deja el gateway, el modelo del Reviewer y la raiz de worktrees limpios.
 
     Son atributos de modulo: sin restaurarlos, una prueba dejaria a las siguientes
     con un gateway falso o una raiz de worktrees que ya no existe.
     """
+    # Only trusted synthetic native fixtures opt in to host execution.
+    monkeypatch.setenv("AI_SWE_NETWORK_EGRESS_ENABLED", "true")
     yield
     nodes.usar_gateway(nodes.SIN_GATEWAY)
     nodes.usar_modelo_reviewer(None)

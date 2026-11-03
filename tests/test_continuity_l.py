@@ -185,7 +185,7 @@ def test_full_proposal_two_gates_promotion_receipt_and_rollback(tmp_path, monkey
     monkeypatch.setattr(
         nodes,
         'ejecutar_target',
-        lambda sandbox, target, permitidos=(), limits=None: TestRun(
+        lambda sandbox, target, permitidos=(), limits=None, network_egress_enabled=False: TestRun(
             target=target,
             command=['pytest', '-q'],
             exit_code=0,

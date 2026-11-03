@@ -253,6 +253,7 @@ def repository_node_files(root: Path, proposals=()):
 
 @dataclass
 class NodeDependencyManifest:
+    required_versions: dict[str, str] = field(default_factory=dict)
     builtin_modules: list[str] = field(default_factory=list)
     local_modules: list[str] = field(default_factory=list)
     third_party_modules: list[str] = field(default_factory=list)
@@ -265,6 +266,16 @@ class NodeDependencyManifest:
     @property
     def needs_manifest(self) -> bool:
         return bool(self.unmet_modules)
+
+    def preflight(self) -> dict:
+        """Static requirements are not evidence of an installed runtime."""
+        return {
+            "scope": "static_only", "runtime_available": False,
+            "required_versions": self.required_versions,
+            "version_source": "package.json engines; no se consulta PATH",
+            "offline_packages": [],
+            "missing_packages": sorted(set(self.third_party_modules) | set(self.declared_packages)),
+        }
 
 
 def npm_package_name(specifier: str) -> str:
@@ -312,6 +323,12 @@ def detect_node_dependencies(
         try:
             pkg_data = json.loads(content["package.json"])
             if isinstance(pkg_data, dict):
+                engines = pkg_data.get("engines", {})
+                if isinstance(engines, dict):
+                    manifest.required_versions = {
+                        name: value for name in ("node", "npm")
+                        if isinstance(value := engines.get(name), str) and len(value) <= 128
+                    }
                 for key in ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies"):
                     val = pkg_data.get(key)
                     if isinstance(val, dict):

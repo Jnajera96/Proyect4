@@ -176,18 +176,13 @@ class Settings(BaseSettings):
         default_factory=list,
         description="Enumeracion cerrada de paquetes instalables. Vacia = ninguno.",
     )
-    # Salida de red desde el entorno de ejecucion. **Todavia NO se aplica.** El
-    # aislamiento real de proceso (contenedor desechable, `network none`) llega en
-    # su propia fase; hasta entonces este campo se conserva porque es la
-    # configuracion que ese aislamiento consumira, pero **no se declara como si ya
-    # bloqueara nada**: hoy, con el valor que sea, la ejecucion de pruebas hereda el
-    # entorno del proceso padre. Prometer un bloqueo que no existe es la misma clase
-    # de fallo que el resto de esta fase corrige.
+    # Windows Job limita recursos, pero no bloquea sockets: el host exige opt-in.
     network_egress_enabled: bool = Field(
         default=False,
         description=(
-            "Salida de red deseada para el entorno de ejecucion. **No aplicado aun**: "
-            "se conectara al aislamiento real de proceso (fase de aislamiento)."
+            "False exige aislamiento estricto de red mediante Docker (network none). "
+            "True autoriza conscientemente pruebas locales sin bloqueo físico de sockets; "
+            "Docker conserva network none incluso con este opt-in."
         ),
     )
 

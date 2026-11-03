@@ -1,0 +1,169 @@
+{
+  "date": "2026-11-02",
+  "base_commit": "2cd8a05d8b957562ad7578d433179ec798904949",
+  "scope": "Post-rc25 source contracts; no packaging or external API calls",
+  "backend": {
+    "collected": 1223,
+    "passed": 1205,
+    "skipped": 18,
+    "failures": 0,
+    "errors": 0,
+    "duration_s": 761.331,
+    "junit_sha256": "513bf042d4d3752e13ad1e42032423a14897888b0aac0b48d2a9ed5f87e7aa4d",
+    "skipped_cases": [
+      {
+        "name": "tests.test_f13_stt.test_transcripcion_real_opt_in",
+        "reason": "opt-in: define AI_SWE_RUN_REAL_STT_TESTS=1 (descarga un modelo)"
+      },
+      {
+        "name": "tests.test_f7_sandbox.test_la_plataforma_no_permite_construir_el_vector_de_enlace",
+        "reason": "el sistema no permite crear enlaces: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\network-node-certified\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test' -> 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\network-node-certified\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test\\\\enlace_de_prueba'"
+      },
+      {
+        "name": "tests.test_model_gateway_real.test_llamada_real_controlada",
+        "reason": "prueba de integracion real: exige AI_SWE_RUN_REAL_PROVIDER_TESTS=1, AI_SWE_MODEL_API_KEY y AI_SWE_MODEL_NAME"
+      },
+      {
+        "name": "tests.test_project_bootstrap.test_linked_private_path_denied",
+        "reason": "Symlink privilege unavailable"
+      },
+      {
+        "name": "tests.test_windows_process_tree.test_runner_terminates_real_descendant[True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_process_tree.test_runner_terminates_real_descendant[False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_process_tree.test_assignment_failure_never_runs_user_code",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_process_tree.test_alias_interpreter_rejected_before_launch",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_process_tree.test_unverified_shutdown_never_reports_success",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_process_tree.test_abrupt_supervisor_death_closes_job_and_terminates_child[True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_process_tree.test_abrupt_supervisor_death_closes_job_and_terminates_child[False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_resource_limits.test_default_job_applies_resource_limits_before_any_process_starts",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_resource_limits.test_committed_memory_is_bounded_with_a_successful_control[64-False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_resource_limits.test_committed_memory_is_bounded_with_a_successful_control[256-True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_resource_limits.test_process_limit_denies_creation_but_allows_an_in_limit_child[1-False]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_resource_limits.test_process_limit_denies_creation_but_allows_an_in_limit_child[2-True]",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_resource_limits.test_total_user_cpu_limit_terminates_busy_job_before_wall_timeout",
+        "reason": "Windows Job Objects require non-Store Python"
+      },
+      {
+        "name": "tests.test_windows_resource_limits.test_cleanup_preserves_memory_and_cpu_limits",
+        "reason": "Windows Job Objects require non-Store Python"
+      }
+    ]
+  },
+  "focused": {
+    "collected": 44,
+    "passed": 44,
+    "skipped": 0,
+    "failures": 0,
+    "errors": 0,
+    "duration_s": 3.01,
+    "junit_sha256": "88278848c712e9cef2c5469ac6899e334f83390a63bc0750f298a2e40267e6f0",
+    "skipped_cases": []
+  },
+  "official_cpython_windows": {
+    "collected": 30,
+    "passed": 30,
+    "skipped": 0,
+    "failures": 0,
+    "errors": 0,
+    "duration_s": 18.971,
+    "junit_sha256": "b684b2f9c77852bb3226f33af08bff206eeda6e05bb1e4a9b7ffed14e63f0e37",
+    "skipped_cases": []
+  },
+  "docker_watchdog_recheck": {
+    "collected": 3,
+    "passed": 3,
+    "skipped": 0,
+    "failures": 0,
+    "errors": 0,
+    "duration_s": 75.947,
+    "junit_sha256": "ebdcdc8f23cd7f832e4a844112a59642c98ceed4a6c35041e92d1b5481a6e5fe",
+    "skipped_cases": []
+  },
+  "frontend": {
+    "passed": 41,
+    "failed": 0,
+    "build": "PASS",
+    "node": "24.22.1",
+    "npm_offline": true
+  },
+  "network": {
+    "default": false,
+    "native_false": "RunnerError: network_egress before process/socket",
+    "graph_error": "NETWORK_EGRESS_UNAVAILABLE",
+    "native_true": "explicit opt-in",
+    "docker_network": "none",
+    "docker_image": "sha256:bdfbf24d45bbdbb966f5cdd3fe45e5a1b3f323043f4140a8787ffcfb8502721c"
+  },
+  "node": {
+    "scope": "static_only",
+    "runtime_available": false,
+    "offline_packages": [],
+    "versions": "package.json engines; never PATH",
+    "missing": "DEPENDENCY_UNAVAILABLE",
+    "host_install_or_execution": false
+  },
+  "verification_history": [
+    "Initial regression exposed fixtures without explicit native opt-in and mocks with old signatures; corrected without relaxing assertions.",
+    "Second regression: 1203 PASS / 18 SKIP / 2 FAIL; module-scoped evaluation fixture opt-in moved to its actual scope.",
+    "Third regression: 1204 PASS / 18 SKIP / 1 FAIL; Docker controller disabled-watchdog fixture exceeded creation deadline under concurrent validation.",
+    "Docker isolated recheck and final full regression recorded separately; no security timeout was relaxed."
+  ],
+  "preserved_test_journal": {
+    "path": "C:/Users/jose_/AppData/Local/Temp/network-node-verified/test_container_watchdog_surviv1/sessions/aiswe-docker-hbc793k2",
+    "owner": "4b07dcd8ef31472d8f0b124d85fbdb15",
+    "containers_remaining": 0,
+    "state": "uncertain creation; journal intentionally preserved, no unsafe forced recovery"
+  },
+  "historical_rc25": {
+    "sha256": "323e3d97ded9b35fbd3dfcd09d6f5d3ebdea4ca6a704bb25098ecdd00833766c",
+    "unchanged": true
+  },
+  "historical_v010": "b158d9b3e5cecc9c7d3fac3e3e6031d1abcfc6bb",
+  "paid_api_cost_usd": 0,
+  "paid_model_calls": 0,
+  "push": false,
+  "remote_semgrep_scan": false,
+  "deferred": [
+    "new portable",
+    "independent Windows PC",
+    "physical continuity pilot",
+    "GitHub publication pilot",
+    "isolated Node runtime"
+  ]
+}

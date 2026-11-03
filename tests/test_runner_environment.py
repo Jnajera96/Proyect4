@@ -18,7 +18,8 @@ def test_real_child_does_not_inherit_server_credentials(sandbox, monkeypatch):
         "    assert not present, 'Unexpected credential names: ' + ', '.join(present)\n",
         encoding="utf-8",
     )
-    result = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=30)
+    result = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=30,
+        network_egress_enabled=True)
     assert result.exit_code == 0, result.stderr + result.stdout
     assert "synthetic-secret-not-a-real-token" not in result.stdout + result.stderr
 

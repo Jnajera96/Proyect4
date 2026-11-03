@@ -79,9 +79,8 @@ Langfuse. MCP, Graphify/Knowledge Graph y TTS conservan una línea posterior de 
 
 ### Ruta recomendada después de rc25
 
-1. Cerrar el contrato de bloqueo de red y la comprobación de runtime/paquetes Node,
-   o delimitar explícitamente el soporte entregado. Validar offline con pruebas
-   negativas; nunca instalar o ejecutar npm de proyectos evaluados en el host.
+1. Contratos P0 de red y Node conciliados en fuente: ver `NETWORK-NODE-CONTRACTS-VALIDATION-2026-11-02.md`. Distribuirlos en un candidato
+   posterior; rc25 no se modifica. Node permanece estático, sin runtime npm certificado.
 2. Verificar el recorrido completo de creación y modificación con productos
    representativos, incluyendo conservación de datos y apertura de la aplicación.
    Los dobles offline no acreditan calidad de modelos; inferencias reales requieren
@@ -97,10 +96,10 @@ Langfuse. MCP, Graphify/Knowledge Graph y TTS conservan una línea posterior de 
 
 | Prioridad | Área | Estado comprobado | Criterio pendiente y siguiente acción |
 | --- | --- | --- | --- |
-| P0 | Contrato de egreso de red | network_egress_enabled sigue declarativo; Docker aplica network none por su propia política y Windows Job no bloquea red. | Reconciliar configuración y backend seleccionado, y probar rechazo real cuando se declara bloqueo. No inferir seguridad por el flag. |
+| P0 | Contrato de egreso de red | **Cerrado en fuente dentro del alcance local.** False exige Docker network none; el runner nativo rechaza antes del proceso/socket. True es opt-in consciente sin aislamiento de red. El motor consume el flag y escala una vez. | Acta NETWORK-NODE-CONTRACTS-VALIDATION-2026-11-02.md. Requiere portable posterior a rc25; no implica firewall nativo ni certificación pública. |
 | P0 | Integridad de propuestas multiarchivo | Corregidos EOF, bytes UTF-8, hash escrito, promoción autocrlf y claridad de fallos de pruebas en fuente. Acta: `PATCH-INTEGRITY-VALIDATION-2026-11-02.md`. | Incluido y verificado en rc25 (57 PASS/1 SKIP del bundle y smoke 14/14). Matriz física pendiente. |
 | P0 | Recuperación y preservación | Rechazo ante integridad fallida, contratos de importación y restauración sin repositorio verificados en fuente y rc24; respaldo cifrado y migraciones existentes sin regresión. | Mantener datos ante daño y restaurar respaldos verificados; la matriz física independiente sigue pendiente. |
-| P0 | Dependencias Node | Conectadas a Coder, runner y guía en `a5e7e7e`. Se corrige autorización con lista vacía y paquetes declarados sin imports; ambos nodos escalan antes de herramientas. Acta: `NODE-DEPENDENCY-GATES-VALIDATION.md`. | Verificar runtime, versiones y disponibilidad offline antes de afirmar soporte Node completo. Incluida y verificada en rc24; no implica disponibilidad npm offline. No ejecutar npm install ni scripts del proyecto automáticamente en el host. |
+| P0 | Dependencias Node | **Cerrado como análisis estático, gates y preflight.** Paquetes no autorizados, no declarados o ausentes offline detienen Coder/Runner. La guía registra requisitos de engines e inventario vacío sin consultar PATH. | Sin npm install/update/npx ni scripts del proyecto en host; guía Node sin lanzador. No se acredita ejecución Node aislada. Distribución posterior a rc25 pendiente. |
 | P0 | Seguridad efectiva por perfil | HSTS según configuración, throttle 429/Retry-After y auditoría sin contraseña verificados en frontera de perfiles y rc24. | Cierre local de los controles solicitados. TLS real/certificados, revisión de todas las rutas y producción pública siguen sin certificar. |
 | P1 | Auto-respaldo en ciclo de vida | Verificados clave/header en memoria, worker, archivo cifrado, logs INFO sin contraseña y restauración de pausa humana, en fuente y rc24. | Cierre local del recorrido solicitado; concurrencia adversa, renovación de credenciales y recuperación física entre equipos tienen validación independiente. |
 | P1 | Motor y nuevos productos | Puertas humanas, propuestas y promoción verificadas offline; aislamiento Docker opt-in. | Validar productos representativos con los modelos que se pretenden recomendar y evidencia de calidad independiente. Actualmente bloqueado para inferencias pagadas. |
@@ -147,3 +146,11 @@ la instalación global. Su actualización del sistema queda fuera de esta ejecuc
 - `CONTINUITY-FOLLOWUP-2026-10-30.md`: recuperación local frente a otro equipo.
 - `PORTABLE-SECOND-PC-PILOT.md`: procedimiento de destino.
 - `RELEASE-RECOVERY-REVIEW-2026-11-02.md`: evidencia de esta revisión.
+
+## Conciliación posterior a rc25: red y Node
+
+Acta: [NETWORK-NODE-CONTRACTS-VALIDATION-2026-11-02.md](NETWORK-NODE-CONTRACTS-VALIDATION-2026-11-02.md).
+Evidencia: [NETWORK-NODE-CONTRACTS-EVIDENCE-2026-11-02.json](NETWORK-NODE-CONTRACTS-EVIDENCE-2026-11-02.json).
+Los dos P0 se cierran dentro de su alcance definido en fuente, conservando rc25.
+La estimación histórica sigue en 91/100; cerrar estos contratos no acredita calidad
+de modelos, certificación Windows independiente ni los pilotos físicos/GitHub pausados.

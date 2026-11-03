@@ -153,13 +153,15 @@ def sandbox(repo: Path, tmp_path: Path) -> Sandbox:
 
 
 @pytest.fixture(autouse=True)
-def _inyeccion_limpia(tmp_path: Path):
+def _inyeccion_limpia(tmp_path: Path, monkeypatch):
     """Fija la raiz de worktrees y los targets, y **restaura** al terminar.
 
     Son atributos de modulo: sin restaurarlos, una prueba dejaria a las siguientes
     con una raiz de worktrees que ya no existe.
     """
     nodes.usar_workspace_root(tmp_path / "workspaces")
+    # Opt-in only for this module's trusted synthetic native-execution fixtures.
+    monkeypatch.setenv("AI_SWE_NETWORK_EGRESS_ENABLED", "true")
     nodes.usar_targets_permitidos(("pytest.unit",))
     yield
     nodes.usar_workspace_root(None)
@@ -263,7 +265,8 @@ def test_ningun_comando_se_ejecuta_a_traves_de_una_shell() -> None:
 
 def test_el_comando_expuesto_coincide_con_el_ejecutado(sandbox: Sandbox) -> None:
     """`argv` en la evidencia es el comando real, no una descripcion."""
-    corrida = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",))
+    corrida = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",),
+        network_egress_enabled=True)
 
     assert corrida.argv == list(TARGET_COMMANDS["pytest.unit"])
     assert comando_de("pytest.unit") == TARGET_COMMANDS["pytest.unit"]
@@ -280,7 +283,8 @@ def test_un_target_desconocido_no_tiene_comando() -> None:
 
 def test_el_runner_ejecuta_pruebas_de_verdad(sandbox: Sandbox) -> None:
     """Un `tests/` que pasa produce un `TestRun` con codigo de salida 0 real."""
-    corrida = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",))
+    corrida = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",),
+        network_egress_enabled=True)
 
     assert corrida.target == "pytest.unit"
     assert corrida.exit_code == 0, f"salida:\n{corrida.stdout}\n{corrida.stderr}"
@@ -302,7 +306,8 @@ def test_un_test_que_falla_es_un_resultado_no_una_excepcion(repo: Path, tmp_path
 
     b = crear(repo, "run-falla", workspace_root=tmp_path / "workspaces")
     try:
-        corrida = ejecutar(b, "pytest.unit", permitidos=("pytest.unit",))
+        corrida = ejecutar(b, "pytest.unit", permitidos=("pytest.unit",),
+            network_egress_enabled=True)
     finally:
         destruir(b)
 
@@ -313,7 +318,8 @@ def test_un_test_que_falla_es_un_resultado_no_una_excepcion(repo: Path, tmp_path
 
 def test_un_timeout_produce_evidencia_en_lugar_de_excepcion(sandbox: Sandbox) -> None:
     """Un objetivo colgado se convierte en evidencia, no en un fallo del sistema."""
-    corrida = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=0.001)
+    corrida = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=0.001,
+        network_egress_enabled=True)
 
     assert corrida.exit_code == EXIT_TIMEOUT
     assert not corrida.passed
@@ -347,7 +353,7 @@ def test_el_runner_llama_a_subprocess_sin_shell(sandbox: Sandbox, monkeypatch) -
         return original(*args, **kwargs)
 
     monkeypatch.setattr(sp, "Popen", espia)
-    ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",))
+    ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), network_egress_enabled=True)
 
     assert capturado, "no se llamo a subprocess.Popen"
     assert capturado["kwargs"].get("shell") is False, "el runner invoca con shell habilitada"
@@ -387,7 +393,7 @@ def test_el_runner_inyecta_el_src_del_sandbox_en_el_pythonpath(
 
     monkeypatch.setattr(sp, "Popen", espia)
     try:
-        ejecutar(b, "pytest.unit", permitidos=("pytest.unit",))
+        ejecutar(b, "pytest.unit", permitidos=("pytest.unit",), network_egress_enabled=True)
     finally:
         destruir(b)
 
@@ -401,7 +407,8 @@ def test_el_runner_inyecta_el_src_del_sandbox_en_el_pythonpath(
 
 def test_la_salida_se_recorta_al_limite_del_contrato(sandbox: Sandbox) -> None:
     """El contrato tiene un maximo; el runner no puede producir un `TestRun` invalido."""
-    corrida = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",))
+    corrida = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",),
+        network_egress_enabled=True)
 
     assert len(corrida.stdout) <= 200_000
     assert len(corrida.stderr) <= 200_000
@@ -413,7 +420,7 @@ def test_la_salida_se_recorta_al_limite_del_contrato(sandbox: Sandbox) -> None:
 def test_un_target_no_permitido_se_rechaza_antes_de_ejecutar(sandbox: Sandbox) -> None:
     """La lista permitida es una puerta, no una sugerencia."""
     with pytest.raises(TargetNoPermitido) as exc:
-        ejecutar(sandbox, "ruff.check", permitidos=("pytest.unit",))
+        ejecutar(sandbox, "ruff.check", permitidos=("pytest.unit",), network_egress_enabled=True)
 
     assert "no esta en la lista permitida" in str(exc.value)
 
@@ -421,7 +428,8 @@ def test_un_target_no_permitido_se_rechaza_antes_de_ejecutar(sandbox: Sandbox) -
 def test_un_target_permitido_sin_comando_definido_se_rechaza(sandbox: Sandbox) -> None:
     """Permitido por configuracion pero sin comando: no se inventa uno."""
     with pytest.raises(RunnerError) as exc:
-        ejecutar(sandbox, "pytest.inventado", permitidos=("pytest.inventado",))
+        ejecutar(sandbox, "pytest.inventado", permitidos=("pytest.inventado",),
+            network_egress_enabled=True)
 
     assert "no tiene comando definido" in str(exc.value)
 

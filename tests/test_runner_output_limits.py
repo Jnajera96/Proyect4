@@ -24,7 +24,8 @@ def test_large_output_retains_tail_without_unbounded_parent_memory(sandbox, monk
     scripted_target(monkeypatch, code)
     tracemalloc.start()
     try:
-        result = runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=30)
+        result = runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=30,
+            network_egress_enabled=True)
         _, peak = tracemalloc.get_traced_memory()
     finally:
         tracemalloc.stop()
@@ -38,7 +39,8 @@ def test_large_output_retains_tail_without_unbounded_parent_memory(sandbox, monk
 def test_binary_and_unicode_output_cannot_break_capture(sandbox, monkeypatch):
     code = "import os;os.write(1,b'\\xff'+ 'Español 😀'.encode('utf-8'));os.write(2,b'error')"
     scripted_target(monkeypatch, code)
-    result = runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=10)
+    result = runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=10,
+        network_egress_enabled=True)
     assert result.exit_code == 0 and "Español 😀" in result.stdout
     assert "\ufffd" in result.stdout and result.stderr == "error"
 
@@ -46,7 +48,8 @@ def test_binary_and_unicode_output_cannot_break_capture(sandbox, monkeypatch):
 def test_continuous_output_cannot_starve_deadline(sandbox, monkeypatch):
     code = "import os\nwhile True:\n os.write(1,b'x'*65536);os.write(2,b'y'*65536)"
     scripted_target(monkeypatch, code)
-    result = runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=0.4)
+    result = runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=0.4,
+        network_egress_enabled=True)
     assert result.exit_code == runner.EXIT_TIMEOUT and not result.passed
     assert len(result.stdout) <= 200_000 and len(result.stderr) <= 200_000
     assert result.duration_s < 8 and "supero" in result.stderr
@@ -56,7 +59,8 @@ def test_continuous_output_cannot_starve_deadline(sandbox, monkeypatch):
 def test_invalid_deadline_never_launches_a_process(sandbox, monkeypatch, timeout):
     monkeypatch.setattr(runner.subprocess, "Popen", lambda *a, **k: pytest.fail("Must not spawn"))
     with pytest.raises(runner.RunnerError, match="positivo y finito"):
-        runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=timeout)
+        runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=timeout,
+            network_egress_enabled=True)
 
 
 def test_capture_setup_failure_closes_the_child_without_unbounded_fallback(sandbox, monkeypatch):
@@ -74,5 +78,6 @@ def test_capture_setup_failure_closes_the_child_without_unbounded_fallback(sandb
     monkeypatch.setattr(runner.subprocess, "Popen", launch)
     monkeypatch.setattr(runner.os, "set_blocking", unavailable)
     with pytest.raises(runner.RunnerError, match="acotada"):
-        runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=10)
+        runner.ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=10,
+            network_egress_enabled=True)
     assert len(processes) == 1 and processes[0].poll() is not None

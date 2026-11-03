@@ -93,7 +93,9 @@ def test_coder_dependency_check_stops_on_unpermitted_npm_package(tmp_path: Path)
         nodes.usar_gateway(previo)
 
 
-def test_launch_guide_node_app_instructions_without_host_execution(tmp_path: Path) -> None:
+def test_launch_guide_node_app_instructions_without_host_execution(
+    tmp_path: Path, monkeypatch,
+) -> None:
     repo = tmp_path / "node_project"
     repo.mkdir()
     server_content = "import http from 'node:http';\nconsole.log('ready');"
@@ -125,6 +127,18 @@ def test_launch_guide_node_app_instructions_without_host_execution(tmp_path: Pat
     )
 
     guide = describe(st)
+    import pytest
+
+    from ai_swe.launch_guide import launch, prepare
+
+    monkeypatch.setattr("subprocess.Popen", lambda *a, **kw: pytest.fail("No host process"))
+    assert guide.available is False and guide.command == ""
+    assert not any("Abre iniciar.bat" in instruction for instruction in guide.instructions)
+    assert guide.node_preflight["runtime_available"] is False
+    assert prepare(st).prepared is False
+    with pytest.raises(ValueError, match="ejecución local no admitida"):
+        launch(st)
+    assert not (repo / "iniciar.bat").exists()
     assert guide.kind == "node_app"
     assert any("Aplicación Node.js detectada" in ins for ins in guide.instructions)
     assert any("No se ejecuta npm install ni scripts automáticamente" in ins for ins in guide.instructions)

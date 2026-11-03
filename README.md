@@ -14,6 +14,13 @@ del runner elegido: Windows Job limita recursos y Docker opt-in aísla ejecució
 un worktree o el flag `network_egress_enabled` no bloquean por sí solos la red nativa.
 Autorizar paquetes no los instala ni acredita un runtime Node offline.
 
+En las fuentes posteriores a rc25, `network_egress_enabled=False` exige Docker
+con `network none`: el runner nativo rechaza las pruebas antes de lanzar procesos.
+El opt-in explícito `True` permite pruebas locales sin aislamiento de sockets.
+Node queda limitado a análisis estático, autorización y preflight; no se ofrece
+un lanzador npm en el host. Estos contratos requieren un nuevo portable para
+distribuirse; rc25 se conserva intacto.
+
 Siguen pendientes la validación independiente en destino, calidad de modelos y
 los pilotos pausados de continuidad y publicación. MCP, Langfuse, Graphify/Knowledge
 Graph y TTS son evolución futura, no capacidades acreditadas ni requisitos nuevos

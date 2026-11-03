@@ -92,7 +92,7 @@ def test_short_request_waits_for_human_and_coder_receives_adjustments(tmp_path, 
     fake = BuilderAdapter(project_files("calendar"))
     monkeypatch.setattr(model_routing, "gateway_from_settings", lambda _: ModelGateway([fake]))
     settings = Settings(
-        _env_file=None,
+        _env_file=None, network_egress_enabled=True,
         profile_id="product-fixture",
         remote_model_roles=["coder", "reviewer"],
         state_db_path=tmp_path / "state.sqlite3",
@@ -138,7 +138,7 @@ def test_new_products_have_four_dimensions_and_wait_for_confirmation(tmp_path, m
     fake = FakeModelAdapter()
     monkeypatch.setattr(model_routing, "gateway_from_settings", lambda _: ModelGateway([fake]))
     settings = Settings(
-        _env_file=None,
+        _env_file=None, network_egress_enabled=True,
         profile_id="universal-fixture",
         remote_model_roles=["coder", "reviewer"],
         state_db_path=tmp_path / "state.sqlite3",

@@ -32,6 +32,7 @@ class LaunchGuide(BaseModel):
     missing_modules: list[str] = Field(default_factory=list)
     suggested_requirements: str = ""
     installation_command: str = ""
+    node_preflight: dict | None = None
 
 
 def approved_repository(state: RunState) -> Path:
@@ -255,7 +256,25 @@ def describe(state: RunState) -> LaunchGuide:
 
         files = [f for f in repository_node_files(root) if not Path(f.path).name.startswith("test_")]
         node_manifest = detect_node_dependencies(files)
+        guide.available = False
+        guide.command = ""
+        guide.launch_action = "none"
+        guide.instructions = [first_instruction]
+        guide.node_preflight = node_manifest.preflight()
+        guide.summary_es = (
+            "Proyecto Node: análisis estático disponible; ejecución local no admitida en v0.2.0."
+        )
         guide.instructions.append("Aplicación Node.js detectada.")
+        guide.instructions.append(
+            "No hay un runtime Node ni paquetes npm offline certificados para esta aplicación. "
+            "El Node del equipo de compilación no acredita disponibilidad en el portable."
+        )
+        guide.instructions.append(
+            "Versiones requeridas en package.json (engines): "
+            + (", ".join(f"{name}: {version}"
+                         for name, version in node_manifest.required_versions.items())
+               or "No declaradas; no se presume una versión mínima compatible.")
+        )
         if node_manifest.unmet_modules:
             guide.instructions.append(
                 "Declara las dependencias externas en package.json: "
@@ -263,7 +282,7 @@ def describe(state: RunState) -> LaunchGuide:
             )
         guide.instructions.append(
             "No se ejecuta npm install ni scripts automáticamente en el host. "
-            "Revisa el proyecto antes de ejecutarlo manualmente."
+            "La ejecución requiere un entorno aislado preparado y validado por separado."
         )
     guide.prepared = (
         launcher.is_file()

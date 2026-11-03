@@ -25,7 +25,8 @@ def test_root_pytest_is_real(tmp_path):
         run_id="calculator",
         creado_por_nosotros=False,
     )
-    result = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",))
+    result = ejecutar(sandbox, "pytest.unit", permitidos=("pytest.unit",),
+        network_egress_enabled=True)
     assert result.exit_code == 0, result.stderr + result.stdout
     assert "1 passed" in result.stdout
 
@@ -139,7 +140,7 @@ def test_compiled_calculator_graph_creates_root_tests_and_persists_evidence(tmp_
         lambda _: ModelGateway([FakeModelAdapter(structured=proposal)]),
     )
     settings = Settings(
-        _env_file=None,
+        _env_file=None, network_egress_enabled=True,
         profile_id="calculator-test",
         remote_model_roles=["coder"],
         workspace_root=tmp_path / "worktrees",
@@ -182,7 +183,8 @@ def test_missing_repository_stops_before_remote_coder(tmp_path, monkeypatch):
         lambda _: (_ for _ in ()).throw(AssertionError("model must not be called")),
     )
     settings = Settings(
-        _env_file=None, remote_model_roles=["coder"], workspace_root=tmp_path / "worktrees"
+        _env_file=None,
+        remote_model_roles=["coder"], workspace_root=tmp_path / "worktrees"
     )
     with RunStore(tmp_path / "no-repo.sqlite3") as store:
         engine = RunEngine(store, settings=settings)
@@ -216,7 +218,8 @@ def test_fake_git_metadata_stops_before_remote_call(tmp_path, monkeypatch):
 
             subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True, capture_output=True)
         settings = Settings(
-            _env_file=None, remote_model_roles=["coder"], workspace_root=tmp_path / "worktrees"
+            _env_file=None,
+            remote_model_roles=["coder"], workspace_root=tmp_path / "worktrees"
         )
         with RunStore(tmp_path / (kind + ".sqlite3")) as store:
             engine = RunEngine(store, settings=settings)

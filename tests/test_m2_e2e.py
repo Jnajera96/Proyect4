@@ -210,8 +210,10 @@ def _gateway(veredictos: object, *, propuesta: dict | None = None) -> _AdapterPo
 
 
 @pytest.fixture(autouse=True)
-def _inyeccion_limpia(tmp_path: Path):
+def _inyeccion_limpia(tmp_path: Path, monkeypatch):
     """Deja gateway, modelo del Reviewer y raiz de worktrees limpios al terminar."""
+    # Only trusted synthetic native fixtures opt in to host execution.
+    monkeypatch.setenv("AI_SWE_NETWORK_EGRESS_ENABLED", "true")
     nodes.usar_workspace_root(tmp_path / "workspaces")
     nodes.usar_targets_permitidos(("pytest.unit",))
     yield

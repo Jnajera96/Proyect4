@@ -261,9 +261,12 @@ def test_las_metricas_leen_el_desglose_de_tokens_del_presupuesto() -> None:
 def bateria_minima(tmp_path_factory: pytest.TempPathFactory) -> InformeEvaluacion:
     """Ejecuta dos tareas en los dos modos: una directa y una que exige correccion."""
     raiz = tmp_path_factory.mktemp("evaluacion")
-    return ejecutar_bateria(
-        tareas=(tarea_por_id("EXP-01"), tarea_por_id("EXP-02")), raiz_trabajo=raiz
-    )
+    # This module-scoped fixture runs before function-scoped opt-ins.
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setenv("AI_SWE_NETWORK_EGRESS_ENABLED", "true")
+        return ejecutar_bateria(
+            tareas=(tarea_por_id("EXP-01"), tarea_por_id("EXP-02")), raiz_trabajo=raiz
+        )
 
 
 def test_una_tarea_directa_la_resuelven_los_dos_modos(bateria_minima: InformeEvaluacion) -> None:
