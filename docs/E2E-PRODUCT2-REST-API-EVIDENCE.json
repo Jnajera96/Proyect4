@@ -1,0 +1,149 @@
+{
+  "verified_at_utc": "2026-11-03T16:44:28Z",
+  "verifier_sha256": "d3e3c44c81f6a7ffb98e2852e27b6e00040a28d176d42c4259e63a05135548e4",
+  "product": "Product 2: Offline task REST service",
+  "status": "APPROVED_LOCAL_SCOPE",
+  "source_commit": "1aebc015dff3028001821696bec6650a886df921",
+  "python": "3.13.14",
+  "seconds": 12.148001800000202,
+  "repository": "C:\\Users\\jose_\\AppData\\Local\\Temp\\aiswe-rest-e2e-5vnq84j0\\user-repo",
+  "baseline_commit": "20fd6d4bee0f16480c45cc1ce5c2d252bacba453",
+  "stages": [
+    "awaiting_human_requirements_confirmation",
+    "awaiting_approval",
+    "completed"
+  ],
+  "human_gates": 2,
+  "artifacts": {
+    "task_api.py": {
+      "sha256": "3a585ecd3e4429a930e1185622eba8dcfbb56837e775e45a59aef8803484582e",
+      "bytes": 2818
+    },
+    "test_task_api.py": {
+      "sha256": "3b697d6d0b098447c79ecd408d5dea3f9dbe93b9fb8e183063dc9ac0f875b526",
+      "bytes": 2535
+    },
+    "conftest.py": {
+      "sha256": "8b3fb5c7d4c1a7970c8fe7ac4db6d77267fc02d96432f3778426127df6a32a16",
+      "bytes": 631
+    },
+    "requirements.txt": {
+      "sha256": "d6125dafe4cc2de85e3497b394893e4f8bf2a2e9b94d03554a37b5702494e375",
+      "bytes": 95
+    }
+  },
+  "sandbox_tests": [
+    {
+      "target": "pytest.unit",
+      "exit_code": 0,
+      "stdout": ".........                                                                [100%]\r\n9 passed in 0.59s\r\n",
+      "stderr": "",
+      "duration_s": 2.436237300000357,
+      "argv": [
+        "C:\\Users\\jose_\\.codex\\worktrees\\provider-preflight\\proyecto4-ai-swe\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-q",
+        "--no-header",
+        "-p",
+        "no:cacheprovider",
+        "-m",
+        "not real_provider",
+        "."
+      ]
+    },
+    {
+      "target": "ruff.check",
+      "exit_code": 0,
+      "stdout": "All checks passed!\n",
+      "stderr": "",
+      "duration_s": 0.3579411999999138,
+      "argv": [
+        "C:\\Users\\jose_\\.codex\\worktrees\\provider-preflight\\proyecto4-ai-swe\\.venv\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ]
+    }
+  ],
+  "promoted_tests": [
+    {
+      "target": "pytest.unit",
+      "exit_code": 0,
+      "stdout": ".........                                                                [100%]\r\n9 passed in 0.97s\r\n",
+      "stderr": "",
+      "duration_s": 3.8812502000000677,
+      "argv": [
+        "C:\\Users\\jose_\\.codex\\worktrees\\provider-preflight\\proyecto4-ai-swe\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-q",
+        "--no-header",
+        "-p",
+        "no:cacheprovider",
+        "-m",
+        "not real_provider",
+        "."
+      ]
+    },
+    {
+      "target": "ruff.check",
+      "exit_code": 0,
+      "stdout": "All checks passed!\n",
+      "stderr": "",
+      "duration_s": 0.45368469999993977,
+      "argv": [
+        "C:\\Users\\jose_\\.codex\\worktrees\\provider-preflight\\proyecto4-ai-swe\\.venv\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ]
+    }
+  ],
+  "dependencies": {
+    "fastapi": "0.142.2",
+    "pydantic": "2.13.5",
+    "httpx": "0.28.1",
+    "starlette": "1.7.0",
+    "anyio": "4.15.1",
+    "uvicorn": "0.54.0"
+  },
+  "installed_packages": false,
+  "model": {
+    "adapter": "FakeModelAdapter",
+    "calls": 2,
+    "roles": [
+      "coder",
+      "reviewer"
+    ],
+    "paid_spend_usd": 0
+  },
+  "http_statuses_asserted": [
+    200,
+    201,
+    404,
+    422
+  ],
+  "launch_command": [
+    "python",
+    "task_api.py"
+  ],
+  "launch_server_tested": false,
+  "network": {
+    "real_http_server": false,
+    "http_transport": "ASGI TestClient in memory",
+    "python_external_connect_and_dns_guard": true,
+    "guard_scope": "pytest subprocesses only; not an OS firewall",
+    "guard_negative_probe_passed": true,
+    "os_network_isolation": false,
+    "native_fixture_opt_in": true,
+    "observed_external_provider_calls": 0
+  },
+  "limitations": [
+    "Fixed simulated proposals/review, not LLM quality evidence",
+    "Worktree plus Python guards is not Docker/VM isolation",
+    "Loopback event-loop control sockets permitted"
+  ]
+}

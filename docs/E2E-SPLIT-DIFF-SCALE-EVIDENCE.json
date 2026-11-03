@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "files": 25,
+  "split_rows": 50,
+  "checks": [
+    "25-file index rendered",
+    "Actual split mode preserves all 25 files and 50 paired rows",
+    "Last-file navigation invokes actual scroll and reaches viewport",
+    "Fold and expand preserve complete split view",
+    "No page errors or external page requests"
+  ],
+  "split_switch_ms": [
+    107.79999999888241,
+    18.700000001117587,
+    16.90000000037253,
+    21.799999998882413,
+    13.900000000372529
+  ],
+  "max_split_switch_ms": 107.79999999888241,
+  "threshold_ms": 1000,
+  "browser": "156.0.8078.80",
+  "external_page_requests": [],
+  "paid_calls": 0,
+  "scope": "Local browser fixture, not packaged UI or whole-host network capture",
+  "verification_date": "2026-11-03",
+  "verifier": "tools/verify_split_diff_scale.cjs",
+  "verifier_sha256": "be8d33d7101749090361518272c5650d6a044020b2f869114555da1f92e93c89"
+}
