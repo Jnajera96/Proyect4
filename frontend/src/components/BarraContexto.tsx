@@ -11,7 +11,7 @@
  * backend; si no hay límite monetario no se dibuja una barra de coste.
  */
 import { useMemo } from "react";
-import { ESTADOS_TERMINALES, ETIQUETA_ESTADO, type Project, type RunEvent, type RunState } from "../lib/contracts";
+import { ESTADOS_TERMINALES, ETIQUETA_ESTADO, type Project, type RunError, type RunEvent, type RunState } from "../lib/contracts";
 import { calcular } from "./DiagramaFlujo";
 import type { VistaId } from "./Navegacion";
 
@@ -57,6 +57,14 @@ export function BarraContexto({
   const tiempo = porcentaje(estado.budget.elapsed_seconds, estado.budget.max_seconds);
   const tono = (pct: number) => (pct >= 90 ? "error" : pct >= 70 ? "aviso" : "");
 
+  const errorPresupuesto = [...(estado?.errors || [])].reverse().find(
+    (e: RunError) => e.error_class === "BUDGET_EXCEEDED"
+  );
+  const esPausaPresupuesto = estado?.status === "paused" && Boolean(errorPresupuesto);
+  const textoEstado = esPausaPresupuesto
+    ? "pausado por presupuesto"
+    : (ESTADO_CORTO[estado.status] ?? ETIQUETA_ESTADO[estado.status]);
+
   return (
     <section className="barra-contexto" aria-label="Contexto de la ejecución seleccionada">
       <div className="bc-identidad">
@@ -70,7 +78,7 @@ export function BarraContexto({
             </button>
           </span>
           <span className={`bc-estado ${TONO_ESTADO[estado.status] ?? ""}`}>
-            {ESTADO_CORTO[estado.status] ?? ETIQUETA_ESTADO[estado.status]}
+            {textoEstado}
           </span>
         </div>
       </div>

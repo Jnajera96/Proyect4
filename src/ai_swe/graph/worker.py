@@ -132,6 +132,8 @@ class RunWorker:
                 error_class="RESUME_EXCEPTION",
                 message=f"{type(exc).__name__}: {exc}"[:1000],
             )
+        finally:
+            self._engine.olvidar_reclamacion(run_id)
 
     def shutdown(self, wait: bool = True) -> None:
         """Detiene el trabajador.

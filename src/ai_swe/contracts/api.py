@@ -63,6 +63,7 @@ class EventKind(StrEnum):
     RUN_DONE = "run.done"  # cierra el flujo SSE (no es un alias)
     RUN_COMPLETED = "run.completed"  # final feliz, explicito
     RUN_FAILED = "run.failed"  # final no feliz, explicito
+    RUN_PAUSED = "run.paused"  # pausa por presupuesto o manual
 
     # --- puertas humanas ------------------------------------------------------
     RUN_AWAITING_HUMAN = "run.awaiting_human"  # cualquier puerta

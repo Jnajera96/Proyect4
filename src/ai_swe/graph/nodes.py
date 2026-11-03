@@ -629,9 +629,9 @@ def _es_fallo_esperado(exc: BaseException) -> bool:
     Se comparte entre `interpret` (F3) y `plan` (F4): el contrato de degradacion es
     el mismo en las dos fases, y duplicarlo permitiria que divergieran.
     """
-    from ai_swe.models import ModelGatewayError
+    from ai_swe.models import BudgetExceededError, ModelGatewayError
 
-    return isinstance(exc, ModelGatewayError)
+    return isinstance(exc, ModelGatewayError) and not isinstance(exc, BudgetExceededError)
 
 
 # ------------------------------------------------------ F4: Supervisor (plan)
@@ -1636,6 +1636,10 @@ def coder(state: RunState) -> dict:
         if isinstance(exc, DockerError):
             return _escalar(state, _error(state, "RUNNER_NOT_READY", "coder", str(exc),
                                           recuperable=False))
+        from ai_swe.models import BudgetExceededError
+
+        if isinstance(exc, BudgetExceededError):
+            raise
         if not _es_fallo_esperado(exc):
             raise
         motivo = f"{type(exc).__name__}: {exc}"[:500]
@@ -3192,6 +3196,8 @@ def route_after_coder(state: RunState) -> str:
     Antes de F8 esta arista iba directo a `run_tests`, que no tenia donde correr.
     """
     if state.status.is_terminal:
+        return "finalize"
+    if state.status is RunStatus.PAUSED:
         return "finalize"
     salida = state.outputs.coder_output
     return "apply_sandbox" if salida and salida.files_changed else "escalate_no_changes"

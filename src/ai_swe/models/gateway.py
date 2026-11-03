@@ -308,7 +308,7 @@ class ModelGateway:
                             hourly_limit=settings.max_cost_per_hour,
                         )
                     except LedgerError as exc:
-                        raise ModelConfigurationError(str(exc)) from None
+                        raise BudgetExceededError(str(exc), motivos=("ledger",)) from None
                 if control:
                     control.check()
                 if reservation is not None:

@@ -296,6 +296,101 @@ class RunEngine:
         with self._locks_guard:
             self._reclamadas.discard(run_id)
 
+    def reclamar_reanudacion_pausa(self, run_id: str) -> None:
+        """Reserva el derecho a reanudar una ejecucion pausada, previniendo dobles clics."""
+        with self._lock_de(run_id):
+            if self._store.summary(run_id) is None:
+                raise RunNotFound(run_id)
+            estado = self.get(run_id)
+            if estado.status is not RunStatus.PAUSED:
+                raise NothingToResume(
+                    f"la ejecucion {run_id} no esta en pausa (estado: {estado.status.value})"
+                )
+            with self._locks_guard:
+                reclamada = run_id in self._reclamadas
+            if reclamada:
+                raise NothingToResume(
+                    f"la ejecucion {run_id} ya tiene una reanudacion en curso"
+                )
+            with self._locks_guard:
+                self._reclamadas.add(run_id)
+
+    def verificar_presupuesto_reanudacion(self, run_id: str) -> None:
+        """Verifica que el presupuesto o saldo sea suficiente antes de reanudar."""
+        from ai_swe.models import BudgetExceededError
+
+        estado = self.get(run_id)
+        if estado.status is not RunStatus.PAUSED:
+            return
+
+        ultimo_error_presupuesto = None
+        for err in reversed(estado.errors):
+            if err.error_class == "BUDGET_EXCEEDED":
+                ultimo_error_presupuesto = err
+                break
+
+        if ultimo_error_presupuesto is None:
+            return
+
+        if hasattr(self._store, "_db_path") and self._store._db_path.is_file():
+            from ai_swe.state.budget_ledger import BudgetLedger
+
+            ledger = BudgetLedger(self._store._db_path)
+            resumen = ledger.summary()
+            if resumen["limit"] is not None:
+                disponible = resumen.get("available") or 0.0
+                if disponible <= 0.0:
+                    unresolved = ledger.unresolved_reservations_for_run(run_id)
+                    nota = ""
+                    if unresolved.get("count", 0) > 0:
+                        nota = (
+                            f" (hay {unresolved['count']} reserva(s) de cobro incierto "
+                            f"retenida(s) por ${unresolved['amount']:.2f})"
+                        )
+                    raise BudgetExceededError(
+                        f"Presupuesto aún insuficiente: saldo disponible en la bóveda es ${disponible:.2f} "
+                        f"(límite actual: ${resumen['limit']:.2f}, consumido: ${resumen['consumed']:.2f}, "
+                        f"reservado: ${resumen['reserved']:.2f}){nota}. "
+                        "Aumente el límite de presupuesto en la bóveda de su perfil antes de continuar.",
+                        motivos=("ledger",),
+                    )
+
+        motivos_agotados = estado.budget.exhausted_reasons()
+        if any(m in ("tokens", "cost", "model_calls", "seconds") for m in motivos_agotados):
+            if self._settings is not None:
+                limite_tokens = self._settings.max_tokens_per_run
+                limite_coste = self._settings.max_cost_per_run
+                nuevo_budget = estado.budget.model_copy()
+                if limite_tokens > nuevo_budget.max_tokens:
+                    nuevo_budget.max_tokens = limite_tokens
+                if limite_coste is not None and (
+                    nuevo_budget.max_cost is None or limite_coste > nuevo_budget.max_cost
+                ):
+                    nuevo_budget.max_cost = limite_coste
+                if any(
+                    m in ("tokens", "cost", "model_calls", "seconds")
+                    for m in nuevo_budget.exhausted_reasons()
+                ):
+                    raise BudgetExceededError(
+                        f"Presupuesto por ejecución agotado ({', '.join(motivos_agotados)}). "
+                        "Ajuste los límites de ejecución en la configuración antes de continuar.",
+                        motivos=motivos_agotados,
+                    )
+                config = self._config(run_id)
+                self._app.update_state(config, {"budget": nuevo_budget.model_dump()})
+                datos = estado.model_dump()
+                datos["budget"] = nuevo_budget.model_dump()
+                datos["updated_at"] = _ahora()
+                actualizado = RunState.model_validate(datos)
+                self._store.sync(actualizado)
+                self.continuity.capture_run(actualizado)
+            else:
+                raise BudgetExceededError(
+                    f"Presupuesto por ejecución agotado ({', '.join(motivos_agotados)}). "
+                    "Aumente el presupuesto de la ejecución antes de continuar.",
+                    motivos=motivos_agotados,
+                )
+
     def _lock_de(self, run_id: str) -> threading.Lock:
         with self._locks_guard:
             return self._locks.setdefault(run_id, threading.Lock())
@@ -481,13 +576,14 @@ class RunEngine:
             estado = self.get(run_id)
             if estado.status is not RunStatus.PAUSED:
                 raise NothingToResume(
-                    f"la ejecucion {run_id} no esta en pausa manual (estado: {estado.status.value})"
+                    f"la ejecucion {run_id} no esta en pausa (estado: {estado.status.value})"
                 )
             with self._locks_guard:
                 self._pause_requested.discard(run_id)
             self.continuity.set_checkpoint_status(run_id, RunStatus.RUNNING)
             config = self._config(run_id)
             if self._app.get_state(config).values:
+                self._app.update_state(config, {"status": RunStatus.RUNNING})
                 return self._ejecutar(None, run_id)
             return self._ejecutar(self._store.initial_state(run_id), run_id)
 
@@ -509,43 +605,89 @@ class RunEngine:
                 return self._confirm_cancel(run_id, self.get(run_id))
 
     def _ejecutar_con_actividad(self, entrada, run_id: str) -> RunState:
+        from ai_swe.models import BudgetExceededError
+
         config = self._config(run_id)
         self._store.append_event(run_id, EventKind.RUN_STARTED, {})
 
-        for trozo in self._app.stream(entrada, config, stream_mode="updates"):
-            for nodo, salida in trozo.items():
-                if nodo == "__interrupt__":
-                    carga = _carga_interrupcion(salida)
-                    # `run.awaiting_human` es el evento general de cualquier puerta.
-                    # Hasta M2 solo habia una y el nombre bastaba; con dos (requisitos
-                    # y aprobacion) decir "awaiting_approval" al parar en la de
-                    # requisitos seria falso. **Que** puerta espera se lee del estado
-                    # (`RunStatus`) o de `next_step`, no del nombre del evento.
-                    self._store.append_event(run_id, EventKind.RUN_AWAITING_HUMAN, carga)
-                    continue
-                # F11 (AUD-11): `run.step` **se retiro**. El nombre del nodo deja de
-                # viajar como dato dentro de `run.step` y pasa a ser un **tipo** de
-                # evento (`requirements.completed`, `plan.completed`, ...), que es lo
-                # que permite al cliente un `switch` exhaustivo. Un nodo sin hito
-                # nombrado (p. ej. `research`) no emite nada: su avance queda
-                # registrado en el punto de control y en `GET /runs/{id}`, que es
-                # donde el cliente lee el estado.
-                hito = EVENTO_POR_NODO.get(nodo)
-                if hito is not None:
-                    self._store.append_event(run_id, hito, {"node": nodo})
-                # Se sincroniza el indice en cada paso para que `GET /runs/{id}`
-                # refleje el avance mientras la ejecucion sigue en curso.
-                current = self._estado_actual(config, run_id)
-                self._store.sync(current)
-                self.memory.project(current)
-                self.continuity.capture_run(current)
-                with self._locks_guard:
-                    pausar = run_id in self._pause_requested
-                    if pausar:
-                        self._pause_requested.discard(run_id)
-                if pausar and not current.status.is_terminal and not current.status.is_awaiting_human:
-                    self.continuity.set_checkpoint_status(run_id, RunStatus.PAUSED)
-                    break
+        try:
+            for trozo in self._app.stream(entrada, config, stream_mode="updates"):
+                for nodo, salida in trozo.items():
+                    if nodo == "__interrupt__":
+                        carga = _carga_interrupcion(salida)
+                        # `run.awaiting_human` es el evento general de cualquier puerta.
+                        # Hasta M2 solo habia una y el nombre bastaba; con dos (requisitos
+                        # y aprobacion) decir "awaiting_approval" al parar en la de
+                        # requisitos seria falso. **Que** puerta espera se lee del estado
+                        # (`RunStatus`) o de `next_step`, no del nombre del evento.
+                        self._store.append_event(run_id, EventKind.RUN_AWAITING_HUMAN, carga)
+                        continue
+                    # F11 (AUD-11): `run.step` **se retiro**. El nombre del nodo deja de
+                    # viajar como dato dentro de `run.step` y pasa a ser un **tipo** de
+                    # evento (`requirements.completed`, `plan.completed`, ...), que es lo
+                    # que permite al cliente un `switch` exhaustivo. Un nodo sin hito
+                    # nombrado (p. ej. `research`) no emite nada: su avance queda
+                    # registrado en el punto de control y en `GET /runs/{id}`, que es
+                    # donde el cliente lee el estado.
+                    hito = EVENTO_POR_NODO.get(nodo)
+                    if hito is not None:
+                        self._store.append_event(run_id, hito, {"node": nodo})
+                    # Se sincroniza el indice en cada paso para que `GET /runs/{id}`
+                    # refleje el avance mientras la ejecucion sigue en curso.
+                    current = self._estado_actual(config, run_id)
+                    self._store.sync(current)
+                    self.memory.project(current)
+                    self.continuity.capture_run(current)
+                    with self._locks_guard:
+                        pausar = run_id in self._pause_requested
+                        if pausar:
+                            self._pause_requested.discard(run_id)
+                    if pausar and not current.status.is_terminal and not current.status.is_awaiting_human:
+                        self.continuity.set_checkpoint_status(run_id, RunStatus.PAUSED)
+                        break
+        except BudgetExceededError as exc:
+            ahora = _ahora()
+            instantanea = self._app.get_state(config)
+            nodo_bloqueado = instantanea.next[0] if instantanea.next else "coder"
+            current = self._estado_actual(config, run_id)
+            err = RunError(
+                error_class="BUDGET_EXCEEDED",
+                agent=nodo_bloqueado,
+                message=str(exc),
+                recoverable=True,
+                occurred_at=ahora,
+            )
+            datos = current.model_dump()
+            datos["status"] = RunStatus.PAUSED
+            datos["next_step"] = nodo_bloqueado
+            datos["errors"] = [*current.errors, err.model_dump()]
+            datos["updated_at"] = ahora
+            paused_state = RunState.model_validate(datos)
+
+            self._store.sync(paused_state)
+            self.memory.project(paused_state)
+            self.continuity.capture_run(paused_state)
+            self.continuity.set_checkpoint_status(run_id, RunStatus.PAUSED)
+            self._app.update_state(
+                config,
+                {
+                    "status": RunStatus.PAUSED,
+                    "next_step": nodo_bloqueado,
+                    "errors": paused_state.errors,
+                    "updated_at": ahora,
+                },
+            )
+            self._store.append_event(
+                run_id,
+                EventKind.RUN_PAUSED,
+                {
+                    "node": nodo_bloqueado,
+                    "reason": "BUDGET_EXCEEDED",
+                    "message": str(exc),
+                    "motivos": list(getattr(exc, "motivos", ())),
+                },
+            )
+            return paused_state
 
         state = self._estado_actual(config, run_id)
         if self._cancel_tokens.get(run_id) and self._cancel_tokens[run_id].requested:

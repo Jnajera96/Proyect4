@@ -1267,12 +1267,9 @@ def crear_app(
         run_id: str,
         identidad: Identidad | None = Depends(_identidad),
     ) -> RunState:
-        """Reanuda una ejecucion en pausa manual (`paused`)."""
-        estado = motor.get(run_id)
-        if estado.status is not RunStatus.PAUSED:
-            raise NothingToResume(
-                f"la ejecucion {run_id} no esta en pausa manual (estado: {estado.status.value})"
-            )
+        """Reanuda una ejecucion en pausa (`paused`)."""
+        motor.verificar_presupuesto_reanudacion(run_id)
+        motor.reclamar_reanudacion_pausa(run_id)
         _auditar("ejecucion.reanudada", identidad, {"run_id": run_id})
         trabajador.submit_resume_paused(run_id)
         return motor.get(run_id)

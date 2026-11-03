@@ -12,7 +12,7 @@ import { api } from "../lib/api";
 import { ActualizarRun } from "../components/ActualizarRun";
 import { CancelarEjecucion } from "../components/CancelarEjecucion";
 import type { EstadoConexion } from "../hooks/useEventosRun";
-import type { Project, RunEvent, RunState } from "../lib/contracts";
+import type { Project, RunError, RunEvent, RunState } from "../lib/contracts";
 import { ActividadPipeline } from "../components/ActividadPipeline";
 import { ETIQUETA_ESTADO } from "../lib/contracts";
 import { fechaHora, hashCorto, rutaCorta } from "../lib/formato";
@@ -65,6 +65,7 @@ export function VistaDetalle({
   puedeOperar?: boolean;
 }) {
   const [revirtiendo, setRevirtiendo] = useState(false);
+  const [reanudando, setReanudando] = useState(false);
   const [errorRollback, setErrorRollback] = useState<string | null>(null);
 
   if (!estado) {
@@ -82,6 +83,15 @@ export function VistaDetalle({
   const cambio = estado.outputs.coder_output;
   const diff = estado.artifacts.diff || cambio?.diff || "";
   const proyecto = proyectos.find((p) => p.repo_path === estado.options.repo_path);
+
+  const errorPresupuesto = [...(estado.errors || [])].reverse().find(
+    (e: RunError) => e.error_class === "BUDGET_EXCEEDED"
+  );
+  const esPausaPresupuesto = estado.status === "paused" && Boolean(errorPresupuesto);
+  const esCobroIncierto = Boolean(
+    errorPresupuesto?.message?.includes("cobro incierto") ||
+      errorPresupuesto?.message?.includes("reserva(s) previa(s)")
+  );
 
   // **Cuando la ejecucion esta en la puerta, la puerta es la vista.** La puerta ya
   // ensena el diff, la evidencia de las pruebas y el veredicto del revisor; repetir
@@ -139,19 +149,51 @@ export function VistaDetalle({
             <button
               id="btn-reanudar-pausa"
               className="primario"
+              disabled={reanudando}
               onClick={async () => {
+                setReanudando(true);
+                setErrorRollback(null);
                 try {
                   await api.reanudarRunPausado(estado.run_id);
                   alReanudar(estado.run_id);
                 } catch (causa) {
                   setErrorRollback(alFallo(causa));
+                } finally {
+                  setReanudando(false);
                 }
               }}
             >
-              Reanudar ejecución
+              {esPausaPresupuesto
+                ? reanudando
+                  ? "Verificando presupuesto..."
+                  : "Verificar presupuesto y continuar"
+                : reanudando
+                ? "Reanudando..."
+                : "Reanudar ejecución"}
             </button>
           ) : null}
         </div>
+        {esPausaPresupuesto ? (
+          <div className="panel-pausa-presupuesto" role="alert">
+            <div className="pausa-presupuesto-cabecera">
+              <span className="pausa-presupuesto-icono" aria-hidden="true">⚠️</span>
+              <strong>Pausado por presupuesto</strong>
+            </div>
+            <p className="pausa-presupuesto-mensaje">
+              {errorPresupuesto?.message || "Presupuesto insuficiente para continuar la ejecución."}
+            </p>
+            {esCobroIncierto ? (
+              <div className="aviso-reserva-incierta">
+                <span aria-hidden="true">🛡️</span>
+                <span>
+                  <strong>Llamada de cobro incierto detectada:</strong> Se conserva la reserva previa
+                  para proteger tu presupuesto contra posibles cobros del proveedor. Antes de reanudar,
+                  debes contar con saldo disponible por encima de dicha reserva.
+                </span>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <ActualizarRun key={estado.run_id} runId={estado.run_id} alRefrescar={alRefrescar} />
         <CancelarEjecucion key={estado.run_id} estado={estado} puedeOperar={puedeOperar}
           alActualizar={() => void alRefrescar(estado.run_id)} />

@@ -1847,3 +1847,45 @@ button.peligro:hover:not(:disabled) { background: var(--error-suave); border-col
   color: #fbbf24 !important;
   font-style: italic;
 }
+
+
+/* Panel de pausa por presupuesto y recuperacion */
+.panel-pausa-presupuesto {
+  margin-top: 14px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--aviso, #eab308);
+  background: var(--aviso-suave, rgba(234, 179, 8, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pausa-presupuesto-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--texto);
+}
+.pausa-presupuesto-icono {
+  font-size: 18px;
+}
+.pausa-presupuesto-mensaje {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--texto-suave);
+}
+.aviso-reserva-incierta {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--texto);
+}

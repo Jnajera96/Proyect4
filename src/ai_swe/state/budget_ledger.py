@@ -136,13 +136,29 @@ class BudgetLedger:
                 (run_id,),
             ).fetchone()[0]
             remaining = run_limit - used
-            if (
-                limit is None
-                or remaining <= 0
-                or estimate > remaining
-                or total + remaining > limit[0]
-            ):
-                raise LedgerError("Presupuesto insuficiente para reservar la llamada")
+            unresolved_info = db.execute(
+                "SELECT COUNT(*), COALESCE(SUM(reserved),0) "
+                "FROM budget_reservations WHERE run_id=? AND consumed IS NULL AND dispatched=1",
+                (run_id,),
+            ).fetchone()
+            unresolved_count, unresolved_amount = (unresolved_info[0], unresolved_info[1]) if unresolved_info else (0, 0.0)
+            unresolved_note = ""
+            if unresolved_count > 0:
+                unresolved_note = f" (atención: hay {unresolved_count} reserva(s) previa(s) de cobro incierto por ${unresolved_amount:.2f} retenida(s))"
+
+            if limit is None:
+                raise LedgerError(f"Sin saldo configurado en la bóveda del perfil; configure o aumente el límite en su bóveda{unresolved_note}")
+            if remaining <= 0 or estimate > remaining:
+                raise LedgerError(
+                    f"Límite de coste por ejecución alcanzado: requiere estimación de ${estimate:.2f} pero solo restan ${max(0.0, remaining):.2f} "
+                    f"del límite por ejecución (${run_limit:.2f}){unresolved_note}"
+                )
+            if total + remaining > limit[0]:
+                disponible = max(0.0, limit[0] - total)
+                raise LedgerError(
+                    f"Saldo local insuficiente en la bóveda: disponible ${disponible:.2f}, requerido ${remaining:.2f} "
+                    f"(límite de bóveda: ${limit[0]:.2f}, consumido/reservado: ${total:.2f}){unresolved_note}"
+                )
             reservation = str(uuid.uuid4())
             from ai_swe.models.budget import assert_hourly_cost
 
@@ -214,3 +230,12 @@ class BudgetLedger:
             "reserved": reserved,
             "available": max(0, limit[0] - spent - reserved) if limit else None,
         }
+
+    def unresolved_reservations_for_run(self, run_id: str) -> dict:
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT COUNT(*), COALESCE(SUM(reserved),0) "
+                "FROM budget_reservations WHERE run_id=? AND consumed IS NULL AND dispatched=1",
+                (run_id,),
+            ).fetchone()
+            return {"count": row[0] if row else 0, "amount": row[1] if row else 0.0}
