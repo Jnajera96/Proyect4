@@ -1,0 +1,61 @@
+{
+  "product": "Product 1: Scientific Calculator (Trigonometry)",
+  "verification_timestamp": "2026-11-03T16:26:17Z",
+  "git_commit": "58647773fc40c5712bb4b45e18f78c9daa01045c",
+  "python_version": "3.13.14",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "execution_duration_seconds": 8.95,
+  "stages": [
+    {
+      "stage": "requirements_gate",
+      "status": "awaiting_human_requirements_confirmation",
+      "fidelity": 1.0,
+      "intent": "modify"
+    },
+    {
+      "stage": "approval_gate",
+      "status": "awaiting_approval",
+      "test_runs": [
+        {
+          "target": "pytest.unit",
+          "exit_code": 0,
+          "stdout": "...                                                                      [100%]\r\n3 passed in 0.02s"
+        },
+        {
+          "target": "ruff.check",
+          "exit_code": 0,
+          "stdout": "All checks passed!"
+        }
+      ],
+      "reviewer_verdict": "accept",
+      "pre_promotion_disk_check": true
+    },
+    {
+      "stage": "promotion_completed",
+      "status": "completed",
+      "errors": []
+    }
+  ],
+  "promoted_artifacts": {
+    "calculator.py": {
+      "path": "C:\\Users\\jose_\\AppData\\Local\\Temp\\aiswe-calc-e2e-ypgpao0z\\calc_user_repo\\calculator.py",
+      "size_bytes": 601,
+      "sha256": "3a47d1e60f0690c3e1a0447123b178a3c5bbce74b92c5d177c861e79c2142d21"
+    },
+    "test_calculator.py": {
+      "path": "C:\\Users\\jose_\\AppData\\Local\\Temp\\aiswe-calc-e2e-ypgpao0z\\calc_user_repo\\test_calculator.py",
+      "size_bytes": 523,
+      "sha256": "f860701b9b896ee7572447704b2a39c686b815521c3e6367c5f76e6f39ceed6f"
+    }
+  },
+  "validation_results": {
+    "math_oracle_status": "PASS",
+    "promoted_repo_pytest_status": "PASS",
+    "pre_promotion_isolation": true,
+    "paid_api_spend_usd": 0.0,
+    "remote_network_egress": false,
+    "model_calls": 1,
+    "human_gates_honored": 2
+  },
+  "status": "APPROVED"
+}

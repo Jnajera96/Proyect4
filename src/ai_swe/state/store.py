@@ -88,10 +88,19 @@ def _aplicar_pragmas(con: sqlite3.Connection, *, fijar_modo: bool = False) -> No
     nueva chocaba con las escrituras en curso y producia `database is locked` bajo
     concurrencia. El modo es persistente en el fichero: se fija una vez.
     """
-    if fijar_modo:
-        con.execute("PRAGMA journal_mode=WAL")
-    con.execute("PRAGMA busy_timeout=15000")
-    con.execute("PRAGMA synchronous=NORMAL")
+    for intento in range(10):
+        try:
+            con.execute("PRAGMA busy_timeout=15000")
+            if fijar_modo:
+                con.execute("PRAGMA journal_mode=WAL")
+            con.execute("PRAGMA synchronous=NORMAL")
+            break
+        except sqlite3.OperationalError as exc:
+            msg = str(exc).lower()
+            if intento == 9 or ("disk i/o error" not in msg and "locked" not in msg and "busy" not in msg):
+                raise
+            import time
+            time.sleep(0.05 * (intento + 1))
 
 
 class RunStore:
