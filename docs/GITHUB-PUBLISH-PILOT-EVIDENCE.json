@@ -1,0 +1,62 @@
+{
+  "pilot": "Day 4 GitHub Publishing Assistant Pilot",
+  "timestamp": "2026-11-03T23:44:14Z",
+  "git_commit": "b4e070b746bd349926966b5f35f89cc12701c78c",
+  "python_version": "3.13.14",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "duration_seconds": 2.22,
+  "results": {
+    "vault_storage_encryption": {
+      "status": "PASS",
+      "cipher": "AES-256-GCM",
+      "kdf": "scrypt(N=32768, r=8, p=1)",
+      "plaintext_leak_in_storage": false,
+      "unsealed_successfully": true
+    },
+    "disposable_repo_publish": {
+      "status": "PASS",
+      "repo_name": "test-ai-swe-disposable",
+      "stages_sequence": [
+        "validating",
+        "creating",
+        "uploading"
+      ],
+      "published_url": "https://github.com/pilot-engineer/test-ai-swe-disposable",
+      "published_files": [
+        "README.md",
+        "service.py"
+      ],
+      "is_private": true
+    },
+    "post_publish_repo_inspection": {
+      "head_commit_message": "Mi aplicaci\u00f3n inicial construida con AI-SWE",
+      "committed_files": [
+        "README.md",
+        "service.py"
+      ],
+      "origin_remote_url": "https://github.com/pilot-engineer/test-ai-swe-disposable.git",
+      "token_leaked_in_git_config": false,
+      "prefix_leaked_in_git_config": false,
+      "status": "PASS"
+    },
+    "security_boundaries": {
+      "preexisting_remote_protection": {
+        "status": "PASS",
+        "message": "Este proyecto ya tiene una conexi\u00f3n remota. No se reemplazar\u00e1."
+      },
+      "dirty_staging_protection": {
+        "status": "PASS",
+        "message": "Hay cambios preparados por otra operaci\u00f3n. Term\u00ednala antes de publicar."
+      },
+      "unauthorized_history_protection": {
+        "status": "PASS",
+        "message": "La publicaci\u00f3n sencilla requiere un proyecto nuevo sin historial ajeno."
+      }
+    }
+  },
+  "cost_summary": {
+    "paid_api_spend_usd": 0.0,
+    "network_egress_calls": 0
+  },
+  "overall_status": "APPROVED"
+}
