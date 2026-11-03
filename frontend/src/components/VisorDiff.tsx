@@ -11,7 +11,7 @@
  * izquierdo y en un `+` el derecho, que es como se lee un diff de verdad. Sin eso
  * los numeros mienten en cuanto hay una linea de contexto.
  */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { rutaCorta } from "../lib/formato";
 
 type Tipo = "add" | "del" | "ctx" | "meta";
@@ -110,6 +110,44 @@ function parsear(texto: string): Fichero[] {
   return ficheros;
 }
 
+/**
+ * Filas de la vista dividida: cada bloque de `-` se empareja con el bloque de `+`
+ * que le sigue, que es como se lee una sustitución. Una línea sin pareja deja la
+ * otra columna vacía; **ninguna línea se omite ni se fusiona**.
+ */
+interface FilaDividida {
+  meta?: Linea;
+  izq: Linea | null;
+  der: Linea | null;
+}
+
+function filasDivididas(lineas: Linea[]): FilaDividida[] {
+  const filas: FilaDividida[] = [];
+  let i = 0;
+  while (i < lineas.length) {
+    const l = lineas[i];
+    if (l.tipo === "meta") { filas.push({ meta: l, izq: null, der: null }); i += 1; continue; }
+    if (l.tipo === "ctx") { filas.push({ izq: l, der: l }); i += 1; continue; }
+    const borradas: Linea[] = [];
+    const anadidas: Linea[] = [];
+    while (i < lineas.length && lineas[i].tipo === "del") borradas.push(lineas[i++]);
+    while (i < lineas.length && lineas[i].tipo === "add") anadidas.push(lineas[i++]);
+    for (let k = 0; k < Math.max(borradas.length, anadidas.length); k += 1) {
+      filas.push({ izq: borradas[k] ?? null, der: anadidas[k] ?? null });
+    }
+  }
+  return filas;
+}
+
+/** `\ No newline at end of file`: metadato del protocolo que se resalta, no se oculta. */
+function claseLinea(l: Linea): string {
+  return l.texto.startsWith("\\") ? `${l.tipo} eof` : l.tipo;
+}
+
+function idFichero(i: number): string {
+  return `diff-fichero-${i}`;
+}
+
 export function VisorDiff({
   texto,
   ficheros,
@@ -119,6 +157,8 @@ export function VisorDiff({
   ficheros?: { path: string; added: number; removed: number; sha256: string }[];
 }) {
   const partes = useMemo(() => parsear(texto), [texto]);
+  const [modo, setModo] = useState<"unificado" | "dividido">("unificado");
+  const [plegados, setPlegados] = useState<ReadonlySet<number>>(() => new Set());
 
   if (!texto.trim()) {
     return <p className="vacio">Sin cambios que mostrar.</p>;
@@ -127,36 +167,96 @@ export function VisorDiff({
   const totalAnadidas = ficheros?.reduce((s, f) => s + f.added, 0) ?? partes.reduce((s, f) => s + f.anadidas, 0);
   const totalBorradas = ficheros?.reduce((s, f) => s + f.removed, 0) ?? partes.reduce((s, f) => s + f.borradas, 0);
 
+  function alternar(i: number) {
+    setPlegados((previos) => {
+      const siguiente = new Set(previos);
+      if (siguiente.has(i)) siguiente.delete(i); else siguiente.add(i);
+      return siguiente;
+    });
+  }
+
   return (
-    <div className="visor-diff">
-      <div className="diff-resumen">
-        <span className="mono">{partes.length}</span> fichero(s)
-        <span className="mas">+{totalAnadidas}</span>
-        <span className="menos">−{totalBorradas}</span>
+    <div className={`visor-diff modo-${modo}`}>
+      <div className="diff-barra">
+        <div className="diff-resumen">
+          <span className="mono">{partes.length}</span> fichero(s)
+          <span className="mas">+{totalAnadidas}</span>
+          <span className="menos">−{totalBorradas}</span>
+        </div>
+        <div className="diff-controles">
+          <div className="segmentado" role="group" aria-label="Modo de visualización del diff">
+            <button type="button" aria-pressed={modo === "unificado"} onClick={() => setModo("unificado")}>Unificado</button>
+            <button type="button" aria-pressed={modo === "dividido"} onClick={() => setModo("dividido")}>Dividido</button>
+          </div>
+          {partes.length > 1 ? (
+            <button type="button" className="sutil" onClick={() => setPlegados(plegados.size ? new Set() : new Set(partes.map((_, i) => i)))}>
+              {plegados.size ? "Expandir todo" : "Plegar todo"}
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      {partes.map((f, i) => (
-        <article className="fichero-diff" key={`${f.ruta}-${i}`}>
-          <header className="fichero-cabecera">
-            <span className="ruta" title={f.ruta}>
-              {f.ruta ? rutaCorta(f.ruta) : "(fichero sin nombre en el diff)"}
-            </span>
-            <span className="fila" style={{ marginLeft: "auto" }}>
+      {partes.length > 1 ? (
+        <nav className="diff-indice" aria-label="Ficheros del cambio">
+          {partes.map((f, i) => (
+            <a key={`${f.ruta}-${i}`} href={`#${idFichero(i)}`} className="diff-indice-item"
+              onClick={(e) => { e.preventDefault(); document.getElementById(idFichero(i))?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
+              <span className="ruta mono" title={f.ruta}>{f.ruta ? rutaCorta(f.ruta) : "(sin nombre)"}</span>
               <span className="mas">+{f.anadidas}</span>
               <span className="menos">−{f.borradas}</span>
-            </span>
-          </header>
-          <div className="diff">
-            {f.lineas.map((l, j) => (
-              <div className={l.tipo} key={j}>
-                <span className="n">{l.viejo ?? ""}</span>
-                <span className="n">{l.nuevo ?? ""}</span>
-                <span className="c">{l.texto || " "}</span>
+            </a>
+          ))}
+        </nav>
+      ) : null}
+
+      {partes.map((f, i) => {
+        const plegado = plegados.has(i);
+        return (
+          <article className={`fichero-diff${plegado ? " plegado" : ""}`} key={`${f.ruta}-${i}`} id={idFichero(i)}>
+            <header className="fichero-cabecera">
+              <button type="button" className="fichero-plegar" aria-expanded={!plegado}
+                aria-label={`${plegado ? "Expandir" : "Plegar"} ${f.ruta || "fichero"}`} onClick={() => alternar(i)}>
+                <span aria-hidden="true">{plegado ? "▸" : "▾"}</span>
+              </button>
+              <span className="ruta" title={f.ruta}>
+                {f.ruta ? rutaCorta(f.ruta) : "(fichero sin nombre en el diff)"}
+              </span>
+              <span className="fila" style={{ marginLeft: "auto" }}>
+                <span className="mas">+{f.anadidas}</span>
+                <span className="menos">−{f.borradas}</span>
+              </span>
+            </header>
+            {plegado ? null : modo === "unificado" ? (
+              <div className="diff">
+                {f.lineas.map((l, j) => (
+                  <div className={claseLinea(l)} key={j}>
+                    <span className="n">{l.viejo ?? ""}</span>
+                    <span className="n">{l.nuevo ?? ""}</span>
+                    <span className="c">{l.texto || " "}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </article>
-      ))}
+            ) : (
+              <div className="diff diff-dividido">
+                {filasDivididas(f.lineas).map((fila, j) => fila.meta ? (
+                  <div className={`fila-meta ${claseLinea(fila.meta)}`} key={j}><span className="c">{fila.meta.texto || " "}</span></div>
+                ) : (
+                  <div className="fila-dividida" key={j}>
+                    <div className={fila.izq ? (fila.izq.tipo === "ctx" ? "ctx" : "del") : "vacia"}>
+                      <span className="n">{fila.izq?.viejo ?? ""}</span>
+                      <span className="c">{fila.izq?.texto || " "}</span>
+                    </div>
+                    <div className={fila.der ? (fila.der.tipo === "ctx" ? "ctx" : "add") : "vacia"}>
+                      <span className="n">{fila.der?.nuevo ?? ""}</span>
+                      <span className="c">{fila.der?.texto || " "}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </article>
+        );
+      })}
       <details className="plegable"><summary>Diff original completo</summary><pre className="salida">{texto}</pre></details>
     </div>
   );
