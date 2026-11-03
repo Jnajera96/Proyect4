@@ -1,5 +1,30 @@
 # Productización v0.1.0 — registro de continuidad
 
+## Avance vigente y conciliación del README público
+
+Actualización del 2 de noviembre de 2026: rc25 es el candidato recomendado para
+pruebas locales, con integridad de parches de f2554d2, smoke 14/14, 57 PASS/1 SKIP
+del bundle y frontend 41 PASS/build aprobado. La regresión fuente previa conserva
+1.196 PASS/18 SKIP y el suplemento Windows Job 22 PASS; no se vuelve a contar como
+una ejecución completa nueva de este empaquetado.
+
+La estimación informada sigue en 91/100, sin certificación de producción ni de
+calidad general de modelos. Estado y paquete: `RELEASE-RC25-VALIDATION-2026-11-02.md`.
+Conciliación y acciones: `README-PENDING-RECONCILIATION-2026-11-02.md` y
+`PLAN-MAESTRO-CIERRE-v0.2.0.md`.
+
+El README público mantenía pendientes históricos de autenticación/cancelación
+ya implementadas. Se actualizaron las referencias locales sin push. Pendiente real
+P0: alinear el flag declarativo de egreso con el runner y probar su efecto; Windows
+Job no bloquea red. También quedan disponibilidad Node, pruebas de modelos/productos,
+concurrencia/credenciales de respaldo y pilotos independientes. MCP, Langfuse,
+Graphify/Knowledge Graph y TTS quedan en evolución posterior con alcance explícito.
+
+Recomendación: estabilizar rc25 y priorizar el recorrido completo de usuario y
+los controles de aislamiento antes de añadir funciones. Continuidad física y
+publicación GitHub siguen pausadas; modelos pagados requieren presupuesto nuevo.
+
+
 ## RC24 — validación local offline (2 de noviembre de 2026)
 
 Fuentes de `e47c40f`, incluidas recuperación `67e6fef`, integración Node/seguridad

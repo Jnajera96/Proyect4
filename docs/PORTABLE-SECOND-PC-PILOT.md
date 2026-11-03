@@ -1,11 +1,11 @@
 # Piloto del portable en otra PC
 
-Actualizado: 2 de noviembre de 2026, candidato rc24. **Piloto físico pausado**;
+Actualizado: 2 de noviembre de 2026, candidato rc25. **Piloto físico pausado**;
 esta guía prepara la validación, no autoriza ni acredita su ejecución.
 
-ZIP: `dist/windows-v0.2.0-rc24/AISWESystem-windows-x64.zip`.
-SHA-256: `10794bd86428bfcde983a0ed353e73e17285ca157bd8ec5bb6a926aa1d94c480`.
-Acta: `RELEASE-RC24-VALIDATION-2026-11-02.md`.
+ZIP: `dist/Windows-v0.2.0-rc25/AISWESystem-windows-x64.zip`.
+SHA-256: `323e3d97ded9b35fbd3dfcd09d6f5d3ebdea4ca6a704bb25098ecdd00833766c`.
+Acta: `RELEASE-RC25-VALIDATION-2026-11-02.md`.
 
 ## Alcance
 
@@ -66,13 +66,13 @@ No copiar el perfil real ni compartir tokens, contraseñas o archivos de bóveda
 El aislamiento de procesos/red y el cierre de producción pública siguen siendo
 requisitos independientes de este piloto.
 
-## Comandos exactos de integridad y arranque rc24
+## Comandos exactos de integridad y arranque rc25
 
 En PowerShell, ajustar las rutas del ZIP y una carpeta de destino nueva:
 
 ```powershell
 $zip = 'C:\Users\usuario\Downloads\AISWESystem-windows-x64.zip'
-$destino = 'C:\Users\usuario\Desktop\AISWE-rc24-piloto'
+$destino = 'C:\Users\usuario\Desktop\AISWE-rc25-piloto'
 (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
 # Comparar con el hash del acta antes de extraer. No usar -Force.
 Expand-Archive -LiteralPath $zip -DestinationPath $destino

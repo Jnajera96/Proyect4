@@ -1,6 +1,28 @@
 # Proyecto 4 — AI Software Engineering System
 
-## v0.1.0 — entrega local aprobada
+## Estado vigente de la entrega Windows local
+
+Actualizado: 2 de noviembre de 2026. **Rc25** es el candidato recomendado para
+pruebas locales e incluye la corrección de parches multiarchivo de `f2554d2`.
+Ver [acta y métricas](docs/RELEASE-RC25-VALIDATION-2026-11-02.md),
+[plan maestro](docs/PLAN-MAESTRO-CIERRE-v0.2.0.md) y
+[conciliación del README público](docs/README-PENDING-RECONCILIATION-2026-11-02.md).
+
+El portable usa CPython firmado y perfiles autenticados; no requiere Python/Node
+de desarrollo para arrancar. La cancelación es cooperativa. El aislamiento depende
+del runner elegido: Windows Job limita recursos y Docker opt-in aísla ejecución/red;
+un worktree o el flag `network_egress_enabled` no bloquean por sí solos la red nativa.
+Autorizar paquetes no los instala ni acredita un runtime Node offline.
+
+Siguen pendientes la validación independiente en destino, calidad de modelos y
+los pilotos pausados de continuidad y publicación. MCP, Langfuse, Graphify/Knowledge
+Graph y TTS son evolución futura, no capacidades acreditadas ni requisitos nuevos
+implícitos de cierre local. La estimación informada permanece en 91/100.
+
+Los apartados siguientes conservan contexto histórico y comandos del prototipo;
+sus cifras y pendientes no describen por sí solos el estado actual.
+
+## v0.1.0 — entrega histórica local aprobada
 
 Entrega canónica: `dist/windows-signed-python-rc2/AISWESystem-signed-python-rc2.zip`.
 Abrir `AISWESystem.cmd` tras extraer todo. 791 PASS, 3 SKIP, cero FAIL; SAC activo
@@ -30,7 +52,7 @@ la ejecución de forma trazable y entrega un resultado revisado con evidencia.
 
 ---
 
-## Estado del proyecto
+## Estado histórico del prototipo
 
 **14 fases completadas y verificadas: `M0`, `M1`, `F1`–`F14`.**
 

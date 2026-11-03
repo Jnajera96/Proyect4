@@ -1,0 +1,195 @@
+{
+  "date": "2026-11-02",
+  "base_commit": "f2554d210af956657b47c55d51e5132de6d5a732",
+  "paid_api_calls": 0,
+  "remote_model_calls": 0,
+  "packaging_offline": true,
+  "uv_offline": true,
+  "npm_config_offline": true,
+  "documentation_public_read": {
+    "url": "https://github.com/Jnajera96/Proyect4/blob/main/README.md",
+    "date": "2026-11-02",
+    "authorized_by_subsequent_user_request": true,
+    "scope": "Public README review only; not used to build or test the artifact"
+  },
+  "archive": {
+    "zip": "dist\\Windows-v0.2.0-rc25\\AISWESystem-windows-x64.zip",
+    "sha256": "323e3d97ded9b35fbd3dfcd09d6f5d3ebdea4ca6a704bb25098ecdd00833766c",
+    "bytes": 121319619,
+    "files": 4745,
+    "crc": true,
+    "source_match": true,
+    "zip_file_count": 4746,
+    "private_files": [],
+    "frontend_matches_build": true,
+    "unwanted_build_residue": false
+  },
+  "runtime": {
+    "version": "3.13.14",
+    "archive_sha256": "90b4e5b9898b72d744650524bff92377c367f44bd5fbd09e3148656c080ad907",
+    "signatures": [
+      {
+        "name": "python.exe",
+        "status": "Valid",
+        "signer": "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+      },
+      {
+        "name": "pythonw.exe",
+        "status": "Valid",
+        "signer": "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+      }
+    ]
+  },
+  "smoke": {
+    "success": true,
+    "checks": [
+      "all manifest hashes match",
+      "no developer state or secrets files",
+      "installed defaults to profiles",
+      "private API gated before login",
+      "integrated frontend served",
+      "profile registration with packaged cryptography",
+      "empty profile has no global token",
+      "packaged graph accepts deterministic run",
+      "human confirmation required",
+      "graceful packaged shutdown",
+      "encrypted profile login survives restart",
+      "SQLite and graph checkpoint survive restart",
+      "persisted SQLite integrity",
+      "restart shutdown graceful"
+    ],
+    "paid_calls": 0
+  },
+  "portable_integrity_tests": {
+    "tests": 58,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 1,
+    "passed": 57
+  },
+  "frontend": {
+    "node": "24.22.1",
+    "passed": 41,
+    "build": "passed",
+    "executed_for_rc25": true
+  },
+  "prior_source_regression": {
+    "evidence": "docs/PATCH-INTEGRITY-EVIDENCE-2026-11-02.json",
+    "full_backend": {
+      "tests": 1214,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 18,
+      "passed": 1196,
+      "seconds": 524.171,
+      "omissions": [
+        {
+          "test": "test_transcripcion_real_opt_in",
+          "reason": "opt-in: define AI_SWE_RUN_REAL_STT_TESTS=1 (descarga un modelo)"
+        },
+        {
+          "test": "test_la_plataforma_no_permite_construir_el_vector_de_enlace",
+          "reason": "el sistema no permite crear enlaces: [WinError 1314] El cliente no dispone de un privilegio requerido: 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_patch_integrity_final_full\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test' -> 'C:\\\\Users\\\\jose_\\\\AppData\\\\Local\\\\Temp\\\\aiswe_patch_integrity_final_full\\\\test_la_plataforma_no_permite_0\\\\workspaces\\\\run-test\\\\enlace_de_prueba'"
+        },
+        {
+          "test": "test_llamada_real_controlada",
+          "reason": "prueba de integracion real: exige AI_SWE_RUN_REAL_PROVIDER_TESTS=1, AI_SWE_MODEL_API_KEY y AI_SWE_MODEL_NAME"
+        },
+        {
+          "test": "test_linked_private_path_denied",
+          "reason": "Symlink privilege unavailable"
+        },
+        {
+          "test": "test_runner_terminates_real_descendant[True]",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_runner_terminates_real_descendant[False]",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_assignment_failure_never_runs_user_code",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_alias_interpreter_rejected_before_launch",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_unverified_shutdown_never_reports_success",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_abrupt_supervisor_death_closes_job_and_terminates_child[True]",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_abrupt_supervisor_death_closes_job_and_terminates_child[False]",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_default_job_applies_resource_limits_before_any_process_starts",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_committed_memory_is_bounded_with_a_successful_control[64-False]",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_committed_memory_is_bounded_with_a_successful_control[256-True]",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_process_limit_denies_creation_but_allows_an_in_limit_child[1-False]",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_process_limit_denies_creation_but_allows_an_in_limit_child[2-True]",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_total_user_cpu_limit_terminates_busy_job_before_wall_timeout",
+          "reason": "Windows Job Objects require non-Store Python"
+        },
+        {
+          "test": "test_cleanup_preserves_memory_and_cpu_limits",
+          "reason": "Windows Job Objects require non-Store Python"
+        }
+      ]
+    },
+    "native_windows_job_supplement": {
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 22,
+      "seconds": 17.152,
+      "omissions": []
+    },
+    "rerun_for_packaging": false
+  },
+  "historical_archives": {
+    "rc23": {
+      "sha256": "4754230ec1bbcbb1295c0c4b121f1fdb715ba809395744046e3b03cb97587460",
+      "preserved": true
+    },
+    "rc24": {
+      "sha256": "10794bd86428bfcde983a0ed353e73e17285ca157bd8ec5bb6a926aa1d94c480",
+      "preserved": true
+    }
+  },
+  "source_hashes": {
+    "src/ai_swe/graph/nodes.py": "9b8a1326077f80abe9043ae5924ea93f471503ad4e7736cc49ec15378a9332d3",
+    "src/ai_swe/sandbox.py": "c88b1fc2be90f1e6345b9fd740768ae3fe3628bf4fbe175ccebb3eace9e063d8",
+    "src/ai_swe/tools/patcher.py": "79cf43c16803032961e645e7b72995c27d0e61eca814b27e04e7d982174721c3",
+    "src/ai_swe/tools/promoter.py": "1174ef3ef0154cecd772171211916b1cad8e0b69d22fb84e8be95f89ffcda1d3",
+    "frontend/src/views/VistaSeguridad.tsx": "fd9860b51bff7676c92e0690d32782a9c3152e4b64af37fe06d92a04219e9d51"
+  },
+  "notes": [
+    "One portable test skipped: symlink creation requires unavailable Windows privilege; no guard was removed.",
+    "All Python sources, manifest hashes and built frontend match the extracted bundle.",
+    "Official runtime signatures valid on this host; not all wheel DLLs are Authenticode signed.",
+    "No physical PC pilot, microphone/STT inference, real models or GitHub publication performed.",
+    "Updating the package does not rewrite failed runs, worktrees or user databases."
+  ]
+}
