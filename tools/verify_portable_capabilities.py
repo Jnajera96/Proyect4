@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 
 PROBE = r"""
-import json, shutil, sys
+import ast, json, shutil, sys
 from pathlib import Path
 from types import SimpleNamespace
 if not __debug__:
@@ -25,6 +25,7 @@ check(shutil.which('python') is None and shutil.which('node') is None,
 from ai_swe.config import Settings
 settings = Settings(_env_file=None)
 check(settings.runtime_mode=='installed', 'signed bundle marker activates installed settings')
+check(settings.network_egress_enabled is False, 'network egress defaults to disabled')
 check(settings.stt_device=='cpu' and settings.stt_compute_type=='int8',
       'Windows STT defaults CPU int8')
 import av, ctranslate2, faster_whisper
@@ -55,15 +56,31 @@ except RunnerError as error:
     check(error.operacion=='network_egress', 'native runner rejects strict network before launch')
 else:
     raise AssertionError('Native strict execution accepted')
+from ai_swe.tools import docker_runner
+from pydantic import ValidationError
+try:
+    docker_runner.DockerSettings(network='host')
+except ValidationError:
+    check(True, 'Docker configuration rejects host networking')
+else:
+    raise AssertionError('Docker host networking accepted')
+# Static contract only; no running-container connectivity proof.
+tree = ast.parse(Path(docker_runner.__file__).read_text(encoding='utf-8'))
+execute = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name=='execute')
+check(any(isinstance(n, ast.Constant) and n.value=='--network=none' for n in ast.walk(execute)),
+      'packaged Docker command declares network none (static)')
 from ai_swe.tools.dependency_detector import SourceFile, detect_node_dependencies
 from ai_swe.tools.policy import node_dependency_issues
 manifest = detect_node_dependencies([SourceFile('package.json','{"dependencies":{"express":"4"}}')])
 check(any('offline' in issue for issue in node_dependency_issues(manifest,['express'])),
       'authorized npm package remains unavailable without offline inventory')
+check(manifest.preflight()['scope']=='static_only', 'Node support explicitly static only')
 check(manifest.preflight()['runtime_available'] is False,
       'Node preflight never borrows build-host runtime')
 print(json.dumps(dict(success=True, checks=checks, paid_calls=0, real_stt_inference=False,
-    real_audio=False, real_langfuse=False, sys_frozen=bool(getattr(sys,'frozen',False)),
+    real_audio=False, real_langfuse=False, real_docker_network=False,
+    budget_recovery_verified=False, browser_tts_verified=False,
+    sys_frozen=bool(getattr(sys,'frozen',False)),
     module=str(Path(ai_swe.__file__).resolve()),python=sys.version.split()[0])))
 """
 

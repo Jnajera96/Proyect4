@@ -1,0 +1,175 @@
+{
+  "date": "2026-11-03",
+  "status": "approved_for_local_packaging_scope_with_documented_limits",
+  "source_commit": "3879148",
+  "budget_implementation_commit": "17c7c4e",
+  "paid_api_calls": 0,
+  "pushes": 0,
+  "integrity": {
+    "success": true,
+    "zip_sha256": "d213a4086a85f55a9420a74a181910587c2e9d9859c68ed1fecf41826d7949ad",
+    "zip_bytes": 127809964,
+    "manifest_sha256": "74ed0c478889084899b2ac084c00eaac80453fcf161b7f72aa5789f134cdf754",
+    "manifest_files": 4862,
+    "zip_files": 4863,
+    "crc": true,
+    "all_zip_and_extracted_hashes": true,
+    "source_files_eol_normalized_equal": 94,
+    "source_comparison_note": "43 files differ only by CRLF versus LF; artifact hashes remain exact",
+    "source_commit": "3879148"
+  },
+  "runtime": {
+    "version": "3.13.14",
+    "signatures": [
+      {
+        "Path": "C:\\Users\\jose_\\Desktop\\repo_proyect\\proyecto4-ai-swe\\dist\\windows-v0.2.0-rc26\\extracted\\AISWESystem\\runtime\\python.exe",
+        "Status": 0,
+        "Signer": "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+      },
+      {
+        "Path": "C:\\Users\\jose_\\Desktop\\repo_proyect\\proyecto4-ai-swe\\dist\\windows-v0.2.0-rc26\\extracted\\AISWESystem\\runtime\\pythonw.exe",
+        "Status": 0,
+        "Signer": "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+      }
+    ],
+    "sys_frozen": false,
+    "installed_mode": "_ai_swe_bundle marker"
+  },
+  "frontend": {
+    "vite": "5.4.21",
+    "react": "18.3.1",
+    "node_verifier": "24.22.1",
+    "tests_passed": 44,
+    "rebuilt_by_codex": false,
+    "entry_js": "index-DMoZfdcG.js",
+    "entry_css": "index-PhWDwN8O.css",
+    "asset_files": 100,
+    "historical_unreferenced_assets_present": true
+  },
+  "smoke": {
+    "success": true,
+    "checks": [
+      "all manifest hashes match",
+      "no developer state or secrets files",
+      "installed defaults to profiles",
+      "private API gated before login",
+      "integrated frontend served",
+      "profile registration with packaged cryptography",
+      "empty profile has no global token",
+      "packaged graph accepts deterministic run",
+      "human confirmation required",
+      "graceful packaged shutdown",
+      "encrypted profile login survives restart",
+      "SQLite and graph checkpoint survive restart",
+      "persisted SQLite integrity",
+      "restart shutdown graceful"
+    ],
+    "paid_calls": 0
+  },
+  "capabilities_harness": {
+    "success": true,
+    "checks": [
+      "application imported from extracted portable",
+      "no development Python or Node on PATH",
+      "signed bundle marker activates installed settings",
+      "network egress defaults to disabled",
+      "Windows STT defaults CPU int8",
+      "PyAV 18.1.0 and Whisper native dependencies import offline",
+      "installed MCP child starts through signed launcher and redacts literals",
+      "MCP denies escaping paths without fallback",
+      "local AST graph extracts actual packaged symbols",
+      "native runner rejects strict network before launch",
+      "Docker configuration rejects host networking",
+      "packaged Docker command declares network none (static)",
+      "authorized npm package remains unavailable without offline inventory",
+      "Node support explicitly static only",
+      "Node preflight never borrows build-host runtime"
+    ],
+    "paid_calls": 0,
+    "real_stt_inference": false,
+    "real_audio": false,
+    "real_langfuse": false,
+    "real_docker_network": false,
+    "budget_recovery_verified": false,
+    "browser_tts_verified": false,
+    "sys_frozen": false,
+    "module": "C:\\Users\\jose_\\Desktop\\repo_proyect\\proyecto4-ai-swe\\dist\\windows-v0.2.0-rc26\\extracted\\AISWESystem\\app\\ai_swe\\__init__.py",
+    "python": "3.13.14"
+  },
+  "packaged_regression": {
+    "core_budget_continuity": {
+      "collected": 69,
+      "passed": 68,
+      "skipped": 1,
+      "failed": 0,
+      "errors": 0,
+      "junit_sha256": "9f1b5b029f6381fd589b7d29b874bb314e241ca26f9ef03af04858cbe693dd80"
+    },
+    "local_network_node": {
+      "collected": 68,
+      "passed": 68,
+      "skipped": 0,
+      "failed": 0,
+      "errors": 0,
+      "junit_sha256": "b80e8f452e29b3a672e9ef7efb6bcf3d6c88db34a934451333e57a0991db5fa3"
+    }
+  },
+  "browser_fixture": {
+    "success": true,
+    "fixture_only": true,
+    "paid_calls": 0,
+    "real_langfuse": false,
+    "real_audio": false,
+    "checks": [
+      "No automatic external export",
+      "Real trace query and token summary",
+      "JSON trace download preserves metadata",
+      "Graph relationships filter is interactive",
+      "Export requires explicit confirmation and reports receipt",
+      "Voice selection excludes remote voices",
+      "Stop button ends reading state",
+      "Missing local voice refuses remote fallback"
+    ],
+    "calls": [
+      {
+        "method": "GET",
+        "path": "/capabilities/local"
+      },
+      {
+        "method": "GET",
+        "path": "/capabilities/local"
+      },
+      {
+        "method": "GET",
+        "path": "/runs/fixture/observability"
+      },
+      {
+        "method": "GET",
+        "path": "/runs/fixture/context-graph"
+      },
+      {
+        "method": "POST",
+        "path": "/runs/fixture/observability/langfuse"
+      }
+    ]
+  },
+  "budget_scope": {
+    "packaged_tests_passed": 5,
+    "actual_ledger_recovery_via_http": false,
+    "reviewer_pause_and_resume": false,
+    "budget_pause_survives_restart": false,
+    "worker_submission_failure_claim_cleanup": false,
+    "note": "Five packaged tests validate simulated Coder pause/recovery, empty ledger rejection, sequential duplicate claim rejection and preservation of uncertain reservations; not full concurrent HTTP readiness."
+  },
+  "limitations": [
+    "No physical second PC or independent VM",
+    "No actual Docker connectivity test; configuration and static command verified",
+    "No physical TTS/microphone or Whisper inference",
+    "No real Langfuse receiver",
+    "No remote inference or provider balance reconciliation",
+    "Complete backend regression not rerun in this audit",
+    "One symlink-vector test skipped due to Windows privilege 1314",
+    "Budget readiness gaps and submission-failure claim cleanup remain Day 2 blockers to full certification",
+    "Historical frontend assets remain in ZIP; active index points to current JS/CSS"
+  ]
+}

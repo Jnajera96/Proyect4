@@ -1,0 +1,31 @@
+{
+  "status": "preparation_only_not_release_certification",
+  "date": "2026-11-03",
+  "source_commit": "17c7c4e",
+  "worktree": "provider-preflight",
+  "paid_calls": 0,
+  "source_tests": {
+    "passed": 18,
+    "failed": 0,
+    "junit": "_tmp/day1-preparation.xml"
+  },
+  "harness_calibration": {
+    "passed": 15,
+    "failed": 0,
+    "report": "_tmp/day1-calibration/report.json",
+    "artifact": "previous extraction from 2026-11-02; not the refreshed budget-recovery bundle"
+  },
+  "pending": [
+    "Independent ZIP hash and manifest audit of refreshed RC26",
+    "14-check smoke of refreshed extraction",
+    "57+ packaged regression tests",
+    "Packaged budget recovery with corrected ledger, restart, concurrent resume and worker submission failure",
+    "Browser local TTS verification",
+    "Docker actual network isolation verification"
+  ],
+  "limitations": [
+    "Source tests are not packaged recovery proof",
+    "Docker network none check is static",
+    "No real microphone or Langfuse reception tested"
+  ]
+}
