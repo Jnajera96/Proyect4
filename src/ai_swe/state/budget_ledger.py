@@ -70,14 +70,28 @@ class BudgetLedger:
     def _connect(self):
         connection = sqlite3.connect(self.path, timeout=30)
         try:
+            connection.execute("PRAGMA journal_mode=WAL")
+            connection.execute("PRAGMA busy_timeout=30000")
             with connection:
                 yield connection
         finally:
             connection.close()
 
+    def _transact(self, fn):
+        """Execute a transactional callback with exponential backoff on busy/locked SQLite."""
+        for attempt in range(5):
+            try:
+                with self._connect() as db:
+                    return fn(db)
+            except sqlite3.OperationalError as exc:
+                if any(term in str(exc).lower() for term in ("locked", "busy")) and attempt < 4:
+                    time.sleep(0.02 * (2**attempt))
+                    continue
+                raise
+
     def set_limit(self, amount: float):
         amount = _amount(amount)
-        with self._connect() as db:
+        def op(db):
             db.execute("BEGIN IMMEDIATE")
             used = db.execute(
                 "SELECT COALESCE(SUM(COALESCE(consumed,reserved)),0) FROM budget_reservations"
@@ -89,12 +103,13 @@ class BudgetLedger:
                 "ON CONFLICT(id) DO UPDATE SET limit_amount=excluded.limit_amount",
                 (amount,),
             )
+        self._transact(op)
 
     def reserve(self, run_id: str, amount: float, *, run_limit: float) -> str:
         amount, run_limit = _amount(amount), _amount(run_limit)
         if not run_id:
             raise LedgerError("Falta identificador de ejecucion")
-        with self._connect() as db:
+        def op(db):
             db.execute("BEGIN IMMEDIATE")
             limit = db.execute("SELECT limit_amount FROM profile_budget WHERE id=1").fetchone()
             total = db.execute(
@@ -113,6 +128,7 @@ class BudgetLedger:
                 (reservation, run_id, amount),
             )
             return reservation
+        return self._transact(op)
 
     def reserve_call(self, run_id: str, *, run_limit: float, estimate: float,
                      hourly_limit: float | None = None) -> str:
@@ -124,7 +140,7 @@ class BudgetLedger:
         run_limit, estimate = _amount(run_limit), _amount(estimate)
         if not run_id:
             raise LedgerError("Falta identificador de ejecucion")
-        with self._connect() as db:
+        def op(db):
             db.execute("BEGIN IMMEDIATE")
             limit = db.execute("SELECT limit_amount FROM profile_budget WHERE id=1").fetchone()
             total = db.execute(
@@ -175,9 +191,10 @@ class BudgetLedger:
                 (reservation, run_id, remaining, now),
             )
             return reservation
+        return self._transact(op)
 
     def mark_dispatched(self, reservation: str):
-        with self._connect() as db:
+        def op(db):
             db.execute("BEGIN IMMEDIATE")
             result = db.execute(
                 "UPDATE budget_reservations SET dispatched=1 WHERE id=? AND consumed IS NULL",
@@ -185,9 +202,10 @@ class BudgetLedger:
             )
             if result.rowcount != 1:
                 raise LedgerError("La reserva ya se concilió; no se enviará la llamada")
+        self._transact(op)
 
     def reconcile_cancelled(self, run_id: str) -> dict:
-        with self._connect() as db:
+        def op(db):
             db.execute("BEGIN IMMEDIATE")
             released = db.execute(
                 "UPDATE budget_reservations SET consumed=0,settled_epoch=? "
@@ -198,6 +216,7 @@ class BudgetLedger:
                 (run_id,),
             ).fetchone()[0]
             return {"released": released, "unresolved": unresolved}
+        return self._transact(op)
 
     def settle(self, reservation: str, cost: float | None):
         if cost is None:
@@ -205,7 +224,7 @@ class BudgetLedger:
             self.mark_dispatched(reservation)
             return
         cost = _amount(cost)
-        with self._connect() as db:
+        def op(db):
             db.execute("BEGIN IMMEDIATE")
             row = db.execute(
                 "SELECT consumed FROM budget_reservations WHERE id=?", (reservation,)
@@ -215,27 +234,30 @@ class BudgetLedger:
             # Preserve actual declared usage even if a provider exceeded our estimate.
             db.execute("UPDATE budget_reservations SET consumed=?,settled_epoch=? WHERE id=?",
                        (cost, time.time(), reservation))
+        self._transact(op)
 
     def summary(self) -> dict:
-        with self._connect() as db:
+        def op(db):
             limit = db.execute("SELECT limit_amount FROM profile_budget WHERE id=1").fetchone()
             spent, reserved = db.execute(
                 "SELECT COALESCE(SUM(consumed),0), "
                 "COALESCE(SUM(CASE WHEN consumed IS NULL THEN reserved ELSE 0 END),0) "
                 "FROM budget_reservations"
             ).fetchone()
-        return {
-            "limit": limit[0] if limit else None,
-            "consumed": spent,
-            "reserved": reserved,
-            "available": max(0, limit[0] - spent - reserved) if limit else None,
-        }
+            return {
+                "limit": limit[0] if limit else None,
+                "consumed": spent,
+                "reserved": reserved,
+                "available": max(0, limit[0] - spent - reserved) if limit else None,
+            }
+        return self._transact(op)
 
     def unresolved_reservations_for_run(self, run_id: str) -> dict:
-        with self._connect() as db:
+        def op(db):
             row = db.execute(
                 "SELECT COUNT(*), COALESCE(SUM(reserved),0) "
                 "FROM budget_reservations WHERE run_id=? AND consumed IS NULL AND dispatched=1",
                 (run_id,),
             ).fetchone()
             return {"count": row[0] if row else 0, "amount": row[1] if row else 0.0}
+        return self._transact(op)

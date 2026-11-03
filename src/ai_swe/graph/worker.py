@@ -50,13 +50,23 @@ class RunWorker:
         respuesta en cuanto el grafo arranca de nuevo, no cuando termina.
         """
         if self._cerrado:
+            self._engine.olvidar_reclamacion(run_id)
             raise RuntimeError("el trabajador esta cerrado")
-        self._submit(self._reanudar_seguro, run_id, decision)
+        try:
+            self._submit(self._reanudar_seguro, run_id, decision)
+        except BaseException:
+            self._engine.olvidar_reclamacion(run_id)
+            raise
 
     def submit_resume_paused(self, run_id: str) -> None:
         if self._cerrado:
+            self._engine.olvidar_reclamacion(run_id)
             raise RuntimeError("el trabajador esta cerrado")
-        self._submit(self._reanudar_pausa_seguro, run_id)
+        try:
+            self._submit(self._reanudar_pausa_seguro, run_id)
+        except BaseException:
+            self._engine.olvidar_reclamacion(run_id)
+            raise
 
     @property
     def active(self):

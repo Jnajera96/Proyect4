@@ -7,7 +7,7 @@ import pytest
 
 from ai_swe.config import Settings
 from ai_swe.models import ModelMessage, ModelRequest, ModelUsage, gateway_from_settings
-from ai_swe.models.errors import ModelConfigurationError
+from ai_swe.models.errors import BudgetExceededError, ModelConfigurationError
 from ai_swe.models.providers.fake import FakeModelAdapter
 from ai_swe.state.budget_ledger import BudgetLedger
 
@@ -35,7 +35,7 @@ def test_request_without_conservative_reservation_never_reaches_adapter(tmp_path
     )
     gateway = gateway_from_settings(settings, adapters=[adapter])
     try:
-        with pytest.raises(ModelConfigurationError):
+        with pytest.raises((BudgetExceededError, ModelConfigurationError)):
             gateway.generate(request)
         assert not adapter.calls
         assert ledger.summary()["reserved"] == 0

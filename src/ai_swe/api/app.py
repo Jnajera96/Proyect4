@@ -1270,8 +1270,12 @@ def crear_app(
         """Reanuda una ejecucion en pausa (`paused`)."""
         motor.verificar_presupuesto_reanudacion(run_id)
         motor.reclamar_reanudacion_pausa(run_id)
-        _auditar("ejecucion.reanudada", identidad, {"run_id": run_id})
-        trabajador.submit_resume_paused(run_id)
+        try:
+            _auditar("ejecucion.reanudada", identidad, {"run_id": run_id})
+            trabajador.submit_resume_paused(run_id)
+        except Exception:
+            motor.olvidar_reclamacion(run_id)
+            raise
         return motor.get(run_id)
 
     @app.get("/continuity/status", dependencies=[LEER])

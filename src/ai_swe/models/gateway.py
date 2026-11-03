@@ -44,6 +44,7 @@ from ai_swe.models.contracts import (
     ModelUsage,
 )
 from ai_swe.models.errors import (
+    BudgetExceededError,
     ModelConfigurationError,
     ModelGatewayError,
     StructuredOutputError,
