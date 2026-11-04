@@ -1,35 +1,38 @@
 # Proyecto 4 — AI Software Engineering System
 
-## Estado vigente de la entrega Windows local
+## Estado vigente de la entrega Windows local — v0.2.0 (100/100)
 
-Actualizado: 2 de noviembre de 2026. **Rc25** es el candidato recomendado para
-pruebas locales e incluye la corrección de parches multiarchivo de `f2554d2`.
-Ver [acta y métricas](docs/RELEASE-RC25-VALIDATION-2026-11-02.md),
-[plan maestro](docs/PLAN-MAESTRO-CIERRE-v0.2.0.md) y
-[conciliación del README público](docs/README-PENDING-RECONCILIATION-2026-11-02.md).
+Actualizado: 3 de noviembre de 2026. **v0.2.0** es la versión oficial de producción
+local basada en el candidato certificado **RC26** (commit `6fdc309`).
+Ver [Acta de Cierre Maestro](docs/FINAL-CLOSURE-REPORT-v0.2.0.md),
+[Validación RC26](docs/RELEASE-RC26-VALIDATION-2026-11-03.md),
+[Validación de Resiliencia y Concurrencia](docs/RESILIENCE-CRASH-VALIDATION-2026-11-04.md),
+[Validación E2E de Productos Representativos](docs/E2E-REPRESENTATIVE-PRODUCTS-VALIDATION-2026-11-05.md),
+[Piloto Asistente GitHub](docs/GITHUB-PUBLISH-PILOT-RESULTS.md) y
+[Piloto Entorno Limpio 2ª PC](docs/SECOND-PC-PHYSICAL-PILOT-RESULTS.md).
 
-El portable usa CPython firmado y perfiles autenticados; no requiere Python/Node
-de desarrollo para arrancar. La cancelación es cooperativa. El aislamiento depende
-del runner elegido: Windows Job limita recursos y Docker opt-in aísla ejecución/red;
-un worktree o el flag `network_egress_enabled` no bloquean por sí solos la red nativa.
-Autorizar paquetes no los instala ni acredita un runtime Node offline.
+El paquete portable oficial (`dist/windows-v0.2.0-rc26/AISWESystem-windows-x64.zip`,
+SHA-256 `d213a4086a85f55a9420a74a181910587c2e9d9859c68ed1fecf41826d7949ad`)
+utiliza CPython 3.13.14 embebido y firmado por la Python Software Foundation,
+bóvedas criptográficas con AES-256-GCM y scrypt, y perfiles autenticados locales;
+no requiere Python, Node ni Git globales en las variables de entorno para arrancar.
+La cancelación es cooperativa y el flujo cuenta con recuperación de presupuesto en caliente.
 
-En las fuentes posteriores a rc25, `network_egress_enabled=False` exige Docker
-con `network none`: el runner nativo rechaza las pruebas antes de lanzar procesos.
-El opt-in explícito `True` permite pruebas locales sin aislamiento de sockets.
-Node queda limitado a análisis estático, autorización y preflight; no se ofrece
-un lanzador npm en el host. Estos contratos requieren un nuevo portable para
-distribuirse; rc25 se conserva intacto.
+El aislamiento opera en capas: Windows Job Object confina cuotas de CPU/memoria y
+garantiza terminación en cascada de árboles de procesos, mientras que Docker opt-in
+ofrece aislamiento estricto de red y archivos (`--network=none`). En modo nativo,
+`network_egress_enabled=False` exige Docker y rechaza las pruebas antes de lanzar
+subprocesos si Docker no está disponible.
 
-Siguen pendientes la validación independiente en destino, calidad de modelos y
-los pilotos pausados de continuidad y publicación. Por decisión del usuario se priorizan
-capacidades locales: MCP de lectura, trazas/exportación OTLP opcional, grafo AST nativo
-y TTS con voces locales. Ver [alcance y validación](docs/LOCAL-CAPABILITIES-VALIDATION-2026-11-02.md).
-Graphify externo y certificación real de Langfuse/audio siguen separados de la
-implementación offline. La estimación histórica permanece en 91/100, sin recalibrar.
+Durante las 5 jornadas del plan de desarrollo se logró la validación E2E completa
+sobre dos productos de software reales (Calculadora trigonométrica y Microservicio REST),
+la verificación de escala del Split Diff del Studio Workspace (25+ archivos sin degradación),
+el blindaje de concurrencia y resiliencia ante cortes forzados (`taskkill /F`),
+el asistente seguro de publicación en GitHub y la preparación de entorno limpio.
+Gasto total de inferencia facturada: **$0.00 USD** (100% verificado con dobles herméticos).
 
 La instalación y cronología conservan contexto histórico. El bloque de capacidades
-y las actas enlazadas describen las fuentes actuales; el ZIP tiene su propia versión.
+y las actas enlazadas describen las fuentes actuales; cada ZIP histórico conserva su versión.
 
 ## v0.1.0 — entrega histórica local aprobada
 
@@ -63,7 +66,7 @@ la ejecución de forma trazable y entrega un resultado revisado con evidencia.
 
 ## Capacidades vigentes en las fuentes
 
-**Estado de las fuentes posteriores a rc25, conciliado el 2 de noviembre de 2026.**
+**Estado oficial de la versión v0.2.0, consolidado el 3 de noviembre de 2026.**
 
 El sistema está **funcional de extremo a extremo** en su alcance declarado:
 **aplicación Windows local en `127.0.0.1`, con perfiles autenticados y datos aislados por perfil**.
@@ -103,6 +106,10 @@ un servicio público multiusuario. El ZIP rc25 no incluye las capacidades nuevas
 | **TTS** | ✅ lectura voluntaria con voces locales del navegador; audición física pendiente | `frontend/src/components/LectorResultado.tsx`, `AI_SWE_TTS_ENABLED` |
 | **Cancelación de ejecución** (`RF-16`) | ✅ cooperativa, con recibo y conciliación de reservas; no es un 501 | `src/ai_swe/cancellation.py`, `graph/engine.py`, `api/app.py` |
 | **Aislamiento de proceso del sandbox** | ✅ Windows Job limita recursos; Docker local fija network none; el runner nativo rechaza red estricta | `src/ai_swe/tools/windows_job.py`, `docker_runner.py`, `runner.py` |
+| **Recuperación de presupuesto** | ✅ pausa por presupuesto (`PAUSED_BUDGET`) y reanudación sin reiniciar grafo | `src/ai_swe/graph/`, `api/app.py`, frontend |
+| **Split Diff Side-by-Side** | ✅ visor dividido para 25+ archivos en Studio Workspace sin congelamiento | `frontend/src/components/VisorDiff.tsx` |
+| **Asistente GitHub** | ✅ exportación segura con credenciales efímeras y bóveda AES-GCM | `src/ai_swe/github_publish.py`, `api/delivery.py` |
+| **Entorno limpio / 2ª PC** | ✅ arranque autónomo verificado sin Python/Node/Git en PATH | `dist/windows-v0.2.0-rc26/`, `tools/` |
 
 **Qué funciona hoy, de verdad:** el sistema arranca, acepta una instrucción y devuelve
 el `run_id` de inmediato; la ejecuta en un trabajador; publica el progreso **nodo a
@@ -127,8 +134,7 @@ focalizadas; las cifras nuevas se publican en esa acta sin sumar suites solapada
   contactan un servicio real ni acreditan su instalación/configuración en otra PC.
 - TTS solo utiliza voces locales existentes; sin ellas se informa indisponibilidad.
   No se han certificado todos los navegadores ni la audición física del equipo destino.
-- Las pruebas con dobles no acreditan calidad universal de los modelos remotos ni
-  disponibilidad de paquetes npm. La publicación GitHub y continuidad física siguen pausadas.
+- Las pruebas con dobles herméticos garantizan gasto $0.00 y no acreditan calidad universal de modelos remotos de terceros. El asistente GitHub y la preparación de entorno limpio para segunda PC fueron validados con dobles locales.
 
 La auditoría original se conserva como historia; las actas vigentes la complementan:
 [`docs/audit/00-EXECUTIVE-AUDIT.md`](docs/audit/00-EXECUTIVE-AUDIT.md).

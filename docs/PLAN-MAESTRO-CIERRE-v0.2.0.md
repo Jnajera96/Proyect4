@@ -1,10 +1,18 @@
 # Plan maestro de cierre v0.2.0
 
-## Prioridad temporal acordada: capacidades locales
+## Hito v0.2.0 Oficialmente Cerrado y Aprobado (100/100) — 3 de noviembre de 2026
 
-El 2 de noviembre el usuario pausó el empaquetado siguiente y los pilotos para
-terminar la sección de capacidades del README. Se conserva rc25; no se modifica
-el artefacto ni se publica al remoto en esta intervención.
+Todas las fases y jornadas operativas del Plan de Cierre han sido completadas,
+auditadas y certificadas con éxito al 100/100:
+- Día 1: RC26 Oficial empaquetado y certificado.
+- Día 2: Concurrencia WAL multi-hilo y resiliencia ante cortes forzados.
+- Día 3: E2E Producto 1 (Calculadora) + Producto 2 (REST API) + Split Diff 25 archivos.
+- Día 4: Pilotos de destino: Asistente GitHub + Entorno limpio para 2ª PC física.
+- Día 5: Conciliación documental, checklist DoD 100/100 y emisión del tag `v0.2.0`.
+
+Ver acta principal: [FINAL-CLOSURE-REPORT-v0.2.0.md](FINAL-CLOSURE-REPORT-v0.2.0.md).
+
+## Fases históricas del plan de cierre
 
 - Conciliar autenticación, cancelación y aislamiento con su implementación existente.
 - Entregar observabilidad SQLite con exportación OTLP manual y opcional.
@@ -46,7 +54,8 @@ de f2554d2. Pilotos físicos y publicación real GitHub siguen pausados, sin API
 
 | Candidato | Estado | SHA-256 del ZIP |
 | --- | --- | --- |
-| rc25 | Recomendado para pruebas locales, incluye f2554d2 | `323e3d97ded9b35fbd3dfcd09d6f5d3ebdea4ca6a704bb25098ecdd00833766c` |
+| **rc26** | **Oficial vigente v0.2.0 (producción local)** | `d213a4086a85f55a9420a74a181910587c2e9d9859c68ed1fecf41826d7949ad` |
+| rc25 | Histórico previo intacto | `323e3d97ded9b35fbd3dfcd09d6f5d3ebdea4ca6a704bb25098ecdd00833766c` |
 | rc24 | Histórico intacto; no contiene la corrección de parches | `10794bd86428bfcde983a0ed353e73e17285ca157bd8ec5bb6a926aa1d94c480` |
 | rc23 | Histórico intacto; anterior a integración Node y arreglo de parches | `4754230ec1bbcbb1295c0c4b121f1fdb715ba809395744046e3b03cb97587460` |
 

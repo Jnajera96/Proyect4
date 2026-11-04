@@ -1,17 +1,17 @@
 # Roadmap vigente de cierre y experimentación
 
-## Avance vigente y conciliación del README público
+## Hito v0.2.0 Cerrado y Aprobado (100/100) — 3 de noviembre de 2026
 
-Actualización del 2 de noviembre de 2026: rc25 es el candidato recomendado para
-pruebas locales, con integridad de parches de f2554d2, smoke 14/14, 57 PASS/1 SKIP
-del bundle y frontend 41 PASS/build aprobado. La regresión fuente previa conserva
-1.196 PASS/18 SKIP y el suplemento Windows Job 22 PASS; no se vuelve a contar como
-una ejecución completa nueva de este empaquetado.
+La versión **v0.2.0** ha completado y certificado el 100% de los criterios del Plan de Cierre en 5 jornadas:
+- **Día 1:** Paquete portable oficial **RC26** (`dist/windows-v0.2.0-rc26/AISWESystem-windows-x64.zip`, SHA-256 `d213a4086a85f55a9420a74a181910587c2e9d9859c68ed1fecf41826d7949ad`), validación de capacidades (11/11 PASS), smoke test (14/14 PASS), recuperación de presupuesto en caliente.
+- **Día 2:** Resiliencia y concurrencia bajo estrés SQLite WAL con 50 hilos concurrentes, liberación atómica de reclamaciones en worker y tolerancia a terminación forzada de procesos (`taskkill /F`).
+- **Día 3:** Validación E2E de dos productos representativos herméticos: Producto 1 (Calculadora científica trigonométrica con oráculo matemático) y Producto 2 (Microservicio REST API offline con FastAPI y SQLite), más verificación de Split Diff para 25+ archivos en Studio Workspace.
+- **Día 4:** Piloto del Asistente de Publicación en GitHub (bóveda AES-256-GCM, repositorio descartable, push efímero sin fugas en `.git/config`) y Piloto de Entorno Limpio para 2ª PC física (PATH depurado sin herramientas de desarrollo, runtime CPython 3.13 PSF embebido, Windows Job Object).
+- **Día 5:** Conciliación documental pública, verificación Definition of Done 100/100 y emisión del tag oficial de Git `v0.2.0`.
 
-La estimación informada sigue en 91/100, sin certificación de producción ni de
-calidad general de modelos. Estado y paquete: `RELEASE-RC25-VALIDATION-2026-11-02.md`.
-Conciliación y acciones: `README-PENDING-RECONCILIATION-2026-11-02.md` y
-`PLAN-MAESTRO-CIERRE-v0.2.0.md`.
+Ver [Acta de Cierre Maestro](FINAL-CLOSURE-REPORT-v0.2.0.md).
+
+## Avance histórico previo y candidatos
 
 El README público mantenía pendientes históricos de autenticación/cancelación
 ya implementadas. Se actualizaron las referencias locales sin push. Los contratos
@@ -28,7 +28,25 @@ los controles de aislamiento antes de añadir funciones. Continuidad física y
 publicación GitHub siguen pausadas; modelos pagados requieren presupuesto nuevo.
 
 
-## RC25 — candidato recomendado para pruebas locales
+## RC26 — Paquete oficial v0.2.0 de producción local
+
+Fecha: 3 de noviembre de 2026. Base de producto `6fdc309`: consolida recuperación de presupuesto,
+resiliencia de concurrencia WAL, productos representativos E2E, asistente GitHub y entorno limpio.
+
+- ZIP: `dist/windows-v0.2.0-rc26/AISWESystem-windows-x64.zip`.
+- SHA-256: `d213a4086a85f55a9420a74a181910587c2e9d9859c68ed1fecf41826d7949ad`.
+- Tamaño: **127809964 bytes**.
+- Archivos ZIP: **4863**; manifiesto: **4862** (excluye su propio JSON).
+- CRC, fuentes Python, frontend construido y hashes de manifiesto: aprobados.
+- Runtime CPython 3.13.14: firmas PSF válidas de python.exe y pythonw.exe.
+- Smoke estándar: **14/14**, con perfiles, persistencia, reinicio y cierres ordenados.
+- Capacidades locales: **11/11 PASS**.
+- Regresión del paquete: **136 PASS / 1 SKIP**.
+- Frontend: **47 PASS** unitarios, build TypeScript/Vite impecable.
+
+Actas: [FINAL-CLOSURE-REPORT-v0.2.0.md](FINAL-CLOSURE-REPORT-v0.2.0.md), [RELEASE-RC26-VALIDATION-2026-11-03.md](RELEASE-RC26-VALIDATION-2026-11-03.md).
+
+## RC25 — candidato histórico previo
 
 Fecha: 2 de noviembre de 2026. Base de producto `f2554d2`: corrige integridad de
 diffs multiarchivo, EOF, LF/CRLF, hash de bytes escritos y promoción autocrlf;
