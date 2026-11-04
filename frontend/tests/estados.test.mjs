@@ -13,6 +13,7 @@ async function cargar(ruta) {
   const resultado = await build({
     entryPoints: [fileURLToPath(new URL(ruta, import.meta.url))],
     bundle: true, write: false, platform: "node", format: "cjs", jsx: "automatic",
+    loader: { ".css": "empty" },
     external: ["react", "react/jsx-runtime"],
   });
   const modulo = { exports: {} };
@@ -34,6 +35,7 @@ const { mensajeEstado } = await cargar("../src/lib/contracts.ts");
 const { iniciarLectura } = await cargar("../src/lib/localCapabilities.ts");
 const { LectorResultado } = await cargar("../src/components/LectorResultado.tsx");
 const { CapacidadesLocales } = await cargar("../src/components/CapacidadesLocales.tsx");
+const { ProfileVaultSection } = await cargar("../src/components/ProfileRoot.tsx");
 
 test("TTS usa solo voces locales y no cae silenciosamente a una voz remota", () => {
   let calls=0;
@@ -371,4 +373,55 @@ test("selector muestra evidencia real por rol sin confundir JSON-mode con esquem
   assert.match(html,/todavía falta construir/);
   assert.match(html,/aplicaciones E2E pendientes de prueba/);
   assert.doesNotMatch(html,/<option[^>]*disabled/);
+});
+
+
+test("bóveda de perfil muestra límite persistido de cero como 0 y no como 50", () => {
+  const dummyVault = {
+    has_token: true,
+    model_name: "gemini-3.8-flash",
+    reviewer_model: "",
+    model_base_url: "https://generativelanguage.googleapis.com/v1beta/openai",
+    remote_model_roles: ["coder"],
+    model_pricing: "[]",
+    budget_limit: 0,
+    max_cost_per_run: 5,
+    max_cost_per_hour: 0,
+    ledger: { limit: 0, consumed: 0, reserved: 0, available: 0 },
+  };
+  const html = renderToStaticMarkup(React.createElement(ProfileVaultSection, {
+    vault: dummyVault,
+    setVault: () => {},
+    busy: false,
+    onSave: async () => {},
+    onClose: () => {},
+    setNotice: () => {},
+  }));
+  assert.match(html, /name="budget_limit"[^>]*value="0"/);
+  assert.doesNotMatch(html, /name="budget_limit"[^>]*value="50"/);
+  assert.match(html, /name="max_cost_per_hour"[^>]*value="0"/);
+});
+
+test("bóveda de perfil usa fallback 50 solo si budget_limit es null o undefined", () => {
+  const dummyVault = {
+    has_token: false,
+    model_name: "gemini-3.8-flash",
+    reviewer_model: "",
+    model_base_url: "https://generativelanguage.googleapis.com/v1beta/openai",
+    remote_model_roles: ["coder"],
+    model_pricing: "[]",
+    budget_limit: undefined,
+    max_cost_per_run: 10,
+    max_cost_per_hour: null,
+    ledger: { limit: null, consumed: 0, reserved: 0, available: null },
+  };
+  const html = renderToStaticMarkup(React.createElement(ProfileVaultSection, {
+    vault: dummyVault,
+    setVault: () => {},
+    busy: false,
+    onSave: async () => {},
+    onClose: () => {},
+    setNotice: () => {},
+  }));
+  assert.match(html, /name="budget_limit"[^>]*value="50"/);
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { App } from "../App";
 import { borrarClave } from "../lib/auth";
 import { profileRequest, setProfileCsrf } from "../lib/profile";
@@ -9,10 +9,168 @@ import "../profiles.css";
 
 type Status = { profile_mode: boolean; authenticated: boolean;
   user?: { id: string; name: string }; csrf_token?: string };
-type Vault = { has_token: boolean; model_name?: string; reviewer_model?: string;
+export type Vault = { has_token: boolean; model_name?: string; reviewer_model?: string;
   model_base_url?: string; remote_model_roles?: string[]; model_pricing?: string;
   budget_limit?: number; max_cost_per_run?: number; max_cost_per_hour?: number | null;
   ledger: { limit: number | null; consumed: number; reserved: number; available: number | null } };
+
+export function ProfileVaultSection({
+  vault,
+  setVault,
+  busy,
+  onSave,
+  onClose,
+  setNotice,
+}: {
+  vault: Vault;
+  setVault: React.Dispatch<React.SetStateAction<Vault | null>>;
+  busy: boolean;
+  onSave: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  onClose: () => void;
+  setNotice: (msg: string) => void;
+}) {
+  const [formRevision, setFormRevision] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [tokenDraft, setTokenDraft] = useState("");
+  const [clearTokenDraft, setClearTokenDraft] = useState(false);
+
+  function applyPreset(preset: {
+    model_base_url: string;
+    model_name: string;
+    reviewer_model: string;
+    model_pricing: string;
+    notice: string;
+  }) {
+    let currentBudget = vault.budget_limit;
+    let currentRun = vault.max_cost_per_run;
+    let currentHour = vault.max_cost_per_hour;
+    let currentRoles = vault.remote_model_roles;
+    let currentToken = tokenDraft;
+    let currentClear = clearTokenDraft;
+
+    if (formRef.current) {
+      const fd = new FormData(formRef.current);
+      const b = fd.get("budget_limit");
+      if (b !== null && b !== "") currentBudget = Number(b);
+      const r = fd.get("max_cost_per_run");
+      if (r !== null && r !== "") currentRun = Number(r);
+      const h = fd.get("max_cost_per_hour");
+      if (h === "") currentHour = null;
+      else if (h !== null) currentHour = Number(h);
+
+      const roles = fd.getAll("roles").map(String);
+      if (roles.length > 0) currentRoles = roles;
+
+      const t = fd.get("hf_token");
+      if (typeof t === "string") currentToken = t;
+      currentClear = Boolean(fd.get("clear_token"));
+    }
+
+    setTokenDraft(currentToken);
+    setClearTokenDraft(currentClear);
+    setVault(prev => prev ? {
+      ...prev,
+      budget_limit: currentBudget,
+      max_cost_per_run: currentRun,
+      max_cost_per_hour: currentHour,
+      remote_model_roles: currentRoles,
+      model_base_url: preset.model_base_url,
+      model_name: preset.model_name,
+      reviewer_model: preset.reviewer_model,
+      model_pricing: preset.model_pricing,
+    } : null);
+    setFormRevision(r => r + 1);
+    setNotice(preset.notice);
+  }
+
+  return (
+    <section className="profile-vault" aria-label="Configuración de bóveda">
+      <h1>Proveedor y presupuesto de tu perfil</h1>
+      <p>Token: {vault.has_token ? "guardado" : "sin configurar"}. Nunca se muestra el valor guardado.</p>
+      <p>Consumo declarado: {vault.ledger.consumed} USD · Reservado: {vault.ledger.reserved} USD ·
+        Disponible: {vault.ledger.available ?? "sin límite declarado"}</p>
+
+      <div style={{ background: "rgba(255,255,255,0.05)", padding: "0.8rem", borderRadius: "8px", marginBottom: "1rem" }}>
+        <strong>Configuración rápida por proveedor:</strong>
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+          <button type="button" onClick={() => applyPreset({
+            model_base_url: "https://generativelanguage.googleapis.com/v1beta/openai",
+            model_name: "gemini-3.8-flash",
+            reviewer_model: "gemini-3.8-flash",
+            model_pricing: JSON.stringify([
+              { model: "gemini-3.8-flash", input_per_1k: 0.00075, output_per_1k: 0.00375, currency: "USD" },
+              { model: "gemini-2.5-flash", input_per_1k: 0.00015, output_per_1k: 0.0006, currency: "USD" }
+            ], null, 2),
+            notice: "Preset Google Gemini aplicado con gemini-3.8-flash. Límites conservados. Pega tu clave de API Gemini y guarda la bóveda.",
+          })}>✨ Usar Google Gemini (API Key)</button>
+          <button type="button" onClick={() => applyPreset({
+            model_base_url: "https://router.huggingface.co/v1",
+            model_name: "Qwen/Qwen2.5-Coder-32B-Instruct:nscale",
+            reviewer_model: "",
+            model_pricing: JSON.stringify([
+              { model: "Qwen/Qwen2.5-Coder-32B-Instruct:nscale", input_per_1k: 0.00006, output_per_1k: 0.0002, currency: "USD" }
+            ], null, 2),
+            notice: "Preset Hugging Face aplicado. Límites conservados. Pega tu HF Token y guarda la bóveda.",
+          })}>🤗 Usar Hugging Face (Router)</button>
+          <button type="button" onClick={() => applyPreset({
+            model_base_url: "http://localhost:20128/v1",
+            model_name: "omniroute-combo",
+            reviewer_model: "",
+            model_pricing: JSON.stringify([
+              { model: "omniroute-combo", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
+              { model: "qwen2.5-coder", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
+              { model: "llama3.3-70b", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
+              { model: "gemini-3.8-flash", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" }
+            ], null, 2),
+            notice: "Preset OmniRoute / Local aplicado (coste cero, 0 USD). Límites conservados. Guarda la bóveda para confirmar.",
+          })}>🆓 Usar OmniRoute / Ollama (Gratis $0.00)</button>
+          <button type="button" onClick={async () => {
+            try {
+              setNotice("Comprobando y lanzando OmniRoute...");
+              const data = await profileRequest<{ status: string; message: string }>("/system/launch-omniroute", { method: "POST" });
+              setNotice(data.message || "OmniRoute iniciado.");
+            } catch (err) {
+              setNotice("Error al invocar launcher: " + (err as Error).message);
+            }
+          }} style={{ background: "rgba(59, 130, 246, 0.2)", borderColor: "rgba(59, 130, 246, 0.5)" }}>⚡ Iniciar OmniRoute en PowerShell</button>
+        </div>
+      </div>
+
+      <form ref={formRef} key={formRevision} onSubmit={onSave}>
+        <label>Token HF / Clave de API Gemini<input name="hf_token" type="password" autoComplete="off"
+          defaultValue={tokenDraft} onChange={e => setTokenDraft(e.target.value)}
+          placeholder="Pega tu clave AIzaSy... o token HF (vacío conserva)" /></label>
+        <label className="profile-check"><input type="checkbox" name="clear_token"
+          checked={clearTokenDraft} onChange={e => setClearTokenDraft(e.target.checked)} />Eliminar el token guardado</label>
+        <label>Endpoint HTTPS<input name="model_base_url" type="url" required
+          defaultValue={vault.model_base_url ?? "https://generativelanguage.googleapis.com/v1beta/openai"} /></label>
+        <ModelConfiguration coder={vault.model_name || "gemini-3.8-flash"} reviewer={vault.reviewer_model} pricing={vault.model_pricing} />
+        <fieldset><legend>Activar llamadas remotas (IA)</legend>
+          {[
+            { id: "coder", label: "coder (Generación de código)" },
+            { id: "reviewer", label: "reviewer (Revisión técnica)" },
+            { id: "supervisor", label: "supervisor (Planificación de tareas)" },
+            { id: "requirements_analyst", label: "requirements_analyst (Interpretación de requisitos)" },
+          ].map(r => <label className="profile-check" key={r.id}>
+            <input type="checkbox" name="roles" value={r.id} defaultChecked={vault.remote_model_roles ? vault.remote_model_roles.includes(r.id) : true} />{r.label}</label>)}
+        </fieldset>
+        <label>Límite acumulado del perfil (USD)<input name="budget_limit" type="number" required
+          min="0" step="any" defaultValue={vault.budget_limit !== undefined && vault.budget_limit !== null ? vault.budget_limit : 50} /></label>
+        <label>Máximo por ejecución (USD)<input name="max_cost_per_run" type="number" required
+          min="0.000001" step="any" defaultValue={vault.max_cost_per_run !== undefined && vault.max_cost_per_run !== null ? vault.max_cost_per_run : 10} /></label>
+        <p>Las reservas son estimaciones locales, no cargos reales. Si falta el consumo del proveedor,
+          el límite horario también conserva las reservas desconocidas. Para admitir una corrida,
+          su máximo debe caber en el saldo horario disponible.</p>
+        <label>Máximo por hora (USD, opcional)<input name="max_cost_per_hour" type="number"
+          min="0" step="any" defaultValue={vault.max_cost_per_hour !== undefined && vault.max_cost_per_hour !== null ? vault.max_cost_per_hour : ""} /></label>
+        <p>Si falta el consumo del proveedor,
+          se conserva la reserva. Este control no garantiza la factura de un tercero.</p>
+        <button type="submit" disabled={busy}>{busy ? "Guardando…" : "Guardar bóveda"}</button>
+        <button type="button" disabled={busy} onClick={onClose}>Volver al espacio</button>
+      </form>
+    </section>
+  );
+}
 
 export function ProfileRoot() {
   const [status, setStatus] = useState<Status | null>(null);
@@ -24,14 +182,15 @@ export function ProfileRoot() {
   const [recoveryCode, setRecoveryCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [vault, setVault] = useState<Vault | null>(null);
-  const [formRevision, setFormRevision] = useState(0);
   const [notice, setNotice] = useState("");
   const [configurationRevision, setConfigurationRevision] = useState(0);
+
   const apply = (next: Status) => {
     setProfileCsrf(next.csrf_token ?? null);
     if (next.profile_mode) borrarClave();
     setStatus(next);
   };
+
   useEffect(() => {
     let current = true;
     profileRequest<Status>("/auth/status").then(s => { if (current) apply(s); })
@@ -192,100 +351,16 @@ export function ProfileRoot() {
         <label>Clave de rescate generada<input readOnly value={recoveryCode} autoComplete="off" /></label></div>}
       <button onClick={() => { setRecoverySetup(false); setRecoveryCode(""); }}>He guardado mi clave · cerrar</button>
     </section>}
-    {vault ? <section className="profile-vault" aria-label="Configuración de bóveda">
-      <h1>Proveedor y presupuesto de tu perfil</h1>
-      <p>Token: {vault.has_token ? "guardado" : "sin configurar"}. Nunca se muestra el valor guardado.</p>
-      <p>Consumo declarado: {vault.ledger.consumed} USD · Reservado: {vault.ledger.reserved} USD ·
-        Disponible: {vault.ledger.available ?? "sin límite declarado"}</p>
-
-      <div style={{ background: "rgba(255,255,255,0.05)", padding: "0.8rem", borderRadius: "8px", marginBottom: "1rem" }}>
-        <strong>Configuración rápida por proveedor:</strong>
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
-          <button type="button" onClick={() => {
-            setVault(prev => prev ? {
-              ...prev,
-              model_base_url: "https://generativelanguage.googleapis.com/v1beta/openai",
-              model_name: "gemini-3.8-flash",
-              reviewer_model: "gemini-3.8-flash",
-              model_pricing: JSON.stringify([
-                { model: "gemini-3.8-flash", input_per_1k: 0.00075, output_per_1k: 0.00375, currency: "USD" },
-                { model: "gemini-2.5-flash", input_per_1k: 0.00015, output_per_1k: 0.0006, currency: "USD" }
-              ], null, 2),
-            } : null);
-            setFormRevision(r => r + 1);
-            setNotice("Preset Google Gemini aplicado con gemini-3.8-flash. Límites conservados. Pega tu clave de API Gemini y guarda la bóveda.");
-          }}>✨ Usar Google Gemini (API Key)</button>
-          <button type="button" onClick={() => {
-            setVault(prev => prev ? {
-              ...prev,
-              model_base_url: "https://router.huggingface.co/v1",
-              model_name: "Qwen/Qwen2.5-Coder-32B-Instruct:nscale",
-              reviewer_model: "",
-              model_pricing: JSON.stringify([
-                { model: "Qwen/Qwen2.5-Coder-32B-Instruct:nscale", input_per_1k: 0.00006, output_per_1k: 0.0002, currency: "USD" }
-              ], null, 2),
-            } : null);
-            setFormRevision(r => r + 1);
-            setNotice("Preset Hugging Face aplicado. Límites conservados. Pega tu HF Token y guarda la bóveda.");
-          }}>🤗 Usar Hugging Face (Router)</button>
-          <button type="button" onClick={() => {
-            setVault(prev => prev ? {
-              ...prev,
-              model_base_url: "http://localhost:20128/v1",
-              model_name: "omniroute-combo",
-              reviewer_model: "",
-              model_pricing: JSON.stringify([
-                { model: "omniroute-combo", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
-                { model: "qwen2.5-coder", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
-                { model: "llama3.3-70b", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
-                { model: "gemini-3.8-flash", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" }
-              ], null, 2),
-            } : null);
-            setFormRevision(r => r + 1);
-            setNotice("Preset OmniRoute / Local aplicado (coste cero, 0 USD). Límites conservados. Guarda la bóveda para confirmar.");
-          }}>🆓 Usar OmniRoute / Ollama (Gratis $0.00)</button>
-          <button type="button" onClick={async () => {
-            try {
-              setNotice("Comprobando y lanzando OmniRoute...");
-              const data = await profileRequest<{ status: string; message: string }>("/system/launch-omniroute", { method: "POST" });
-              setNotice(data.message || "OmniRoute iniciado.");
-            } catch (err) {
-              setNotice("Error al invocar launcher: " + (err as Error).message);
-            }
-          }} style={{ background: "rgba(59, 130, 246, 0.2)", borderColor: "rgba(59, 130, 246, 0.5)" }}>⚡ Iniciar OmniRoute en PowerShell</button>
-        </div>
-      </div>
-
-      <form key={formRevision} onSubmit={saveVault}>
-        <label>Token HF / Clave de API Gemini<input name="hf_token" type="password" autoComplete="off" placeholder="Pega tu clave AIzaSy... o token HF (vacío conserva)" /></label>
-        <label className="profile-check"><input type="checkbox" name="clear_token" />Eliminar el token guardado</label>
-        <label>Endpoint HTTPS<input name="model_base_url" type="url" required
-          defaultValue={vault.model_base_url ?? "https://generativelanguage.googleapis.com/v1beta/openai"} /></label>
-        <ModelConfiguration coder={vault.model_name || "gemini-3.8-flash"} reviewer={vault.reviewer_model} pricing={vault.model_pricing} />
-        <fieldset><legend>Activar llamadas remotas (IA)</legend>
-          {[
-            { id: "coder", label: "coder (Generación de código)" },
-            { id: "reviewer", label: "reviewer (Revisión técnica)" },
-            { id: "supervisor", label: "supervisor (Planificación de tareas)" },
-            { id: "requirements_analyst", label: "requirements_analyst (Interpretación de requisitos)" },
-          ].map(r => <label className="profile-check" key={r.id}>
-            <input type="checkbox" name="roles" value={r.id} defaultChecked={vault.remote_model_roles ? vault.remote_model_roles.includes(r.id) : true} />{r.label}</label>)}
-        </fieldset>
-        <label>Límite acumulado del perfil (USD)<input name="budget_limit" type="number" required
-          min="0" step="any" defaultValue={vault.budget_limit && vault.budget_limit > 0 ? vault.budget_limit : 50} /></label>
-        <label>Máximo por ejecución (USD)<input name="max_cost_per_run" type="number" required
-          min="0.000001" step="any" defaultValue={vault.max_cost_per_run ?? 10} /></label>
-        <p>Las reservas son estimaciones locales, no cargos reales. Si falta el consumo del proveedor,
-          el límite horario también conserva las reservas desconocidas. Para admitir una corrida,
-          su máximo debe caber en el saldo horario disponible.</p>
-        <label>Máximo por hora (USD, opcional)<input name="max_cost_per_hour" type="number"
-          min="0" step="any" defaultValue={vault.max_cost_per_hour ?? ""} /></label>
-        <p>Si falta el consumo del proveedor,
-          se conserva la reserva. Este control no garantiza la factura de un tercero.</p>
-        <button type="submit" disabled={busy}>{busy ? "Guardando…" : "Guardar bóveda"}</button>
-        <button type="button" disabled={busy} onClick={() => setVault(null)}>Volver al espacio</button>
-      </form>
-    </section> : null}
+    {vault ? (
+      <ProfileVaultSection
+        vault={vault}
+        setVault={setVault}
+        busy={busy}
+        onSave={saveVault}
+        onClose={() => setVault(null)}
+        setNotice={setNotice}
+      />
+    ) : null}
     <div hidden={vault !== null}>
     <App key={status.user?.id} profile={{ name: status.user?.name ?? "", configurationRevision,
       onLogout: () => void logout(), onVault: () => {

@@ -802,8 +802,10 @@ def crear_app(
     @app.post("/system/launch-omniroute", dependencies=[ADMINISTRAR])
     def launch_omniroute() -> dict:
         """Comprueba y lanza OmniRoute en una ventana independiente, requiriendo autorización."""
+        import json
         import os
         import subprocess
+        import time
         import urllib.request
         from pathlib import Path
 
@@ -822,15 +824,30 @@ def crear_app(
                 "message": "OmniRoute ya está activo y respondiendo en http://localhost:20128",
             }
 
-        candidate_dirs = [
-            Path(os.environ.get("OMNIROUTE_DIR", "")),
-            Path.cwd() / "omniroute",
-            Path(__file__).resolve().parents[4] / "omniroute",
-            Path.home() / "Desktop" / "repo_proyect" / "omniroute",
-        ]
+        def is_valid_omniroute_dir(d: Path) -> bool:
+            try:
+                if not d.is_dir():
+                    return False
+                pkg_path = d / "package.json"
+                if not pkg_path.is_file():
+                    return False
+                with open(pkg_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                return data.get("name") == "omniroute"
+            except Exception:
+                return False
+
+        candidate_dirs: list[Path] = []
+        omni_env = os.environ.get("OMNIROUTE_DIR", "").strip()
+        if omni_env:
+            candidate_dirs.append(Path(omni_env).resolve())
+
+        candidate_dirs.append((Path(__file__).resolve().parents[4] / "omniroute").resolve())
+        candidate_dirs.append((Path.home() / "Desktop" / "repo_proyect" / "omniroute").resolve())
+
         chosen_script = None
         for d in candidate_dirs:
-            if not str(d) or not d.is_dir():
+            if not is_valid_omniroute_dir(d):
                 continue
             cmd_candidate = d / "iniciar.cmd"
             if cmd_candidate.is_file():
@@ -844,14 +861,34 @@ def crear_app(
         if not chosen_script:
             return {
                 "status": "not_found",
-                "message": "No se encontró el script de inicio de OmniRoute (iniciar.cmd o iniciar.ps1)",
+                "message": "No se encontró una instalación válida de OmniRoute con iniciar.cmd o iniciar.ps1",
             }
 
         try:
-            # Minimal sanitized environment without credentials
+            # Minimal allowlist-based sanitized environment (no credentials or database URLs leaked)
+            allowed_keys = {
+                "SYSTEMROOT",
+                "SYSTEMDRIVE",
+                "WINDIR",
+                "COMSPEC",
+                "PATHEXT",
+                "PATH",
+                "TEMP",
+                "TMP",
+                "LOCALAPPDATA",
+                "APPDATA",
+                "USERPROFILE",
+                "HOMEDRIVE",
+                "HOMEPATH",
+                "OMNIROUTE_USE_TURBOPACK",
+                "PORT",
+                "NODE_ENV",
+                "INITIAL_PASSWORD",
+            }
             safe_env = {
                 k: v for k, v in os.environ.items()
-                if not any(secret in k.upper() for secret in ("TOKEN", "SECRET", "KEY", "PASSWORD"))
+                if k.upper() in allowed_keys
+                and not any(secret in k.upper() for secret in ("TOKEN", "SECRET", "KEY", "PASSWORD", "DATABASE"))
             }
             safe_env["OMNIROUTE_USE_TURBOPACK"] = "1"
 
@@ -869,10 +906,26 @@ def crear_app(
                     env=safe_env,
                     creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
                 )
+
+            # Post-launch health verification (poll for up to 2.5 seconds)
+            is_running = False
+            deadline = time.monotonic() + 2.5
+            while time.monotonic() < deadline:
+                time.sleep(0.3)
+                if check_health():
+                    is_running = True
+                    break
+
+            if is_running:
+                return {
+                    "status": "running",
+                    "url": "http://localhost:20128",
+                    "message": f"OmniRoute se ha iniciado y responde correctamente ({chosen_script.name}).",
+                }
             return {
-                "status": "launched",
+                "status": "launching",
                 "url": "http://localhost:20128",
-                "message": f"Se ha iniciado OmniRoute ({chosen_script.name}).",
+                "message": f"OmniRoute ha sido iniciado ({chosen_script.name}); el servicio se está levantando en segundo plano.",
             }
         except Exception as exc:
             return {

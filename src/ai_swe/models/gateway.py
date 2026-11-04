@@ -47,9 +47,11 @@ from ai_swe.models.errors import (
     BudgetExceededError,
     InvalidResponseError,
     ModelAuthenticationError,
+    ModelBillingError,
     ModelConfigurationError,
     ModelGatewayError,
     ModelRateLimitError,
+    ModelTimeoutError,
     StructuredOutputError,
 )
 from ai_swe.models.pricing import TABLA_POR_DEFECTO, PricingTable, pricing_from_json
@@ -347,11 +349,22 @@ class ModelGateway:
                 return bruto, latencia_ms
             except (ModelGatewayError, BudgetExceededError) as exc:
                 ultimo = exc
+                is_timeout = (
+                    isinstance(exc, ModelTimeoutError)
+                    or getattr(exc, "status_code", None) in (408, 504)
+                    or "408" in str(exc)
+                    or "timeout" in str(exc).lower()
+                )
+                status = getattr(exc, "status_code", None)
+                # Unambiguous non-billed client rejection: the provider rejected the request
+                # before running the model (e.g. invalid credentials, unprocessable schema, rate limit).
+                # Exclude any timeout, 408, 5xx, or ambiguous connection errors.
                 is_client_rejection = (
-                    isinstance(exc, ModelAuthenticationError)
-                    or (isinstance(exc, ModelGatewayError) and getattr(exc, "status_code", None) is not None and 400 <= exc.status_code < 500)
-                    or (isinstance(exc, InvalidResponseError) and "HTTP 4" in str(exc))
-                    or isinstance(exc, ModelRateLimitError)
+                    not is_timeout
+                    and (
+                        isinstance(exc, (ModelAuthenticationError, ModelRateLimitError, ModelBillingError))
+                        or (status is not None and status in (400, 401, 402, 403, 404, 405, 413, 415, 422, 429))
+                    )
                 )
                 if reservation is not None:
                     if is_client_rejection:
@@ -361,7 +374,7 @@ class ModelGateway:
                             pass
                         reservation = None
                     else:
-                        # Ambiguous error (timeout, connection reset): request reached provider,
+                        # Ambiguous error (timeout, 408, connection reset, 5xx): request reached provider,
                         # cost is uncertain. Keep reservation intact in ledger as liability,
                         # detach so retry must reserve independently.
                         reservation = None
