@@ -45,8 +45,11 @@ from ai_swe.models.contracts import (
 )
 from ai_swe.models.errors import (
     BudgetExceededError,
+    InvalidResponseError,
+    ModelAuthenticationError,
     ModelConfigurationError,
     ModelGatewayError,
+    ModelRateLimitError,
     StructuredOutputError,
 )
 from ai_swe.models.pricing import TABLA_POR_DEFECTO, PricingTable, pricing_from_json
@@ -341,6 +344,22 @@ class ModelGateway:
                         )
             except (ModelGatewayError, BudgetExceededError) as exc:
                 ultimo = exc
+                if reservation is not None:
+                    # Si el proveedor rechazó la solicitud por error de cliente/auth (HTTP 4xx salvo 429),
+                    # no se generaron tokens ni hubo coste. Se liquida en 0.0 para no bloquear la bóveda.
+                    is_client_rejection = (
+                        isinstance(exc, ModelAuthenticationError)
+                        or (isinstance(exc, ModelGatewayError) and getattr(exc, "status_code", None) is not None and 400 <= exc.status_code < 500 and exc.status_code != 429)
+                        or (isinstance(exc, InvalidResponseError) and "HTTP 4" in str(exc))
+                    )
+                    # En caso de 429 (rate limit), el intento actual no consumió tokens y antes de reintentar
+                    # liberamos la reserva de este intento para permitir la reserva del siguiente.
+                    if is_client_rejection or isinstance(exc, ModelRateLimitError):
+                        try:
+                            self._ledger.settle(reservation, 0.0)
+                            reservation = None
+                        except Exception:
+                            pass
                 if not exc.recoverable or intento >= self._max_retries:
                     raise
                 espera = self._espera(intento, exc)

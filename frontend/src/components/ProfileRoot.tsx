@@ -206,22 +206,24 @@ export function ProfileRoot() {
               const urlInput = form.querySelector('[name="model_base_url"]') as HTMLInputElement | null;
               if (urlInput) urlInput.value = "https://generativelanguage.googleapis.com/v1beta/openai";
               const budgetInput = form.querySelector('[name="budget_limit"]') as HTMLInputElement | null;
-              if (budgetInput && (!budgetInput.value || Number(budgetInput.value) <= 0)) budgetInput.value = "5";
+              if (budgetInput) budgetInput.value = "50";
+              const runBudgetInput = form.querySelector('[name="max_cost_per_run"]') as HTMLInputElement | null;
+              if (runBudgetInput) runBudgetInput.value = "10";
               const checkboxes = form.querySelectorAll<HTMLInputElement>('input[name="roles"]');
               checkboxes.forEach(cb => { cb.checked = true; });
               const pricingText = form.querySelector('[name="model_pricing"]') as HTMLTextAreaElement | null;
               if (pricingText) {
                 pricingText.value = JSON.stringify([
-                  { model: "gemini-2.0-flash", input_per_1k: 0.0001, output_per_1k: 0.0004, currency: "USD" },
-                  { model: "gemini-1.5-flash", input_per_1k: 0.000075, output_per_1k: 0.0003, currency: "USD" }
+                  { model: "gemini-1.5-flash", input_per_1k: 0.000075, output_per_1k: 0.0003, currency: "USD" },
+                  { model: "gemini-2.0-flash", input_per_1k: 0.0001, output_per_1k: 0.0004, currency: "USD" }
                 ], null, 2);
               }
               const coderSelect = form.querySelector('#model_name-selector') as HTMLSelectElement | null;
-              if (coderSelect) { coderSelect.value = "gemini-2.0-flash"; coderSelect.dispatchEvent(new Event('change', { bubbles: true })); }
+              if (coderSelect) { coderSelect.value = "gemini-1.5-flash"; coderSelect.dispatchEvent(new Event('change', { bubbles: true })); }
               const reviewerSelect = form.querySelector('#reviewer_model-selector') as HTMLSelectElement | null;
               if (reviewerSelect) { reviewerSelect.value = "gemini-1.5-flash"; reviewerSelect.dispatchEvent(new Event('change', { bubbles: true })); }
             }
-            setNotice("Preset Google Gemini aplicado. Pega tu API Key de Gemini y guarda la bóveda.");
+            setNotice("Preset Google Gemini aplicado con gemini-1.5-flash y presupuesto holgado ($50 / $10 por ejecución). Pega tu clave de API y guarda la bóveda.");
           }}>✨ Usar Google Gemini (API Key)</button>
           <button type="button" onClick={() => {
             const form = document.querySelector(".profile-vault form") as HTMLFormElement | null;
@@ -253,7 +255,7 @@ export function ProfileRoot() {
         <label className="profile-check"><input type="checkbox" name="clear_token" />Eliminar el token guardado</label>
         <label>Endpoint HTTPS<input name="model_base_url" type="url" required
           defaultValue={vault.model_base_url ?? "https://generativelanguage.googleapis.com/v1beta/openai"} /></label>
-        <ModelConfiguration coder={vault.model_name || "gemini-2.0-flash"} reviewer={vault.reviewer_model} pricing={vault.model_pricing} />
+        <ModelConfiguration coder={vault.model_name || "gemini-1.5-flash"} reviewer={vault.reviewer_model} pricing={vault.model_pricing} />
         <fieldset><legend>Activar llamadas remotas (IA)</legend>
           {[
             { id: "coder", label: "coder (Generación de código)" },
@@ -264,9 +266,9 @@ export function ProfileRoot() {
             <input type="checkbox" name="roles" value={r.id} defaultChecked={vault.remote_model_roles ? vault.remote_model_roles.includes(r.id) : true} />{r.label}</label>)}
         </fieldset>
         <label>Límite acumulado del perfil (USD)<input name="budget_limit" type="number" required
-          min="0" step="any" defaultValue={vault.budget_limit && vault.budget_limit > 0 ? vault.budget_limit : 5} /></label>
+          min="0" step="any" defaultValue={vault.budget_limit && vault.budget_limit > 0 ? vault.budget_limit : 50} /></label>
         <label>Máximo por ejecución (USD)<input name="max_cost_per_run" type="number" required
-          min="0.000001" step="any" defaultValue={vault.max_cost_per_run ?? 1} /></label>
+          min="0.000001" step="any" defaultValue={vault.max_cost_per_run ?? 10} /></label>
         <p>Las reservas son estimaciones locales, no cargos reales. Si falta el consumo del proveedor,
           el límite horario también conserva las reservas desconocidas. Para admitir una corrida,
           su máximo debe caber en el saldo horario disponible.</p>

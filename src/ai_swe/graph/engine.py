@@ -336,6 +336,8 @@ class RunEngine:
             from ai_swe.state.budget_ledger import BudgetLedger
 
             ledger = BudgetLedger(self._store._db_path)
+            # Reconciliar reservas huérfanas retenidas de esta corrida antes de comprobar disponibilidad
+            ledger.reconcile_unsettled_run(run_id)
             resumen = ledger.summary()
             if resumen["limit"] is not None:
                 disponible = resumen.get("available") or 0.0

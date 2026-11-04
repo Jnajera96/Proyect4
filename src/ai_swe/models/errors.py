@@ -39,6 +39,7 @@ class ModelGatewayError(Exception):
         provider: str | None = None,
         model: str | None = None,
         detail: str | None = None,
+        status_code: int | None = None,
     ) -> None:
         # El redactor se aplica aqui, en el unico sitio por el que pasan todos los
         # errores del paquete. Si se dejara al llamante, bastaria un olvido.
@@ -46,6 +47,7 @@ class ModelGatewayError(Exception):
         self.model = model
         self.detail = redact(detail) if detail is not None else None
         self.message = redact(message)
+        self.status_code = status_code
         super().__init__(self.message)
 
     def __str__(self) -> str:

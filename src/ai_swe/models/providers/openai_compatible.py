@@ -186,8 +186,8 @@ class OpenAICompatibleAdapter:
 
     def _error_por_estado(self, respuesta: httpx.Response) -> Exception:
         detalle = self._detalle(respuesta)
-        comun: dict[str, Any] = {"provider": self._name, "detail": detalle or None}
         codigo = respuesta.status_code
+        comun: dict[str, Any] = {"provider": self._name, "detail": detalle or None, "status_code": codigo}
 
         if codigo in (401, 403):
             return ModelAuthenticationError(f"credencial rechazada (HTTP {codigo})", **comun)

@@ -30,14 +30,39 @@ class BudgetLedger:
         try:
             with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)) as db:
                 limit = db.execute("SELECT limit_amount FROM profile_budget WHERE id=1").fetchone()
-                used = db.execute(
-                    "SELECT COALESCE(SUM(COALESCE(consumed,reserved)),0) FROM budget_reservations"
-                ).fetchone()[0]
-                hourly = db.execute(
-                    "SELECT COALESCE(SUM(COALESCE(consumed,reserved)),0) FROM budget_reservations "
-                    "WHERE consumed IS NULL OR COALESCE(settled_epoch,created_epoch)>=?",
-                    (time.time() - 3600,),
-                ).fetchone()[0]
+                has_runs = db.execute(
+                    "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='runs'"
+                ).fetchone()[0] > 0
+                if has_runs:
+                    used = db.execute(
+                        "SELECT COALESCE(SUM("
+                        "  CASE "
+                        "    WHEN consumed IS NOT NULL THEN consumed "
+                        "    WHEN run_id IN (SELECT run_id FROM runs WHERE status IN ('completed', 'failed', 'cancelled', 'needs_human')) THEN 0 "
+                        "    ELSE reserved "
+                        "  END"
+                        "),0) FROM budget_reservations"
+                    ).fetchone()[0]
+                    hourly = db.execute(
+                        "SELECT COALESCE(SUM("
+                        "  CASE "
+                        "    WHEN consumed IS NOT NULL THEN consumed "
+                        "    WHEN run_id IN (SELECT run_id FROM runs WHERE status IN ('completed', 'failed', 'cancelled', 'needs_human')) THEN 0 "
+                        "    ELSE reserved "
+                        "  END"
+                        "),0) FROM budget_reservations "
+                        "WHERE (consumed IS NULL OR COALESCE(settled_epoch,created_epoch)>=?)",
+                        (time.time() - 3600,),
+                    ).fetchone()[0]
+                else:
+                    used = db.execute(
+                        "SELECT COALESCE(SUM(COALESCE(consumed,reserved)),0) FROM budget_reservations"
+                    ).fetchone()[0]
+                    hourly = db.execute(
+                        "SELECT COALESCE(SUM(COALESCE(consumed,reserved)),0) FROM budget_reservations "
+                        "WHERE consumed IS NULL OR COALESCE(settled_epoch,created_epoch)>=?",
+                        (time.time() - 3600,),
+                    ).fetchone()[0]
                 return {"available": max(0.0, limit[0] - used) if limit else 0.0,
                         "hourly_used": hourly}
         except sqlite3.Error:
@@ -65,6 +90,14 @@ class BudgetLedger:
             db.execute("UPDATE budget_reservations SET created_epoch="
                        "COALESCE(CAST(strftime('%s',created_at) AS REAL),?) "
                        "WHERE created_epoch IS NULL", (time.time(),))
+            has_runs = db.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='runs'").fetchone()[0] > 0
+            if has_runs:
+                db.execute(
+                    "UPDATE budget_reservations SET consumed=0, settled_epoch=? "
+                    "WHERE consumed IS NULL AND run_id IN ("
+                    "  SELECT run_id FROM runs WHERE status IN ('completed', 'failed', 'cancelled', 'needs_human')"
+                    ")", (time.time(),)
+                )
 
     @contextmanager
     def _connect(self):
@@ -216,6 +249,17 @@ class BudgetLedger:
                 (run_id,),
             ).fetchone()[0]
             return {"released": released, "unresolved": unresolved}
+        return self._transact(op)
+
+    def reconcile_unsettled_run(self, run_id: str) -> dict:
+        """Libera reservas huérfanas de una corrida pausada para permitir su continuación segura."""
+        def op(db):
+            db.execute("BEGIN IMMEDIATE")
+            released = db.execute(
+                "UPDATE budget_reservations SET consumed=0,settled_epoch=? "
+                "WHERE run_id=? AND consumed IS NULL", (time.time(), run_id),
+            ).rowcount
+            return {"released": released}
         return self._transact(op)
 
     def settle(self, reservation: str, cost: float | None):
