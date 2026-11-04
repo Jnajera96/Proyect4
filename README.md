@@ -1,5 +1,40 @@
 # Proyecto 4 — AI Software Engineering System
 
+
+## Integración verificada con Google Gemini
+
+Se verificó una conexión real con Google Gemini mediante el adaptador `openai_compatible` y el Model Gateway del proyecto.
+
+### Configuración local
+
+En el archivo `.env`:
+
+```dotenv
+AI_SWE_MODEL_PROVIDER=openai_compatible
+AI_SWE_MODEL_NAME=gemini-3.5-flash-lite
+AI_SWE_MODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+AI_SWE_MODEL_API_KEY=TU_CLAVE_PRIVADA
+AI_SWE_REMOTE_MODEL_ROLES=["coder","reviewer"]
+```
+
+Nunca subir el archivo `.env` ni las credenciales a GitHub.
+
+### Pruebas realizadas
+
+- 80 pruebas automatizadas aprobadas del Gateway y enrutamiento híbrido.
+- Conexión real con Gemini verificada.
+- Generación de respuestas estructuradas con Pydantic validada.
+- Prueba real opcional, desactivada por defecto.
+- Reintentos automáticos del Gateway desactivados para esa prueba.
+
+### Limitaciones actuales
+
+- Todavía no se ha probado el flujo multiagente completo con Gemini.
+- TD-01 permanece pendiente de validación integral.
+- El uso gratuito depende de las cuotas y condiciones de Google.
+- Un costo estimado `None` no garantiza que la solicitud sea gratuita.
+
+
 ## Mantenimiento y estabilización — 2026-11-02
 
 Rama de trabajo: `feature/complete-project-requirements`.
