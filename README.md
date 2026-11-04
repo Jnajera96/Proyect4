@@ -36,7 +36,36 @@ y las actas enlazadas describen las fuentes actuales; cada ZIP histórico conser
 
 ## v0.1.0 — entrega histórica local aprobada
 
-Entrega canónica: `dist/windows-signed-python-rc2/AISWESystem-signed-python-rc2.zip`.
+## Mantenimiento y estabilización — 2026-11-02
+
+Rama de trabajo: `feature/complete-project-requirements`.
+
+### Correcciones realizadas
+
+1. **Límites de procesos en Windows**
+   - Se ajustó la prueba de Windows Job Objects para utilizar el ejecutable base de Python.
+   - Se evita que el lanzador del entorno virtual consuma una cuota adicional de procesos durante la prueba.
+   - Se conservan los límites de seguridad del runner.
+
+2. **Importación de perfiles**
+   - El endpoint `POST /auth/import-vault` utiliza `conflict_strategy="error"` de manera predeterminada.
+   - Una importación con nombre de perfil duplicado devuelve HTTP 400.
+   - Se mantiene disponible `conflict_strategy="rename"` cuando se solicita explícitamente.
+   - Se añadieron comprobaciones de regresión para la restauración de repositorios y ejecuciones pendientes.
+
+### Validación
+
+- Pruebas específicas de Windows: 15 aprobadas.
+- Pruebas de importación de perfiles: 2 aprobadas.
+- Pruebas relacionadas de continuidad: aprobadas.
+- Suite completa de pytest: ejecutada hasta el 100 %, sin fallos visibles en la salida de progreso.
+- Ruff: sin errores en los archivos modificados.
+- `git diff --check`: sin errores.
+
+Estas correcciones estabilizan el entorno de desarrollo y las pruebas de regresión.
+No representan una nueva versión publicada ni una certificación de producción.
+
+## v0.1.0 — entrega histórica local aprobadaigned-python-rc2/AISWESystem-signed-python-rc2.zip`.
 Extraer el archivo ZIP, el cual genera la carpeta contenedora `AISWESystem/`. Acceder a dicha carpeta y ejecutar `AISWESystem.cmd`. El lanzador inicia el backend en el puerto 8000 por defecto o selecciona dinámicamente el siguiente puerto disponible si estuviera ocupado. 791 PASS, 3 SKIP, cero FAIL; SAC activo
 y cero bloqueos del paquete en este host. Sin VM independiente. Ver
 [producto](docs/PRODUCT-v0.1.0.md), [instalación](docs/INSTALLATION-WINDOWS.md) y

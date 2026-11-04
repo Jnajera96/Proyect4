@@ -89,7 +89,7 @@ def test_new_device_import_without_registration_preserves_pending_run(tmp_path, 
             assert (new_repo / "app.py").read_bytes() == (old_repo / "app.py").read_bytes()
         assert client.post("/auth/import-vault", json=request).status_code == 400
 
-        # El renombrado debe funcionar cuando se solicita explicitamente.
+        # El renombrado debe funcionar cuando se solicita explícitamente.
         renamed_repos = [
             tmp_path / "destination" / f"renamed-repo-{i}"
             for i in range(count)
@@ -117,6 +117,7 @@ def test_new_device_import_without_registration_preserves_pending_run(tmp_path, 
             assert (renamed_repo / "app.py").read_bytes() == (
                 old_repo / "app.py"
             ).read_bytes()
+
 
     with TestClient(crear_app(settings=settings)) as client:
         login = client.post(

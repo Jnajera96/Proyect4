@@ -54,6 +54,7 @@ def test_llamada_real_controlada() -> None:
     """Una sola llamada, pidiendo un valor trivial y sin contexto del proyecto."""
     ajustes = load_settings()
     gateway = gateway_from_settings(ajustes)
+
     gateway._max_retries = 0
     try:
         respuesta = gateway.generate_structured(
