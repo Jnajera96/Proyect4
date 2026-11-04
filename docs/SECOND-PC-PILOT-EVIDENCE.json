@@ -1,0 +1,126 @@
+{
+  "status": "passed_simulated_clean_environment",
+  "physical_second_pc": false,
+  "clean_environment_simulated": true,
+  "paid_api_calls": 0,
+  "downloads": 0,
+  "pushes": 0,
+  "bundle": "C:\\Users\\jose_\\Desktop\\repo_proyect\\proyecto4-ai-swe\\dist\\windows-v0.2.0-rc26\\extracted\\AISWESystem",
+  "output": "C:\\Users\\jose_\\AppData\\Local\\Temp\\aiswe-clean-df02b993dc",
+  "integrity": {
+    "manifest_sha256": "74ed0c478889084899b2ac084c00eaac80453fcf161b7f72aa5789f134cdf754",
+    "files": 4862,
+    "bytes": 362656933,
+    "bundled_git": false
+  },
+  "runtime_signatures": [
+    {
+      "file": "python.exe",
+      "status": "Valid",
+      "subject": "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+    },
+    {
+      "file": "pythonw.exe",
+      "status": "Valid",
+      "subject": "CN=Python Software Foundation, O=Python Software Foundation, L=Beaverton, S=Oregon, C=US"
+    }
+  ],
+  "runtime_probe": {
+    "success": true,
+    "checks": [
+      "bundled CPython 3.13.14 and ai_swe imports verified",
+      "PATH System32 discovers no Python Node or Git",
+      "installed user directories created outside bundle",
+      "voice dependencies import and CPU int8 factory prepared without loading weights",
+      "Windows Job created assigned before resume and contains child plus descendant",
+      "TerminateJobObject cascades and verifies both owned processes terminated"
+    ],
+    "discovery": {
+      "python": null,
+      "node": null,
+      "git": null
+    },
+    "python": "3.13.14 (tags/v3.13.14:fd17997, Jun 10 2026, 13:03:48) [MSC v.1944 64 bit (AMD64)]",
+    "executable": "C:\\Users\\jose_\\Desktop\\repo_proyect\\proyecto4-ai-swe\\dist\\windows-v0.2.0-rc26\\extracted\\AISWESystem\\runtime\\python.exe",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "machine": "AMD64",
+    "user_root": "C:\\Users\\jose_\\AppData\\Local\\Temp\\aiswe-clean-df02b993dc\\probe-userdata\\AISWESystem",
+    "module": "C:\\Users\\jose_\\Desktop\\repo_proyect\\proyecto4-ai-swe\\dist\\windows-v0.2.0-rc26\\extracted\\AISWESystem\\app\\ai_swe\\__init__.py",
+    "job_descendant_pid": 9996,
+    "job_initial_active_members": 4,
+    "job_member_images": [
+      "C:\\Users\\jose_\\Desktop\\repo_proyect\\proyecto4-ai-swe\\dist\\windows-v0.2.0-rc26\\extracted\\AISWESystem\\runtime\\python.exe",
+      "C:\\Users\\jose_\\Desktop\\repo_proyect\\proyecto4-ai-swe\\dist\\windows-v0.2.0-rc26\\extracted\\AISWESystem\\runtime\\python.exe"
+    ],
+    "kill_on_close_configured": true,
+    "close_only_kill_tested": false,
+    "voice": {
+      "av": "18.1.0",
+      "ctranslate2": "4.8.2",
+      "device": "cpu",
+      "compute_type": "int8",
+      "model_loaded": false,
+      "real_audio": false,
+      "real_inference": false
+    },
+    "paid_calls": 0
+  },
+  "profiles": {
+    "success": true,
+    "checks": [
+      "all manifest hashes match",
+      "no developer state or secrets files",
+      "installed defaults to profiles",
+      "private API gated before login",
+      "integrated frontend served",
+      "profile registration with packaged cryptography",
+      "empty profile has no global token",
+      "packaged graph accepts deterministic run",
+      "human confirmation required",
+      "graceful packaged shutdown",
+      "encrypted profile login survives restart",
+      "SQLite and graph checkpoint survive restart",
+      "persisted SQLite integrity",
+      "restart shutdown graceful"
+    ],
+    "paid_calls": 0
+  },
+  "post_run_integrity": {
+    "manifest_sha256": "74ed0c478889084899b2ac084c00eaac80453fcf161b7f72aa5789f134cdf754",
+    "files": 4862,
+    "bytes": 362656933,
+    "bundled_git": false
+  },
+  "audit": {
+    "executed_local_date": "2026-11-03",
+    "timezone": "America/Mexico_City",
+    "source_worktree_base": "5b71986",
+    "runtime_checks_passed": 6,
+    "portable_smoke_checks_passed": 14,
+    "unit_tests_passed": 12,
+    "verifier_sha256": "8590e112299e116f0588ede3c78f8ea53db0b49935df148916025ad5424646ed",
+    "profiles_helper_sha256": "a2ab54db514a2c6e1af512baf651bb72e10ac5b1ffef7e18c4c1b50779eec71f",
+    "unit_junit_sha256": "ea381f4f1dd11891690d0b00341cd30f4eeb2ce82c30784a5c6036f5817751c4"
+  },
+  "readiness": {
+    "standalone_startup_profiles_and_restart": "passed_same_host_clean_environment_simulation",
+    "full_generation_without_git": "not_ready_git_not_bundled",
+    "offline_stt_with_uncached_model": "not_ready_weights_not_bundled",
+    "physical_second_machine": "pending_operator_execution",
+    "windows10": "not_tested",
+    "windows11": "tested_on_current_host_only",
+    "requested_user_root": "%LOCALAPPDATA%/AI-SWE-System",
+    "actual_user_root": "%LOCALAPPDATA%/AISWESystem"
+  },
+  "limitations": [
+    "This is not a second physical PC or an independent VM",
+    "Windows Job constrains owned process trees/resources, not network or file access",
+    "TerminateJobObject cascade tested; kill-on-close only configuration checked",
+    "Voice native dependencies and CPU int8 factory only; no weights/audio/inference",
+    "Git absent from PATH and bundle; complete worktree/Coder flow not certified on a Git-free machine",
+    "No models billed, downloads or pushes; local HTTP only; no whole-host packet capture",
+    "Authenticode covers CPython executables, not every third-party DLL",
+    "Same-host cleanup and state simulation does not remove installed DLLs/drivers or host policies",
+    "RC26 was not rebuilt with newer Day 2-4 source changes"
+  ]
+}
