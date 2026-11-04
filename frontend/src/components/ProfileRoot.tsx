@@ -280,6 +280,15 @@ export function ProfileRoot() {
             }
             setNotice("Preset OmniRoute / Local aplicado (coste cero, 0 USD). Endpoint http://localhost:20128/v1 (o 11434 para Ollama) con tarifas en 0 USD.");
           }}>🆓 Usar OmniRoute / Ollama (Gratis $0.00)</button>
+          <button type="button" onClick={async () => {
+            try {
+              setNotice("Comprobando y lanzando OmniRoute en PowerShell...");
+              const data = await profileRequest<{ status: string; message: string }>("/system/launch-omniroute", { method: "POST" });
+              setNotice(data.message || "OmniRoute iniciado.");
+            } catch (err) {
+              setNotice("Error al invocar launcher: " + (err as Error).message);
+            }
+          }} style={{ background: "rgba(59, 130, 246, 0.2)", borderColor: "rgba(59, 130, 246, 0.5)" }}>⚡ Iniciar OmniRoute en PowerShell</button>
         </div>
       </div>
 

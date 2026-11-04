@@ -799,6 +799,49 @@ def crear_app(
             "proyectos": len(almacen.listar_proyectos(limit=1000)),
         }
 
+    @app.post("/system/launch-omniroute")
+    def launch_omniroute() -> dict:
+        """Comprueba y lanza OmniRoute en una ventana de PowerShell."""
+        import socket
+        import subprocess
+        from pathlib import Path
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5)
+        is_running = sock.connect_ex(("127.0.0.1", 20128)) == 0
+        sock.close()
+
+        if is_running:
+            return {
+                "status": "already_running",
+                "url": "http://localhost:20128",
+                "message": "OmniRoute ya está activo y respondiendo en http://localhost:20128",
+            }
+
+        ps1_script = Path(r"C:\Users\jose_\Desktop\repo_proyect\omniroute\iniciar.ps1")
+        if not ps1_script.exists():
+            return {
+                "status": "not_found",
+                "message": f"No se encontró el script en {ps1_script}",
+            }
+
+        try:
+            cmd = f'Start-Process powershell -ArgumentList \'-NoExit\', \'-ExecutionPolicy\', \'Bypass\', \'-File\', \'{ps1_script}\''
+            subprocess.Popen(
+                ["powershell.exe", "-Command", cmd],
+                creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
+            )
+            return {
+                "status": "launched",
+                "url": "http://localhost:20128",
+                "message": "Se ha abierto una nueva ventana de PowerShell ejecutando OmniRoute.",
+            }
+        except Exception as exc:
+            return {
+                "status": "error",
+                "message": f"Error al ejecutar PowerShell: {exc}",
+            }
+
     # ------------------------------------------------------------- proyectos
     @app.post("/projects", response_model=Project, status_code=201, dependencies=[ADMINISTRAR])
     def crear_proyecto(
