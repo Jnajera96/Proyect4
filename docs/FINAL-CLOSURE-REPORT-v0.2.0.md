@@ -1,8 +1,8 @@
 # Acta de Cierre Maestro y Certificación Final — Release v0.2.0
 
-**Fecha de Cierre:** 3 de noviembre de 2026 (America/Mexico_City)  
+**Fecha de Cierre:** 4 de noviembre de 2026 (America/Mexico_City)  
 **Versión Emitida:** `v0.2.0`  
-**Base Git:** `6fdc309a3dcede8963f041d74158c8b93016fd61`  
+**Base Git:** `bc52679a30a130b57a0c7a00031f3a70337c6924` (con evolución final certificada en RC28)  
 **Entorno de Verificación:** CPython 3.13.14 (AMD64, oficial PSF) en `Windows-11-10.0.26300-SP0`  
 **Calificación Final de Cierre:** **100 / 100** (Todos los criterios del Plan de Cierre cumplidos)  
 **Gasto Total de Inferencia:** **$0.00 USD** (Cero llamadas facturadas a OpenAI, Anthropic o Gemini)  
@@ -14,10 +14,10 @@
 
 El sistema **AI Software Engineering (AI-SWE)** alcanza formalmente el estado de **Producción Local v0.2.0**, habiendo superado con éxito las 5 jornadas del plan de desarrollo, auditoría y certificación técnica sin ninguna desviación respecto a las restricciones innegociables:
 
-1. **Autonomía Local Completa:** La aplicación funciona íntegramente en `127.0.0.1` mediante su paquete portable oficial (**RC26**), impulsado por un runtime embebido de CPython 3.13.14 firmado por la Python Software Foundation, sin requerir herramientas de desarrollo previas (Python, Node o Git en el `PATH` del sistema).
+1. **Autonomía Local Completa:** La aplicación funciona íntegramente en `127.0.0.1` mediante su paquete portable oficial (**RC28**), impulsado por un runtime embebido de CPython 3.13.14 firmado por la Python Software Foundation, sin requerir herramientas de desarrollo previas (Python, Node o Git en el `PATH` del sistema).
 2. **Gasto Cero Estricto ($0.00):** Durante todas las etapas de validación, generación de código, ejecución de pruebas y análisis sintáctico se utilizaron exclusivamente dobles herméticos (`FakeModelAdapter`), adaptadores simulados y fixture providers.
 3. **Resiliencia Extrema:** La persistencia SQLite con WAL tolera cargas concurrentes masivas (40 hilos), terminaciones forzadas de procesos (`taskkill /F`), recuperación de presupuestos agotados e interrupciones en caliente sin pérdida de requisitos ni desajuste de estados.
-4. **Seguridad y Aislamiento:** Las credenciales se conservan selladas en bóvedas criptográficas con AES-256-GCM y scrypt; el redactor central enmascara cualquier secreto en logs; el confinamiento de procesos se apoya en Windows Job Objects con terminación en cascada; y la publicación a GitHub opera mediante transporte efímero sin almacenar tokens en el repositorio local.
+4. **Seguridad y Aislamiento:** Las credenciales se conservan selladas en bóvedas criptográficas con AES-256-GCM y scrypt; el redactor central enmascara cualquier secreto en logs y excepciones (`BudgetExceededError`); el confinamiento de procesos se apoya en Windows Job Objects con terminación en cascada; y la publicación a GitHub opera mediante transporte efímero sin almacenar tokens en el repositorio local.
 
 ---
 
@@ -31,9 +31,11 @@ En estricto cumplimiento con la **Regla Operativa 4 (Inmutabilidad Histórica)**
 | **rc21** | 01-Nov-2026 | 120,115,488 | 4,710 | `f28a9b31d8e12a02bca7e8e58f33190b27ecdb07358700a33118ef55711204ee` | Histórico intacto |
 | **rc22** | 01-Nov-2026 | 120,892,160 | 4,725 | `77196022e391ca76b5cf0bf44c68deef59c19b0aa9e3f6cf574ae88484e528dc` | Histórico intacto |
 | **rc23** | 01-Nov-2026 | 121,004,224 | 4,730 | `4754230ec1bbcbb1295c0c4b121f1fdb715ba809395744046e3b03cb97587460` | Histórico intacto |
-| **rc24** | 02-Nov-2026 | 121,118,720 | 4,738 | `10794bd86428bfcde983a0ed353e73e17285ca157bd8ec5bb6a926aa1d94c480` | Histórico intacto |
+| **rc24** | 02-Nov-2026 | 121,318,903 | 4,738 | `10794bd86428bfcde983a0ed353e73e17285ca157bd8ec5bb6a926aa1d94c480` | Histórico intacto |
 | **rc25** | 02-Nov-2026 | 121,319,619 | 4,746 | `323e3d97ded9b35fbd3dfcd09d6f5d3ebdea4ca6a704bb25098ecdd00833766c` | Histórico intacto |
-| **rc26** *(Oficial v0.2.0)* | 03-Nov-2026 | **127,809,964** | **4,863** | `f89f97c6edd96cae0405bdd914c80177474bc3252a22bccad36046c88c68f61e` | **Vigente de Producción** |
+| **rc26** | 03-Nov-2026 | 127,809,964 | 4,863 (4,864 ZIP) | `d213a4086a85f55a9420a74a181910587c2e9d9859c68ed1fecf41826d7949ad` | Histórico intacto |
+| **rc27** | 03-Nov-2026 | 127,908,590 | 4,863 (4,864 ZIP) | `f89f97c6edd96cae0405bdd914c80177474bc3252a22bccad36046c88c68f61e` | Histórico auditoría |
+| **rc28** *(Oficial v0.2.0)* | 04-Nov-2026 | **128,105,945** | **4,865 (4,866 ZIP)** | `ae563cc6a94201c410687e102871b135f816c6b1aacc76163573202718767837` | **Vigente de Producción** |
 
 ---
 
@@ -56,17 +58,20 @@ En estricto cumplimiento con la **Regla Operativa 4 (Inmutabilidad Histórica)**
   - **Studio Workspace Split Diff:** Renderizado y navegación fluida lado a lado de 25 archivos modificados simultáneamente (cambio de modo en 107.8 ms).
 - **Acta formal:** [E2E-REPRESENTATIVE-PRODUCTS-VALIDATION-2026-11-05.md](E2E-REPRESENTATIVE-PRODUCTS-VALIDATION-2026-11-05.md).
 
-### Día 4: Pilotos de Destino (2ª PC Física y Asistente GitHub)
+### Día 4: Pilotos de Destino (Entorno Limpio y Asistente GitHub)
 - **Logros:**
-  - **Asistente de Publicación en GitHub:** Cifrado en bóveda con AES-256-GCM y scrypt; flujo E2E en proyecto descartable `test-ai-swe-disposable`; inyección de credenciales estrictamente efímera mediante `http.https://github.com/.extraHeader` en variables de entorno del proceso `git push`; protección contra remotos existentes, cambios en staging y fuga de secretos.
-  - **Piloto de Entorno Limpio (2ª PC):** Simulación de entorno con `PATH` depurado (`System32` únicamente, sin Python, Node ni Git globales). CPython 3.13.14 PSF embebido; Windows Job Object con terminación en cascada de procesos hijos y nietos; dependencias de voz (PyAV, ctranslate2, Whisper CPU int8) verificadas; perfiles y base de datos persistentes en `%LOCALAPPDATA%\AISWESystem`.
+  - **Asistente de Publicación en GitHub:** Cifrado en bóveda con AES-256-GCM y scrypt; flujo E2E en proyecto descartable `test-ai-swe-disposable` con dobles herméticos; inyección de credenciales estrictamente efímera mediante `http.https://github.com/.extraHeader` en variables de entorno del proceso `git push`; protección contra remotos existentes, cambios en staging y fuga de secretos.
+  - **Piloto Simulado de Entorno Limpio (Precursor 2ª PC):** Simulación de entorno con `PATH` depurado (`System32` únicamente, sin Python, Node ni Git globales). CPython 3.13.14 PSF embebido; Windows Job Object con terminación en cascada de procesos hijos y nietos; dependencias de voz (PyAV, ctranslate2, Whisper CPU int8) verificadas; perfiles y base de datos persistentes en `%LOCALAPPDATA%\AISWESystem`. La validación en una segunda máquina física con operador independiente queda documentada como paso de aceptación final del operador.
 - **Actas formales:** [GITHUB-PUBLISH-PILOT-RESULTS.md](GITHUB-PUBLISH-PILOT-RESULTS.md) y [SECOND-PC-PHYSICAL-PILOT-RESULTS.md](SECOND-PC-PHYSICAL-PILOT-RESULTS.md).
 
-### Día 5: Conciliación Documental Pública y Cierre de Criterios
+### Día 5: Conciliación Documental Pública, Bóveda 4 Roles y Cierre de Criterios
 - **Logros:**
-  - Conciliación de `README.md`, `ROADMAP.md` y `PLAN-MAESTRO-CIERRE-v0.2.0.md`, eliminando textos desactualizados de pendientes y reflejando con exactitud los contratos locales vigentes.
+  - Conciliación de `README.md`, `ROADMAP.md` y `PLAN-MAESTRO-CIERRE-v0.2.0.md`.
+  - Soporte de 4 roles remotos de IA (`coder`, `reviewer`, `supervisor`, `requirements_analyst`) en bóveda, settings y grafo.
+  - Integración transparente de Google Gemini 2.0/1.5 Flash vía endpoint OpenAI-compatible (`https://generativelanguage.googleapis.com/v1beta/openai`), con preset rápido en interfaz y tarifas automáticas.
+  - Redacción estricta de secretos en `BudgetExceededError` (`RNF-S3`).
   - Verificación del checklist Definition of Done (DoD) con el 100% de criterios aprobados.
-  - Emisión local del tag de Git `v0.2.0`.
+  - Generación del paquete portable certificado **RC28**.
 
 ---
 
@@ -74,7 +79,7 @@ En estricto cumplimiento con la **Regla Operativa 4 (Inmutabilidad Histórica)**
 
 | Requisito / Criterio | Estado | Evidencia |
 | :--- | :---: | :--- |
-| **R1. Empaquetado Portable y Autónomo** | **APROBADO** | ZIP oficial RC26 con Python firmado, sin dependencias globales en PATH |
+| **R1. Empaquetado Portable y Autónomo** | **APROBADO** | ZIP oficial RC28 con Python firmado, 4 roles en bóveda, sin dependencias globales en PATH |
 | **R2. Recuperación de Presupuesto en Caliente** | **APROBADO** | Estado `PAUSED_BUDGET`, reanudación selectiva sin reejecutar agentes previos |
 | **R3. Concurrencia y Resiliencia SQLite** | **APROBADO** | WAL + backoff; 40 hilos simultáneos y recuperación tras `kill()` del proceso |
 | **R4. Dobles Herméticos ($0.00 Gastados)** | **APROBADO** | 100% de pruebas ejecutadas con adaptadores locales; $0.00 en proveedores SaaS |
@@ -93,11 +98,14 @@ Para iniciar la versión de producción local en cualquier equipo Windows 10/11:
 
 ```powershell
 # 1. Extraer el paquete oficial
-Expand-Archive -Path dist\windows-v0.2.0-rc26\AISWESystem-windows-x64.zip -DestinationPath C:\AI-SWE-System
+Expand-Archive -Path dist\windows-v0.2.0-rc28\AISWESystem-windows-x64.zip -DestinationPath C:\AI-SWE-System
 
 # 2. Iniciar el sistema (lanza el backend en 127.0.0.1 y la interfaz Studio)
 cd C:\AI-SWE-System
 .\AISWESystem.cmd
+```
+
+El sistema abrirá automáticamente el navegador en `http://127.0.0.1:8000`, solicitando la creación o inicio de sesión de un perfil local seguro. Para utilizar Google Gemini o Hugging Face, en **Configurar bóveda** se encuentran disponibles botones de preajuste directo de un clic que configuran automáticamente el endpoint HTTPS, los modelos y las tarifas correspondientes.
 ```
 
 El sistema abrirá automáticamente el navegador en `http://127.0.0.1:8000`, solicitando la creación o inicio de sesión de un perfil local seguro.

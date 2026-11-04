@@ -3,6 +3,7 @@ import catalog from "../lib/modelCatalog.json";
 
 const CUSTOM = "__custom__";
 const HF_ROUTER = "https://router.huggingface.co/v1";
+const GEMINI_ROUTER = "https://generativelanguage.googleapis.com/v1beta/openai";
 
 export function pricingForSelection(ids: string[], previous: string): string {
   const entries = JSON.parse(previous.trim() || "[]");
@@ -35,15 +36,22 @@ export function ModelSelector({ name, label, value, onChange }: {
         onChange(next === CUSTOM ? "" : next);
       }}>
       <option value="">{name === "reviewer_model" ? "Usar el mismo modelo que Coder" : "Seleccionar modelo"}</option>
+      <optgroup label="Modelos Google Gemini (OpenAI-compatible)">
+        {catalog.models.filter(m => m.provider === "google").map(m =>
+          <option key={m.id} value={m.id}>{m.label} · {m.provider} · Candidato configurable</option>)}
+      </optgroup>
       <optgroup label="Validación E2E previa en este proyecto">
-        {catalog.models.filter(m => m.projectValidated).map(m =>
+        {catalog.models.filter(m => m.projectValidated && m.provider !== "google").map(m =>
           <option key={m.id} value={m.id}>{m.label} · {m.provider}</option>)}
       </optgroup>
       <optgroup label="Contratos comprobados · aplicaciones E2E pendientes de prueba">
-        {catalog.models.filter(m => !m.projectValidated).map(m =>
-          <option key={m.id} value={m.id}>{m.label} · {m.provider} · Coder {m.probe.coderPassed}/{m.probe.coderTotal} · Reviewer {m.probe.reviewerPassed}/{m.probe.reviewerTotal}</option>)}
+        {catalog.models.filter(m => !m.projectValidated && m.provider !== "google").map(m =>
+          <option key={m.id} value={m.id}>
+            {m.label} · {m.provider}
+            {m.probe ? ` · Coder ${m.probe.coderPassed}/${m.probe.coderTotal} · Reviewer ${m.probe.reviewerPassed}/${m.probe.reviewerTotal}` : " · Candidato configurable"}
+          </option>)}
       </optgroup>
-      <option value={CUSTOM}>Otro modelo — escribir identificador HF</option>
+      <option value={CUSTOM}>Otro modelo — escribir identificador</option>
     </select>
     <input type="hidden" name={name} value={value.trim()} />
     {custom && <label htmlFor={`${name}-custom`}>Identificador personalizado de {label}
@@ -54,13 +62,17 @@ export function ModelSelector({ name, label, value, onChange }: {
     {selected && <p className="profile-model-note">
       {selected.purpose}. {selected.projectValidated
         ? "Funcionó en la validación E2E histórica y sus pruebas de contrato se actualizaron."
-        : "Respondió en pruebas reales de contrato; todavía falta construir y verificar una aplicación completa con esta ruta."}
-      <br />Pruebas del {selected.probe.checkedAt}: Coder {selected.probe.coderPassed}/{selected.probe.coderTotal}, Reviewer {selected.probe.reviewerPassed}/{selected.probe.reviewerTotal}. Una ejecución por caso; no es una garantía de calidad general.
+        : selected.probe
+        ? "Respondió en pruebas reales de contrato; todavía falta construir y verificar una aplicación completa con esta ruta."
+        : "Modelo candidato configurable; requiere endpoint compatible y tarifas declaradas."}
+      {selected.probe && (
+        <><br />Pruebas del {selected.probe.checkedAt}: Coder {selected.probe.coderPassed}/{selected.probe.coderTotal}, Reviewer {selected.probe.reviewerPassed}/{selected.probe.reviewerTotal}. Una ejecución por caso; no es una garantía de calidad general.</>
+      )}
       {!selected.supportsStructuredOutput && <><br />El proveedor no declara esquema nativo, pero respondió correctamente en las sondas de modo JSON con validación local.</>}
-      {" "}<a href={selected.source} target="_blank" rel="noreferrer">Ficha en Hugging Face</a>
+      {" "}<a href={selected.source} target="_blank" rel="noreferrer">Ficha técnica</a>
       <br />{selected.inputPerMillion} USD / millón de entrada · {selected.outputPerMillion} USD / millón de salida.
     </p>}
-    {custom && <p className="profile-model-note">Debe estar servido por un proveedor compatible con el router HF.
+    {custom && <p className="profile-model-note">Debe estar servido por un proveedor compatible con OpenAI.
       Escribir el nombre no despliega el modelo. Declara también sus tarifas.</p>}
   </div>;
 }
@@ -83,8 +95,10 @@ export function ModelConfiguration({ coder = "", reviewer = "", pricing = "" }: 
       try {
         const form = event.currentTarget.form;
         const endpoint = new FormData(form ?? undefined).get("model_base_url");
-        if (String(endpoint).trim().replace(/\/$/, "") !== HF_ROUTER) {
-          throw new Error("Estas tarifas corresponden al router HF; declara las de tu endpoint.");
+        const rawEndpoint = String(endpoint).trim().replace(/\/$/, "");
+        const isKnownCatalogEndpoint = rawEndpoint === HF_ROUTER || rawEndpoint.startsWith(GEMINI_ROUTER);
+        if (!isKnownCatalogEndpoint) {
+          throw new Error("Estas tarifas corresponden a proveedores del catálogo (HF / Gemini); para endpoints personalizados declara las de tu proveedor.");
         }
         setPrices(pricingForSelection([coderModel, reviewerModel || coderModel], prices));
         setNotice(`Tarifas publicadas el ${catalog.checkedAt} aplicadas. Revísalas antes de guardar.`);
@@ -94,7 +108,7 @@ export function ModelConfiguration({ coder = "", reviewer = "", pricing = "" }: 
     <label>Tarifas declaradas en USD (JSON)<textarea name="model_pricing" rows={6}
       value={prices} onChange={event => setPrices(event.target.value)}
       placeholder={'[{"model":"organización/modelo:proveedor","input_per_1k":0.001,"output_per_1k":0.002,"currency":"USD"}]'} /></label>
-    <p className="profile-model-note">Después marca coder/reviewer en «Activar llamadas remotas»,
+    <p className="profile-model-note">Después marca los roles deseados en «Activar llamadas remotas»,
       configura el presupuesto y guarda la bóveda. La disponibilidad pública no garantiza
       acceso con tu cuenta ni una respuesta válida al contrato de esta aplicación.</p>
   </>;

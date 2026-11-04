@@ -66,7 +66,9 @@ class Settings(BaseSettings):
     # --- Proveedor de modelo -------------------------------------------------
     model_provider: str = Field(default="openai", description="Proveedor del Foundation Model.")
     model_name: str = Field(default="", description="Identificador del modelo a usar.")
-    remote_model_roles: list[Literal["coder", "reviewer"]] = Field(
+    remote_model_roles: list[
+        Literal["coder", "reviewer", "supervisor", "requirements_analyst"]
+    ] = Field(
         default_factory=list,
         description="Roles con modelo remoto; vacio conserva el modo offline.",
     )

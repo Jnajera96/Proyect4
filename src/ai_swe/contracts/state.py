@@ -39,8 +39,10 @@ class BudgetExceededError(Exception):
     recoverable: bool = False
 
     def __init__(self, message: str, *, motivos: tuple[str, ...] = (), **kwargs) -> None:
-        self.message = str(message)
-        self.motivos = tuple(motivos)
+        from ai_swe.security import redact
+
+        self.message = redact(str(message))
+        self.motivos = tuple(redact(str(m)) for m in motivos)
         super().__init__(self.message)
 
 

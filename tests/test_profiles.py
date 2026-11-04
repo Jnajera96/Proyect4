@@ -401,3 +401,46 @@ def test_ledger_connections_close_on_success_and_rollback(tmp_path, monkeypatch)
     for connection in connections:
         with pytest.raises(sqlite3.ProgrammingError, match="closed"):
             connection.execute("SELECT 1")
+
+
+def test_four_remote_roles_vault_and_settings(tmp_path):
+    app = crear_app(
+        settings=Settings(
+            _env_file=None, profile_mode=True, profiles_root=tmp_path / "users", stt_provider="fake"
+        )
+    )
+    with TestClient(app) as client:
+        r = client.post("/auth/register", json={"name": "carol", "password": PASSWORD})
+        csrf = r.json()["csrf_token"]
+        headers = {"X-CSRF-Token": csrf}
+        pricing = json.dumps([{"model": "custom-model", "input_per_1k": 0.001, "output_per_1k": 0.002, "currency": "USD"}])
+        config_4roles = dict(
+            hf_token="hf_test_secret_token",
+            model_name="custom-model",
+            remote_model_roles=["coder", "reviewer", "supervisor", "requirements_analyst"],
+            model_pricing=pricing,
+            budget_limit=10,
+            max_cost_per_run=2,
+        )
+        res = client.put("/auth/vault", json=config_4roles, headers=headers)
+        assert res.status_code == 200, res.text
+        vault_state = client.get("/auth/vault").json()
+        assert vault_state["remote_model_roles"] == ["coder", "reviewer", "supervisor", "requirements_analyst"]
+        context = next(iter(app.state.profiles.contexts.values()))
+        assert context.app.state.settings.remote_model_roles == ["coder", "reviewer", "supervisor", "requirements_analyst"]
+
+
+def test_budget_exceeded_error_redacts_secrets():
+    from ai_swe.contracts.state import BudgetExceededError
+    from ai_swe.security import register_secret
+
+    secret = "secret-token-to-hide-12345"
+    register_secret(secret)
+    err = BudgetExceededError(f"Presupuesto agotado con {secret}", motivos=(f"motivo: {secret}",))
+    assert secret not in str(err)
+    assert "[REDACTED]" in str(err)
+    assert secret not in err.message
+    assert "[REDACTED]" in err.message
+    assert secret not in err.motivos[0]
+    assert "[REDACTED]" in err.motivos[0]
+

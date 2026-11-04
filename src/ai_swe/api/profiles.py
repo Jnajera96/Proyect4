@@ -99,7 +99,15 @@ class VaultConfig(BaseModel):
             or not self.budget_limit
             or not models.issubset(set(table.known_models()))
         ):
-            raise ValueError("Para activar IA remota declara token, modelos, tarifas y limite")
+            motivos = []
+            if not data["hf_token"].strip():
+                motivos.append("ingresa el token o clave de API")
+            if not self.budget_limit or self.budget_limit <= 0:
+                motivos.append("el límite de presupuesto acumulado debe ser mayor a 0 (ej. 5.00 USD)")
+            faltantes = models - set(table.known_models())
+            if faltantes:
+                motivos.append(f"faltan las tarifas declaradas para: {', '.join(sorted(faltantes))}")
+            raise ValueError("Para activar IA remota: " + "; ".join(motivos))
         return data
 
 
@@ -540,9 +548,9 @@ def create_profile_app(settings: Settings) -> FastAPI:
                 candidate.settings(settings)
                 context.app.state.ledger.set_limit(config.budget_limit)
                 context.profile.save(data)
-            except (ValueError, LedgerError):
+            except (ValueError, LedgerError) as exc:
                 raise HTTPException(
-                    422, "Configuracion invalida: revisa token, tarifas y limites"
+                    422, f"Configuración inválida: {exc}"
                 ) from None
             profile = context.profile
             await manager.close_context(session.user_id)

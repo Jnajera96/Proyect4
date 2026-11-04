@@ -11,8 +11,20 @@ from ai_swe.graph.workflow import construir_grafo
 
 def test_remote_roles_are_opt_in_and_restricted():
     assert Settings(_env_file=None).remote_model_roles == []
+    valid = Settings(
+        _env_file=None,
+        remote_model_roles=["coder", "reviewer", "supervisor", "requirements_analyst"],
+    )
+    assert valid.remote_model_roles == [
+        "coder",
+        "reviewer",
+        "supervisor",
+        "requirements_analyst",
+    ]
     with pytest.raises(ValidationError):
-        Settings(_env_file=None, remote_model_roles=["supervisor"])
+        Settings(_env_file=None, remote_model_roles=["researcher"])
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, remote_model_roles=["invalid_role"])
 
 
 def test_disabled_role_never_builds_gateway(monkeypatch):
