@@ -317,7 +317,7 @@ class RunEngine:
 
     def verificar_presupuesto_reanudacion(self, run_id: str) -> None:
         """Verifica que el presupuesto o saldo sea suficiente antes de reanudar."""
-        from ai_swe.models import BudgetExceededError
+        from ai_swe.contracts import BudgetExceededError
 
         estado = self.get(run_id)
         if estado.status is not RunStatus.PAUSED:
@@ -605,7 +605,7 @@ class RunEngine:
                 return self._confirm_cancel(run_id, self.get(run_id))
 
     def _ejecutar_con_actividad(self, entrada, run_id: str) -> RunState:
-        from ai_swe.models import BudgetExceededError
+        from ai_swe.contracts import BudgetExceededError
 
         config = self._config(run_id)
         self._store.append_event(run_id, EventKind.RUN_STARTED, {})

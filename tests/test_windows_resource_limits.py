@@ -82,12 +82,27 @@ def test_process_limit_denies_creation_but_allows_an_in_limit_child(
 ):
     from ai_swe.tools.windows_job import JobLimits
 
-    scripted_target(monkeypatch,
+    code = (
         "import subprocess,sys;print('before',flush=True);"
         "p=subprocess.Popen([sys.executable,'-c','pass']);"
-        "assert p.wait()==0;print('child finished')")
+        "assert p.wait()==0;print('child finished')"
+    )
+
+    scripted_target(monkeypatch, code)
+
+    # El lanzador del entorno virtual puede consumir un proceso adicional.
+    # Usamos Python base solo en esta prueba para medir la cuota real.
+    monkeypatch.setitem(
+        runner.TARGET_COMMANDS,
+        "pytest.unit",
+        (sys._base_executable, "-u", "-c", code),
+    )
+
     result = runner.ejecutar(
-        sandbox, "pytest.unit", permitidos=("pytest.unit",), timeout=10,
+        sandbox,
+        "pytest.unit",
+        permitidos=("pytest.unit",),
+        timeout=10,
         limits=JobLimits(max_processes=max_processes),
         network_egress_enabled=True,
     )

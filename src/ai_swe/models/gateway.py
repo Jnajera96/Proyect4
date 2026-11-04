@@ -339,7 +339,7 @@ class ModelGateway:
                         raise ModelConfigurationError(
                             "Consumo desconocido; se conserva la reserva y se detiene la ejecucion"
                         )
-            except ModelGatewayError as exc:
+            except (ModelGatewayError, BudgetExceededError) as exc:
                 ultimo = exc
                 if not exc.recoverable or intento >= self._max_retries:
                     raise
@@ -434,7 +434,7 @@ class ModelGateway:
         for indice, adapter in enumerate(self._adapters):
             try:
                 bruto, latencia_ms = self._intentar(adapter, pedido)
-            except ModelGatewayError as exc:
+            except (ModelGatewayError, BudgetExceededError) as exc:
                 ultimo_error = exc
                 hay_respaldo = indice + 1 < len(self._adapters)
                 # Solo un fallo recuperable justifica probar otro proveedor. Un error

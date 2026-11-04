@@ -16,4 +16,4 @@ proceso** de ejecucion. Estado verificado, riesgos abiertos y plan de evolucion:
 `docs/audit/00-EXECUTIVE-AUDIT.md`.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

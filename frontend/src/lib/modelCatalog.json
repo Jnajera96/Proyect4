@@ -201,6 +201,46 @@
         "reviewerPassed": 2,
         "reviewerTotal": 2
       }
+    },
+    {
+      "id": "gemini-2.0-flash",
+      "baseModel": "gemini-2.0-flash",
+      "label": "Google Gemini 2.0 Flash",
+      "provider": "google",
+      "purpose": "Multimodal rápido y eficiente (endpoint OpenAI-compatible)",
+      "projectValidated": true,
+      "inputPerMillion": 0.1,
+      "outputPerMillion": 0.4,
+      "source": "https://ai.google.dev/gemini-api/docs/openai",
+      "supportsStructuredOutput": true,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-11-03",
+        "coderPassed": 2,
+        "coderTotal": 2,
+        "reviewerPassed": 2,
+        "reviewerTotal": 2
+      }
+    },
+    {
+      "id": "gemini-1.5-flash",
+      "baseModel": "gemini-1.5-flash",
+      "label": "Google Gemini 1.5 Flash",
+      "provider": "google",
+      "purpose": "Modelo versátil con contexto extendido",
+      "projectValidated": true,
+      "inputPerMillion": 0.075,
+      "outputPerMillion": 0.3,
+      "source": "https://ai.google.dev/gemini-api/docs/openai",
+      "supportsStructuredOutput": true,
+      "catalogStatus": "live",
+      "probe": {
+        "checkedAt": "2026-11-03",
+        "coderPassed": 2,
+        "coderTotal": 2,
+        "reviewerPassed": 2,
+        "reviewerTotal": 2
+      }
     }
   ]
 }

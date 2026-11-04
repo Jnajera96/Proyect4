@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-swe-system"
-version = "0.1.0"
+version = "0.2.0"
 description = "Proyecto 4 - AI Software Engineering System: sistema multiagente para tareas de ingenieria de software"
 readme = "README.md"
 requires-python = ">=3.12"

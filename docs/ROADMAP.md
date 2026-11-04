@@ -4,7 +4,7 @@
 
 La versión **v0.2.0** ha completado y certificado el 100% de los criterios del Plan de Cierre en 5 jornadas:
 - **Día 1:** Paquete portable oficial **RC26** (`dist/windows-v0.2.0-rc26/AISWESystem-windows-x64.zip`, SHA-256 `d213a4086a85f55a9420a74a181910587c2e9d9859c68ed1fecf41826d7949ad`), validación de capacidades (11/11 PASS), smoke test (14/14 PASS), recuperación de presupuesto en caliente.
-- **Día 2:** Resiliencia y concurrencia bajo estrés SQLite WAL con 50 hilos concurrentes, liberación atómica de reclamaciones en worker y tolerancia a terminación forzada de procesos (`taskkill /F`).
+- **Día 2:** Resiliencia y concurrencia bajo estrés SQLite WAL con 40 hilos concurrentes, liberación atómica de reclamaciones en worker y tolerancia a terminación forzada de procesos (`taskkill /F`).
 - **Día 3:** Validación E2E de dos productos representativos herméticos: Producto 1 (Calculadora científica trigonométrica con oráculo matemático) y Producto 2 (Microservicio REST API offline con FastAPI y SQLite), más verificación de Split Diff para 25+ archivos en Studio Workspace.
 - **Día 4:** Piloto del Asistente de Publicación en GitHub (bóveda AES-256-GCM, repositorio descartable, push efímero sin fugas en `.git/config`) y Piloto de Entorno Limpio para 2ª PC física (PATH depurado sin herramientas de desarrollo, runtime CPython 3.13 PSF embebido, Windows Job Object).
 - **Día 5:** Conciliación documental pública, verificación Definition of Done 100/100 y emisión del tag oficial de Git `v0.2.0`.
@@ -28,7 +28,29 @@ los controles de aislamiento antes de añadir funciones. Continuidad física y
 publicación GitHub siguen pausadas; modelos pagados requieren presupuesto nuevo.
 
 
-## RC26 — Paquete oficial v0.2.0 de producción local
+## RC27 — Paquete oficial v0.2.0 de producción local
+
+Fecha: 4 de noviembre de 2026. Integra las fuentes consolidadas definitivas:
+- Corrección de resiliencia en worker y reintentos exponenciales en SQLite WAL.
+- Corrección de guardia AST en imports del Model Gateway.
+- Conciliación de errores de presupuesto en el ledger del perfil (`BudgetExceededError`).
+- Bóveda y Model Gateway ampliados a 4 roles de IA (`coder`, `reviewer`, `supervisor`, `requirements_analyst`).
+- Integración verificada con Google Gemini mediante endpoint OpenAI-compatible (`https://generativelanguage.googleapis.com/v1beta/openai/`).
+- Metadatos de versión conciliados a `0.2.0` (`pyproject.toml`, `ai_swe/__init__.py`, `frontend/package.json`).
+
+Métricas del artefacto:
+- ZIP: `dist/windows-v0.2.0-rc27/AISWESystem-windows-x64.zip`.
+- SHA-256: `f89f97c6edd96cae0405bdd914c80177474bc3252a22bccad36046c88c68f61e`.
+- Tamaño: **127908590 bytes**.
+- Archivos ZIP: **4864**; manifiesto: **4863** (excluye su propio JSON).
+- CRC, 90 fuentes Python del paquete y build de frontend React: aprobados.
+- Runtime CPython 3.13.14: firmas PSF válidas.
+- Smoke estándar: **18/18 controles PASS**.
+- Capacidades locales: **15/15 controles PASS**.
+
+---
+
+## RC26 — candidato histórico previo v0.2.0 de producción local
 
 Fecha: 3 de noviembre de 2026. Base de producto `6fdc309`: consolida recuperación de presupuesto,
 resiliencia de concurrencia WAL, productos representativos E2E, asistente GitHub y entorno limpio.

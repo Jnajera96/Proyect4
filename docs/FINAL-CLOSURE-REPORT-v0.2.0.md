@@ -16,7 +16,7 @@ El sistema **AI Software Engineering (AI-SWE)** alcanza formalmente el estado de
 
 1. **Autonomía Local Completa:** La aplicación funciona íntegramente en `127.0.0.1` mediante su paquete portable oficial (**RC26**), impulsado por un runtime embebido de CPython 3.13.14 firmado por la Python Software Foundation, sin requerir herramientas de desarrollo previas (Python, Node o Git en el `PATH` del sistema).
 2. **Gasto Cero Estricto ($0.00):** Durante todas las etapas de validación, generación de código, ejecución de pruebas y análisis sintáctico se utilizaron exclusivamente dobles herméticos (`FakeModelAdapter`), adaptadores simulados y fixture providers.
-3. **Resiliencia Extrema:** La persistencia SQLite con WAL tolera cargas concurrentes masivas (50 hilos), terminaciones forzadas de procesos (`taskkill /F`), recuperación de presupuestos agotados e interrupciones en caliente sin pérdida de requisitos ni desajuste de estados.
+3. **Resiliencia Extrema:** La persistencia SQLite con WAL tolera cargas concurrentes masivas (40 hilos), terminaciones forzadas de procesos (`taskkill /F`), recuperación de presupuestos agotados e interrupciones en caliente sin pérdida de requisitos ni desajuste de estados.
 4. **Seguridad y Aislamiento:** Las credenciales se conservan selladas en bóvedas criptográficas con AES-256-GCM y scrypt; el redactor central enmascara cualquier secreto en logs; el confinamiento de procesos se apoya en Windows Job Objects con terminación en cascada; y la publicación a GitHub opera mediante transporte efímero sin almacenar tokens en el repositorio local.
 
 ---
@@ -33,7 +33,7 @@ En estricto cumplimiento con la **Regla Operativa 4 (Inmutabilidad Histórica)**
 | **rc23** | 01-Nov-2026 | 121,004,224 | 4,730 | `4754230ec1bbcbb1295c0c4b121f1fdb715ba809395744046e3b03cb97587460` | Histórico intacto |
 | **rc24** | 02-Nov-2026 | 121,118,720 | 4,738 | `10794bd86428bfcde983a0ed353e73e17285ca157bd8ec5bb6a926aa1d94c480` | Histórico intacto |
 | **rc25** | 02-Nov-2026 | 121,319,619 | 4,746 | `323e3d97ded9b35fbd3dfcd09d6f5d3ebdea4ca6a704bb25098ecdd00833766c` | Histórico intacto |
-| **rc26** *(Oficial v0.2.0)* | 03-Nov-2026 | **127,809,964** | **4,863** | `d213a4086a85f55a9420a74a181910587c2e9d9859c68ed1fecf41826d7949ad` | **Vigente de Producción** |
+| **rc26** *(Oficial v0.2.0)* | 03-Nov-2026 | **127,809,964** | **4,863** | `f89f97c6edd96cae0405bdd914c80177474bc3252a22bccad36046c88c68f61e` | **Vigente de Producción** |
 
 ---
 
@@ -76,7 +76,7 @@ En estricto cumplimiento con la **Regla Operativa 4 (Inmutabilidad Histórica)**
 | :--- | :---: | :--- |
 | **R1. Empaquetado Portable y Autónomo** | **APROBADO** | ZIP oficial RC26 con Python firmado, sin dependencias globales en PATH |
 | **R2. Recuperación de Presupuesto en Caliente** | **APROBADO** | Estado `PAUSED_BUDGET`, reanudación selectiva sin reejecutar agentes previos |
-| **R3. Concurrencia y Resiliencia SQLite** | **APROBADO** | WAL + backoff; 50 hilos simultáneos y recuperación tras `kill()` del proceso |
+| **R3. Concurrencia y Resiliencia SQLite** | **APROBADO** | WAL + backoff; 40 hilos simultáneos y recuperación tras `kill()` del proceso |
 | **R4. Dobles Herméticos ($0.00 Gastados)** | **APROBADO** | 100% de pruebas ejecutadas con adaptadores locales; $0.00 en proveedores SaaS |
 | **R5. Flujo E2E Producto Lógico (Calculadora)** | **APROBADO** | Captura $\rightarrow$ sandbox $\rightarrow$ tests $\rightarrow$ aprobación $\rightarrow$ promoción $\rightarrow$ oráculo |
 | **R6. Flujo E2E Producto Servicio (REST API)** | **APROBADO** | CRUD, modelos Pydantic, SQLite en memoria, códigos 200/201/404/422 |

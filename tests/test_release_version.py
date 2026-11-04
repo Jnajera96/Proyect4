@@ -13,7 +13,7 @@ def test_release_versions_match_across_python_api_and_frontend(tmp_path, monkeyp
     project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     frontend = json.loads((root / "frontend/package.json").read_text(encoding="utf-8"))
     lock = json.loads((root / "frontend/package-lock.json").read_text(encoding="utf-8"))
-    assert __version__ == project["project"]["version"] == "0.1.0"
+    assert __version__ == project["project"]["version"] == "0.2.0"
     with RunStore(tmp_path / "isolated.sqlite3") as store:
         assert crear_app(store=store).version == __version__
     assert frontend["version"] == lock["version"] == lock["packages"][""]["version"] == __version__

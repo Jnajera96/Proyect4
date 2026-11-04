@@ -60,7 +60,7 @@ class VaultConfig(BaseModel):
     reviewer_model: str = Field(default="", max_length=120)
     model_provider: str = "openai_compatible"
     model_base_url: str = "https://router.huggingface.co/v1"
-    remote_model_roles: list[str] = Field(default_factory=list, max_length=2)
+    remote_model_roles: list[str] = Field(default_factory=list, max_length=4)
     model_pricing: str = Field(default="", max_length=16000)
     budget_limit: float = Field(ge=0)
     max_cost_per_run: float = Field(gt=0)
@@ -74,7 +74,8 @@ class VaultConfig(BaseModel):
         parsed = urlsplit(self.model_base_url)
         if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
             raise ValueError("El endpoint remoto debe usar HTTPS sin credenciales en la URL")
-        if any(role not in {"coder", "reviewer"} for role in self.remote_model_roles):
+        ALLOWED_ROLES = {"coder", "reviewer", "supervisor", "requirements_analyst"}
+        if any(role not in ALLOWED_ROLES for role in self.remote_model_roles):
             raise ValueError("Rol remoto invalido")
         table = pricing_from_json(self.model_pricing)
         prices = json.loads(self.model_pricing or "[]")

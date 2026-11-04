@@ -202,9 +202,14 @@ export function ProfileRoot() {
         <label>Endpoint HTTPS<input name="model_base_url" type="url" required
           defaultValue={vault.model_base_url ?? "https://router.huggingface.co/v1"} /></label>
         <ModelConfiguration coder={vault.model_name} reviewer={vault.reviewer_model} pricing={vault.model_pricing} />
-        <fieldset><legend>Activar llamadas remotas</legend>
-          {["coder", "reviewer"].map(role => <label className="profile-check" key={role}>
-            <input type="checkbox" name="roles" value={role} defaultChecked={vault.remote_model_roles?.includes(role)} />{role}</label>)}
+        <fieldset><legend>Activar llamadas remotas (IA)</legend>
+          {[
+            { id: "coder", label: "coder (Generación de código)" },
+            { id: "reviewer", label: "reviewer (Revisión técnica)" },
+            { id: "supervisor", label: "supervisor (Planificación de tareas)" },
+            { id: "requirements_analyst", label: "requirements_analyst (Interpretación de requisitos)" },
+          ].map(r => <label className="profile-check" key={r.id}>
+            <input type="checkbox" name="roles" value={r.id} defaultChecked={vault.remote_model_roles?.includes(r.id)} />{r.label}</label>)}
         </fieldset>
         <label>Límite acumulado del perfil (USD)<input name="budget_limit" type="number" required
           min="0" step="any" defaultValue={vault.budget_limit ?? 0} /></label>

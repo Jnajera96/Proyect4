@@ -1636,10 +1636,6 @@ def coder(state: RunState) -> dict:
         if isinstance(exc, DockerError):
             return _escalar(state, _error(state, "RUNNER_NOT_READY", "coder", str(exc),
                                           recuperable=False))
-        from ai_swe.models import BudgetExceededError
-
-        if isinstance(exc, BudgetExceededError):
-            raise
         if not _es_fallo_esperado(exc):
             raise
         motivo = f"{type(exc).__name__}: {exc}"[:500]
@@ -2933,23 +2929,6 @@ def promote_changes(state: RunState) -> dict:
     return salida
 
 
-def _unused_promote_tail():
-    if False:
-        return _escalar(
-            state,
-            _error(
-                state,
-                "PROMOTION_FAILED",
-                AgentRole.SUPERVISOR.value,
-                "unused",
-                recuperable=False,
-            ),
-        )
-
-    return {
-        "next_step": "finalize",
-        "updated_at": _ahora(),
-    }
 
 
 def escalate(state: RunState) -> dict:

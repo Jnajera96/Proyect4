@@ -295,7 +295,7 @@ test("selector distingue la evidencia E2E de candidatos y admite identificador p
   assert.match(html, /Otro modelo/);
   assert.match(html, /mi-organizacion\/mi-modelo:proveedor/);
   assert.match(html, /id="model_name-custom"/);
-  assert.equal((html.match(/<option/g) || []).length, 12); // diez modelos, vacío y personalizado
+  assert.equal((html.match(/<option/g) || []).length, 14); // doce modelos (incl. Gemini), vacío y personalizado
 });
 test("selector reviewer conserva la herencia de Coder sin inventar un modelo", () => {
   const html = renderToStaticMarkup(React.createElement(ModelSelector, {

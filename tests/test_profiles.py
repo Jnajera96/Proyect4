@@ -193,7 +193,7 @@ def test_login_throttle_and_validation_do_not_echo_secrets(tmp_path):
 
 def test_gateway_profile_reserves_before_call_and_preserves_unknown(tmp_path):
     from ai_swe.models import ModelMessage, ModelRequest, ModelUsage, gateway_from_settings
-    from ai_swe.models.errors import ModelConfigurationError
+    from ai_swe.models.errors import BudgetExceededError, ModelConfigurationError
     from ai_swe.models.providers.fake import FakeModelAdapter
 
     p = ProfileStore(tmp_path / "users").create("alice", PASSWORD)
@@ -215,7 +215,7 @@ def test_gateway_profile_reserves_before_call_and_preserves_unknown(tmp_path):
         run_id="one",
         max_output_tokens=10,
     )
-    with pytest.raises(ModelConfigurationError):
+    with pytest.raises(BudgetExceededError):
         gateway.generate(request)
     assert adapter.calls == []
     ledger.set_limit(2)
@@ -228,7 +228,7 @@ def test_gateway_profile_reserves_before_call_and_preserves_unknown(tmp_path):
     with pytest.raises(ModelConfigurationError):
         unknown_gateway.generate(request)
     assert ledger.summary()["reserved"] == 1
-    with pytest.raises(ModelConfigurationError):
+    with pytest.raises(BudgetExceededError):
         unknown_gateway.generate(request)
     assert len(unknown.calls) == 1
     other = ProfileStore(tmp_path / "other").create("bob", PASSWORD)

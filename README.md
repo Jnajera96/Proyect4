@@ -3,7 +3,7 @@
 ## Estado vigente de la entrega Windows local — v0.2.0 (100/100)
 
 Actualizado: 3 de noviembre de 2026. **v0.2.0** es la versión oficial de producción
-local basada en el candidato certificado **RC26** (commit `6fdc309`).
+local basada en el candidato certificado **RC27** (con RC26 histórico preservado).
 Ver [Acta de Cierre Maestro](docs/FINAL-CLOSURE-REPORT-v0.2.0.md),
 [Validación RC26](docs/RELEASE-RC26-VALIDATION-2026-11-03.md),
 [Validación de Resiliencia y Concurrencia](docs/RESILIENCE-CRASH-VALIDATION-2026-11-04.md),
@@ -11,8 +11,8 @@ Ver [Acta de Cierre Maestro](docs/FINAL-CLOSURE-REPORT-v0.2.0.md),
 [Piloto Asistente GitHub](docs/GITHUB-PUBLISH-PILOT-RESULTS.md) y
 [Piloto Entorno Limpio 2ª PC](docs/SECOND-PC-PHYSICAL-PILOT-RESULTS.md).
 
-El paquete portable oficial (`dist/windows-v0.2.0-rc26/AISWESystem-windows-x64.zip`,
-SHA-256 `d213a4086a85f55a9420a74a181910587c2e9d9859c68ed1fecf41826d7949ad`)
+El paquete portable oficial (`dist/windows-v0.2.0-rc27/AISWESystem-windows-x64.zip`,
+SHA-256 `f89f97c6edd96cae0405bdd914c80177474bc3252a22bccad36046c88c68f61e`)
 utiliza CPython 3.13.14 embebido y firmado por la Python Software Foundation,
 bóvedas criptográficas con AES-256-GCM y scrypt, y perfiles autenticados locales;
 no requiere Python, Node ni Git globales en las variables de entorno para arrancar.
@@ -37,7 +37,7 @@ y las actas enlazadas describen las fuentes actuales; cada ZIP histórico conser
 ## v0.1.0 — entrega histórica local aprobada
 
 Entrega canónica: `dist/windows-signed-python-rc2/AISWESystem-signed-python-rc2.zip`.
-Abrir `AISWESystem.cmd` tras extraer todo. 791 PASS, 3 SKIP, cero FAIL; SAC activo
+Extraer el archivo ZIP, el cual genera la carpeta contenedora `AISWESystem/`. Acceder a dicha carpeta y ejecutar `AISWESystem.cmd`. El lanzador inicia el backend en el puerto 8000 por defecto o selecciona dinámicamente el siguiente puerto disponible si estuviera ocupado. 791 PASS, 3 SKIP, cero FAIL; SAC activo
 y cero bloqueos del paquete en este host. Sin VM independiente. Ver
 [producto](docs/PRODUCT-v0.1.0.md), [instalación](docs/INSTALLATION-WINDOWS.md) y
 [matriz](docs/RELEASE-MATRIX-v0.1.0.md). Tag local `v0.1.0` autorizado por el usuario.
@@ -61,6 +61,34 @@ Sistema multiagente que convierte una instrucción de ingeniería de software
 —dictada o escrita— en un **plan acotado y verificable** sobre un repositorio
 autorizado, coordina especialistas con permisos distintos, mantiene el estado de
 la ejecución de forma trazable y entrega un resultado revisado con evidencia.
+
+---
+
+
+
+## Integración con Google Gemini y Modelos de IA en Bóveda
+
+El sistema incorpora soporte oficial para **Google Gemini** mediante el adaptador `openai_compatible` del Model Gateway, permitiendo que no solo la generación de código y revisión técnica (`coder`, `reviewer`) utilicen modelos avanzados, sino también la planificación (`supervisor`) y la interpretación de requisitos (`requirements_analyst`).
+
+### Configuración local (.env)
+
+```dotenv
+AI_SWE_MODEL_PROVIDER=openai_compatible
+AI_SWE_MODEL_NAME=gemini-2.0-flash
+AI_SWE_MODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+AI_SWE_MODEL_API_KEY=TU_API_KEY_DE_GEMINI
+AI_SWE_REMOTE_MODEL_ROLES=["coder","reviewer","supervisor","requirements_analyst"]
+```
+
+> **Seguridad de credenciales:** Nunca subir el archivo `.env` ni claves privadas al repositorio.
+
+### Configuración gráfica desde la Bóveda (Vault UI)
+
+En la interfaz del Studio Workspace (modal **Proveedor y presupuesto de tu perfil**):
+- **Token HF / API:** Clave de Google AI Studio o proveedor compatible (almacenada con cifrado AES-256-GCM + scrypt).
+- **Endpoint HTTPS:** `https://generativelanguage.googleapis.com/v1beta/openai/`.
+- **Selector de modelo:** Modelos preconfigurados `Google Gemini 2.0 Flash` o `Google Gemini 1.5 Flash` con tarifas sugeridas en catálogo.
+- **Activar llamadas remotas:** Cuatro roles configurables independientemente (`coder`, `reviewer`, `supervisor`, `requirements_analyst`). Si un rol no se marca o no hay saldo disponible, el nodo conmuta de forma transparente y declarada al fallback determinista local sin abortar la ejecución.
 
 ---
 

@@ -17,6 +17,8 @@ como `detail` y se redacta. La garantia no depende de que el llamante se acuerde
 
 from __future__ import annotations
 
+
+from ai_swe.contracts.state import BudgetExceededError
 from ai_swe.security import redact
 
 
@@ -105,14 +107,7 @@ class StructuredOutputError(ModelGatewayError):
     error_class = "STRUCTURED_OUTPUT_ERROR"
 
 
-class BudgetExceededError(ModelGatewayError):
-    """El presupuesto esta agotado. No se gasta la llamada."""
 
-    error_class = "BUDGET_EXCEEDED"
-
-    def __init__(self, message: str, *, motivos: tuple[str, ...] = (), **kwargs) -> None:
-        self.motivos = motivos
-        super().__init__(message, **kwargs)
 
 
 # ------------------------------------------------------- reintentables

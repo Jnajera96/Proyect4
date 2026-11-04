@@ -32,6 +32,18 @@ from ai_swe.contracts.tasks import RunPlan, TaskInterpretation
 SCHEMA_VERSION = "1.0.0"
 
 
+class BudgetExceededError(Exception):
+    """El presupuesto de ejecucion o saldo en ledger esta agotado."""
+
+    error_class: str = "BUDGET_EXCEEDED"
+    recoverable: bool = False
+
+    def __init__(self, message: str, *, motivos: tuple[str, ...] = (), **kwargs) -> None:
+        self.message = str(message)
+        self.motivos = tuple(motivos)
+        super().__init__(self.message)
+
+
 class RunStatus(StrEnum):
     """Estados de una ejecucion.
 
