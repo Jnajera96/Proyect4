@@ -214,16 +214,16 @@ export function ProfileRoot() {
               const pricingText = form.querySelector('[name="model_pricing"]') as HTMLTextAreaElement | null;
               if (pricingText) {
                 pricingText.value = JSON.stringify([
-                  { model: "gemini-1.5-flash", input_per_1k: 0.000075, output_per_1k: 0.0003, currency: "USD" },
-                  { model: "gemini-2.0-flash", input_per_1k: 0.0001, output_per_1k: 0.0004, currency: "USD" }
+                  { model: "gemini-3.8-flash", input_per_1k: 0.00075, output_per_1k: 0.00375, currency: "USD" },
+                  { model: "gemini-2.5-flash", input_per_1k: 0.00015, output_per_1k: 0.0006, currency: "USD" }
                 ], null, 2);
               }
               const coderSelect = form.querySelector('#model_name-selector') as HTMLSelectElement | null;
-              if (coderSelect) { coderSelect.value = "gemini-1.5-flash"; coderSelect.dispatchEvent(new Event('change', { bubbles: true })); }
+              if (coderSelect) { coderSelect.value = "gemini-3.8-flash"; coderSelect.dispatchEvent(new Event('change', { bubbles: true })); }
               const reviewerSelect = form.querySelector('#reviewer_model-selector') as HTMLSelectElement | null;
-              if (reviewerSelect) { reviewerSelect.value = "gemini-1.5-flash"; reviewerSelect.dispatchEvent(new Event('change', { bubbles: true })); }
+              if (reviewerSelect) { reviewerSelect.value = "gemini-3.8-flash"; reviewerSelect.dispatchEvent(new Event('change', { bubbles: true })); }
             }
-            setNotice("Preset Google Gemini aplicado con gemini-1.5-flash y presupuesto holgado ($50 / $10 por ejecución). Pega tu clave de API y guarda la bóveda.");
+            setNotice("Preset Google Gemini aplicado con gemini-3.8-flash y presupuesto holgado ($50 / $10 por ejecución). Pega tu clave de API y guarda la bóveda.");
           }}>✨ Usar Google Gemini (API Key)</button>
           <button type="button" onClick={() => {
             const form = document.querySelector(".profile-vault form") as HTMLFormElement | null;
@@ -255,7 +255,7 @@ export function ProfileRoot() {
         <label className="profile-check"><input type="checkbox" name="clear_token" />Eliminar el token guardado</label>
         <label>Endpoint HTTPS<input name="model_base_url" type="url" required
           defaultValue={vault.model_base_url ?? "https://generativelanguage.googleapis.com/v1beta/openai"} /></label>
-        <ModelConfiguration coder={vault.model_name || "gemini-1.5-flash"} reviewer={vault.reviewer_model} pricing={vault.model_pricing} />
+        <ModelConfiguration coder={vault.model_name || "gemini-3.8-flash"} reviewer={vault.reviewer_model} pricing={vault.model_pricing} />
         <fieldset><legend>Activar llamadas remotas (IA)</legend>
           {[
             { id: "coder", label: "coder (Generación de código)" },

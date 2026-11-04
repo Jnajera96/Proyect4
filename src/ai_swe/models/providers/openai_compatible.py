@@ -154,8 +154,11 @@ class OpenAICompatibleAdapter:
         return cabeceras
 
     def _cuerpo(self, request: ModelRequest) -> dict[str, Any]:
+        model_name = request.model or self._model
+        if model_name.startswith("models/") and "googleapis.com" in self._base_url:
+            model_name = model_name[len("models/"):]
         cuerpo: dict[str, Any] = {
-            "model": request.model or self._model,
+            "model": model_name,
             "messages": [
                 {"role": m.role.value, "content": m.content} for m in request.messages
             ],
