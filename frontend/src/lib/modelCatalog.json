@@ -3,6 +3,19 @@
   "source": "https://router.huggingface.co/v1/models",
   "models": [
     {
+      "id": "omniroute-combo",
+      "baseModel": "omniroute-combo",
+      "label": "OmniRoute Combo (Auto-Fallback inteligente)",
+      "provider": "omniroute",
+      "purpose": "Router local con fallback automático y rotación entre proveedores",
+      "projectValidated": true,
+      "inputPerMillion": 0.0,
+      "outputPerMillion": 0.0,
+      "source": "http://localhost:20128/dashboard",
+      "supportsStructuredOutput": true,
+      "catalogStatus": "live"
+    },
+    {
       "id": "Qwen/Qwen2.5-Coder-32B-Instruct:nscale",
       "baseModel": "Qwen/Qwen2.5-Coder-32B-Instruct",
       "label": "Qwen2.5 Coder 32B",

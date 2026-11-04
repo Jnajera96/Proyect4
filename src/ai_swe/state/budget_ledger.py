@@ -38,7 +38,7 @@ class BudgetLedger:
                         "SELECT COALESCE(SUM("
                         "  CASE "
                         "    WHEN consumed IS NOT NULL THEN consumed "
-                        "    WHEN run_id IN (SELECT run_id FROM runs WHERE status IN ('completed', 'failed', 'cancelled', 'needs_human')) THEN 0 "
+                        "    WHEN run_id IN (SELECT run_id FROM runs WHERE status IN ('completed', 'failed', 'cancelled', 'needs_human')) AND dispatched=0 THEN 0 "
                         "    ELSE reserved "
                         "  END"
                         "),0) FROM budget_reservations"
@@ -47,7 +47,7 @@ class BudgetLedger:
                         "SELECT COALESCE(SUM("
                         "  CASE "
                         "    WHEN consumed IS NOT NULL THEN consumed "
-                        "    WHEN run_id IN (SELECT run_id FROM runs WHERE status IN ('completed', 'failed', 'cancelled', 'needs_human')) THEN 0 "
+                        "    WHEN run_id IN (SELECT run_id FROM runs WHERE status IN ('completed', 'failed', 'cancelled', 'needs_human')) AND dispatched=0 THEN 0 "
                         "    ELSE reserved "
                         "  END"
                         "),0) FROM budget_reservations "
@@ -94,7 +94,7 @@ class BudgetLedger:
             if has_runs:
                 db.execute(
                     "UPDATE budget_reservations SET consumed=0, settled_epoch=? "
-                    "WHERE consumed IS NULL AND run_id IN ("
+                    "WHERE consumed IS NULL AND dispatched=0 AND run_id IN ("
                     "  SELECT run_id FROM runs WHERE status IN ('completed', 'failed', 'cancelled', 'needs_human')"
                     ")", (time.time(),)
                 )
@@ -252,16 +252,23 @@ class BudgetLedger:
         return self._transact(op)
 
     def reconcile_unsettled_run(self, run_id: str) -> dict:
-        """Libera reservas huérfanas de una corrida pausada para permitir su continuación segura."""
+        """Libera reservas huérfanas nunca enviadas (dispatched=0) de una corrida pausada.
+
+        Las reservas con dispatched=1 representan llamadas enviadas al proveedor cuyo
+        coste sigue siendo incierto; se conservan retenidas para proteger el presupuesto.
+        """
         def op(db):
             db.execute("BEGIN IMMEDIATE")
             released = db.execute(
                 "UPDATE budget_reservations SET consumed=0,settled_epoch=? "
-                "WHERE run_id=? AND consumed IS NULL", (time.time(), run_id),
+                "WHERE run_id=? AND consumed IS NULL AND dispatched=0", (time.time(), run_id),
             ).rowcount
-            return {"released": released}
+            unresolved = db.execute(
+                "SELECT COUNT(*) FROM budget_reservations WHERE run_id=? AND consumed IS NULL AND dispatched=1",
+                (run_id,),
+            ).fetchone()[0]
+            return {"released": released, "unresolved": unresolved}
         return self._transact(op)
-
     def settle(self, reservation: str, cost: float | None):
         if cost is None:
             # A settlement with missing usage cannot prove that no request was sent.

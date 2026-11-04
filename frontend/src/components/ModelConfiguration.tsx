@@ -36,16 +36,20 @@ export function ModelSelector({ name, label, value, onChange }: {
         onChange(next === CUSTOM ? "" : next);
       }}>
       <option value="">{name === "reviewer_model" ? "Usar el mismo modelo que Coder" : "Seleccionar modelo"}</option>
+      <optgroup label="OmniRoute (Router inteligente local · Sin costo)">
+        {catalog.models.filter(m => m.provider === "omniroute").map(m =>
+          <option key={m.id} value={m.id}>{m.label} · {m.provider}</option>)}
+      </optgroup>
       <optgroup label="Modelos Google Gemini (OpenAI-compatible)">
         {catalog.models.filter(m => m.provider === "google").map(m =>
           <option key={m.id} value={m.id}>{m.label} · {m.provider} · Candidato configurable</option>)}
       </optgroup>
       <optgroup label="Validación E2E previa en este proyecto">
-        {catalog.models.filter(m => m.projectValidated && m.provider !== "google").map(m =>
+        {catalog.models.filter(m => m.projectValidated && m.provider !== "google" && m.provider !== "omniroute").map(m =>
           <option key={m.id} value={m.id}>{m.label} · {m.provider}</option>)}
       </optgroup>
       <optgroup label="Contratos comprobados · aplicaciones E2E pendientes de prueba">
-        {catalog.models.filter(m => !m.projectValidated && m.provider !== "google").map(m =>
+        {catalog.models.filter(m => !m.projectValidated && m.provider !== "google" && m.provider !== "omniroute").map(m =>
           <option key={m.id} value={m.id}>
             {m.label} · {m.provider}
             {m.probe ? ` · Coder ${m.probe.coderPassed}/${m.probe.coderTotal} · Reviewer ${m.probe.reviewerPassed}/${m.probe.reviewerTotal}` : " · Candidato configurable"}
@@ -96,9 +100,10 @@ export function ModelConfiguration({ coder = "", reviewer = "", pricing = "" }: 
         const form = event.currentTarget.form;
         const endpoint = new FormData(form ?? undefined).get("model_base_url");
         const rawEndpoint = String(endpoint).trim().replace(/\/$/, "");
-        const isKnownCatalogEndpoint = rawEndpoint === HF_ROUTER || rawEndpoint.startsWith(GEMINI_ROUTER);
+        const isLoopback = rawEndpoint.startsWith("http://localhost") || rawEndpoint.startsWith("http://127.0.0.1") || rawEndpoint.startsWith("http://[::1]");
+        const isKnownCatalogEndpoint = rawEndpoint === HF_ROUTER || rawEndpoint.startsWith(GEMINI_ROUTER) || isLoopback;
         if (!isKnownCatalogEndpoint) {
-          throw new Error("Estas tarifas corresponden a proveedores del catálogo (HF / Gemini); para endpoints personalizados declara las de tu proveedor.");
+          throw new Error("Estas tarifas corresponden a proveedores del catálogo (HF / Gemini / OmniRoute); para endpoints personalizados declara las de tu proveedor.");
         }
         setPrices(pricingForSelection([coderModel, reviewerModel || coderModel], prices));
         setNotice(`Tarifas publicadas el ${catalog.checkedAt} aplicadas. Revísalas antes de guardar.`);

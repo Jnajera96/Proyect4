@@ -24,6 +24,7 @@ export function ProfileRoot() {
   const [recoveryCode, setRecoveryCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [vault, setVault] = useState<Vault | null>(null);
+  const [formRevision, setFormRevision] = useState(0);
   const [notice, setNotice] = useState("");
   const [configurationRevision, setConfigurationRevision] = useState(0);
   const apply = (next: Status) => {
@@ -201,88 +202,51 @@ export function ProfileRoot() {
         <strong>Configuración rápida por proveedor:</strong>
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
           <button type="button" onClick={() => {
-            const form = document.querySelector(".profile-vault form") as HTMLFormElement | null;
-            if (form) {
-              const urlInput = form.querySelector('[name="model_base_url"]') as HTMLInputElement | null;
-              if (urlInput) urlInput.value = "https://generativelanguage.googleapis.com/v1beta/openai";
-              const budgetInput = form.querySelector('[name="budget_limit"]') as HTMLInputElement | null;
-              if (budgetInput) budgetInput.value = "50";
-              const runBudgetInput = form.querySelector('[name="max_cost_per_run"]') as HTMLInputElement | null;
-              if (runBudgetInput) runBudgetInput.value = "10";
-              const checkboxes = form.querySelectorAll<HTMLInputElement>('input[name="roles"]');
-              checkboxes.forEach(cb => { cb.checked = true; });
-              const pricingText = form.querySelector('[name="model_pricing"]') as HTMLTextAreaElement | null;
-              if (pricingText) {
-                pricingText.value = JSON.stringify([
-                  { model: "gemini-3.8-flash", input_per_1k: 0.00075, output_per_1k: 0.00375, currency: "USD" },
-                  { model: "gemini-2.5-flash", input_per_1k: 0.00015, output_per_1k: 0.0006, currency: "USD" }
-                ], null, 2);
-              }
-              const coderSelect = form.querySelector('#model_name-selector') as HTMLSelectElement | null;
-              if (coderSelect) { coderSelect.value = "gemini-3.8-flash"; coderSelect.dispatchEvent(new Event('change', { bubbles: true })); }
-              const reviewerSelect = form.querySelector('#reviewer_model-selector') as HTMLSelectElement | null;
-              if (reviewerSelect) { reviewerSelect.value = "gemini-3.8-flash"; reviewerSelect.dispatchEvent(new Event('change', { bubbles: true })); }
-            }
-            setNotice("Preset Google Gemini aplicado con gemini-3.8-flash y presupuesto holgado ($50 / $10 por ejecución). Pega tu clave de API y guarda la bóveda.");
+            setVault(prev => prev ? {
+              ...prev,
+              model_base_url: "https://generativelanguage.googleapis.com/v1beta/openai",
+              model_name: "gemini-3.8-flash",
+              reviewer_model: "gemini-3.8-flash",
+              model_pricing: JSON.stringify([
+                { model: "gemini-3.8-flash", input_per_1k: 0.00075, output_per_1k: 0.00375, currency: "USD" },
+                { model: "gemini-2.5-flash", input_per_1k: 0.00015, output_per_1k: 0.0006, currency: "USD" }
+              ], null, 2),
+            } : null);
+            setFormRevision(r => r + 1);
+            setNotice("Preset Google Gemini aplicado con gemini-3.8-flash. Límites conservados. Pega tu clave de API Gemini y guarda la bóveda.");
           }}>✨ Usar Google Gemini (API Key)</button>
           <button type="button" onClick={() => {
-            const form = document.querySelector(".profile-vault form") as HTMLFormElement | null;
-            if (form) {
-              const urlInput = form.querySelector('[name="model_base_url"]') as HTMLInputElement | null;
-              if (urlInput) urlInput.value = "https://router.huggingface.co/v1";
-              const budgetInput = form.querySelector('[name="budget_limit"]') as HTMLInputElement | null;
-              if (budgetInput && (!budgetInput.value || Number(budgetInput.value) <= 0)) budgetInput.value = "5";
-              const checkboxes = form.querySelectorAll<HTMLInputElement>('input[name="roles"]');
-              checkboxes.forEach(cb => { cb.checked = true; });
-              const pricingText = form.querySelector('[name="model_pricing"]') as HTMLTextAreaElement | null;
-              if (pricingText) {
-                pricingText.value = JSON.stringify([
-                  { model: "Qwen/Qwen2.5-Coder-32B-Instruct:nscale", input_per_1k: 0.00006, output_per_1k: 0.0002, currency: "USD" }
-                ], null, 2);
-              }
-              const coderSelect = form.querySelector('#model_name-selector') as HTMLSelectElement | null;
-              if (coderSelect) { coderSelect.value = "Qwen/Qwen2.5-Coder-32B-Instruct:nscale"; coderSelect.dispatchEvent(new Event('change', { bubbles: true })); }
-              const reviewerSelect = form.querySelector('#reviewer_model-selector') as HTMLSelectElement | null;
-              if (reviewerSelect) { reviewerSelect.value = ""; reviewerSelect.dispatchEvent(new Event('change', { bubbles: true })); }
-            }
-            setNotice("Preset Hugging Face aplicado. Pega tu HF Token y guarda la bóveda.");
+            setVault(prev => prev ? {
+              ...prev,
+              model_base_url: "https://router.huggingface.co/v1",
+              model_name: "Qwen/Qwen2.5-Coder-32B-Instruct:nscale",
+              reviewer_model: "",
+              model_pricing: JSON.stringify([
+                { model: "Qwen/Qwen2.5-Coder-32B-Instruct:nscale", input_per_1k: 0.00006, output_per_1k: 0.0002, currency: "USD" }
+              ], null, 2),
+            } : null);
+            setFormRevision(r => r + 1);
+            setNotice("Preset Hugging Face aplicado. Límites conservados. Pega tu HF Token y guarda la bóveda.");
           }}>🤗 Usar Hugging Face (Router)</button>
           <button type="button" onClick={() => {
-            const form = document.querySelector(".profile-vault form") as HTMLFormElement | null;
-            if (form) {
-              const urlInput = form.querySelector('[name="model_base_url"]') as HTMLInputElement | null;
-              if (urlInput) urlInput.value = "http://localhost:20128/v1";
-              const tokenInput = form.querySelector('[name="hf_token"]') as HTMLInputElement | null;
-              if (tokenInput) tokenInput.value = "local";
-              const budgetInput = form.querySelector('[name="budget_limit"]') as HTMLInputElement | null;
-              if (budgetInput) budgetInput.value = "100";
-              const runBudgetInput = form.querySelector('[name="max_cost_per_run"]') as HTMLInputElement | null;
-              if (runBudgetInput) runBudgetInput.value = "10";
-              const checkboxes = form.querySelectorAll<HTMLInputElement>('input[name="roles"]');
-              checkboxes.forEach(cb => { cb.checked = true; });
-              const pricingText = form.querySelector('[name="model_pricing"]') as HTMLTextAreaElement | null;
-              if (pricingText) {
-                pricingText.value = JSON.stringify([
-                  { model: "omniroute-combo", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
-                  { model: "qwen2.5-coder", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
-                  { model: "llama3.3-70b", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
-                  { model: "gemini-3.8-flash", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" }
-                ], null, 2);
-              }
-              const coderSelect = form.querySelector('#model_name-selector') as HTMLSelectElement | null;
-              if (coderSelect) { coderSelect.value = "__custom__"; coderSelect.dispatchEvent(new Event('change', { bubbles: true })); }
-              setTimeout(() => {
-                const coderCustom = form.querySelector('#model_name-custom') as HTMLInputElement | null;
-                if (coderCustom) { coderCustom.value = "omniroute-combo"; coderCustom.dispatchEvent(new Event('input', { bubbles: true })); }
-              }, 50);
-              const reviewerSelect = form.querySelector('#reviewer_model-selector') as HTMLSelectElement | null;
-              if (reviewerSelect) { reviewerSelect.value = ""; reviewerSelect.dispatchEvent(new Event('change', { bubbles: true })); }
-            }
-            setNotice("Preset OmniRoute / Local aplicado (coste cero, 0 USD). Endpoint http://localhost:20128/v1 (o 11434 para Ollama) con tarifas en 0 USD.");
+            setVault(prev => prev ? {
+              ...prev,
+              model_base_url: "http://localhost:20128/v1",
+              model_name: "omniroute-combo",
+              reviewer_model: "",
+              model_pricing: JSON.stringify([
+                { model: "omniroute-combo", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
+                { model: "qwen2.5-coder", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
+                { model: "llama3.3-70b", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
+                { model: "gemini-3.8-flash", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" }
+              ], null, 2),
+            } : null);
+            setFormRevision(r => r + 1);
+            setNotice("Preset OmniRoute / Local aplicado (coste cero, 0 USD). Límites conservados. Guarda la bóveda para confirmar.");
           }}>🆓 Usar OmniRoute / Ollama (Gratis $0.00)</button>
           <button type="button" onClick={async () => {
             try {
-              setNotice("Comprobando y lanzando OmniRoute en PowerShell...");
+              setNotice("Comprobando y lanzando OmniRoute...");
               const data = await profileRequest<{ status: string; message: string }>("/system/launch-omniroute", { method: "POST" });
               setNotice(data.message || "OmniRoute iniciado.");
             } catch (err) {
@@ -292,7 +256,7 @@ export function ProfileRoot() {
         </div>
       </div>
 
-      <form onSubmit={saveVault}>
+      <form key={formRevision} onSubmit={saveVault}>
         <label>Token HF / Clave de API Gemini<input name="hf_token" type="password" autoComplete="off" placeholder="Pega tu clave AIzaSy... o token HF (vacío conserva)" /></label>
         <label className="profile-check"><input type="checkbox" name="clear_token" />Eliminar el token guardado</label>
         <label>Endpoint HTTPS<input name="model_base_url" type="url" required

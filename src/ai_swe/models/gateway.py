@@ -277,34 +277,6 @@ class ModelGateway:
         una credencial invalida gasta tiempo y cuota sin posibilidad de exito.
         """
         reservation = None
-        if self._ledger is not None:
-            from ai_swe.state.budget_ledger import LedgerError
-
-            settings = self._profile_settings
-            model = request.model or settings.model_name
-            if settings.max_cost_per_run is None or request.max_output_tokens is None:
-                raise ModelConfigurationError("El perfil requiere limite y salida acotada")
-            # UTF-8 bytes plus structural overhead are a conservative local estimate.
-            # Without a verified model tokenizer, a bytes/3 heuristic is
-            # not an upper bound. Reserve bytes plus framing overhead;
-            # duplicate schema serialization deliberately over-reserves.
-            inputs = len(request.model_dump_json().encode()) + 1024
-            estimate = self._pricing.cost(
-                model,
-                ModelUsage(input_tokens=inputs, output_tokens=request.max_output_tokens),
-            )
-            if estimate is None:
-                raise ModelConfigurationError("El perfil requiere una tarifa declarada")
-            try:
-                reservation = self._ledger.reserve_call(
-                    request.run_id or "",
-                    run_limit=settings.max_cost_per_run,
-                    estimate=estimate,
-                    hourly_limit=settings.max_cost_per_hour,
-                )
-            except LedgerError as exc:
-                raise BudgetExceededError(str(exc), motivos=("ledger",)) from None
-
         ultimo: ModelGatewayError | None = None
         for intento in range(self._max_retries + 1):
             from ai_swe.cancellation import current_cancellation
@@ -312,6 +284,34 @@ class ModelGateway:
             control = current_cancellation()
             if control:
                 control.check()
+
+            if self._ledger is not None and reservation is None:
+                from ai_swe.state.budget_ledger import LedgerError
+
+                settings = self._profile_settings
+                model = request.model or settings.model_name
+                if settings.max_cost_per_run is None or request.max_output_tokens is None:
+                    raise ModelConfigurationError("El perfil requiere limite y salida acotada")
+                # UTF-8 bytes plus structural overhead are a conservative local estimate.
+                # Without a verified model tokenizer, a bytes/3 heuristic is
+                # not an upper bound. Reserve bytes plus framing overhead;
+                # duplicate schema serialization deliberately over-reserves.
+                inputs = len(request.model_dump_json().encode()) + 1024
+                estimate = self._pricing.cost(
+                    model,
+                    ModelUsage(input_tokens=inputs, output_tokens=request.max_output_tokens),
+                )
+                if estimate is None:
+                    raise ModelConfigurationError("El perfil requiere una tarifa declarada")
+                try:
+                    reservation = self._ledger.reserve_call(
+                        request.run_id or "",
+                        run_limit=settings.max_cost_per_run,
+                        estimate=estimate,
+                        hourly_limit=settings.max_cost_per_hour,
+                    )
+                except LedgerError as exc:
+                    raise BudgetExceededError(str(exc), motivos=("ledger",)) from None
             inicio = time.perf_counter()
             try:
                 if control:
@@ -347,22 +347,26 @@ class ModelGateway:
                 return bruto, latencia_ms
             except (ModelGatewayError, BudgetExceededError) as exc:
                 ultimo = exc
+                is_client_rejection = (
+                    isinstance(exc, ModelAuthenticationError)
+                    or (isinstance(exc, ModelGatewayError) and getattr(exc, "status_code", None) is not None and 400 <= exc.status_code < 500)
+                    or (isinstance(exc, InvalidResponseError) and "HTTP 4" in str(exc))
+                    or isinstance(exc, ModelRateLimitError)
+                )
+                if reservation is not None:
+                    if is_client_rejection:
+                        try:
+                            self._ledger.settle(reservation, 0.0)
+                        except Exception:
+                            pass
+                        reservation = None
+                    else:
+                        # Ambiguous error (timeout, connection reset): request reached provider,
+                        # cost is uncertain. Keep reservation intact in ledger as liability,
+                        # detach so retry must reserve independently.
+                        reservation = None
+
                 if not exc.recoverable or intento >= self._max_retries:
-                    # En caso de fallo definitivo por error de cliente (4xx) o 429,
-                    # se liquida la reserva en 0.0 para no bloquear la bóveda.
-                    if reservation is not None:
-                        is_client_rejection = (
-                            isinstance(exc, ModelAuthenticationError)
-                            or (isinstance(exc, ModelGatewayError) and getattr(exc, "status_code", None) is not None and 400 <= exc.status_code < 500)
-                            or (isinstance(exc, InvalidResponseError) and "HTTP 4" in str(exc))
-                            or isinstance(exc, ModelRateLimitError)
-                        )
-                        if is_client_rejection:
-                            try:
-                                self._ledger.settle(reservation, 0.0)
-                                reservation = None
-                            except Exception:
-                                pass
                     raise
                 espera = self._espera(intento, exc)
                 log.warning(

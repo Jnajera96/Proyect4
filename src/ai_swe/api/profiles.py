@@ -93,11 +93,26 @@ class VaultConfig(BaseModel):
             if self.hf_token is None
             else self.hf_token.get_secret_value()
         )
-        if is_loopback and not data["hf_token"].strip():
-            data["hf_token"] = "local"
         models = {self.model_name.strip().lower()}
         if "reviewer" in self.remote_model_roles:
             models.add((self.reviewer_model or self.model_name).strip().lower())
+        if is_loopback:
+            if not data["hf_token"].strip():
+                data["hf_token"] = "local"
+            missing_for_pricing = models - set(table.known_models())
+            if missing_for_pricing:
+                existing_prices = prices if isinstance(prices, list) else []
+                for m in missing_for_pricing:
+                    if not any(str(item.get("model", "")).strip().lower() == m for item in existing_prices):
+                        existing_prices.append({
+                            "model": m,
+                            "input_per_1k": 0.0,
+                            "output_per_1k": 0.0,
+                            "currency": "USD",
+                        })
+                self.model_pricing = json.dumps(existing_prices, indent=2)
+                data["model_pricing"] = self.model_pricing
+                table = pricing_from_json(self.model_pricing)
         if self.remote_model_roles and (
             not data["hf_token"].strip()
             or not self.budget_limit

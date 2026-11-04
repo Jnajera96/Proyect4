@@ -799,47 +799,85 @@ def crear_app(
             "proyectos": len(almacen.listar_proyectos(limit=1000)),
         }
 
-    @app.post("/system/launch-omniroute")
+    @app.post("/system/launch-omniroute", dependencies=[ADMINISTRAR])
     def launch_omniroute() -> dict:
-        """Comprueba y lanza OmniRoute en una ventana de PowerShell."""
-        import socket
+        """Comprueba y lanza OmniRoute en una ventana independiente, requiriendo autorización."""
+        import os
         import subprocess
+        import urllib.request
         from pathlib import Path
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(0.5)
-        is_running = sock.connect_ex(("127.0.0.1", 20128)) == 0
-        sock.close()
+        def check_health() -> bool:
+            try:
+                req = urllib.request.Request("http://127.0.0.1:20128/api/settings/require-login", method="GET")
+                with urllib.request.urlopen(req, timeout=0.8) as resp:
+                    return resp.status in (200, 302, 307, 308)
+            except Exception:
+                return False
 
-        if is_running:
+        if check_health():
             return {
                 "status": "already_running",
                 "url": "http://localhost:20128",
                 "message": "OmniRoute ya está activo y respondiendo en http://localhost:20128",
             }
 
-        ps1_script = Path(r"C:\Users\jose_\Desktop\repo_proyect\omniroute\iniciar.ps1")
-        if not ps1_script.exists():
+        candidate_dirs = [
+            Path(os.environ.get("OMNIROUTE_DIR", "")),
+            Path.cwd() / "omniroute",
+            Path(__file__).resolve().parents[4] / "omniroute",
+            Path.home() / "Desktop" / "repo_proyect" / "omniroute",
+        ]
+        chosen_script = None
+        for d in candidate_dirs:
+            if not str(d) or not d.is_dir():
+                continue
+            cmd_candidate = d / "iniciar.cmd"
+            if cmd_candidate.is_file():
+                chosen_script = cmd_candidate
+                break
+            ps1_candidate = d / "iniciar.ps1"
+            if ps1_candidate.is_file():
+                chosen_script = ps1_candidate
+                break
+
+        if not chosen_script:
             return {
                 "status": "not_found",
-                "message": f"No se encontró el script en {ps1_script}",
+                "message": "No se encontró el script de inicio de OmniRoute (iniciar.cmd o iniciar.ps1)",
             }
 
         try:
-            cmd = f'Start-Process powershell -ArgumentList \'-NoExit\', \'-ExecutionPolicy\', \'Bypass\', \'-File\', \'{ps1_script}\''
-            subprocess.Popen(
-                ["powershell.exe", "-Command", cmd],
-                creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
-            )
+            # Minimal sanitized environment without credentials
+            safe_env = {
+                k: v for k, v in os.environ.items()
+                if not any(secret in k.upper() for secret in ("TOKEN", "SECRET", "KEY", "PASSWORD"))
+            }
+            safe_env["OMNIROUTE_USE_TURBOPACK"] = "1"
+
+            if chosen_script.suffix.lower() == ".cmd":
+                subprocess.Popen(
+                    ["cmd.exe", "/c", "start", '""', str(chosen_script)],
+                    cwd=str(chosen_script.parent),
+                    env=safe_env,
+                    creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
+                )
+            else:
+                subprocess.Popen(
+                    ["powershell.exe", "-NoProfile", "-File", str(chosen_script)],
+                    cwd=str(chosen_script.parent),
+                    env=safe_env,
+                    creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
+                )
             return {
                 "status": "launched",
                 "url": "http://localhost:20128",
-                "message": "Se ha abierto una nueva ventana de PowerShell ejecutando OmniRoute.",
+                "message": f"Se ha iniciado OmniRoute ({chosen_script.name}).",
             }
         except Exception as exc:
             return {
                 "status": "error",
-                "message": f"Error al ejecutar PowerShell: {exc}",
+                "message": f"Error al ejecutar launcher: {exc}",
             }
 
     # ------------------------------------------------------------- proyectos
