@@ -324,3 +324,67 @@ def test_uncertain_consumption_reservation_retained_and_warned(tmp_path: Path):
 
     assert "cobro incierto" in str(exc.value)
     assert "retenida" in str(exc.value)
+
+
+def test_gateway_retries_reuse_reservation_without_budget_starvation(tmp_path: Path):
+    """Verifica que un reintento transitorio por rate limit u otro error recuperable
+    no duplique la reserva en el ledger ni cause un falso agotamiento de presupuesto.
+    """
+    from ai_swe.contracts import Instruction, InstructionSource
+    from ai_swe.models import (
+        MessageRole,
+        ModelMessage,
+        ModelPricing,
+        ModelRateLimitError,
+        ModelRequest,
+        PricingTable,
+    )
+
+    db_path = tmp_path / "retry_budget_test.sqlite3"
+    ledger = BudgetLedger(db_path)
+    ledger.set_limit(5.0)
+
+    intentos = 0
+
+    class RateLimitThenSucceedAdapter(FakeModelAdapter):
+        def generate(self, request):
+            nonlocal intentos
+            intentos += 1
+            if intentos == 1:
+                raise ModelRateLimitError("Quota / Rate limit temporal", retry_after_s=0.001)
+            return super().generate(request)
+
+    adapter = RateLimitThenSucceedAdapter(name="gemini_test", content="respuesta recuperada")
+    pricing = PricingTable({
+        "fake-model": ModelPricing(input_per_1k=0.001, output_per_1k=0.002)
+    })
+    settings = Settings(
+        profile_id="test_profile",
+        model_name="fake-model",
+        max_cost_per_run=1.0,
+        max_cost_per_hour=10.0,
+        state_db_path=db_path,
+    )
+    gw = ModelGateway(
+        [adapter],
+        profile_settings=settings,
+        pricing=pricing,
+        max_retries=2,
+        sleep=lambda _s: None,
+    )
+
+    req = ModelRequest(
+        messages=[ModelMessage(role=MessageRole.USER, content="test")],
+        model="fake-model",
+        run_id="run-retry-ok",
+        max_output_tokens=100,
+    )
+
+    resp = gw.generate(req)
+    assert resp.content == "respuesta recuperada"
+    assert intentos == 2
+
+    # Verificar que las reservas no quedaron colgadas
+    unresolved = ledger.unresolved_reservations_for_run("run-retry-ok")
+    assert unresolved["count"] == 0
+

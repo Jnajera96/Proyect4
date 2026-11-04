@@ -247,6 +247,39 @@ export function ProfileRoot() {
             }
             setNotice("Preset Hugging Face aplicado. Pega tu HF Token y guarda la bóveda.");
           }}>🤗 Usar Hugging Face (Router)</button>
+          <button type="button" onClick={() => {
+            const form = document.querySelector(".profile-vault form") as HTMLFormElement | null;
+            if (form) {
+              const urlInput = form.querySelector('[name="model_base_url"]') as HTMLInputElement | null;
+              if (urlInput) urlInput.value = "http://localhost:20128/v1";
+              const tokenInput = form.querySelector('[name="hf_token"]') as HTMLInputElement | null;
+              if (tokenInput) tokenInput.value = "local";
+              const budgetInput = form.querySelector('[name="budget_limit"]') as HTMLInputElement | null;
+              if (budgetInput) budgetInput.value = "100";
+              const runBudgetInput = form.querySelector('[name="max_cost_per_run"]') as HTMLInputElement | null;
+              if (runBudgetInput) runBudgetInput.value = "10";
+              const checkboxes = form.querySelectorAll<HTMLInputElement>('input[name="roles"]');
+              checkboxes.forEach(cb => { cb.checked = true; });
+              const pricingText = form.querySelector('[name="model_pricing"]') as HTMLTextAreaElement | null;
+              if (pricingText) {
+                pricingText.value = JSON.stringify([
+                  { model: "omniroute-combo", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
+                  { model: "qwen2.5-coder", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
+                  { model: "llama3.3-70b", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
+                  { model: "gemini-3.8-flash", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" }
+                ], null, 2);
+              }
+              const coderSelect = form.querySelector('#model_name-selector') as HTMLSelectElement | null;
+              if (coderSelect) { coderSelect.value = "__custom__"; coderSelect.dispatchEvent(new Event('change', { bubbles: true })); }
+              setTimeout(() => {
+                const coderCustom = form.querySelector('#model_name-custom') as HTMLInputElement | null;
+                if (coderCustom) { coderCustom.value = "omniroute-combo"; coderCustom.dispatchEvent(new Event('input', { bubbles: true })); }
+              }, 50);
+              const reviewerSelect = form.querySelector('#reviewer_model-selector') as HTMLSelectElement | null;
+              if (reviewerSelect) { reviewerSelect.value = ""; reviewerSelect.dispatchEvent(new Event('change', { bubbles: true })); }
+            }
+            setNotice("Preset OmniRoute / Local aplicado (coste cero, 0 USD). Endpoint http://localhost:20128/v1 (o 11434 para Ollama) con tarifas en 0 USD.");
+          }}>🆓 Usar OmniRoute / Ollama (Gratis $0.00)</button>
         </div>
       </div>
 

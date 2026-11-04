@@ -72,8 +72,10 @@ class VaultConfig(BaseModel):
         if self.model_provider != "openai_compatible":
             raise ValueError("Selecciona un proveedor compatible con OpenAI")
         parsed = urlsplit(self.model_base_url)
-        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
-            raise ValueError("El endpoint remoto debe usar HTTPS sin credenciales en la URL")
+        is_loopback = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
+        valid_scheme = (parsed.scheme in {"http", "https"}) if is_loopback else (parsed.scheme == "https")
+        if not valid_scheme or not parsed.hostname or parsed.username or parsed.password:
+            raise ValueError("El endpoint remoto debe usar HTTPS (o HTTP para localhost) sin credenciales en la URL")
         ALLOWED_ROLES = {"coder", "reviewer", "supervisor", "requirements_analyst"}
         if any(role not in ALLOWED_ROLES for role in self.remote_model_roles):
             raise ValueError("Rol remoto invalido")
@@ -91,6 +93,8 @@ class VaultConfig(BaseModel):
             if self.hf_token is None
             else self.hf_token.get_secret_value()
         )
+        if is_loopback and not data["hf_token"].strip():
+            data["hf_token"] = "local"
         models = {self.model_name.strip().lower()}
         if "reviewer" in self.remote_model_roles:
             models.add((self.reviewer_model or self.model_name).strip().lower())
