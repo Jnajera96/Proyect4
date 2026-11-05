@@ -425,3 +425,27 @@ test("bóveda de perfil usa fallback 50 solo si budget_limit es null o undefined
   }));
   assert.match(html, /name="budget_limit"[^>]*value="50"/);
 });
+
+test("bóveda de perfil no marca ningún checkbox si remote_model_roles está vacío", () => {
+  const dummyVault = {
+    has_token: false,
+    model_name: "gemini-3.8-flash",
+    reviewer_model: "",
+    model_base_url: "https://generativelanguage.googleapis.com/v1beta/openai",
+    remote_model_roles: [],
+    model_pricing: "[]",
+    budget_limit: 10,
+    max_cost_per_run: 1,
+    max_cost_per_hour: null,
+    ledger: { limit: null, consumed: 0, reserved: 0, available: null },
+  };
+  const html = renderToStaticMarkup(React.createElement(ProfileVaultSection, {
+    vault: dummyVault,
+    setVault: () => {},
+    busy: false,
+    onSave: async () => {},
+    onClose: () => {},
+    setNotice: () => {},
+  }));
+  assert.doesNotMatch(html, /name="roles"[^>]*checked/);
+});

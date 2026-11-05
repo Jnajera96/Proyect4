@@ -109,6 +109,9 @@ class PricingTable:
         de exacta y sin fundamento.
         """
         precio = self._entries.get(model.strip().lower())
+        if precio is None and "/" in model:
+            base_model = model.split("/", 1)[-1].strip().lower()
+            precio = self._entries.get(base_model)
         if precio is None:
             return None
         if usage.input_tokens is None or usage.output_tokens is None:

@@ -142,6 +142,16 @@ class OpenAICompatibleAdapter:
     def __exit__(self, *_excepcion: object) -> None:
         self.close()
 
+    def _is_loopback(self) -> bool:
+        from urllib.parse import urlparse
+
+        try:
+            parsed = urlparse(self._base_url)
+            host = (parsed.hostname or "").lower()
+            return host in ("localhost", "127.0.0.1", "::1", "0.0.0.0")
+        except Exception:
+            return False
+
     def _cabeceras(self) -> dict[str, str]:
         """Cabeceras de la peticion. **Nunca se registran en un log.**
 
@@ -149,9 +159,56 @@ class OpenAICompatibleAdapter:
         ningun sitio que pueda acabar serializado.
         """
         cabeceras = {"Content-Type": "application/json"}
-        if self._api_key.strip():
-            cabeceras["Authorization"] = f"Bearer {self._api_key}"
+        api_key = self._api_key.strip()
+        if api_key and api_key.lower() not in ("local", "none", "null"):
+            cabeceras["Authorization"] = f"Bearer {api_key}"
         return cabeceras
+
+    def _resolver_modelo_loopback(self, solicitado: str) -> str | None:
+        """En endpoints loopback (como OmniRoute), consulta /models para resolver prefijos o combos."""
+        if not self._is_loopback():
+            return None
+        url = f"{self._base_url}/models"
+        try:
+            resp = self._cliente().get(url, timeout=3.0)
+            if resp.status_code != 200:
+                return None
+            datos = resp.json()
+            items = datos.get("data", [])
+            modelos: list[str] = [
+                m.get("id") for m in items if isinstance(m, dict) and isinstance(m.get("id"), str)
+            ]
+            if not modelos:
+                return None
+            sol_lower = solicitado.strip().lower()
+            for m in modelos:
+                if m.lower() == sol_lower:
+                    return m
+            for m in modelos:
+                if m.lower().endswith(f"/{sol_lower}"):
+                    return m
+            excluidos = (
+                "embedding",
+                "clip",
+                "tts",
+                "image",
+                "audio",
+                "transcribe",
+                "live",
+                "robotics",
+                "preview-tts",
+            )
+            viables = [m for m in modelos if not any(x in m.lower() for x in excluidos)]
+            if viables:
+                preferidos = [
+                    m
+                    for m in viables
+                    if any(p in m.lower() for p in ("flash", "coder", "instruct", "chat"))
+                ]
+                return preferidos[0] if preferidos else viables[0]
+            return modelos[0]
+        except Exception:
+            return None
 
     def _cuerpo(self, request: ModelRequest) -> dict[str, Any]:
         model_name = request.model or self._model
@@ -269,12 +326,14 @@ class OpenAICompatibleAdapter:
     def generate(self, request: ModelRequest) -> ProviderResponse:
         url = f"{self._base_url}/chat/completions"
         timeout = request.timeout_s or self._timeout_s
+        cuerpo = self._cuerpo(request)
+        cabeceras = self._cabeceras()
 
         try:
             respuesta = self._cliente().post(
                 url,
-                json=self._cuerpo(request),
-                headers=self._cabeceras(),
+                json=cuerpo,
+                headers=cabeceras,
                 timeout=timeout,
             )
         except httpx.TimeoutException as exc:
@@ -291,6 +350,44 @@ class OpenAICompatibleAdapter:
                 provider=self._name,
                 detail=type(exc).__name__,
             ) from exc
+
+        # Condición 1: En loopback, si se rechaza con 401/403 y se envió Authorization,
+        # reintentar inmediatamente en modo local sin cabecera Authorization.
+        if self._is_loopback() and respuesta.status_code in (401, 403) and "Authorization" in cabeceras:
+            cabeceras_sin_auth = {k: v for k, v in cabeceras.items() if k.lower() != "authorization"}
+            try:
+                segunda = self._cliente().post(
+                    url,
+                    json=cuerpo,
+                    headers=cabeceras_sin_auth,
+                    timeout=timeout,
+                )
+                if segunda.status_code < 400 or (segunda.status_code != respuesta.status_code):
+                    respuesta = segunda
+                    cabeceras = cabeceras_sin_auth
+            except Exception:
+                pass
+
+        # Condición 2: En loopback, si responde 400 (modelo no encontrado, ambiguo o combo no registrado),
+        # consultar /models y reintentar con el identificador resuelto.
+        if self._is_loopback() and respuesta.status_code == 400:
+            solicitado = str(cuerpo.get("model", ""))
+            resuelto = self._resolver_modelo_loopback(solicitado)
+            if resuelto and resuelto != solicitado:
+                nuevo_cuerpo = dict(cuerpo)
+                nuevo_cuerpo["model"] = resuelto
+                try:
+                    segunda = self._cliente().post(
+                        url,
+                        json=nuevo_cuerpo,
+                        headers=cabeceras,
+                        timeout=timeout,
+                    )
+                    if segunda.status_code < 400 or (segunda.status_code != respuesta.status_code):
+                        respuesta = segunda
+                        cuerpo = nuevo_cuerpo
+                except Exception:
+                    pass
 
         if respuesta.status_code >= 400:
             raise self._error_por_estado(respuesta)

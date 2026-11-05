@@ -97,8 +97,8 @@ class VaultConfig(BaseModel):
         if "reviewer" in self.remote_model_roles:
             models.add((self.reviewer_model or self.model_name).strip().lower())
         if is_loopback:
-            if not data["hf_token"].strip():
-                data["hf_token"] = "local"
+            if data["hf_token"].strip().lower() == "local" or not data["hf_token"].strip():
+                data["hf_token"] = ""
             missing_for_pricing = models - set(table.known_models())
             if missing_for_pricing:
                 existing_prices = prices if isinstance(prices, list) else []
@@ -114,12 +114,12 @@ class VaultConfig(BaseModel):
                 data["model_pricing"] = self.model_pricing
                 table = pricing_from_json(self.model_pricing)
         if self.remote_model_roles and (
-            not data["hf_token"].strip()
+            (not is_loopback and not data["hf_token"].strip())
             or not self.budget_limit
             or not models.issubset(set(table.known_models()))
         ):
             motivos = []
-            if not data["hf_token"].strip():
+            if not is_loopback and not data["hf_token"].strip():
                 motivos.append("ingresa el token o clave de API")
             if not self.budget_limit or self.budget_limit <= 0:
                 motivos.append("el límite de presupuesto acumulado debe ser mayor a 0 (ej. 5.00 USD)")

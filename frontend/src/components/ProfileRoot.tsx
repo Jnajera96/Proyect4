@@ -59,7 +59,7 @@ export function ProfileVaultSection({
       else if (h !== null) currentHour = Number(h);
 
       const roles = fd.getAll("roles").map(String);
-      if (roles.length > 0) currentRoles = roles;
+      currentRoles = roles;
 
       const t = fd.get("hf_token");
       if (typeof t === "string") currentToken = t;
@@ -120,7 +120,8 @@ export function ProfileVaultSection({
               { model: "omniroute-combo", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
               { model: "qwen2.5-coder", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
               { model: "llama3.3-70b", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
-              { model: "gemini-3.8-flash", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" }
+              { model: "gemini-3.8-flash", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" },
+              { model: "gemini/gemini-3.8-flash", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" }
             ], null, 2),
             notice: "Preset OmniRoute / Local aplicado (coste cero, 0 USD). Límites conservados. Guarda la bóveda para confirmar.",
           })}>🆓 Usar OmniRoute / Ollama (Gratis $0.00)</button>

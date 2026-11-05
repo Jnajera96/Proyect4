@@ -284,3 +284,162 @@ def test_launcher_rejects_untrusted_cwd_and_sanitizes_environment(tmp_path, monk
         assert "PRIVATE_SECRET_KEY" not in captured_env
         assert captured_env.get("OMNIROUTE_USE_TURBOPACK") == "1"
     store.close()
+
+
+
+def test_loopback_omits_bearer_when_api_key_is_local():
+    """RC32: api_key='local' nunca debe enviarse como Bearer local al endpoint."""
+    from ai_swe.models.providers.openai_compatible import OpenAICompatibleAdapter
+
+    adapter = OpenAICompatibleAdapter(name="test", model="m", api_key="local", base_url="http://127.0.0.1:20128/v1")
+    assert "Authorization" not in adapter._cabeceras()
+
+    adapter_blank = OpenAICompatibleAdapter(name="test", model="m", api_key="", base_url="http://127.0.0.1:20128/v1")
+    assert "Authorization" not in adapter_blank._cabeceras()
+
+
+def test_loopback_401_retries_without_authorization_header():
+    """RC32: En loopback, si se envía un token viejo y el servidor devuelve 401, reintenta sin Authorization."""
+    import httpx
+    from ai_swe.models.contracts import MessageRole, ModelMessage, ModelRequest
+    from ai_swe.models.providers.openai_compatible import OpenAICompatibleAdapter
+
+    captured_requests = []
+
+    def fake_handler(request: httpx.Request) -> httpx.Response:
+        captured_requests.append(dict(request.headers))
+        if "authorization" in request.headers:
+            return httpx.Response(
+                401,
+                json={"error": {"message": "Invalid API key", "type": "authentication_error", "code": "invalid_api_key"}},
+            )
+        return httpx.Response(
+            200,
+            json={
+                "id": "chat-123",
+                "model": "gemini-3.8-flash",
+                "choices": [{"message": {"role": "assistant", "content": "pong"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7},
+            },
+        )
+
+    transport = httpx.MockTransport(fake_handler)
+    client = httpx.Client(transport=transport)
+    adapter = OpenAICompatibleAdapter(
+        name="test",
+        model="gemini-3.8-flash",
+        api_key="old-stale-vault-token",
+        base_url="http://127.0.0.1:20128/v1",
+        client=client,
+    )
+
+    req = ModelRequest(messages=[ModelMessage(role=MessageRole.USER, content="ping")])
+    res = adapter.generate(req)
+
+    assert res.content == "pong"
+    assert len(captured_requests) == 2
+    assert "authorization" in captured_requests[0]
+    assert "authorization" not in captured_requests[1]
+
+
+def test_loopback_400_resolves_model_via_models_endpoint():
+    """RC32: En loopback, si omniroute-combo o modelo sin prefijo da 400, consulta /models y reintenta."""
+    import httpx
+    from ai_swe.models.contracts import MessageRole, ModelMessage, ModelRequest
+    from ai_swe.models.providers.openai_compatible import OpenAICompatibleAdapter
+
+    models_called = []
+    chat_models = []
+
+    def fake_handler(request: httpx.Request) -> httpx.Response:
+        url_str = str(request.url)
+        if url_str.endswith("/models"):
+            models_called.append(True)
+            return httpx.Response(
+                200,
+                json={"data": [{"id": "gemini/gemini-3.8-flash"}, {"id": "gemini/embedding-001"}]},
+            )
+        if url_str.endswith("/chat/completions"):
+            import json as _json
+            body = _json.loads(request.content.decode("utf-8"))
+            m = body.get("model")
+            chat_models.append(m)
+            if m == "omniroute-combo":
+                return httpx.Response(
+                    400,
+                    json={"error": {"message": "No credentials for provider: openai", "type": "invalid_request_error"}},
+                )
+            if m == "gemini/gemini-3.8-flash":
+                return httpx.Response(
+                    200,
+                    json={
+                        "id": "chat-456",
+                        "model": "gemini/gemini-3.8-flash",
+                        "choices": [{"message": {"role": "assistant", "content": "resuelto"}, "finish_reason": "stop"}],
+                        "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+                    },
+                )
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(fake_handler)
+    client = httpx.Client(transport=transport)
+    adapter = OpenAICompatibleAdapter(
+        name="test",
+        model="omniroute-combo",
+        api_key="",
+        base_url="http://127.0.0.1:20128/v1",
+        client=client,
+    )
+
+    req = ModelRequest(messages=[ModelMessage(role=MessageRole.USER, content="test")])
+    res = adapter.generate(req)
+
+    assert res.content == "resuelto"
+    assert models_called == [True]
+    assert chat_models == ["omniroute-combo", "gemini/gemini-3.8-flash"]
+
+
+def test_pricing_table_supports_provider_prefixes():
+    """RC32: PricingTable.cost encuentra gemini-3.8-flash cuando el modelo devuelto es gemini/gemini-3.8-flash."""
+    from ai_swe.models.contracts import ModelUsage
+    from ai_swe.models.pricing import pricing_from_json
+
+    table = pricing_from_json(
+        '[{"model": "gemini-3.8-flash", "input_per_1k": 0.001, "output_per_1k": 0.002, "currency": "USD"}]'
+    )
+    usage = ModelUsage(input_tokens=1000, output_tokens=1000)
+
+    # Coincidencia directa
+    assert table.cost("gemini-3.8-flash", usage) == 0.003
+    # Coincidencia con prefijo de proveedor
+    assert table.cost("gemini/gemini-3.8-flash", usage) == 0.003
+
+
+
+def test_vault_loopback_cleans_local_token_and_permits_empty():
+    """RC32: En loopback, hf_token vacío o 'local' no es rechazado y se almacena vacío."""
+    from ai_swe.api.profiles import VaultConfig
+
+    cfg = VaultConfig(
+        model_name="gemini-3.8-flash",
+        model_base_url="http://localhost:20128/v1",
+        remote_model_roles=["coder"],
+        model_pricing='[{"model": "gemini-3.8-flash", "input_per_1k": 0.0, "output_per_1k": 0.0, "currency": "USD"}]',
+        budget_limit=10.0,
+        max_cost_per_run=1.0,
+        hf_token="local",
+    )
+    data = cfg.vault_data({})
+    assert data["hf_token"] == ""
+
+    cfg_empty = VaultConfig(
+        model_name="gemini-3.8-flash",
+        model_base_url="http://localhost:20128/v1",
+        remote_model_roles=["coder"],
+        model_pricing='[{"model": "gemini-3.8-flash", "input_per_1k": 0.0, "output_per_1k": 0.0, "currency": "USD"}]',
+        budget_limit=10.0,
+        max_cost_per_run=1.0,
+        hf_token="",
+    )
+    data_empty = cfg_empty.vault_data({})
+    assert data_empty["hf_token"] == ""
