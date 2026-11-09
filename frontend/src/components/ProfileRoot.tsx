@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { App } from "../App";
 import { borrarClave } from "../lib/auth";
 import { profileRequest, setProfileCsrf } from "../lib/profile";
-import { ModelConfiguration } from "./ModelConfiguration";
+import { isLocalEndpoint, ModelConfiguration } from "./ModelConfiguration";
 import { PasswordField } from "./PasswordField";
 import { RestaurarPerfil } from "./RestaurarPerfil";
 import "../profiles.css";
@@ -33,6 +33,20 @@ export function ProfileVaultSection({
   const formRef = useRef<HTMLFormElement>(null);
   const [tokenDraft, setTokenDraft] = useState("");
   const [clearTokenDraft, setClearTokenDraft] = useState(false);
+  const [replacingToken, setReplacingToken] = useState(!vault.has_token);
+  const [endpoint, setEndpoint] = useState(vault.model_base_url ?? "");
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [checking, setChecking] = useState(false);
+  const [connectionMessage, setConnectionMessage] = useState("");
+  const connectionVersion = useRef(0);
+  const verifiedSignature = useRef("");
+  const local = isLocalEndpoint(endpoint);
+
+  function connectionSignature(form: HTMLFormElement): string {
+    const fields = new FormData(form);
+    return JSON.stringify(["model_base_url", "model_name", "reviewer_model", "hf_token", "clear_token"]
+      .map(name => fields.get(name) ?? ""));
+  }
 
   function applyPreset(preset: {
     model_base_url: string;
@@ -66,8 +80,15 @@ export function ProfileVaultSection({
       currentClear = Boolean(fd.get("clear_token"));
     }
 
-    setTokenDraft(currentToken);
-    setClearTokenDraft(currentClear);
+    const changedProvider = endpoint.replace(/\/$/, "") !== preset.model_base_url.replace(/\/$/, "");
+    setTokenDraft(changedProvider ? "" : currentToken);
+    setClearTokenDraft(changedProvider || currentClear);
+    setReplacingToken(changedProvider || replacingToken);
+    setEndpoint(preset.model_base_url);
+    connectionVersion.current += 1;
+    verifiedSignature.current = "";
+    setAvailableModels([]);
+    setConnectionMessage("");
     setVault(prev => prev ? {
       ...prev,
       budget_limit: currentBudget,
@@ -86,7 +107,7 @@ export function ProfileVaultSection({
   return (
     <section className="profile-vault" aria-label="Configuración de bóveda">
       <h1>Proveedor y presupuesto de tu perfil</h1>
-      <p>Token: {vault.has_token ? "guardado" : "sin configurar"}. Nunca se muestra el valor guardado.</p>
+      <p>La credencial guardada permanece oculta. Los cambios se aplican al guardar la bóveda.</p>
       <p>Consumo declarado: {vault.ledger.consumed} USD · Reservado: {vault.ledger.reserved} USD ·
         Disponible: {vault.ledger.available ?? "sin límite declarado"}</p>
 
@@ -124,7 +145,14 @@ export function ProfileVaultSection({
               { model: "gemini/gemini-3.8-flash", input_per_1k: 0.0, output_per_1k: 0.0, currency: "USD" }
             ], null, 2),
             notice: "Preset OmniRoute / Local aplicado (coste cero, 0 USD). Límites conservados. Guarda la bóveda para confirmar.",
-          })}>🆓 Usar OmniRoute / Ollama (Gratis $0.00)</button>
+          })}>Usar OmniRoute local</button>
+          <button type="button" onClick={() => applyPreset({
+            model_base_url: "http://localhost:11434/v1",
+            model_name: "",
+            reviewer_model: "",
+            model_pricing: "[]",
+            notice: "Ollama seleccionado. Consulta los modelos instalados y elige uno antes de activar IA.",
+          })}>Usar Ollama local</button>
           <button type="button" onClick={async () => {
             try {
               setNotice("Comprobando y lanzando OmniRoute...");
@@ -137,15 +165,61 @@ export function ProfileVaultSection({
         </div>
       </div>
 
-      <form ref={formRef} key={formRevision} onSubmit={onSave}>
-        <label>Token HF / Clave de API Gemini<input name="hf_token" type="password" autoComplete="off"
-          defaultValue={tokenDraft} onChange={e => setTokenDraft(e.target.value)}
-          placeholder="Pega tu clave AIzaSy... o token HF (vacío conserva)" /></label>
-        <label className="profile-check"><input type="checkbox" name="clear_token"
-          checked={clearTokenDraft} onChange={e => setClearTokenDraft(e.target.checked)} />Eliminar el token guardado</label>
-        <label>Endpoint HTTPS<input name="model_base_url" type="url" required
-          defaultValue={vault.model_base_url ?? "https://generativelanguage.googleapis.com/v1beta/openai"} /></label>
-        <ModelConfiguration coder={vault.model_name || "gemini-3.8-flash"} reviewer={vault.reviewer_model} pricing={vault.model_pricing} />
+      <form ref={formRef} key={formRevision} onChange={() => { connectionVersion.current += 1; }}
+        onSubmit={event => {
+          const fields = new FormData(event.currentTarget);
+          if (fields.getAll("roles").length && verifiedSignature.current !== connectionSignature(event.currentTarget)) {
+            event.preventDefault();
+            setConnectionMessage("Prueba la conexión con estos modelos y esta credencial antes de activar IA.");
+            return;
+          }
+          void onSave(event);
+        }}>
+        <label>Endpoint del proveedor<input name="model_base_url" type="url" required
+          value={endpoint} onChange={e => {
+            setEndpoint(e.target.value); setTokenDraft(""); setClearTokenDraft(true);
+            setReplacingToken(true); setAvailableModels([]); setConnectionMessage("");
+          }} /></label>
+        <p>{local ? "Sin credencial para este endpoint local." :
+          clearTokenDraft && !tokenDraft ? "Sin token para esta configuración. Se eliminará el anterior al guardar." :
+          !clearTokenDraft && vault.has_token ? "Token configurado (••••••••)." : "Sin token configurado."}</p>
+        <input type="hidden" name="clear_token" value={clearTokenDraft && !tokenDraft ? "1" : ""} />
+        {!local && <>
+          <button type="button" onClick={() => setReplacingToken(true)}>Reemplazar token</button>
+          <button type="button" onClick={() => {
+            setTokenDraft(""); setClearTokenDraft(true); setReplacingToken(false);
+            connectionVersion.current += 1; verifiedSignature.current = "";
+          }}>Eliminar token</button>
+        </>}
+        {!local && replacingToken && <label>Clave del proveedor<input name="hf_token" type="password" autoComplete="off"
+          value={tokenDraft} onChange={e => setTokenDraft(e.target.value)}
+          placeholder="Ingresa la nueva credencial" /></label>}
+        <ModelConfiguration coder={vault.model_name || ""} reviewer={vault.reviewer_model}
+          pricing={vault.model_pricing} endpoint={endpoint} available={availableModels} />
+        <button type="button" disabled={checking || busy} onClick={async () => {
+          if (!formRef.current) return;
+          const fields = new FormData(formRef.current);
+          const version = connectionVersion.current;
+          const signature = connectionSignature(formRef.current);
+          verifiedSignature.current = "";
+          setChecking(true); setConnectionMessage("Comprobando conexión y catálogo…");
+          try {
+            const result = await profileRequest<{ ok: boolean; message: string; models: string[] }>(
+              "/auth/vault/test-connection", { method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ model_base_url: endpoint,
+                  model_name: fields.get("model_name"), reviewer_model: fields.get("reviewer_model"),
+                  hf_token: local || (clearTokenDraft && !tokenDraft) ? "" : tokenDraft || null }) });
+            if (version !== connectionVersion.current) {
+              setConnectionMessage("La configuración cambió durante la prueba. Vuelve a comprobarla.");
+              return;
+            }
+            setAvailableModels(result.models); setConnectionMessage(result.message);
+            if (result.ok) verifiedSignature.current = signature;
+          } catch (err) { setConnectionMessage((err as Error).message); }
+          finally { setChecking(false); }
+        }}>{checking ? "Comprobando…" : "Probar conexión y consultar modelos"}</button>
+        {connectionMessage && <p role="status">{connectionMessage}</p>}
         <fieldset><legend>Activar llamadas remotas (IA)</legend>
           {[
             { id: "coder", label: "coder (Generación de código)" },

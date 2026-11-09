@@ -535,9 +535,11 @@ def gateway_from_settings(
         )
 
     config = provider_config_from_settings(settings)
+    from ai_swe.config import is_local_model_endpoint
+
     if (
         requires_credentials(config.name) or config.base_url == "https://router.huggingface.co/v1"
-    ) and not config.has_credentials:
+    ) and not is_local_model_endpoint(config.base_url) and not config.has_credentials:
         raise ModelConfigurationError(
             f"el proveedor '{config.name}' exige una credencial y no hay ninguna configurada",
             provider=config.name,

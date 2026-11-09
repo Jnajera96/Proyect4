@@ -256,7 +256,7 @@ def test_launcher_rejects_untrusted_cwd_and_sanitizes_environment(tmp_path, monk
         assert not any(str(fake_script) in str(c[0]) or c[1] == str(fake_cwd) for c in captured_exec)
 
     # 2. Ahora creamos una carpeta válida con package.json identificando omniroute
-    valid_omni = tmp_path / "valid_omni"
+    valid_omni = tmp_path / "OmniRoute con espacios"
     valid_omni.mkdir()
     (valid_omni / "package.json").write_text('{"name": "omniroute", "version": "3.6.1"}', encoding="utf-8")
     valid_cmd = valid_omni / "iniciar.cmd"
@@ -266,6 +266,8 @@ def test_launcher_rejects_untrusted_cwd_and_sanitizes_environment(tmp_path, monk
     captured_env = {}
 
     def fake_popen_valid(args, cwd, env, **kwargs):
+        assert args == ["cmd.exe", "/d", "/c", r".\iniciar.cmd"]
+        assert cwd == str(valid_omni)
         captured_env.update(env)
         return MagicMock()
 
@@ -298,8 +300,8 @@ def test_loopback_omits_bearer_when_api_key_is_local():
     assert "Authorization" not in adapter_blank._cabeceras()
 
 
-def test_loopback_401_retries_without_authorization_header():
-    """RC32: En loopback, si se envía un token viejo y el servidor devuelve 401, reintenta sin Authorization."""
+def test_loopback_never_sends_stale_authorization_header():
+    """La credencial residual se excluye antes de la primera petición local."""
     import httpx
     from ai_swe.models.contracts import MessageRole, ModelMessage, ModelRequest
     from ai_swe.models.providers.openai_compatible import OpenAICompatibleAdapter
@@ -337,13 +339,12 @@ def test_loopback_401_retries_without_authorization_header():
     res = adapter.generate(req)
 
     assert res.content == "pong"
-    assert len(captured_requests) == 2
-    assert "authorization" in captured_requests[0]
-    assert "authorization" not in captured_requests[1]
+    assert len(captured_requests) == 1
+    assert "authorization" not in captured_requests[0]
 
 
 def test_loopback_400_resolves_model_via_models_endpoint():
-    """RC32: En loopback, si omniroute-combo o modelo sin prefijo da 400, consulta /models y reintenta."""
+    """En loopback solo se resuelve un alias único del mismo modelo."""
     import httpx
     from ai_swe.models.contracts import MessageRole, ModelMessage, ModelRequest
     from ai_swe.models.providers.openai_compatible import OpenAICompatibleAdapter
@@ -364,7 +365,7 @@ def test_loopback_400_resolves_model_via_models_endpoint():
             body = _json.loads(request.content.decode("utf-8"))
             m = body.get("model")
             chat_models.append(m)
-            if m == "omniroute-combo":
+            if m == "gemini-3.8-flash":
                 return httpx.Response(
                     400,
                     json={"error": {"message": "No credentials for provider: openai", "type": "invalid_request_error"}},
@@ -385,7 +386,7 @@ def test_loopback_400_resolves_model_via_models_endpoint():
     client = httpx.Client(transport=transport)
     adapter = OpenAICompatibleAdapter(
         name="test",
-        model="omniroute-combo",
+        model="gemini-3.8-flash",
         api_key="",
         base_url="http://127.0.0.1:20128/v1",
         client=client,
@@ -396,7 +397,7 @@ def test_loopback_400_resolves_model_via_models_endpoint():
 
     assert res.content == "resuelto"
     assert models_called == [True]
-    assert chat_models == ["omniroute-combo", "gemini/gemini-3.8-flash"]
+    assert chat_models == ["gemini-3.8-flash", "gemini/gemini-3.8-flash"]
 
 
 def test_pricing_table_supports_provider_prefixes():

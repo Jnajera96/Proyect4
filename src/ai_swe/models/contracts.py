@@ -75,7 +75,7 @@ class ProviderConfig(BaseModel):
 
     @property
     def has_credentials(self) -> bool:
-        return bool(self.api_key.get_secret_value().strip())
+        return self.api_key.get_secret_value().strip().lower() not in {"", "local", "none", "null"}
 
 
 class ModelUsage(BaseModel):

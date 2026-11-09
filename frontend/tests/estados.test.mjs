@@ -36,6 +36,27 @@ const { iniciarLectura } = await cargar("../src/lib/localCapabilities.ts");
 const { LectorResultado } = await cargar("../src/components/LectorResultado.tsx");
 const { CapacidadesLocales } = await cargar("../src/components/CapacidadesLocales.tsx");
 const { ProfileVaultSection } = await cargar("../src/components/ProfileRoot.tsx");
+const { isLocalEndpoint, ModelConfiguration } = await cargar("../src/components/ModelConfiguration.tsx");
+
+test("bóveda distingue loopback de hosts con prefijos engañosos", () => {
+  for (const endpoint of ["http://localhost:20128/v1", "http://127.0.0.1:11434/v1", "http://[::1]:1234/v1"]) {
+    assert.equal(isLocalEndpoint(endpoint), true);
+  }
+  assert.equal(isLocalEndpoint("http://localhost.attacker.test/v1"), false);
+  assert.equal(isLocalEndpoint("invalid"), false);
+});
+
+test("modelo local fija tarifas cero y presenta catálogo del servidor", () => {
+  const html = renderToStaticMarkup(React.createElement(ModelConfiguration, {
+    coder: "local/example", endpoint: "http://localhost:11434/v1",
+    pricing: "stale invalid JSON", available: ["local/example", "local/another"],
+  }));
+  assert.match(html, /Disponibles en tu servidor/);
+  assert.match(html, /local\/another/);
+  assert.match(html, /read[oO]nly/);
+  assert.doesNotMatch(html, /stale invalid JSON/);
+  assert.match(html, /input_per_1k.*:0/);
+});
 
 test("TTS usa solo voces locales y no cae silenciosamente a una voz remota", () => {
   let calls=0;

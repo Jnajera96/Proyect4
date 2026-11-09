@@ -22,6 +22,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.requests import HTTPConnection
 
 from ai_swe.config import Settings
+from ai_swe.models.providers.connection import ConnectionRequest, check_connection, local_endpoint, validate_endpoint
 from ai_swe.resources import frontend_dist
 from ai_swe.runtime_logging import profile_log_context
 from ai_swe.security.vault import VaultError
@@ -71,16 +72,23 @@ class VaultConfig(BaseModel):
 
         if self.model_provider != "openai_compatible":
             raise ValueError("Selecciona un proveedor compatible con OpenAI")
-        parsed = urlsplit(self.model_base_url)
-        is_loopback = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
-        valid_scheme = (parsed.scheme in {"http", "https"}) if is_loopback else (parsed.scheme == "https")
-        if not valid_scheme or not parsed.hostname or parsed.username or parsed.password:
-            raise ValueError("El endpoint remoto debe usar HTTPS (o HTTP para localhost) sin credenciales en la URL")
+        endpoint = validate_endpoint(self.model_base_url)
+        is_loopback = local_endpoint(endpoint)
         ALLOWED_ROLES = {"coder", "reviewer", "supervisor", "requirements_analyst"}
         if any(role not in ALLOWED_ROLES for role in self.remote_model_roles):
             raise ValueError("Rol remoto invalido")
-        table = pricing_from_json(self.model_pricing)
-        prices = json.loads(self.model_pricing or "[]")
+        models = {self.model_name.strip()}
+        if "reviewer" in self.remote_model_roles:
+            models.add((self.reviewer_model or self.model_name).strip())
+        if self.remote_model_roles and "" in models:
+            raise ValueError("Selecciona el modelo antes de activar IA")
+        pricing = self.model_pricing
+        if is_loopback:
+            pricing = json.dumps([{"model": m, "input_per_1k": 0.0,
+                                   "output_per_1k": 0.0, "currency": "USD"}
+                                  for m in sorted(models) if m])
+        table = pricing_from_json(pricing)
+        prices = json.loads(pricing or "[]")
         if any(
             p.get("currency", "USD").upper() != "USD"
             or not all(math.isfinite(p[k]) for k in ("input_per_1k", "output_per_1k"))
@@ -88,31 +96,21 @@ class VaultConfig(BaseModel):
         ):
             raise ValueError("Declara tarifas finitas en USD")
         data = self.model_dump(exclude={"hf_token"})
-        data["hf_token"] = (
-            previous.get("hf_token", "")
-            if self.hf_token is None
-            else self.hf_token.get_secret_value()
-        )
-        models = {self.model_name.strip().lower()}
-        if "reviewer" in self.remote_model_roles:
-            models.add((self.reviewer_model or self.model_name).strip().lower())
+        data["model_base_url"] = endpoint
+        data["model_pricing"] = pricing
+        token = ""
+        if self.hf_token is not None:
+            token = self.hf_token.get_secret_value().strip()
+        elif endpoint == previous.get("model_base_url", "").rstrip("/"):
+            token = previous.get("hf_token", "").strip()
+        data["hf_token"] = token
+        data["model_name"] = self.model_name.strip()
+        data["reviewer_model"] = self.reviewer_model.strip()
+        models = {m.lower() for m in models}
         if is_loopback:
-            if data["hf_token"].strip().lower() == "local" or not data["hf_token"].strip():
-                data["hf_token"] = ""
-            missing_for_pricing = models - set(table.known_models())
-            if missing_for_pricing:
-                existing_prices = prices if isinstance(prices, list) else []
-                for m in missing_for_pricing:
-                    if not any(str(item.get("model", "")).strip().lower() == m for item in existing_prices):
-                        existing_prices.append({
-                            "model": m,
-                            "input_per_1k": 0.0,
-                            "output_per_1k": 0.0,
-                            "currency": "USD",
-                        })
-                self.model_pricing = json.dumps(existing_prices, indent=2)
-                data["model_pricing"] = self.model_pricing
-                table = pricing_from_json(self.model_pricing)
+            data["hf_token"] = ""
+        if data["hf_token"].lower() in {"local", "none", "null"}:
+            data["hf_token"] = ""
         if self.remote_model_roles and (
             (not is_loopback and not data["hf_token"].strip())
             or not self.budget_limit
@@ -544,6 +542,15 @@ def create_profile_app(settings: Settings) -> FastAPI:
             "has_token": bool(context.profile.data.get("hf_token")),
             "ledger": context.app.state.ledger.summary(),
         }
+
+    @app.post("/auth/vault/test-connection")
+    async def test_connection(request: Request, body: ConnectionRequest):
+        session = require_session(request)
+        previous = dict(manager.contexts[session.user_id].profile.data)
+        try:
+            return await run_in_threadpool(check_connection, body, previous)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
 
     @app.put("/auth/vault")
     async def configure(request: Request, config: VaultConfig):

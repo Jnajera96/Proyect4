@@ -456,7 +456,7 @@ def test_profile_vault_supports_local_omniroute_and_ollama_endpoints(tmp_path):
         headers = {"X-CSRF-Token": csrf}
         pricing = json.dumps([{"model": "qwen2.5-coder", "input_per_1k": 0.0, "output_per_1k": 0.0, "currency": "USD"}])
         local_config = dict(
-            hf_token="",  # local endpoints do not require token; should auto-default to 'local'
+            hf_token="",  # Local endpoints keep credentials empty.
             model_base_url="http://localhost:20128/v1",
             model_name="qwen2.5-coder",
             remote_model_roles=["coder", "reviewer"],
@@ -467,7 +467,7 @@ def test_profile_vault_supports_local_omniroute_and_ollama_endpoints(tmp_path):
         res = client.put("/auth/vault", json=local_config, headers=headers)
         assert res.status_code == 200, res.text
         vault_state = client.get("/auth/vault").json()
-        assert vault_state["has_token"] is True
+        assert vault_state["has_token"] is False
         assert vault_state["model_base_url"] == "http://localhost:20128/v1"
 
 

@@ -148,7 +148,7 @@ class OpenAICompatibleAdapter:
         try:
             parsed = urlparse(self._base_url)
             host = (parsed.hostname or "").lower()
-            return host in ("localhost", "127.0.0.1", "::1", "0.0.0.0")
+            return host in ("localhost", "127.0.0.1", "::1")
         except Exception:
             return False
 
@@ -160,7 +160,7 @@ class OpenAICompatibleAdapter:
         """
         cabeceras = {"Content-Type": "application/json"}
         api_key = self._api_key.strip()
-        if api_key and api_key.lower() not in ("local", "none", "null"):
+        if not self._is_loopback() and api_key and api_key.lower() not in ("local", "none", "null"):
             cabeceras["Authorization"] = f"Bearer {api_key}"
         return cabeceras
 
@@ -184,29 +184,8 @@ class OpenAICompatibleAdapter:
             for m in modelos:
                 if m.lower() == sol_lower:
                     return m
-            for m in modelos:
-                if m.lower().endswith(f"/{sol_lower}"):
-                    return m
-            excluidos = (
-                "embedding",
-                "clip",
-                "tts",
-                "image",
-                "audio",
-                "transcribe",
-                "live",
-                "robotics",
-                "preview-tts",
-            )
-            viables = [m for m in modelos if not any(x in m.lower() for x in excluidos)]
-            if viables:
-                preferidos = [
-                    m
-                    for m in viables
-                    if any(p in m.lower() for p in ("flash", "coder", "instruct", "chat"))
-                ]
-                return preferidos[0] if preferidos else viables[0]
-            return modelos[0]
+            coincidencias = [m for m in modelos if m.lower().endswith(f"/{sol_lower}")]
+            return coincidencias[0] if len(coincidencias) == 1 else None
         except Exception:
             return None
 

@@ -5,6 +5,11 @@ const CUSTOM = "__custom__";
 const HF_ROUTER = "https://router.huggingface.co/v1";
 const GEMINI_ROUTER = "https://generativelanguage.googleapis.com/v1beta/openai";
 
+export function isLocalEndpoint(value: string): boolean {
+  try { return ["localhost", "127.0.0.1", "[::1]"].includes(new URL(value).hostname); }
+  catch { return false; }
+}
+
 export function pricingForSelection(ids: string[], previous: string): string {
   const entries = JSON.parse(previous.trim() || "[]");
   if (!Array.isArray(entries)) throw new Error("Las tarifas deben ser una lista JSON.");
@@ -22,8 +27,8 @@ export function pricingForSelection(ids: string[], previous: string): string {
   return JSON.stringify([...prices.values()], null, 2);
 }
 
-export function ModelSelector({ name, label, value, onChange }: {
-  name: string; label: string; value: string; onChange: (value: string) => void;
+export function ModelSelector({ name, label, value, onChange, available = [] }: {
+  name: string; label: string; value: string; onChange: (value: string) => void; available?: string[];
 }) {
   const [custom, setCustom] = useState(Boolean(value) && !catalog.models.some(m => m.id === value));
   const selected = catalog.models.find(m => m.id === value);
@@ -36,7 +41,10 @@ export function ModelSelector({ name, label, value, onChange }: {
         onChange(next === CUSTOM ? "" : next);
       }}>
       <option value="">{name === "reviewer_model" ? "Usar el mismo modelo que Coder" : "Seleccionar modelo"}</option>
-      <optgroup label="OmniRoute (Router inteligente local · Sin costo)">
+      {available.length > 0 && <optgroup label="Disponibles en tu servidor">
+        {available.map(id => <option key={id} value={id}>{id}</option>)}
+      </optgroup>}
+      <optgroup label="OmniRoute local">
         {catalog.models.filter(m => m.provider === "omniroute").map(m =>
           <option key={m.id} value={m.id}>{m.label} · {m.provider}</option>)}
       </optgroup>
@@ -81,26 +89,30 @@ export function ModelSelector({ name, label, value, onChange }: {
   </div>;
 }
 
-export function ModelConfiguration({ coder = "", reviewer = "", pricing = "" }: {
-  coder?: string; reviewer?: string; pricing?: string;
+export function ModelConfiguration({ coder = "", reviewer = "", pricing = "", endpoint = "", available = [] }: {
+  coder?: string; reviewer?: string; pricing?: string; endpoint?: string; available?: string[];
 }) {
   const [coderModel, setCoderModel] = useState(coder);
   const [reviewerModel, setReviewerModel] = useState(reviewer);
   const [prices, setPrices] = useState(pricing);
   const [notice, setNotice] = useState("");
+  const local = isLocalEndpoint(endpoint);
+  const localPrices = JSON.stringify([...new Set([coderModel, reviewerModel || coderModel].filter(Boolean))]
+    .map(model => ({ model, input_per_1k: 0, output_per_1k: 0, currency: "USD" })));
   return <>
-    <ModelSelector name="model_name" label="Modelo Coder" value={coderModel} onChange={setCoderModel} />
-    <ModelSelector name="reviewer_model" label="Modelo Reviewer" value={reviewerModel} onChange={setReviewerModel} />
+    <ModelSelector name="model_name" label="Modelo Coder" value={coderModel} onChange={setCoderModel} available={available} />
+    <ModelSelector name="reviewer_model" label="Modelo Reviewer" value={reviewerModel} onChange={setReviewerModel} available={available} />
+    {local && <p role="status">Endpoint local. Tarifas del registro de AI-SWE fijadas a 0 USD. Revisa los cargos del proveedor conectado en tu proxy.</p>}
     <p className="profile-model-note">Diez opciones por especialidad, sin clasificación universal de «mejores».
       Solo Qwen2.5 Coder 32B tiene una prueba E2E registrada en este proyecto.
       Catálogo y tarifas consultados el {catalog.checkedAt}; pueden cambiar.
       Elegir un modelo no activa llamadas ni comprueba tu token.</p>
-    <button type="button" disabled={!coderModel} onClick={event => {
+    <button type="button" disabled={!coderModel || local} onClick={event => {
       try {
         const form = event.currentTarget.form;
         const endpoint = new FormData(form ?? undefined).get("model_base_url");
         const rawEndpoint = String(endpoint).trim().replace(/\/$/, "");
-        const isLoopback = rawEndpoint.startsWith("http://localhost") || rawEndpoint.startsWith("http://127.0.0.1") || rawEndpoint.startsWith("http://[::1]");
+        const isLoopback = isLocalEndpoint(rawEndpoint);
         const isKnownCatalogEndpoint = rawEndpoint === HF_ROUTER || rawEndpoint.startsWith(GEMINI_ROUTER) || isLoopback;
         if (!isKnownCatalogEndpoint) {
           throw new Error("Estas tarifas corresponden a proveedores del catálogo (HF / Gemini / OmniRoute); para endpoints personalizados declara las de tu proveedor.");
@@ -111,7 +123,7 @@ export function ModelConfiguration({ coder = "", reviewer = "", pricing = "" }: 
     }}>Aplicar tarifas del catálogo a los modelos elegidos</button>
     {notice && <p role="status">{notice}</p>}
     <label>Tarifas declaradas en USD (JSON)<textarea name="model_pricing" rows={6}
-      value={prices} onChange={event => setPrices(event.target.value)}
+      value={local ? localPrices : prices} readOnly={local} onChange={event => setPrices(event.target.value)}
       placeholder={'[{"model":"organización/modelo:proveedor","input_per_1k":0.001,"output_per_1k":0.002,"currency":"USD"}]'} /></label>
     <p className="profile-model-note">Después marca los roles deseados en «Activar llamadas remotas»,
       configura el presupuesto y guarda la bóveda. La disponibilidad pública no garantiza

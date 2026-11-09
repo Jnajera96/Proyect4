@@ -418,6 +418,15 @@ def load_settings(*, prepare: bool = True) -> Settings:
     return settings
 
 
+def is_local_model_endpoint(url: str | None) -> bool:
+    from urllib.parse import urlsplit
+
+    try:
+        return urlsplit(url or "").hostname in {"localhost", "127.0.0.1", "::1"}
+    except ValueError:
+        return False
+
+
 def provider_configuration(settings: Settings) -> dict:
     """Presence only: no requests, account identity, secrets or claims of valid credit."""
     missing = []
@@ -426,7 +435,8 @@ def provider_configuration(settings: Settings) -> dict:
     if (
         (settings.model_provider.lower() in PROVEEDORES_CON_CLAVE
          or settings.model_base_url == "https://router.huggingface.co/v1")
-        and not settings.model_api_key.get_secret_value().strip()
+        and not is_local_model_endpoint(settings.model_base_url)
+        and settings.model_api_key.get_secret_value().strip().lower() in {"", "local", "none", "null"}
     ):
         missing.append(
             "HF_TOKEN / AI_SWE_MODEL_API_KEY"
@@ -519,7 +529,10 @@ def require_model_credentials(settings: Settings) -> None:
     """
     if settings.model_provider.lower() not in PROVEEDORES_CON_CLAVE:
         return
-    if not settings.model_api_key.get_secret_value().strip():
+    if (
+        not is_local_model_endpoint(settings.model_base_url)
+        and settings.model_api_key.get_secret_value().strip().lower() in {"", "local", "none", "null"}
+    ):
         raise ConfiguracionInsuficiente(
             campo="model_api_key",
             detalle=f"el proveedor '{settings.model_provider}' exige una clave",

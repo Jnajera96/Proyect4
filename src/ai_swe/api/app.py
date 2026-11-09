@@ -893,14 +893,14 @@ def crear_app(
             safe_env["OMNIROUTE_USE_TURBOPACK"] = "1"
 
             if chosen_script.suffix.lower() == ".cmd":
-                subprocess.Popen(
-                    ["cmd.exe", "/c", "start", '""', str(chosen_script)],
+                process = subprocess.Popen(
+                    ["cmd.exe", "/d", "/c", r".\iniciar.cmd"],
                     cwd=str(chosen_script.parent),
                     env=safe_env,
                     creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0),
                 )
             else:
-                subprocess.Popen(
+                process = subprocess.Popen(
                     ["powershell.exe", "-NoProfile", "-File", str(chosen_script)],
                     cwd=str(chosen_script.parent),
                     env=safe_env,
@@ -915,6 +915,15 @@ def crear_app(
                 if check_health():
                     is_running = True
                     break
+                exit_code = process.poll()
+                if exit_code is not None:
+                    return {
+                        "status": "error",
+                        "message": (
+                            f"OmniRoute se cerró antes de responder (código {exit_code}). "
+                            "Revisa la salida del script y que Node.js esté disponible."
+                        ),
+                    }
 
             if is_running:
                 return {
