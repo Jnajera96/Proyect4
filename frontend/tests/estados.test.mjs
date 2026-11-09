@@ -9,7 +9,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const require = createRequire(import.meta.url);
-async function cargar(ruta) {
+async function cargar(ruta, overrides = {}) {
   const resultado = await build({
     entryPoints: [fileURLToPath(new URL(ruta, import.meta.url))],
     bundle: true, write: false, platform: "node", format: "cjs", jsx: "automatic",
@@ -18,7 +18,7 @@ async function cargar(ruta) {
   });
   const modulo = { exports: {} };
   new Function("require", "module", "exports", resultado.outputFiles[0].text)(
-    require, modulo, modulo.exports,
+    name => overrides[name] ?? require(name), modulo, modulo.exports,
   );
   return modulo.exports;
 }
@@ -56,6 +56,68 @@ test("modelo local fija tarifas cero y presenta catálogo del servidor", () => {
   assert.match(html, /read[oO]nly/);
   assert.doesNotMatch(html, /stale invalid JSON/);
   assert.match(html, /input_per_1k.*:0/);
+  assert.match(html, /ollama run qwen2.5-coder/);
+  assert.match(html, /value="local\/example" selected/);
+});
+
+test("la bóveda envía el formulario sin exigir una prueba de conexión previa", async () => {
+  const { ProfileVaultSection: VaultWithoutRenderer } = await cargar("../src/components/ProfileRoot.tsx", {
+    react: { ...React, useState: initial => [initial, () => {}], useRef: current => ({ current }) },
+  });
+  let saves = 0;
+  const onSave = async () => { saves++; };
+  const tree = VaultWithoutRenderer({
+    vault: { has_token: false, model_name: "custom/not-listed", remote_model_roles: ["coder"],
+      ledger: { consumed: 0, reserved: 0, available: 2 } },
+    setVault() {}, busy: false, onSave, onClose() {}, setNotice() {},
+  });
+  function findForm(node) {
+    if (!React.isValidElement(node)) return undefined;
+    if (node.type === "form") return node;
+    return React.Children.toArray(node.props.children).map(findForm).find(Boolean);
+  }
+  const form = findForm(tree);
+  assert.ok(form);
+  assert.equal(form.props.onSubmit, onSave);
+  await form.props.onSubmit({ preventDefault() { throw new Error("Guardado bloqueado"); } });
+  assert.equal(saves, 1);
+});
+
+test("el autocompletado actualiza modelos y conserva las tarifas de sus alias", async () => {
+  const state = [];
+  let cursor = 0;
+  let effects = [];
+  const { ModelConfiguration: Configuration } = await cargar("../src/components/ModelConfiguration.tsx", {
+    react: { ...React,
+      useState(initial) {
+        const index = cursor++;
+        if (!(index in state)) state[index] = initial;
+        return [state[index], value => {
+          state[index] = typeof value === "function" ? value(state[index]) : value;
+        }];
+      },
+      useEffect(effect) { effects.push(effect); },
+    },
+  });
+  function render(props) {
+    cursor = 0; effects = [];
+    const tree = Configuration(props);
+    for (const effect of effects) effect();
+    return tree;
+  }
+  const props = { coder: "gemini-flash", endpoint: "https://example.test/v1",
+    pricing: JSON.stringify([{ model: "gemini-flash", input_per_1k: 0.1, output_per_1k: 0.2 }]) };
+  render(props);
+  const resolved = { coder: "models/gemini-flash", reviewer: "models/gemini-flash" };
+  render({ ...props, resolved });
+  const tree = render({ ...props, resolved });
+  const children = React.Children.toArray(tree.props.children);
+  const selectors = children.filter(child => child.props?.name === "model_name" || child.props?.name === "reviewer_model");
+  assert.deepEqual(selectors.map(child => child.props.value), [resolved.coder, resolved.reviewer]);
+  const tariffLabel = children.find(child =>
+    React.Children.toArray(child.props?.children).some(item => item.props?.name === "model_pricing"));
+  const textarea = React.Children.toArray(tariffLabel.props.children).find(child => child.props?.name === "model_pricing");
+  assert.equal(JSON.parse(textarea.props.value).find(item => item.model === resolved.coder).input_per_1k, 0.1);
 });
 
 test("TTS usa solo voces locales y no cae silenciosamente a una voz remota", () => {

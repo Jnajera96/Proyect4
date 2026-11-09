@@ -40,6 +40,33 @@ class ConnectionRequest(BaseModel):
     hf_token: SecretStr | None = None
 
 
+def resolve_catalog_model(requested: str, catalog: list[str]) -> str | None:
+    """Resolve aliases without selecting an ambiguous model, except the local combo."""
+    name = requested.strip().casefold()
+    for model in catalog:
+        if model.casefold() == name:
+            return model
+    if name == "omniroute-combo":
+        excluded = ("embedding", "tts", "image", "audio", "transcribe", "vision-only")
+        return next((model for model in catalog
+                     if not any(word in model.casefold() for word in excluded)), None)
+
+    def parts(value: str, strip_tag: bool) -> set[str]:
+        value = value.casefold()
+        if strip_tag:
+            value = value.split(":", 1)[0]
+        return {value, value.split("/", 1)[-1], value.rsplit("/", 1)[-1]}
+
+    for strip_tag in (False, True):
+        requested_parts = parts(name, strip_tag)
+        matches = [model for model in catalog if requested_parts & parts(model, strip_tag)]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            return None
+    return None
+
+
 def check_connection(body: ConnectionRequest, previous: dict) -> dict:
     endpoint = validate_endpoint(body.model_base_url)
     local = local_endpoint(endpoint)
@@ -67,12 +94,32 @@ def check_connection(body: ConnectionRequest, previous: dict) -> dict:
                     if len(content) > 1_000_000 or time.monotonic() > deadline:
                         raise ValueError("Catálogo demasiado grande")
                 payload = json.loads(content)
-        models = sorted({item["id"] for item in payload.get("data", [])
+        catalog = sorted({item["id"] for item in payload.get("data", [])
                          if isinstance(item, dict) and isinstance(item.get("id"), str)
-                         and 0 < len(item["id"]) <= 120})[:500]
-        missing = [model for model in {body.model_name, body.reviewer_model} if model and model not in models]
+                         and 0 < len(item["id"]) <= 120})
+        models = catalog[:500]
+        if not models:
+            message = (
+                "Ollama está activo pero no tiene modelos descargados. Ejecuta 'ollama run qwen2.5-coder' en tu terminal."
+                if local and urlsplit(endpoint).port == 11434
+                else "El servidor está activo pero su catálogo está vacío. Puedes guardar un identificador personalizado."
+            )
+            return {"ok": False, "message": message, "models": [],
+                    "resolved_coder_model": None, "resolved_reviewer_model": None}
+        coder = resolve_catalog_model(body.model_name, catalog) if body.model_name else models[0]
+        reviewer = resolve_catalog_model(body.reviewer_model, catalog) if body.reviewer_model else coder
+        # Hugging Face's suffix chooses the inference provider, not a different model.
+        if urlsplit(endpoint).hostname == "router.huggingface.co":
+            if coder and ":" in body.model_name:
+                coder = coder.split(":", 1)[0] + ":" + body.model_name.rsplit(":", 1)[1]
+            if reviewer and ":" in body.reviewer_model:
+                reviewer = reviewer.split(":", 1)[0] + ":" + body.reviewer_model.rsplit(":", 1)[1]
+            elif not body.reviewer_model:
+                reviewer = coder
+        resolved = {"resolved_coder_model": coder, "resolved_reviewer_model": reviewer}
+        missing = (body.model_name and coder is None) or (body.reviewer_model and reviewer is None)
         if missing:
-            return {"ok": False, "message": "Modelo no encontrado en el catálogo. Selecciona un identificador disponible.", "models": models}
-        return {"ok": True, "message": "Conexión y catálogo comprobados. La generación se validará al ejecutar.", "models": models}
+            return {"ok": False, "message": "El identificador no figura en el catálogo. Puedes seleccionar uno disponible o guardar tu modelo personalizado.", "models": models, **resolved}
+        return {"ok": True, "message": "Conexión y catálogo comprobados. La generación se validará al ejecutar.", "models": models, **resolved}
     except (httpx.HTTPError, ValueError, TypeError, AttributeError, KeyError):
         return {"ok": False, "message": "No se pudo consultar el catálogo. Comprueba que el servidor esté activo y la URL sea correcta.", "models": []}

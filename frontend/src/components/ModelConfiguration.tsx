@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import catalog from "../lib/modelCatalog.json";
 
 const CUSTOM = "__custom__";
@@ -34,7 +34,7 @@ export function ModelSelector({ name, label, value, onChange, available = [] }: 
   const selected = catalog.models.find(m => m.id === value);
   return <div className="profile-model-selector">
     <label htmlFor={`${name}-selector`}>{label}</label>
-    <select id={`${name}-selector`} value={custom ? CUSTOM : value}
+    <select id={`${name}-selector`} value={custom && !available.includes(value) ? CUSTOM : value}
       onChange={event => {
         const next = event.target.value;
         setCustom(next === CUSTOM);
@@ -66,7 +66,7 @@ export function ModelSelector({ name, label, value, onChange, available = [] }: 
       <option value={CUSTOM}>Otro modelo — escribir identificador</option>
     </select>
     <input type="hidden" name={name} value={value.trim()} />
-    {custom && <label htmlFor={`${name}-custom`}>Identificador personalizado de {label}
+    {custom && !available.includes(value) && <label htmlFor={`${name}-custom`}>Identificador personalizado de {label}
       <input id={`${name}-custom`} value={value} required maxLength={120}
         placeholder="organización/modelo:proveedor"
         onChange={event => onChange(event.target.value)} />
@@ -86,20 +86,50 @@ export function ModelSelector({ name, label, value, onChange, available = [] }: 
     </p>}
     {custom && <p className="profile-model-note">Debe estar servido por un proveedor compatible con OpenAI.
       Escribir el nombre no despliega el modelo. Declara también sus tarifas.</p>}
+    {value && available.length > 0 && !available.includes(value) && <p role="status">
+      Este identificador no figura en el catálogo consultado. Puedes guardarlo como modelo personalizado.
+    </p>}
   </div>;
 }
 
-export function ModelConfiguration({ coder = "", reviewer = "", pricing = "", endpoint = "", available = [] }: {
+export function ModelConfiguration({ coder = "", reviewer = "", pricing = "", endpoint = "", available = [], resolved }: {
   coder?: string; reviewer?: string; pricing?: string; endpoint?: string; available?: string[];
+  resolved?: { coder: string; reviewer: string };
 }) {
   const [coderModel, setCoderModel] = useState(coder);
   const [reviewerModel, setReviewerModel] = useState(reviewer);
   const [prices, setPrices] = useState(pricing);
   const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (!resolved) return;
+    setCoderModel(resolved.coder);
+    setReviewerModel(resolved.reviewer);
+    setPrices(previous => {
+      try {
+        const entries = JSON.parse(previous || "[]");
+        if (!Array.isArray(entries)) return previous;
+        const aliases = [[coderModel, resolved.coder], [reviewerModel || coderModel, resolved.reviewer]];
+        const result = [...entries];
+        for (const [from, to] of aliases) {
+          const base = (name: string) => name.toLowerCase().split(":")[0].split("/").pop();
+          if (!from || base(from) !== base(to)) continue;
+          const price = entries.find(item => item.model?.toLowerCase() === from.toLowerCase());
+          if (price && !result.some(item => item.model?.toLowerCase() === to.toLowerCase())) {
+            result.push({ ...price, model: to });
+          }
+        }
+        return JSON.stringify(result, null, 2);
+      } catch { return previous; }
+    });
+  }, [resolved]);
   const local = isLocalEndpoint(endpoint);
   const localPrices = JSON.stringify([...new Set([coderModel, reviewerModel || coderModel].filter(Boolean))]
     .map(model => ({ model, input_per_1k: 0, output_per_1k: 0, currency: "USD" })));
   return <>
+    {isLocalEndpoint(endpoint) && new URL(endpoint).port === "11434" && <p role="note">
+      Para usar Ollama: 1. Instala Ollama (ollama.com). 2. Ejecuta en tu terminal: 'ollama run qwen2.5-coder'.
+      3. Pulsa 'Probar conexión' para detectar tu modelo.
+    </p>}
     <ModelSelector name="model_name" label="Modelo Coder" value={coderModel} onChange={setCoderModel} available={available} />
     <ModelSelector name="reviewer_model" label="Modelo Reviewer" value={reviewerModel} onChange={setReviewerModel} available={available} />
     {local && <p role="status">Endpoint local. Tarifas del registro de AI-SWE fijadas a 0 USD. Revisa los cargos del proveedor conectado en tu proxy.</p>}

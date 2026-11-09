@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ai_swe.api import crear_app
-from ai_swe.models.providers.connection import ConnectionRequest, check_connection
+from ai_swe.models.providers.connection import ConnectionRequest, check_connection, resolve_catalog_model
 from ai_swe.api.profiles import VaultConfig
 from ai_swe.config import Settings
 from ai_swe.models.providers.openai_compatible import OpenAICompatibleAdapter
@@ -145,6 +145,87 @@ def test_missing_model_returns_catalog_without_silent_substitution(monkeypatch):
     ), {})
     assert not result["ok"]
     assert result["models"] == ["gemini/example"]
+
+
+@pytest.mark.parametrize(("requested", "catalog", "expected"), [
+    ("GEMINI-3.8-FLASH", ["models/gemini-3.8-flash"], "models/gemini-3.8-flash"),
+    ("gemini-3.8-flash", ["gemini/gemini-3.8-flash"], "gemini/gemini-3.8-flash"),
+    ("Qwen/Qwen2.5-Coder-32B-Instruct:nscale", ["Qwen/Qwen2.5-Coder-32B-Instruct"], "Qwen/Qwen2.5-Coder-32B-Instruct"),
+    ("Qwen2.5-Coder-32B-Instruct:nscale", ["Qwen/Qwen2.5-Coder-32B-Instruct"], "Qwen/Qwen2.5-Coder-32B-Instruct"),
+    ("qwen2.5-coder", ["qwen2.5-coder:latest"], "qwen2.5-coder:latest"),
+    ("qwen2.5-coder:latest", ["qwen2.5-coder"], "qwen2.5-coder"),
+    ("omniroute-combo", ["embedding-001", "gemini/gemini-3.8-flash"], "gemini/gemini-3.8-flash"),
+    ("omniroute-combo", ["omniroute-combo", "gemini/example"], "omniroute-combo"),
+    ("example", ["provider-a/example", "provider-b/example"], None),
+])
+def test_resolve_catalog_aliases(requested, catalog, expected):
+    assert resolve_catalog_model(requested, catalog) == expected
+
+
+@pytest.mark.parametrize(("endpoint", "requested", "listed", "expected"), [
+    ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.8-flash", "models/gemini-3.8-flash", "models/gemini-3.8-flash"),
+    ("https://router.huggingface.co/v1", "Qwen/Example:nscale", "Qwen/Example", "Qwen/Example:nscale"),
+    ("http://localhost:20128/v1", "omniroute-combo", "gemini/example", "gemini/example"),
+    ("http://localhost:11434/v1", "qwen2.5-coder", "qwen2.5-coder:latest", "qwen2.5-coder:latest"),
+])
+def test_connection_resolves_both_roles(monkeypatch, endpoint, requested, listed, expected):
+    catalog_mock(monkeypatch, body={"data": [{"id": listed}]})
+    result = check_connection(ConnectionRequest(
+        model_base_url=endpoint, model_name=requested, hf_token="offline-test-key",
+    ), {})
+    assert result["ok"]
+    assert result["resolved_coder_model"] == expected
+    assert result["resolved_reviewer_model"] == expected
+
+
+def test_ollama_empty_catalog_has_actionable_guide(monkeypatch):
+    catalog_mock(monkeypatch, body={"data": []})
+    result = check_connection(ConnectionRequest(
+        model_base_url="http://localhost:11434/v1", model_name="qwen2.5-coder",
+    ), {})
+    assert not result["ok"]
+    assert "Ollama está activo" in result["message"]
+    assert "ollama run qwen2.5-coder" in result["message"]
+
+
+def test_resolution_searches_beyond_the_display_limit(monkeypatch):
+    entries = [{"id": f"a-model-{i:04}"} for i in range(501)]
+    entries.append({"id": "models/z-requested"})
+    catalog_mock(monkeypatch, body={"data": entries})
+    result = check_connection(ConnectionRequest(
+        model_base_url="http://localhost:20128/v1", model_name="z-requested",
+    ), {})
+    assert result["ok"]
+    assert result["resolved_coder_model"] == "models/z-requested"
+    assert len(result["models"]) == 500
+
+
+@pytest.mark.parametrize("endpoint", [
+    "https://generativelanguage.googleapis.com/v1beta/openai",
+    "https://router.huggingface.co/v1", "http://localhost:20128/v1",
+    "http://localhost:11434/v1",
+])
+def test_custom_model_saves_without_connection_probe(tmp_path, monkeypatch, endpoint):
+    app = crear_app(settings=Settings(
+        _env_file=None, profile_mode=True, profiles_root=tmp_path, stt_provider="fake",
+    ))
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Saving must not require a catalog request")
+    monkeypatch.setattr("ai_swe.api.profiles.check_connection", forbidden)
+    with TestClient(app) as client:
+        registration = client.post("/auth/register", json={
+            "name": "owner", "password": "long offline test password",
+        })
+        data = config(model_base_url=endpoint, model_name="custom/not-listed",
+                      hf_token="offline-test-key", model_pricing=json.dumps([{
+                          "model": "custom/not-listed", "input_per_1k": 0.01,
+                          "output_per_1k": 0.02, "currency": "USD",
+                      }])).model_dump(mode="json", exclude={"hf_token"})
+        data["hf_token"] = "offline-test-key"
+        saved = client.put("/auth/vault", json=data,
+                           headers={"X-CSRF-Token": registration.json()["csrf_token"]})
+        assert saved.status_code == 200, saved.text
+        assert client.get("/auth/vault").json()["model_name"] == "custom/not-listed"
 
 
 def test_adapter_never_substitutes_an_unrelated_or_ambiguous_model():

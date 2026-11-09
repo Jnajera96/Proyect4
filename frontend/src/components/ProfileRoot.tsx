@@ -39,14 +39,8 @@ export function ProfileVaultSection({
   const [checking, setChecking] = useState(false);
   const [connectionMessage, setConnectionMessage] = useState("");
   const connectionVersion = useRef(0);
-  const verifiedSignature = useRef("");
+  const [resolvedModels, setResolvedModels] = useState<{ coder: string; reviewer: string }>();
   const local = isLocalEndpoint(endpoint);
-
-  function connectionSignature(form: HTMLFormElement): string {
-    const fields = new FormData(form);
-    return JSON.stringify(["model_base_url", "model_name", "reviewer_model", "hf_token", "clear_token"]
-      .map(name => fields.get(name) ?? ""));
-  }
 
   function applyPreset(preset: {
     model_base_url: string;
@@ -86,7 +80,7 @@ export function ProfileVaultSection({
     setReplacingToken(changedProvider || replacingToken);
     setEndpoint(preset.model_base_url);
     connectionVersion.current += 1;
-    verifiedSignature.current = "";
+    setResolvedModels(undefined);
     setAvailableModels([]);
     setConnectionMessage("");
     setVault(prev => prev ? {
@@ -166,15 +160,7 @@ export function ProfileVaultSection({
       </div>
 
       <form ref={formRef} key={formRevision} onChange={() => { connectionVersion.current += 1; }}
-        onSubmit={event => {
-          const fields = new FormData(event.currentTarget);
-          if (fields.getAll("roles").length && verifiedSignature.current !== connectionSignature(event.currentTarget)) {
-            event.preventDefault();
-            setConnectionMessage("Prueba la conexión con estos modelos y esta credencial antes de activar IA.");
-            return;
-          }
-          void onSave(event);
-        }}>
+        onSubmit={onSave}>
         <label>Endpoint del proveedor<input name="model_base_url" type="url" required
           value={endpoint} onChange={e => {
             setEndpoint(e.target.value); setTokenDraft(""); setClearTokenDraft(true);
@@ -188,23 +174,22 @@ export function ProfileVaultSection({
           <button type="button" onClick={() => setReplacingToken(true)}>Reemplazar token</button>
           <button type="button" onClick={() => {
             setTokenDraft(""); setClearTokenDraft(true); setReplacingToken(false);
-            connectionVersion.current += 1; verifiedSignature.current = "";
+            connectionVersion.current += 1;
           }}>Eliminar token</button>
         </>}
         {!local && replacingToken && <label>Clave del proveedor<input name="hf_token" type="password" autoComplete="off"
           value={tokenDraft} onChange={e => setTokenDraft(e.target.value)}
           placeholder="Ingresa la nueva credencial" /></label>}
         <ModelConfiguration coder={vault.model_name || ""} reviewer={vault.reviewer_model}
-          pricing={vault.model_pricing} endpoint={endpoint} available={availableModels} />
+          pricing={vault.model_pricing} endpoint={endpoint} available={availableModels} resolved={resolvedModels} />
         <button type="button" disabled={checking || busy} onClick={async () => {
           if (!formRef.current) return;
           const fields = new FormData(formRef.current);
           const version = connectionVersion.current;
-          const signature = connectionSignature(formRef.current);
-          verifiedSignature.current = "";
           setChecking(true); setConnectionMessage("Comprobando conexión y catálogo…");
           try {
-            const result = await profileRequest<{ ok: boolean; message: string; models: string[] }>(
+            const result = await profileRequest<{ ok: boolean; message: string; models: string[];
+              resolved_coder_model?: string | null; resolved_reviewer_model?: string | null }>(
               "/auth/vault/test-connection", { method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ model_base_url: endpoint,
@@ -214,8 +199,16 @@ export function ProfileVaultSection({
               setConnectionMessage("La configuración cambió durante la prueba. Vuelve a comprobarla.");
               return;
             }
-            setAvailableModels(result.models); setConnectionMessage(result.message);
-            if (result.ok) verifiedSignature.current = signature;
+            setAvailableModels([...new Set([...result.models,
+              ...[result.resolved_coder_model, result.resolved_reviewer_model]
+                .filter((model): model is string => Boolean(model))])]);
+            setConnectionMessage(result.message);
+            if (result.models.length) {
+              setResolvedModels({
+                coder: result.resolved_coder_model || result.models[0],
+                reviewer: result.resolved_reviewer_model || result.resolved_coder_model || result.models[0],
+              });
+            }
           } catch (err) { setConnectionMessage((err as Error).message); }
           finally { setChecking(false); }
         }}>{checking ? "Comprobando…" : "Probar conexión y consultar modelos"}</button>

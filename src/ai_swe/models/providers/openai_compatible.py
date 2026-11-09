@@ -180,12 +180,9 @@ class OpenAICompatibleAdapter:
             ]
             if not modelos:
                 return None
-            sol_lower = solicitado.strip().lower()
-            for m in modelos:
-                if m.lower() == sol_lower:
-                    return m
-            coincidencias = [m for m in modelos if m.lower().endswith(f"/{sol_lower}")]
-            return coincidencias[0] if len(coincidencias) == 1 else None
+            from ai_swe.models.providers.connection import resolve_catalog_model
+
+            return resolve_catalog_model(solicitado, modelos)
         except Exception:
             return None
 
